@@ -173,13 +173,13 @@ final class MapQcfThumbnails extends WebView {
    .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:14px sans-serif}")
    .append("body{display:flex;flex-direction:column}.tile{flex:1;min-height:0;width:100%;display:flex;justify-content:center;padding:4px 8px;overflow:hidden}")
    .append(".paper{width:100%;height:100%;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}")
-   .append(".paper img{display:block;flex:none;object-fit:contain;width:1px;height:1px;max-width:100%;max-height:100%}")
+   .append(".paper img{display:block;flex:none;object-fit:contain;width:auto;height:auto;max-width:100%;max-height:100%}")
    .append("footer{height:60px;flex:none;text-align:center;padding:2px 6px 3px}")
    .append("nav{height:54px;display:flex;gap:4px;align-items:center;justify-content:center;overflow:hidden}")
    .append("button{flex:none;width:44px;height:44px;min-width:44px;min-height:44px;border:1px solid #b7b6b0;border-radius:50%;background:transparent;color:#121211;font:14px sans-serif;padding:0}")
    .append("button.passage{border-width:2px;font-weight:bold}button.even{background:#121211;color:#faf8f0;border-color:#121211}button.odd{background:#faf8f0;color:#121211;border-color:#98978f}button[aria-current=page]{width:50px;height:50px;border:2px solid #121211;font-weight:bold;outline:2px solid #121211;outline-offset:2px}")
    .append("button[hidden]{display:none}</style><script>")
-   .append("function fit(){var img=document.querySelector('.paper img'),box=document.querySelector('.paper');if(!img||!img.naturalWidth||!box)return;var ratio=img.naturalWidth/img.naturalHeight;var w=Math.max(1,Math.min(box.clientWidth-4,(box.clientHeight-4)*ratio));img.style.width=w+'px';img.style.height=(w/ratio)+'px';}")
+   .append("function fit(){var img=document.querySelector('.paper img'),box=document.querySelector('.paper');if(!img||!img.naturalWidth||!box||box.clientWidth<48||box.clientHeight<72)return;var ratio=img.naturalWidth/img.naturalHeight;var w=Math.max(1,Math.min(box.clientWidth-4,(box.clientHeight-4)*ratio));img.style.width=w+'px';img.style.height=(w/ratio)+'px';}")
    .append("function pills(){var nav=document.querySelector('nav');if(!nav)return;var count=Math.max(1,Math.min(7,Math.floor((nav.clientWidth-12)/50)));if(count>1&&count%2===0)count--;var first=Math.max(")
    .append(start).append(",Math.min(").append(end).append("-count+1,").append(selected).append("-Math.floor(count/2)));nav.querySelectorAll('button').forEach(b=>b.hidden=Number(b.textContent)<first||Number(b.textContent)>=first+count);}")
    .append("var touch=null,ignoreClick=0;document.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});")
@@ -196,7 +196,7 @@ final class MapQcfThumbnails extends WebView {
    html.append(" onclick='choosePage(").append(p).append(")'>").append(p).append("</button>");
   }
   html.append("</nav></footer><script>var fullGeneration=").append(generation).append(";")
-      .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var img=document.querySelector('.paper img');if(!img)return;if(!src){img.alt='Page indisponible';return;}img.src='data:image/svg+xml;base64,'+src;}")
+      .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var img=document.querySelector('.paper img');if(!img)return;if(!src){img.alt='Page indisponible';return;}img.onload=function(){fit();requestAnimationFrame(function(){fit();requestAnimationFrame(fit);});};img.src='data:image/svg+xml;base64,'+src;}")
       .append("new ResizeObserver(()=>{fit();pills();}).observe(document.body);pills();")
       .append("window.addEventListener('load',()=>MapPages.full(").append(selected).append(",").append(generation).append("));")
       .append("</script></body></html>");
