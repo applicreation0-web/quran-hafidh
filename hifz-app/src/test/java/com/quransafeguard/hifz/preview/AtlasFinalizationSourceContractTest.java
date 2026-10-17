@@ -44,30 +44,27 @@ public final class AtlasFinalizationSourceContractTest {
         assertTrue(pages.contains("MapPages.step(dx>0?1:-1)"));
     }
 
-    @Test public void commentaryAndReaderActionsStayCompactCenteredAndAccessible() throws Exception {
+    @Test public void atlasHasOnlyUnitMosaicAndReaderActions() throws Exception {
         String map=read(ROOT+"MawdudiMapScreen.java");
         assertTrue(map.contains("icons=Ui.row(activity);icons.setGravity(Gravity.CENTER);"));
         assertTrue(map.contains("icons.setMinimumHeight(Ui.dp(activity,56));"));
-        assertTrue(map.contains("tafsirPos.rightMargin=Ui.dp(activity,36);"));
-        assertTrue(map.contains("readerPos.leftMargin=Ui.dp(activity,36);"));
-        assertFalse(map.contains("icons.addView(new View(activity)"));
-        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Tafsir\",v->openCommentary())"));
-        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Lecture\",v->openReader())"));
+        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Mosaïque des pages\""));
+        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Lecture avec amorces\""));
         String actions=map.substring(map.indexOf("icons=Ui.row(activity)"),map.indexOf("root.addView(icons);"));
-        assertFalse(actions.contains("new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1)"));
+        assertFalse("No commentary link from Atlas", actions.contains("openCommentary()"));
+        assertTrue("Unit nodes only, not a separate passage graph",map.contains("axis.addView(overviewGraph,"));
+        assertFalse(map.contains("axis.addView(graph,"));
+        assertTrue(map.contains("thumbnails.setMosaic(!passageOpen)"));
+        assertTrue(map.contains("activity.startActivityForResult(intent,11436)"));
     }
 
-    @Test public void canonicalAnNamlUsesItsOwnTitleWhileExactSubnodesRemain() throws Exception {
+        @Test public void sourcePassagesRemainUnchangedButNeverAppearAsAtlasNodes() throws Exception {
         String map=read(ROOT+"MawdudiMapScreen.java");
-        int start=map.indexOf("String selectedTitle(){");
-        int end=map.indexOf("@Override protected void onMeasure",start);
-        assertTrue(start>=0&&end>start);
-        String method=map.substring(start,end);
-        assertTrue(method.contains("n.index==selected&&n.first==focusStart&&n.last==focusEnd"));
-        assertTrue(method.contains("return n.title;"));
-        assertTrue(method.contains("return titles.titleForPassage(current().id);"));
-        assertTrue(map.contains("if(surah==27&&focusStart>=67&&focusEnd<=82&&subnodes.length()==3)"));
-        assertTrue("Expanded title must retain parent fallback",
-            map.contains("showTitle(titles.titleForPassage(current().id));"));
+        assertTrue("Canonical passage node code remains source-only",map.contains("return titles.titleForPassage(current().id);"));
+        assertTrue("Atlas uses only source-backed unit labels",map.contains("passageTitle.setText(unit.label);"));
+        assertTrue("No PDF action from selected unit title",map.contains("showTitle(macro().label);"));
+        assertFalse("Do not open Islāḥī or Maududi commentaries from unit Atlas",
+            map.substring(map.indexOf("private void showCurrentTitle(){"),
+                map.indexOf("private void chooseUnit(){")).contains("AtlasSourcePdfActivity"));
     }
 }
