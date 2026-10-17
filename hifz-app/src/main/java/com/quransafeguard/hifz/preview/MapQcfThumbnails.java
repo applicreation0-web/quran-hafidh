@@ -25,6 +25,12 @@ final class MapQcfThumbnails extends WebView {
  private int start,end,selected;
  private int markSurah,markFirst,markLast;
  private boolean markOnlyBoundaries;
+ private boolean mosaicMode;
+ /** The two QCF modes have separate render cache identities. */
+ void setMosaic(boolean value) {
+  if(mosaicMode==value)return;
+  mosaicMode=value;renderKey="";
+ }
  MapQcfThumbnails(Context context,Listener listener){
   super(context);this.listener=listener;
   setBackgroundColor(Color.rgb(250,248,242));
@@ -44,7 +50,7 @@ final class MapQcfThumbnails extends WebView {
   if(s<0||s>114||firstAyah<0||lastAyah<0||firstAyah>lastAyah)throw new IllegalArgumentException("QCF verse highlight range");
   if(first<1||last>604||last<first)throw new IllegalArgumentException("QCF thumbnail range");
   int chosen=Math.max(first,Math.min(last,selectedPage));
-  String key=first+":"+last+":"+chosen+":"+s+":"+firstAyah+":"+lastAyah+":"+boundariesOnly+":"+focusFirstPage+":"+focusLastPage;
+  String key=first+":"+last+":"+chosen+":"+s+":"+firstAyah+":"+lastAyah+":"+boundariesOnly+":"+focusFirstPage+":"+focusLastPage+":"+mosaicMode;
   if(key.equals(renderKey))return;
   renderKey=key;start=first;end=last;selected=chosen;
   markSurah=s;markFirst=firstAyah;markLast=lastAyah;markOnlyBoundaries=boundariesOnly;
@@ -92,7 +98,39 @@ final class MapQcfThumbnails extends WebView {
   css.append("path.ayahPolygon[surah='").append(markSurah)
      .append("'][ayah='").append(ayah).append("']");
  }
+ /** Multiple authentic QCF SVG pages, fitted together with no vertical scroll.
+  * Page taps select a page; the parent then opens the original full-page preview.
+  */
+ private void drawMosaic(){
+  int count=end-start+1;
+  int columns=count>40?10:count>20?8:count>10?5:count>4?3:Math.max(1,count);
+  int rows=(count+columns-1)/columns;
+  StringBuilder html=new StringBuilder(8192);
+  html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>")
+      .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:12px sans-serif}")
+      .append(".grid{display:grid;width:100%;height:100%;min-height:0;padding:5px;gap:5px;grid-template-columns:repeat(")
+      .append(columns).append(",minmax(0,1fr));grid-template-rows:repeat(").append(rows).append(",minmax(0,1fr))}")
+      .append("button{border:1px solid #999;background:white;padding:2px;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;overflow:hidden}")
+      .append("button.current{border:2px solid #121211;outline:2px solid #121211;outline-offset:-3px}")
+      .append("img{object-fit:contain;flex:1;width:100%;min-height:0;pointer-events:none}")
+      .append("b{display:inline-block;min-height:14px;font-size:10px;line-height:14px;border-radius:9px;padding:0 4px;font-weight:500}")
+      .append(".even b{background:#121211;color:#faf8f0}.odd b{background:#faf8f0;color:#121211;border:1px solid #888}")
+      .append(".current b{outline:1px solid #121211;outline-offset:1px;font-weight:bold}</style></head><body><div class='grid'>");
+  for(int p=start;p<=end;p++){
+   html.append("<button class='").append(p%2==0?"even":"odd").append(p==selected?" current":"")
+      .append("' aria-label='Page ").append(p).append("' onclick='MapPages.choose(").append(p).append(")'>");
+   try{
+    String svg=readSvg(getContext(),p);
+    String encoded=android.util.Base64.encodeToString(svg.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
+    html.append("<img alt='Muṣḥaf ").append(p).append("' src='data:image/svg+xml;base64,").append(encoded).append("'>");
+   }catch(Exception missing){html.append("<span>Page indisponible</span>");}
+   html.append("<b>").append(p).append("</b></button>");
+  }
+  html.append("</div></body></html>");
+  loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
+ }
  private void drawChunk(){
+  if(mosaicMode){drawMosaic();return;}
   StringBuilder html=new StringBuilder(4000);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>")
    .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:14px sans-serif}")
