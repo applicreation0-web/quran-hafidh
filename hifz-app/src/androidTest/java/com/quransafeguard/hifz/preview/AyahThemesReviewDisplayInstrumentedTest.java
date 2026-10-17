@@ -168,16 +168,20 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      AtomicReference<MawdudiMapScreen> screen)throws Exception {
   String script="(function(){var grid=document.querySelector('.grid');"+
     "if(!grid||grid.querySelectorAll('button').length<1||grid.querySelectorAll('button').length>6)return false;"+
-    "if(document.documentElement.scrollHeight>innerHeight+1)return false;"+
+    "if(document.documentElement.scrollHeight>innerHeight+1||!window.mosaicPaintReady)return false;"+
     "return Array.from(grid.querySelectorAll('img')).every(x=>"+
-    "x.complete&&x.naturalWidth>0&&x.naturalHeight>0&&Math.abs(x.naturalWidth/x.naturalHeight-345/550)<0.03&&x.getAttribute('src').startsWith('data:image/svg+xml;base64,'));})()";
+    "x.complete&&x.naturalWidth>0&&x.naturalHeight>0&&x.loading==='eager'&&Math.abs(x.naturalWidth/x.naturalHeight-345/550)<0.03&&x.getAttribute('src').startsWith('data:image/svg+xml;base64,'));})()";
   for(int attempt=0;attempt<72;attempt++){
    CountDownLatch ready=new CountDownLatch(1);
    AtomicReference<String> result=new AtomicReference<>();
    scenario.onActivity(a->((android.webkit.WebView)field(screen.get(),"thumbnails"))
      .evaluateJavascript(script,v->{result.set(v);ready.countDown();}));
    assertTrue(ready.await(15,TimeUnit.SECONDS));
-   if("true".equals(result.get()))return;
+   if("true".equals(result.get())){
+    // Decode completion is not the same as Android WebView compositor completion.
+    android.os.SystemClock.sleep(350);
+    return;
+   }
    android.os.SystemClock.sleep(250);
   }
   fail("All displayed Atlas thumbnail SVG pages must load at the native QCF ratio");
