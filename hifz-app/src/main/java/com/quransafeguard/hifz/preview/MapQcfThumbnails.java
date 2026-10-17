@@ -73,7 +73,9 @@ final class MapQcfThumbnails extends WebView {
    }
    String svg=new String(out.toByteArray(),StandardCharsets.UTF_8);
    if(!svg.contains("<svg")||!svg.contains("</svg>"))throw new IllegalStateException("Invalid QCF page");
-   return svg;
+   // Original QCF viewBox is 345x550, but its SVG has no intrinsic dimensions.
+   // The WebView default 300x150 distorted the aspect ratio and produced blank bands.
+   return svg.replaceFirst("<svg ", "<svg width='345' height='550' ");
   }
  }
  /** The original SVG contains transparent exact 'ayahPolygon' paths, one
@@ -122,23 +124,17 @@ final class MapQcfThumbnails extends WebView {
       .append("<img id='qcf").append(p).append("' alt='Muṣḥaf ").append(p)
       .append("' loading='lazy'><b>").append(p).append("</b></button>");
   }
-  // Each original SVG is transferred ONCE, rasterized into a tiny immutable PNG
-  // and then immediately released. Never keep 48 huge full-SVG data URLs alive.
+  // Preserve the original SVG vectors. Rasterizing at 318x486 blurred
+  // QCF text when WebView or the E-Ink display scaled a thumbnail.
+  // Decode one authentic local page at a time, no canvas or PNG conversion.
   html.append("</div><script>")
       .append("var nextPage=").append(start).append(",lastPage=").append(end).append(";")
       .append("function requestNext(){if(nextPage<=lastPage)MapPages.thumb(nextPage++);}")
       .append("function receiveThumb(p,src){var el=document.getElementById('qcf'+p);")
-      .append("if(!el)return;var img=new Image();")
-      .append("function done(){img.onload=null;img.onerror=null;img.src='';setTimeout(requestNext,0);}")
-      .append("img.onload=function(){try{var c=document.createElement('canvas');c.width=318;c.height=486;")
-      .append("var ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,318,486);")
-      .append("var ratio=img.naturalWidth/img.naturalHeight;")
-      .append("var w=Math.min(318,Math.max(1,Math.round(486*ratio)));")
-      .append("ctx.drawImage(img,Math.floor((318-w)/2),0,w,486);")
-      .append("el.src=c.toDataURL('image/png');c.width=0;c.height=0;")
-      .append("}catch(e){el.alt='Miniature indisponible';}done();};")
-      .append("img.onerror=function(){el.alt='Miniature indisponible';done();};")
-      .append("img.src='data:image/svg+xml;base64,'+src;}")
+      .append("if(!el){requestNext();return;}")
+      .append("el.onload=function(){el.onload=null;el.onerror=null;requestNext();};")
+      .append("el.onerror=function(){el.alt='Miniature indisponible';el.onload=null;el.onerror=null;requestNext();};")
+      .append("if(!src){el.onerror();return;}el.src='data:image/svg+xml;base64,'+src;}")
       .append("window.addEventListener('load',requestNext);</script></body></html>");
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
  }
