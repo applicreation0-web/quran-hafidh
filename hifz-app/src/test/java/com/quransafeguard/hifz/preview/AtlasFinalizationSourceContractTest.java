@@ -48,8 +48,8 @@ public final class AtlasFinalizationSourceContractTest {
         String map=read(ROOT+"MawdudiMapScreen.java");
         assertTrue(map.contains("icons=Ui.row(activity);icons.setGravity(Gravity.CENTER);"));
         assertTrue(map.contains("icons.setMinimumHeight(Ui.dp(activity,56));"));
-        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Mosaïque des pages\""));
-        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Lecture avec amorces\""));
+        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Carte\""));
+        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Lecture\""));
         String actions=map.substring(map.indexOf("icons=Ui.row(activity)"),map.indexOf("root.addView(icons);"));
         assertFalse("No commentary link from Atlas", actions.contains("openCommentary()"));
         assertTrue("Unit nodes only, not a separate passage graph",map.contains("axis.addView(overviewGraph,"));
