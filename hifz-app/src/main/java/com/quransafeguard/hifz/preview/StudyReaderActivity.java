@@ -924,9 +924,15 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         updateAtlasCueFooter();
         if(mapPreview&&mapPreviewUnits!=null){
             int surah=getIntent().getIntExtra("map114Surah",0);
-            if(surah>=1&&surah<=114)
-                MapUnitMarkers.show(mushaf,shown,surah,
-                    mapPreviewUnits.forSurah(surah),GeometryRepository.get(this));
+            if(surah>=1&&surah<=114){
+                GeometryRepository originalQcf=GeometryRepository.get(this);
+                if(mapUnitPreview&&unitBounded)
+                    MapUnitMarkers.showScoped(mushaf,shown,surah,
+                        mapPreviewUnits.forSurah(surah),originalQcf);
+                else
+                    MapUnitMarkers.show(mushaf,shown,surah,
+                        mapPreviewUnits.forSurah(surah),originalQcf);
+            }
         }
     }
     @Override public void finish() {
