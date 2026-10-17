@@ -26,10 +26,20 @@ final class MapQcfThumbnails extends WebView {
  private int markSurah,markFirst,markLast;
  private boolean markOnlyBoundaries;
  private boolean mosaicMode;
+ private int mosaicFirst=-1,mosaicGeneration;
+ private final java.util.LinkedHashMap<Integer,String> vectorCache=
+     new java.util.LinkedHashMap<Integer,String>(8,0.75f,true){
+      @Override protected boolean removeEldestEntry(java.util.Map.Entry<Integer,String> entry){return size()>6;}
+     };
+ private String cachedSvg(int page)throws Exception{
+  String svg=vectorCache.get(page);
+  if(svg==null){svg=readSvg(getContext(),page);vectorCache.put(page,svg);}
+  return svg;
+ }
  /** The two QCF modes have separate render cache identities. */
  void setMosaic(boolean value) {
   if(mosaicMode==value)return;
-  mosaicMode=value;renderKey="";
+  mosaicMode=value;mosaicFirst=-1;renderKey="";
  }
  MapQcfThumbnails(Context context,Listener listener){
   super(context);this.listener=listener;
@@ -53,6 +63,8 @@ final class MapQcfThumbnails extends WebView {
   String key=first+":"+last+":"+chosen+":"+s+":"+firstAyah+":"+lastAyah+":"+boundariesOnly+":"+focusFirstPage+":"+focusLastPage+":"+mosaicMode;
   if(key.equals(renderKey))return;
   renderKey=key;start=first;end=last;selected=chosen;
+  if(mosaicFirst<first||mosaicFirst>last||chosen<mosaicFirst||chosen>=mosaicFirst+6)
+   mosaicFirst=first+((chosen-first)/6)*6;
   markSurah=s;markFirst=firstAyah;markLast=lastAyah;markOnlyBoundaries=boundariesOnly;
   passageFirstPage=focusFirstPage;passageLastPage=focusLastPage;
   drawChunk();
@@ -104,8 +116,10 @@ final class MapQcfThumbnails extends WebView {
   * Page taps select a page; the parent then opens the original full-page preview.
   */
  private void drawMosaic(){
-  int count=end-start+1;
-  int columns=count>6?3:count>3?3:Math.max(1,count);
+  int count=Math.min(6,end-mosaicFirst+1);
+  int columns=count<=3?count:count==4?2:3;
+  int windowLast=mosaicFirst+count-1;
+  int generation=++mosaicGeneration;
   int rows=(count+columns-1)/columns;
   StringBuilder html=new StringBuilder(8192);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>")
@@ -114,11 +128,11 @@ final class MapQcfThumbnails extends WebView {
       .append(columns).append(",minmax(0,1fr));grid-template-rows:repeat(").append(rows).append(",minmax(0,1fr))}")
       .append("button{border:1px solid #999;background:white;padding:2px;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}")
       .append("button.current{border:2px solid #121211;outline:2px solid #121211;outline-offset:-3px}")
-      .append("img{object-fit:contain;flex:1;width:100%;height:100%;min-height:0;pointer-events:none}")
+      .append("img{object-fit:contain;flex:1;width:auto;height:auto;min-width:0;min-height:0;max-width:100%;max-height:calc(100% - 18px);aspect-ratio:345/550;pointer-events:none}")
       .append("b{display:inline-block;min-height:14px;font-size:10px;line-height:14px;border-radius:9px;padding:0 4px;font-weight:500}")
       .append(".even b{background:#121211;color:#faf8f0}.odd b{background:#faf8f0;color:#121211;border:1px solid #888}")
       .append(".current b{outline:1px solid #121211;outline-offset:1px;font-weight:bold}</style></head><body><div class='grid'>");
-  for(int p=start;p<=end;p++){
+  for(int p=mosaicFirst;p<=windowLast;p++){
    html.append("<button class='").append(p%2==0?"even":"odd").append(p==selected?" current":"")
       .append("' aria-label='Page ").append(p).append("' onclick='MapPages.choose(").append(p).append(")'>")
       .append("<img id='qcf").append(p).append("' alt='Muṣḥaf ").append(p)
@@ -127,16 +141,27 @@ final class MapQcfThumbnails extends WebView {
   // Preserve the original SVG vectors. Rasterizing at 318x486 blurred
   // QCF text when WebView or the E-Ink display scaled a thumbnail.
   // Decode one authentic local page at a time, no canvas or PNG conversion.
-  html.append("</div><script>")
-      .append("var nextPage=").append(start).append(",lastPage=").append(end).append(";")
-      .append("function requestNext(){if(nextPage<=lastPage)MapPages.thumb(nextPage++);}")
-      .append("function receiveThumb(p,src){var el=document.getElementById('qcf'+p);")
+  html.append("</div>");
+  if(end-start>=6)html.append("<div style=\'height:24px;text-align:center;font:12px sans-serif\'>")
+      .append("<button style=\'height:23px;width:40px\' onclick=\'MapPages.shift(-1)\'>‹</button> ")
+      .append(mosaicFirst).append("–").append(windowLast).append(" / ").append(start).append("–").append(end)
+      .append(" <button style=\'height:23px;width:40px\' onclick=\'MapPages.shift(1)\'>›</button></div>");
+  html.append("<script>")
+      .append("var nextPage=").append(mosaicFirst).append(",lastPage=").append(windowLast).append(",generation=").append(generation).append(";")
+      .append("function requestNext(){if(nextPage<=lastPage)MapPages.thumb(nextPage++,generation);}")
+      .append("function receiveThumb(p,src,gen){if(gen!==generation)return;var el=document.getElementById('qcf'+p);")
       .append("if(!el){requestNext();return;}")
       .append("el.onload=function(){el.onload=null;el.onerror=null;requestNext();};")
       .append("el.onerror=function(){el.alt='Miniature indisponible';el.onload=null;el.onerror=null;requestNext();};")
       .append("if(!src){el.onerror();return;}el.src='data:image/svg+xml;base64,'+src;}")
       .append("window.addEventListener('load',requestNext);</script></body></html>");
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
+ }
+ private void shiftMosaic(int delta){
+  if(!mosaicMode||delta==0)return;
+  int next=Math.max(start,Math.min(start+((end-start)/6)*6,mosaicFirst+(delta>0?6:-6)));
+  if(next==mosaicFirst)return;
+  mosaicFirst=next;drawMosaic();
  }
  private void drawChunk(){
   if(mosaicMode){drawMosaic();return;}
@@ -179,20 +204,21 @@ final class MapQcfThumbnails extends WebView {
   /** Sequential on-device rasterization of authentic local QCF SVG pages.
    * Never loads multiple full pages in one HTML document.
    */
-  @JavascriptInterface public void thumb(int page){
+  @JavascriptInterface public void thumb(int page,int generation){
    if(page<1||page>604)return;
    post(()->{
-    if(!mosaicMode||page<start||page>end)return;
+    if(!mosaicMode||generation!=mosaicGeneration||page<mosaicFirst||page>Math.min(end,mosaicFirst+5))return;
     try{
-     String original=readSvg(getContext(),page);
+     String original=cachedSvg(page);
      String encoded=android.util.Base64.encodeToString(
          original.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
-     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'"+encoded+"');",null);
+     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'"+encoded+"',"+generation+");",null);
     }catch(Exception unavailable){
-     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'');",null);
+     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'',"+generation+");",null);
     }
    });
   }
+  @JavascriptInterface public void shift(int delta){post(()->MapQcfThumbnails.this.shiftMosaic(delta));}
   @JavascriptInterface public void step(int delta){post(()->MapQcfThumbnails.this.step(delta));}
   @JavascriptInterface public void choose(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onPageChosen(page);});}
   @JavascriptInterface public void open(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onOpenReading(page);});}
