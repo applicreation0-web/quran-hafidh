@@ -178,7 +178,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setMinimumHeight(Ui.dp(this, 48));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
-        semanticButton = Ui.iconButton(this, "", "Afficher les amorces", v -> toggleSemanticCues());
+        semanticButton = Ui.iconButton(this, "", "Afficher les ancres", v -> toggleSemanticCues());
         semanticButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
         if(mapUnitPreview){
@@ -239,7 +239,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             atlasCueFooter.setMaxLines(2);
             atlasCueFooter.setEllipsize(TextUtils.TruncateAt.END);
             atlasCueFooter.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),Ui.dp(this,3));
-            atlasCueFooter.setContentDescription("Titres Ayah Themes de la page");
+            atlasCueFooter.setContentDescription("Titres des ancres de la page");
             readerStack.addView(atlasCueFooter,new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,42)));
         }
@@ -405,10 +405,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void updateSemanticButton() {
         if (semanticButton == null) return;
         semanticButton.setSelected(semanticCuesEnabled);
-        String description=semanticCuesEnabled?"Masquer les amorces"
-            :"Afficher les amorces";
+        String description=semanticCuesEnabled?"Masquer les ancres"
+            :"Afficher les ancres";
         Ui.setIconDescription(semanticButton,description);
-        int icon=Ui.iconFor(semanticCuesEnabled?"Masquer les amorces":"Afficher les amorces","");
+        int icon=Ui.iconFor(semanticCuesEnabled?"Masquer les ancres":"Afficher les ancres","");
         if (icon != 0) Ui.setButtonIcon(semanticButton, icon);
     }
 
@@ -451,7 +451,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void updateAtlasCueFooter(){
         if(!mapUnitPreview||atlasCueFooter==null)return;
         if(!semanticCuesEnabled||ayahThemesCues==null){
-            atlasCueFooter.setText("Amorces masquées");return;
+            atlasCueFooter.setText("Ancres masquées");return;
         }
         int s=getIntent().getIntExtra("map114Surah",0);
         int first=getIntent().getIntExtra("map114FocusStart",0);
@@ -477,7 +477,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         }catch(RuntimeException missingGeometry){
             // No synthesized fallback titles.
         }
-        atlasCueFooter.setText(labels.isEmpty()?"Aucune amorce sur cette page":
+        atlasCueFooter.setText(labels.isEmpty()?"Aucune ancre sur cette page":
             android.text.TextUtils.join("  •  ",labels));
     }
 
