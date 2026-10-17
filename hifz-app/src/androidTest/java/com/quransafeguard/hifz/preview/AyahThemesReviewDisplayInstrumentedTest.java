@@ -58,7 +58,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      Integer.parseInt(js(scenario,"String(document.querySelectorAll('.ayah-themes-title-targets rect').length)"))>0);
   }
  }
- @Test public void graphical114MapUsesRealQcfAndReturnsToExactPassage() throws Exception {
+ @Test public void graphical114MapUsesRealQcfAndReturnsToExactUnit() throws Exception {
   Context context=ApplicationProvider.getApplicationContext();
   Intent intent=new Intent(context,IbnKathirMapActivity.class)
    .putExtra(IbnKathirMapActivity.EXTRA_SURAH,3).putExtra(IbnKathirMapActivity.EXTRA_AYAH,175);
@@ -86,121 +86,122 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      MawdudiMapData macro=MawdudiMapData.parse(new JSONObject().put("schema","MAWDUDI_SOURCE_SAFE_MACROS_V1").put("macros",macros).toString(),canonical);
      ((MushafView)field(a,"pagePreview")).destroySafely();
      MawdudiMapScreen map=new MawdudiMapScreen(a,GeometryRepository.get(a),canonical,titles,macro,3,175,null);
-     java.lang.reflect.Field f=IbnKathirMapActivity.class.getDeclaredField("map114");f.setAccessible(true);f.set(a,map);
+     java.lang.reflect.Field host=IbnKathirMapActivity.class.getDeclaredField("map114");
+     host.setAccessible(true);host.set(a,map);
      map.display();
-     // The map now correctly starts on level 1. Enter level 2 explicitly before
-     // asserting that its passage graph is attached, measured and navigable.
-     java.lang.reflect.Method showPassages=MawdudiMapScreen.class.getDeclaredMethod("setLevel",boolean.class);
-     showPassages.setAccessible(true);showPassages.invoke(map,false);
-     // Opening an unit deliberately shows only its QCF thumbnails. A separate
-     // passage selection reveals the single-page focus and full reader action.
-     java.lang.reflect.Field passageOpen=MawdudiMapScreen.class.getDeclaredField("passageOpen");
-     passageOpen.setAccessible(true);passageOpen.setBoolean(map,true);
-     map.refresh();
-     screen.set(map);selected.set(canonical.at(3,175));
+     // Unit U4 of Al-Imran, with no passage graph, commentary or synthetic QCF.
+     java.lang.reflect.Method open=MawdudiMapScreen.class.getDeclaredMethod("openMacro",int.class);
+     open.setAccessible(true);open.invoke(map,3);
+     screen.set(map);
     }catch(Exception ex){throw new AssertionError(ex);}
    });
-   int expected=GeometryRepository.get(context).pageForVerse(new com.quransafeguard.hifz.core.VerseRef(3,selected.get().firstAyah));
-   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
+   int first=GeometryRepository.get(context).pageForVerse(new com.quransafeguard.hifz.core.VerseRef(3,121));
+   int last=MawdudiMapModel.lastPageForVerse(new com.quransafeguard.hifz.core.VerseRef(3,200),
+       GeometryRepository.get(context));
+   assertTrue("This fixture contains several physical pages",last>first+2);
+   awaitAtlasMosaic(scenario,screen);
    scenario.onActivity(a->{
-    assertEquals(expected,((Integer)field(screen.get(),"page")).intValue());
-    assertEquals("Graph",field(screen.get(),"graph").getClass().getSimpleName());
-    assertTrue(((android.view.View)field(screen.get(),"graph")).getWidth()>0);
-    assertEquals("Atlas must reserve full-page QCF for the reader",
-      android.view.View.GONE,screen.get().mushaf().getVisibility());
+    assertEquals("Unit 4 must be selected",3,((Integer)field(screen.get(),"activeMacro")).intValue());
+    assertEquals("Atlas displays only the unit graph","OverviewGraph",
+      ((android.widget.HorizontalScrollView)field(screen.get(),"axis")).getChildAt(0).getClass().getSimpleName());
+    assertFalse("A unit mosaic has no passage selected",(Boolean)field(screen.get(),"passageOpen"));
+    assertEquals("Mosaic starts at the first physical QCF page",first,((Integer)field(screen.get(),"page")).intValue());
    });
-   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-synthetic-graph-qcf.png");
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-unit-only-real-qcf-mosaic.png");
    scenario.onActivity(a->{
     try {
-     java.lang.reflect.Method title=MawdudiMapScreen.class.getDeclaredMethod("showCurrentTitle");
-     title.setAccessible(true);title.invoke(screen.get());
-     assertEquals(expected,((Integer)field(screen.get(),"page")).intValue());
-     assertTrue("Short titles must not reserve a large empty sheet",
-       ((android.view.View)field(screen.get(),"titlePanel")).getLayoutParams().height<=80*a.getResources().getDisplayMetrics().density);
+     java.lang.reflect.Method openPage=MawdudiMapScreen.class.getDeclaredMethod("onThumbnailPage",int.class);
+     openPage.setAccessible(true);openPage.invoke(screen.get(),first+1);
     }catch(Exception e){throw new AssertionError(e);}
    });
-   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
-   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-inline-title-entire-page.png");
-   scenario.onActivity(a->{
-    try {java.lang.reflect.Method close=MawdudiMapScreen.class.getDeclaredMethod("closeTitle");close.setAccessible(true);close.invoke(screen.get());}
-    catch(Exception e){throw new AssertionError(e);}
-   });
-   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
+   awaitAtlasFullPage(scenario,screen,first+1);
    swipeAtlasPage(scenario,screen,true);
-   awaitAtlasThumbnails(scenario,screen,selected.get(),expected+1);
-   scenario.onActivity(a->assertEquals("Page swipes stay in the selected unit",3,((Integer)field(screen.get(),"activeMacro")).intValue()));
-   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-page-badges-swipe.png");
-   swipeAtlasPage(scenario,screen,false);
-   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
+   awaitAtlasFullPage(scenario,screen,first+2);
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-unit-swiped-original-qcf-page.png");
    scenario.onActivity(a->screen.get().openReader());
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
    AtomicReference<StudyReaderActivity> reader=new AtomicReference<>();
-   for(int attempt=0;attempt<44;attempt++) {
+   for(int attempt=0;attempt<44;attempt++){
     androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
-     for(android.app.Activity a:androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED))
-      if(a instanceof StudyReaderActivity && Boolean.TRUE.equals(field(mushaf((StudyReaderActivity)a),"pageShown")))reader.set((StudyReaderActivity)a);
+     for(android.app.Activity a:androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+          .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED))
+      if(a instanceof StudyReaderActivity&&Boolean.TRUE.equals(field(mushaf((StudyReaderActivity)a),"pageShown")))
+       reader.set((StudyReaderActivity)a);
     });
-    if(reader.get()!=null)break;android.os.SystemClock.sleep(250);
+    if(reader.get()!=null)break;
+    android.os.SystemClock.sleep(250);
    }
-   assertNotNull("The real reader must render the map passage",reader.get());
+   assertNotNull("Reader must open the authentic QCF page",reader.get());
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
-    assertEquals(expected,((Integer)field(reader.get(),"page")).intValue());
-    java.util.List<?> focus=(java.util.List<?>)field(mushaf(reader.get()),"lastSelection");assertFalse(focus.isEmpty());
-    for(Object v:focus){com.quransafeguard.hifz.core.VerseRef verse=(com.quransafeguard.hifz.core.VerseRef)v;assertEquals(3,verse.getSurah());assertTrue(selected.get().contains(verse.getAyah()));}
+    assertEquals(first+2,((Integer)field(reader.get(),"page")).intValue());
+    assertTrue("Atlas reading must be unit-scoped",(Boolean)field(reader.get(),"mapUnitPreview"));
+    assertTrue("Unit boundary is on by default",(Boolean)field(reader.get(),"unitBounded"));
+    assertNotNull("Page-dependent Ayah Themes footer",(android.widget.TextView)field(reader.get(),"atlasCueFooter"));
+    assertEquals(121,reader.get().getIntent().getIntExtra("map114FocusStart",-1));
+    assertEquals(200,reader.get().getIntent().getIntExtra("map114FocusEnd",-1));
+    try{
+     java.lang.reflect.Method setPage=StudyReaderActivity.class.getDeclaredMethod("setPage",int.class);
+     setPage.setAccessible(true);
+     setPage.invoke(reader.get(),last);
+     setPage.invoke(reader.get(),last+1);
+    }catch(Exception e){throw new AssertionError(e);}
+    assertEquals("Reader must stop at the precise unit's last physical page",last,
+      ((Integer)field(reader.get(),"page")).intValue());
    });
-   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-synthetic-reader-focus.png");
-   androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);
+   androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(
+       android.view.KeyEvent.KEYCODE_BACK);
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-   scenario.onActivity(a->assertEquals(expected,((Integer)field(screen.get(),"page")).intValue()));
-   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
-   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-synthetic-return.png");
    scenario.onActivity(a->{
-    try {
-     // 4:101-104 spans two units: adjacent passage navigation must cross
-     // both memberships without repeating the passage or becoming stuck.
-     for(int direction:new int[]{1,-1}) {
-      MawdudiMapScreen original=screen.get();
-      MawdudiMapScreen boundary=new MawdudiMapScreen(a,GeometryRepository.get(a),
-        (MawdudiPassageIndex)field(original,"index"),(AyahThemesCueIndex)field(original,"titles"),
-        (MawdudiMapData)field(original,"macros"),4,direction>0?101:104,null);
-      try {
-       boundary.display();
-       java.lang.reflect.Method level=MawdudiMapScreen.class.getDeclaredMethod("setLevel",boolean.class);
-       level.setAccessible(true);level.invoke(boundary,false);
-       java.lang.reflect.Method move=MawdudiMapScreen.class.getDeclaredMethod("movePassage",int.class);
-       move.setAccessible(true);move.invoke(boundary,direction);
-       int position=(Integer)field(boundary,"selected");
-       MawdudiPassageIndex.Passage actual=((MawdudiPassageIndex)field(original,"index")).forSurah(4).get(position);
-       assertEquals("Canonical adjacency across two unit memberships",direction>0?"s004a105b112":"s004a097b100",actual.id);
-      } finally {boundary.destroy();}
-     }
-    }catch(Exception ex){throw new AssertionError(ex);}
+    assertEquals("Back returns to the very same QCF page",last,
+      ((Integer)field(screen.get(),"page")).intValue());
+    assertEquals(3,((Integer)field(screen.get(),"activeMacro")).intValue());
    });
-   MawdudiMapScreen originalScreen=screen.get();
-   scenario.onActivity(a->{
-    try {
-     MawdudiPassageIndex canonical=(MawdudiPassageIndex)field(originalScreen,"index");
-     MawdudiMapScreen baqarah=new MawdudiMapScreen(a,GeometryRepository.get(a),canonical,
-       (AyahThemesCueIndex)field(originalScreen,"titles"),(MawdudiMapData)field(originalScreen,"macros"),2,47,null);
-     baqarah.display();
-     java.lang.reflect.Method level=MawdudiMapScreen.class.getDeclaredMethod("setLevel",boolean.class);level.setAccessible(true);level.invoke(baqarah,false);
-     java.lang.reflect.Field opened=MawdudiMapScreen.class.getDeclaredField("passageOpen");opened.setAccessible(true);opened.setBoolean(baqarah,true);
-     baqarah.refresh();screen.set(baqarah);selected.set(canonical.at(2,47));
-    }catch(Exception e){throw new AssertionError(e);}
-   });
-   awaitAtlasThumbnails(scenario,screen,selected.get(),7);
-   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-baqarah-two-rows-page7.png");
-   scenario.onActivity(a->{
-    try {
-     java.lang.reflect.Method title=MawdudiMapScreen.class.getDeclaredMethod("showTitle",String.class);title.setAccessible(true);
-     StringBuilder caption=new StringBuilder();for(int k=0;k<12;k++)caption.append("SYNTHETIC long caption for viewport regression. ");
-     title.invoke(screen.get(),caption.toString());
-    }catch(Exception e){throw new AssertionError(e);}
-   });
-   awaitAtlasThumbnails(scenario,screen,selected.get(),7);
-   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-baqarah-long-title-page7.png");
-   scenario.onActivity(a->{screen.get().destroy();screen.set(originalScreen);});
+   awaitAtlasFullPage(scenario,screen,last);
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-unit-reading-return-exact-page.png");
+   scenario.onActivity(a->screen.get().destroy());
   }
+ }
+ /** Real QCF mosaic shows every unit page using bounded raster thumbnails. */
+ private static void awaitAtlasMosaic(ActivityScenario<IbnKathirMapActivity> scenario,
+     AtomicReference<MawdudiMapScreen> screen)throws Exception {
+  String script="(function(){var grid=document.querySelector('.grid');"+
+    "if(!grid||grid.querySelectorAll('button').length<4)return false;"+
+    "if(document.documentElement.scrollHeight>innerHeight+1)return false;"+
+    "return Array.from(grid.querySelectorAll('img')).some(x=>"+
+    "x.complete&&x.naturalWidth>0&&x.getAttribute('src').startsWith('data:image/png'));})()";
+  for(int attempt=0;attempt<72;attempt++){
+   CountDownLatch ready=new CountDownLatch(1);
+   AtomicReference<String> result=new AtomicReference<>();
+   scenario.onActivity(a->((android.webkit.WebView)field(screen.get(),"thumbnails"))
+     .evaluateJavascript(script,v->{result.set(v);ready.countDown();}));
+   assertTrue(ready.await(15,TimeUnit.SECONDS));
+   if("true".equals(result.get()))return;
+   android.os.SystemClock.sleep(250);
+  }
+  fail("The Atlas must render authentic local QCF pages as a small in-memory mosaic");
+ }
+ /** Unit-only page view: original SVG fully contained, never a fake page or passage text. */
+ private static void awaitAtlasFullPage(ActivityScenario<IbnKathirMapActivity> scenario,
+     AtomicReference<MawdudiMapScreen> screen,int page)throws Exception {
+  String script="(function(){var tile=document.querySelector('.tile.selected');"+
+    "var img=tile&&tile.querySelector('img');"+
+    "var badge=document.querySelector('[aria-current=page]');"+
+    "if(!img||!img.complete||img.naturalWidth<1||!badge||Number(badge.textContent)!="+page+")return false;"+
+    "if(!img.getAttribute('src').startsWith('data:image/svg+xml;base64,'))return false;"+
+    "var r=img.getBoundingClientRect(),host=document.querySelector('.paper').getBoundingClientRect();"+
+    "if(r.width<=0||r.height<=0||r.left<host.left-1||r.right>host.right+1||"+
+    "r.top<host.top-1||r.bottom>host.bottom+1)return false;"+
+    "return document.documentElement.scrollHeight<=innerHeight+1;})()";
+  for(int attempt=0;attempt<64;attempt++){
+   CountDownLatch ready=new CountDownLatch(1);
+   AtomicReference<String> result=new AtomicReference<>();
+   scenario.onActivity(a->((android.webkit.WebView)field(screen.get(),"thumbnails"))
+     .evaluateJavascript(script,v->{result.set(v);ready.countDown();}));
+   assertTrue(ready.await(15,TimeUnit.SECONDS));
+   if("true".equals(result.get()))return;
+   android.os.SystemClock.sleep(250);
+  }
+  fail("The full original QCF page is not fitted within the Atlas viewport");
  }
  @Test public void titleTargetPreservesPassiveEndpointAndArmedActiveWeakMark()throws Exception {
   Context c=ApplicationProvider.getApplicationContext();JSONObject backup=HifzBackup.export(c);
