@@ -94,8 +94,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         super.onCreate(state);
         mapPreview = getIntent().getBooleanExtra(EXTRA_MAP_PREVIEW, false);
         mapUnitPreview = mapPreview && getIntent().getBooleanExtra("map114UnitMode", false);
-        if (mapUnitPreview && state != null)
-            unitBounded = state.getBoolean("map114UnitBounded", true);
+        // Atlas passage focus replaces the legacy zoom/free-mode toggle.
+        // A restored Activity must not reopen the old non-focused state.
+        if(mapUnitPreview)unitBounded=true;
         if(mapPreview) {
             try {
                 mapPreviewUnits=MawdudiMapData.load(this,MawdudiPassageIndex.load(this));
