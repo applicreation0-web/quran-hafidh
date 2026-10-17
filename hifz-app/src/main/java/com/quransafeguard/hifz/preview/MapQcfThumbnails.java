@@ -136,7 +136,7 @@ final class MapQcfThumbnails extends WebView {
    html.append("<button class='").append(p%2==0?"even":"odd").append(p==selected?" current":"")
       .append("' aria-label='Page ").append(p).append("' onclick='MapPages.choose(").append(p).append(")'>")
       .append("<img id='qcf").append(p).append("' alt='Muṣḥaf ").append(p)
-      .append("' loading='lazy'><b>").append(p).append("</b></button>");
+      .append("' loading='eager' decoding='sync'><b>").append(p).append("</b></button>");
   }
   // Preserve the original SVG vectors. Rasterizing at 318x486 blurred
   // QCF text when WebView or the E-Ink display scaled a thumbnail.
@@ -148,10 +148,10 @@ final class MapQcfThumbnails extends WebView {
       .append(" <button style=\'height:23px;width:40px\' onclick=\'MapPages.shift(1)\'>›</button></div>");
   html.append("<script>")
       .append("var nextPage=").append(mosaicFirst).append(",lastPage=").append(windowLast).append(",generation=").append(generation).append(";")
-      .append("function requestNext(){if(nextPage<=lastPage)MapPages.thumb(nextPage++,generation);}")
+      .append("var mosaicPaintReady=false;function requestNext(){if(nextPage<=lastPage)MapPages.thumb(nextPage++,generation);else{mosaicPaintReady=true;MapPages.ready(generation);}}")
       .append("function receiveThumb(p,src,gen){if(gen!==generation)return;var el=document.getElementById('qcf'+p);")
       .append("if(!el){requestNext();return;}")
-      .append("el.onload=function(){el.onload=null;el.onerror=null;requestNext();};")
+      .append("el.onload=function(){el.onload=null;el.onerror=null;requestAnimationFrame(function(){requestAnimationFrame(requestNext);});};")
       .append("el.onerror=function(){el.alt='Miniature indisponible';el.onload=null;el.onerror=null;requestNext();};")
       .append("if(!src){el.onerror();return;}el.src='data:image/svg+xml;base64,'+src;}")
       .append("window.addEventListener('load',requestNext);</script></body></html>");
@@ -218,6 +218,7 @@ final class MapQcfThumbnails extends WebView {
     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'"+prepared+"',"+generation+");",null);
    });
   }
+  @JavascriptInterface public void ready(int generation){post(()->{if(mosaicMode&&generation==mosaicGeneration)invalidate();});}
   @JavascriptInterface public void shift(int delta){post(()->MapQcfThumbnails.this.shiftMosaic(delta));}
   @JavascriptInterface public void step(int delta){post(()->MapQcfThumbnails.this.step(delta));}
   @JavascriptInterface public void choose(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onPageChosen(page);});}
