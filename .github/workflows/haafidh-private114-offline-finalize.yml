@@ -108,3 +108,5 @@ jobs:
           if-no-files-found: error
 
 # CP10 Atlas BOOX units-only, memory-safe thumbnails. Build current CI-green HEAD code only; inject exact verified private assets and sign only offline. No secrets on runner.
+
+# Atlas Ancres source and icon contracts updated; staging must rebuild exact current HEAD.
