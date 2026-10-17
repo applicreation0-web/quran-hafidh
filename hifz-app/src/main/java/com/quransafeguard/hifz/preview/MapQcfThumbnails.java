@@ -26,7 +26,7 @@ final class MapQcfThumbnails extends WebView {
  private int markSurah,markFirst,markLast;
  private boolean markOnlyBoundaries;
  private boolean mosaicMode;
- private int mosaicFirst=-1,mosaicGeneration;
+ private int mosaicFirst=-1,mosaicGeneration,fullGeneration;
  private final java.util.LinkedHashMap<Integer,String> vectorCache=
      new java.util.LinkedHashMap<Integer,String>(8,0.75f,true){
       @Override protected boolean removeEldestEntry(java.util.Map.Entry<Integer,String> entry){return size()>6;}
@@ -93,23 +93,23 @@ final class MapQcfThumbnails extends WebView {
  /** The original SVG contains transparent exact 'ayahPolygon' paths, one
   * per physical verse shape. Highlight those paths directly, never fabricate
   * line-based boxes that also cover neighboring verses. */
- private String highlightExactVersePolygons(String svg){
-  if(markSurah==0||markFirst==0)return svg;
+ private String highlightExactVersePolygons(String svg,int surah,int firstAyah,int lastAyah,boolean boundariesOnly){
+  if(surah==0||firstAyah==0)return svg;
   StringBuilder css=new StringBuilder("<style>");
-  if(markOnlyBoundaries){
-   appendSelector(css,markFirst);
-   if(markLast!=markFirst){css.append(',');appendSelector(css,markLast);}
+  if(boundariesOnly){
+   appendSelector(css,surah,firstAyah);
+   if(lastAyah!=firstAyah){css.append(',');appendSelector(css,surah,lastAyah);}
   }else{
-   for(int a=markFirst;a<=markLast;a++){
-    if(a>markFirst)css.append(',');
-    appendSelector(css,a);
+   for(int a=firstAyah;a<=lastAyah;a++){
+    if(a>firstAyah)css.append(',');
+    appendSelector(css,surah,a);
    }
   }
   css.append("{fill:#999!important;fill-opacity:0.23!important;stroke:#333!important;stroke-width:0.25!important;}</style>");
   return svg.replace("</svg>",css.toString()+"</svg>");
  }
- private void appendSelector(StringBuilder css,int ayah){
-  css.append("path.ayahPolygon[surah='").append(markSurah)
+ private void appendSelector(StringBuilder css,int surah,int ayah){
+  css.append("path.ayahPolygon[surah='").append(surah)
      .append("'][ayah='").append(ayah).append("']");
  }
  /** Multiple authentic QCF SVG pages, fitted together with no vertical scroll.
@@ -165,40 +165,64 @@ final class MapQcfThumbnails extends WebView {
  }
  private void drawChunk(){
   if(mosaicMode){drawMosaic();return;}
+  // Decompression and SVG highlighting run on the JavaScript bridge worker.
+  // Keep every page swipe off the BOOX/phone Android main thread.
+  final int generation=++fullGeneration;
   StringBuilder html=new StringBuilder(4000);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>")
    .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:14px sans-serif}")
    .append("body{display:flex;flex-direction:column}.tile{flex:1;min-height:0;width:100%;display:flex;justify-content:center;padding:4px 8px;overflow:hidden}")
    .append(".paper{width:100%;height:100%;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}")
    .append(".paper img{display:block;flex:none;object-fit:contain;width:1px;height:1px;max-width:100%;max-height:100%}")
-   .append("footer{height:72px;flex:none;text-align:center;padding:2px 6px 4px}")
-   .append("nav{height:64px;display:flex;gap:4px;align-items:center;justify-content:center;overflow:hidden}")
-   .append("button{flex:none;width:48px;height:48px;min-width:48px;min-height:48px;border:1px solid #b7b6b0;border-radius:50%;background:transparent;color:#121211;font:14px sans-serif;padding:0}")
-   .append("button.passage{border-width:2px;font-weight:bold}button.even{background:#121211;color:#faf8f0;border-color:#121211}button.odd{background:#faf8f0;color:#121211;border-color:#98978f}button[aria-current=page]{width:56px;height:56px;border:2px solid #121211;font-weight:bold;outline:2px solid #121211;outline-offset:2px}")
+   .append("footer{height:60px;flex:none;text-align:center;padding:2px 6px 3px}")
+   .append("nav{height:54px;display:flex;gap:4px;align-items:center;justify-content:center;overflow:hidden}")
+   .append("button{flex:none;width:44px;height:44px;min-width:44px;min-height:44px;border:1px solid #b7b6b0;border-radius:50%;background:transparent;color:#121211;font:14px sans-serif;padding:0}")
+   .append("button.passage{border-width:2px;font-weight:bold}button.even{background:#121211;color:#faf8f0;border-color:#121211}button.odd{background:#faf8f0;color:#121211;border-color:#98978f}button[aria-current=page]{width:50px;height:50px;border:2px solid #121211;font-weight:bold;outline:2px solid #121211;outline-offset:2px}")
    .append("button[hidden]{display:none}</style><script>")
    .append("function fit(){var img=document.querySelector('.paper img'),box=document.querySelector('.paper');if(!img||!img.naturalWidth||!box)return;var ratio=img.naturalWidth/img.naturalHeight;var w=Math.max(1,Math.min(box.clientWidth-4,(box.clientHeight-4)*ratio));img.style.width=w+'px';img.style.height=(w/ratio)+'px';}")
-   .append("function pills(){var nav=document.querySelector('nav');if(!nav)return;var count=Math.max(1,Math.min(7,Math.floor((nav.clientWidth-12)/54)));if(count>1&&count%2===0)count--;var first=Math.max(")
+   .append("function pills(){var nav=document.querySelector('nav');if(!nav)return;var count=Math.max(1,Math.min(7,Math.floor((nav.clientWidth-12)/50)));if(count>1&&count%2===0)count--;var first=Math.max(")
    .append(start).append(",Math.min(").append(end).append("-count+1,").append(selected).append("-Math.floor(count/2)));nav.querySelectorAll('button').forEach(b=>b.hidden=Number(b.textContent)<first||Number(b.textContent)>=first+count);}")
    .append("var touch=null,ignoreClick=0;document.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});")
    .append("document.addEventListener('touchend',e=>{if(!touch)return;var dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){e.preventDefault();ignoreClick=Date.now()+400;MapPages.step(dx>0?1:-1);}});")
    .append("function readPage(p){if(Date.now()>ignoreClick)MapPages.open(p);}function choosePage(p){if(Date.now()>ignoreClick)MapPages.choose(p);}</script></head><body>");
-  try{
-   String svg=highlightExactVersePolygons(readSvg(getContext(),selected));
-   String base64=android.util.Base64.encodeToString(svg.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
-   html.append("<main class='tile selected'><div class='paper' role='button' tabindex='0' aria-label='Lecture page ").append(selected)
-       .append("' onclick='readPage(").append(selected).append(")'><img alt='Page ").append(selected)
-       .append(" entière' onload='fit()' src='data:image/svg+xml;base64,").append(base64).append("'></div></main>");
-  }catch(Exception invalid){html.append("<main class='tile'>Page indisponible</main>");}
+  html.append("<main class='tile selected'><div class='paper' role='button' tabindex='0' aria-label='Lecture page ")
+      .append(selected).append("' onclick='readPage(").append(selected)
+      .append(")'><img alt='Page ").append(selected)
+      .append(" entière' onload='fit()'></div></main>");
   html.append("<footer><nav aria-label='Pages de l’unité'>");
   for(int p=start;p<=end;p++){
    html.append("<button class='page ").append(p%2==0?"even":"odd").append(p>=passageFirstPage&&p<=passageLastPage?" passage":"").append("' aria-label='Page ").append(p).append(p%2==0?" paire":" impaire").append("'");
    if(p==selected)html.append(" aria-current='page'");
    html.append(" onclick='choosePage(").append(p).append(")'>").append(p).append("</button>");
   }
-  html.append("</nav></footer><script>new ResizeObserver(()=>{fit();pills();}).observe(document.body);fit();pills();</script></body></html>");
+  html.append("</nav></footer><script>var fullGeneration=").append(generation).append(";")
+      .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var img=document.querySelector('.paper img');if(!img)return;if(!src){img.alt='Page indisponible';return;}img.src='data:image/svg+xml;base64,'+src;}")
+      .append("new ResizeObserver(()=>{fit();pills();}).observe(document.body);pills();")
+      .append("window.addEventListener('load',()=>MapPages.full(").append(selected).append(",").append(generation).append("));")
+      .append("</script></body></html>");
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
  }
  private final class Bridge {
+  @JavascriptInterface public void full(int page,int generation){
+   if(page<1||page>604)return;
+   final int s,a,b;
+   final boolean only;
+   synchronized(MapQcfThumbnails.this){
+    if(mosaicMode||page!=selected||generation!=fullGeneration)return;
+    s=markSurah;a=markFirst;b=markLast;only=markOnlyBoundaries;
+   }
+   String encoded;
+   try{
+    String highlighted=highlightExactVersePolygons(cachedSvg(page),s,a,b,only);
+    encoded=android.util.Base64.encodeToString(
+        highlighted.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
+   }catch(Exception unavailable){encoded="";}
+   final String prepared=encoded;
+   post(()->{
+    if(mosaicMode||generation!=fullGeneration||page!=selected)return;
+    evaluateJavascript("if(window.receiveFull)receiveFull('"+prepared+"',"+generation+");",null);
+   });
+  }
   /** Decode on the WebView JavaScript bridge worker, never on Android's UI thread.
    * Only inject the prepared authentic SVG after validating its generation.
    */
