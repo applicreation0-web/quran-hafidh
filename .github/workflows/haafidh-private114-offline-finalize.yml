@@ -11,6 +11,12 @@ on:
       - work/haafidh-1171-ibn-kathir-integration-independent
     paths:
       - .github/workflows/haafidh-private114-offline-finalize.yml
+      - scripts/guard_frozen_hifz_engines.sh
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasPrivateV2.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasSourcePdfActivity.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapData.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapScreen.java
+      - hifz-app/src/main/AndroidManifest.xml
   workflow_dispatch:
 
 permissions:

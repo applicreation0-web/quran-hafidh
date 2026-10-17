@@ -63,6 +63,22 @@ while IFS= read -r file; do
         echo "EXACT M10 WORD LOOKUP FOUNDATION: $file"
       fi
       ;;
+    "$APP_ROOT/AtlasPrivateV2.java")
+      if [ "$(git hash-object "$file")" != "955304414fe110092fad800263f6a4f44fb870af" ]; then
+        echo "::error file=$file::Atlas 366 source index adapter differs from exact reviewed source."
+        bad=1
+      else
+        echo "EXACT CP09 ATLAS DOCUMENTARY INDEX: $file"
+      fi
+      ;;
+    "$APP_ROOT/AtlasSourcePdfActivity.java")
+      if [ "$(git hash-object "$file")" != "3f2a9f7c3c3d51590da5ff13f621ff7715d113de" ]; then
+        echo "::error file=$file::Atlas offline source reader differs from exact reviewed source."
+        bad=1
+      else
+        echo "EXACT CP09 ATLAS SOURCE READER: $file"
+      fi
+      ;;
     "$APP_ROOT/HifzSessionActivity.java" | \
     "$APP_ROOT/HifzPrefs.java" | \
     "$APP_ROOT/ConsolidationCycleEngine.java" | \
