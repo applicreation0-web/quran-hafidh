@@ -92,11 +92,21 @@ for file in audit-lecture-mushaf.png \
             audit-mawdudi-baqara-compact-map-commentary-return.png \
             audit-cp04-memo-libre-avant.png \
             audit-cp04-memo-libre-apres.png \
-            audit-map114-synthetic-graph-qcf.png \
-            audit-map114-synthetic-reader-focus.png \
-            audit-map114-synthetic-return.png; do
+            audit-atlas-unit-only-real-qcf-mosaic.png \
+            audit-atlas-unit-swiped-original-qcf-page.png \
+            audit-atlas-unit-reading-return-exact-page.png; do
   test -s "audit-runtime-screens/$file"
 done
+# Keep visual comparisons grounded in the newly instrumented unit-only Atlas.
+# The old passage-graph screenshots have been intentionally retired.
+test ! -f audit-runtime-screens/audit-map114-synthetic-graph-qcf.png || \
+  echo "::notice::Historical passage-graph screenshot exists but is not the approved Atlas proof"
+if cmp -s audit-runtime-screens/audit-atlas-unit-only-real-qcf-mosaic.png \
+          audit-runtime-screens/audit-atlas-unit-swiped-original-qcf-page.png; then
+  echo "::error::Atlas mosaic and full QCF page rendered identical pixels"
+  exit 1
+fi
+
 private_dir=hifz-app/src/main/assets/ibn_kathir_qurancom_private
 if [ -d "$private_dir" ]; then
   # Work's independent private-checkout test is stricter: actual title pixels.
