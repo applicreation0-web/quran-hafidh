@@ -270,10 +270,21 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             bottomTafsir.setVisibility(View.GONE);
             bottomTafsir.setClickable(true);
             bottomTafsir.setFocusable(true);
-            int panelHeight = Math.max(Ui.dp(this, 220),
-                Math.round(getResources().getDisplayMetrics().heightPixels * .42f));
-            readerPane.addView(bottomTafsir, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, panelHeight, Gravity.BOTTOM));
+            int panelHeight = mapPreview
+                ? Math.max(Ui.dp(this, 150),Math.min(Ui.dp(this, 320),
+                    Math.round(getResources().getDisplayMetrics().heightPixels * .35f)))
+                : Math.max(Ui.dp(this, 220),
+                    Math.round(getResources().getDisplayMetrics().heightPixels * .42f));
+            if(mapPreview) {
+                // Atlas: a real sibling, never an overlay hiding part of the Mushaf.
+                // The weighted QCF pane shrinks, and recovers its full height on close.
+                readerStack.addView(bottomTafsir,new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,panelHeight));
+            } else {
+                // Keep the established ordinary reading behavior unchanged.
+                readerPane.addView(bottomTafsir,new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,panelHeight,Gravity.BOTTOM));
+            }
         }
         scheduleAutoHide();
         loadGeometryForSurahPicker();
@@ -567,7 +578,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             return;
         }
         if(mapPreview) {
-            // BOOX semantic route: full-screen commentary, never split the QCF.
+            // Atlas/Jalalayn is now non-modal: BOOX side panel, phone bottom panel.
+            // Both preserve the genuine QCF page, selected verse and Hifz data.
             if(mapPreviewJalalayn!=null)mapPreviewJalalayn.close();
             int first=getIntent().getIntExtra("map114FocusStart",verse.getAyah());
             int last=getIntent().getIntExtra("map114FocusEnd",verse.getAyah());
@@ -576,8 +588,18 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 first=Math.max(first,focus.firstAyah);
                 last=Math.min(last,focus.lastAyah);
             }
-            mapPreviewJalalayn=new MapJalalaynDialog(this,verse.getSurah(),first,last,verse.getAyah());
+            final ViewGroup panelHost=largeScreen?sideTafsir:bottomTafsir;
+            if(panelHost==null)return;
+            mapPreviewJalalayn=new MapJalalaynDialog(this,verse.getSurah(),first,last,
+                verse.getAyah(),panelHost,()->{
+                    panelHost.setVisibility(View.GONE);
+                    mushaf.clearReveal();
+                    eink.local(panelHost,hifzPrefs);
+                    showControls();
+                });
             mapPreviewJalalayn.show();
+            showControls();
+            eink.local(panelHost,hifzPrefs);
             return;
         }
         if (largeScreen) { openSideTafsir(verse); return; }
@@ -592,6 +614,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void refreshOpenTafsir(VerseRef verse) {
         if (verse == null) return;
+        if(mapPreview&&mapPreviewJalalayn!=null&&mapPreviewJalalayn.isShowing()) {
+            if(mapPreviewJalalayn.accepts(verse))mapPreviewJalalayn.selectVerse(verse);
+            else {
+                mapPreviewJalalayn.close();
+                openTafsir();
+            }
+            return;
+        }
         if (largeScreen && sideTafsir != null && sideTafsir.getVisibility() == View.VISIBLE) {
             openSideTafsir(verse);
             return;
