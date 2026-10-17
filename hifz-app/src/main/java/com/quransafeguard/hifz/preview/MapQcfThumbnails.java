@@ -123,8 +123,8 @@ final class MapQcfThumbnails extends WebView {
   int rows=(count+columns-1)/columns;
   StringBuilder html=new StringBuilder(8192);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>")
-      .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:12px sans-serif}")
-      .append(".grid{display:grid;width:100%;height:100%;min-height:0;padding:5px;gap:5px;align-content:center;grid-template-columns:repeat(")
+      .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:12px sans-serif}body{display:flex;flex-direction:column}")
+      .append(".grid{display:grid;flex:1;width:100%;min-height:0;padding:5px;gap:5px;align-content:center;grid-template-columns:repeat(")
       .append(columns).append(",minmax(0,1fr));grid-template-rows:repeat(").append(rows).append(",minmax(0,1fr))}")
       .append("button{border:1px solid #999;background:white;padding:2px;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}")
       .append("button.current{border:2px solid #121211;outline:2px solid #121211;outline-offset:-3px}")
