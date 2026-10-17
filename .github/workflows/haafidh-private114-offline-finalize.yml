@@ -87,8 +87,9 @@ jobs:
           python3 - "$out/CODE-ONLY-NOT-INSTALLABLE.apk" <<'PY'
           import zipfile,sys
           with zipfile.ZipFile(sys.argv[1]) as archive:
-              assert not [name for name in archive.namelist() if name.startswith('assets/ayah_themes_private/')]
-          print('PASS: zero private title, macro or subnode files in CI')
+              forbidden=('assets/ayah_themes_private/', 'assets/atlas_private/')
+              assert not [name for name in archive.namelist() if name.startswith(forbidden)]
+          print('PASS: no private Ayah Themes, Atlas index, unit titles or PDF in public CI')
           PY
           sdk="$ANDROID_HOME/build-tools/36.0.0"
           cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
@@ -103,4 +104,4 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-# CP09 Atlas V2: generic public code only; user PDF, index and signing material remain offline.
+# CP10 Atlas BOOX units-only, memory-safe thumbnails. Build current CI-green HEAD code only; inject exact verified private assets and sign only offline. No secrets on runner.
