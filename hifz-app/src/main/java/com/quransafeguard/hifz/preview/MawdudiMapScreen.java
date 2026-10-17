@@ -150,7 +150,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
    int height=atlasHeight(right-left,bottom-topEdge);
    if(height!=sunHeight){sunHeight=height;refresh();}
   });
-  passageTitle=Ui.text(activity,"",13.5f,true);
+  passageTitle=Ui.text(activity,"",16f,true);
+  passageTitle.setTypeface(android.graphics.Typeface.DEFAULT,android.graphics.Typeface.BOLD);
   passageTitle.setGravity(Gravity.CENTER);
   passageTitle.setMaxLines(3);passageTitle.setEllipsize(TextUtils.TruncateAt.END);
   passageTitle.setOnClickListener(v->showCurrentTitle());
@@ -159,7 +160,9 @@ final class MawdudiMapScreen implements MushafView.Listener {
   titlePanel.setVerticalScrollBarEnabled(true);
   titlePanel.addView(passageTitle,new ScrollView.LayoutParams(-1,-2));
   root.addView(titlePanel,new LinearLayout.LayoutParams(-1,Ui.dp(activity,56)));
-  selectedPassageTitle=Ui.text(activity,"",11f,false);
+  selectedPassageTitle=Ui.text(activity,"",12.5f,false);
+  selectedPassageTitle.setTypeface(android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.ITALIC));
+  selectedPassageTitle.setTextColor(Ui.INK);
   selectedPassageTitle.setGravity(Gravity.CENTER);
   selectedPassageTitle.setMaxLines(3);
   selectedPassageTitle.setEllipsize(null);
@@ -437,12 +440,12 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private int atlasHeight(int width,int height){
   // One unit row for both Al-Fatiha and 11-unit An-Nisa. The second line is
   // reserved for the five canonical Ayah Themes passages, not for more units.
-  return Ui.dp(activity,148);
+  return Ui.dp(activity,118);
  }
  private float atlasX(int visibleOrdinal,int width){
   return width*(visibleOrdinal+.5f)/visibleUnitCount();
  }
- private float atlasY(){return Ui.dp(activity,27);}
+ private float atlasY(){return Ui.dp(activity,31);}
  private int atlasUnitAt(float x,float y,int width){
   if(Math.abs(y-atlasY())>Ui.dp(activity,25))return -1;
   int nearest=-1;float best=Ui.dp(activity,27)*Ui.dp(activity,27);
@@ -466,11 +469,11 @@ final class MawdudiMapScreen implements MushafView.Listener {
   for(int j=0;j<visible;j++){
    int ordinal=unitWindowStart+j;float x=atlasX(j,width);
    p.setStyle(Paint.Style.FILL);
-   c.drawCircle(x,y,Ui.dp(activity,ordinal==activeMacro?8:4),p);
+   c.drawCircle(x,y,Ui.dp(activity,ordinal==activeMacro?9:5),p);
    if(ordinal==activeMacro){
     p.setStyle(Paint.Style.STROKE);
     p.setStrokeWidth(Ui.dp(activity,1));
-    c.drawCircle(x,y,Ui.dp(activity,12),p);
+    c.drawCircle(x,y,Ui.dp(activity,14),p);
     p.setStyle(Paint.Style.FILL);
    }
    p.setTextSize(Ui.dp(activity,11));
@@ -480,37 +483,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   p.setTextSize(Ui.dp(activity,12));
   if(unitWindowStart>0)c.drawText("‹",Ui.dp(activity,5),y+Ui.dp(activity,4),p);
   if(unitWindowStart+visible<total)c.drawText("›",width-Ui.dp(activity,5),y+Ui.dp(activity,4),p);
-  int firstPage=geometry.pageForVerse(new VerseRef(surah,1));
-  java.util.List<MawdudiPassageIndex.Passage> all=index.forSurah(surah);
-  int lastPage=MawdudiMapModel.lastPageForVerse(
-      new VerseRef(surah,all.get(all.size()-1).lastAyah),geometry);
-  int pageCount=Math.max(1,lastPage-firstPage+1);
-  float left=Ui.dp(activity,17),right=width-Ui.dp(activity,17);
-  float top=Ui.dp(activity,58),bottom=top+Ui.dp(activity,5);
-  p.setColor(0xffcecdc7);p.setStyle(Paint.Style.FILL);
-  c.drawRoundRect(left,top,right,bottom,Ui.dp(activity,3),Ui.dp(activity,3),p);
-  p.setColor(Ui.INK);
-  MawdudiMapData.Macro active=macro();
-  int a=geometry.pageForVerse(new VerseRef(surah,active.start));
-  int b=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,active.end),geometry);
-  float x1=left+(a-firstPage)*(right-left)/pageCount;
-  float x2=left+(b-firstPage+1)*(right-left)/pageCount;
-  p.setStyle(Paint.Style.FILL);
-  c.drawRoundRect(x1,top,Math.max(x1+Ui.dp(activity,2),x2),bottom,Ui.dp(activity,3),Ui.dp(activity,3),p);
-  float cursor=left+(page-firstPage+.5f)*(right-left)/pageCount;
-  p.setColor(Ui.PAPER);c.drawCircle(cursor,(top+bottom)/2,Ui.dp(activity,7),p);
-  p.setColor(Ui.INK);c.drawCircle(cursor,(top+bottom)/2,Ui.dp(activity,5),p);
-  p.setStyle(Paint.Style.STROKE);
-  for(MawdudiMapData.Macro unit:units){
-   int pg=geometry.pageForVerse(new VerseRef(surah,unit.start));
-   float tick=left+(pg-firstPage)*(right-left)/pageCount;
-   c.drawCircle(tick,(top+bottom)/2,Ui.dp(activity,1),p);
-  }
-  p.setStyle(Paint.Style.FILL);p.setTextSize(Ui.dp(activity,10));
-  p.setTextAlign(Paint.Align.LEFT);
-  c.drawText("Pages "+firstPage+"–"+lastPage,left,bottom+Ui.dp(activity,16),p);
-  p.setTextAlign(Paint.Align.RIGHT);
-  c.drawText("U"+(activeMacro+1)+" · "+a+"–"+b,right,bottom+Ui.dp(activity,16),p);
+  // QCF page pastilles are below the Mushaf: no duplicate page rail here.
+
  }
  private final class OverviewGraph extends View {
   final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -597,7 +571,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   return Math.max(0,Math.min(Math.max(0,items.size()-5),selectedOrdinalZero(items)-2));
  }
  private float passageX(int j,int visible,int width){return width*(j+.5f)/visible;}
- private float passageY(int height){return height-Ui.dp(activity,26);}
+ private float passageY(int height){return height-Ui.dp(activity,19);}
  @Override protected void onDraw(Canvas canvas){
   int width=getWidth(),height=getHeight();
   drawAtlas(canvas,paint,width,height);
@@ -612,9 +586,9 @@ final class MawdudiMapScreen implements MushafView.Listener {
    int ordinal=first+j;Node n=items.get(ordinal);
    float x=passageX(j,visible,width);
    paint.setStyle(Paint.Style.FILL);
-   canvas.drawCircle(x,y,Ui.dp(activity,ordinal==selectedIndex?7:3),paint);
+   canvas.drawCircle(x,y,Ui.dp(activity,ordinal==selectedIndex?6:3),paint);
    paint.setTextAlign(Paint.Align.CENTER);paint.setTextSize(Ui.dp(activity,9));
-   canvas.drawText(n.first==n.last?String.valueOf(n.first):n.first+"–"+n.last,x,y-Ui.dp(activity,13),paint);
+   canvas.drawText(n.first==n.last?String.valueOf(n.first):n.first+"–"+n.last,x,y-Ui.dp(activity,12),paint);
   }
  }
  @Override public boolean onTouchEvent(MotionEvent event){
