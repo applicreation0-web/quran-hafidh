@@ -12,7 +12,7 @@ for token in ('onSemanticCueTap(String passageId)',
               'AyahThemesCueIndex.load(this)',
               'SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog)',
               'readerActions.addView(semanticButton)',
-              'ayahThemesCues.forPage(page)', '"Masquer les amorces"'):
+              'ayahThemesCues.forPage(page)', '"Masquer les ancres"'):
     assert token in lecture, "Missing Mushaf-first role: "+token
 for legacy in ('IbnKathirOfflineTitles.verifiedHeadings(group)',
                'IbnKathirTitlePack.sourceHeadings(this,group)'):
