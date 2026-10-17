@@ -600,7 +600,10 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         if(map114==null||requestCode!=11436||resultCode!=RESULT_OK||data==null)return;
         map114.returnFromReader(data.getIntExtra("map114Surah",0),
             data.getIntExtra("map114UnitOrdinal",0),
-            data.getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,0));
+            data.getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,0),
+            data.getStringExtra("map114ReturnPassageId"),
+            data.getIntExtra("map114ReturnPassageStart",-1),
+            data.getIntExtra("map114ReturnPassageEnd",-1));
     }
 
     @Override protected void onSaveInstanceState(Bundle out) {
