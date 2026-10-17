@@ -171,7 +171,7 @@ final class MapQcfThumbnails extends WebView {
    .append("body{display:flex;flex-direction:column}.tile{flex:1;min-height:0;width:100%;display:flex;justify-content:center;padding:4px 8px;overflow:hidden}")
    .append(".paper{width:100%;height:100%;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}")
    .append(".paper img{display:block;flex:none;object-fit:contain;width:1px;height:1px;max-width:100%;max-height:100%}")
-   .append("footer{height:100px;flex:none;text-align:center;padding:2px 6px 8px}.range{height:24px;line-height:24px;font-size:12px}")
+   .append("footer{height:72px;flex:none;text-align:center;padding:2px 6px 4px}")
    .append("nav{height:64px;display:flex;gap:4px;align-items:center;justify-content:center;overflow:hidden}")
    .append("button{flex:none;width:48px;height:48px;min-width:48px;min-height:48px;border:1px solid #b7b6b0;border-radius:50%;background:transparent;color:#121211;font:14px sans-serif;padding:0}")
    .append("button.passage{border-width:2px;font-weight:bold}button.even{background:#121211;color:#faf8f0;border-color:#121211}button.odd{background:#faf8f0;color:#121211;border-color:#98978f}button[aria-current=page]{width:56px;height:56px;border:2px solid #121211;font-weight:bold;outline:2px solid #121211;outline-offset:2px}")
@@ -189,9 +189,7 @@ final class MapQcfThumbnails extends WebView {
        .append("' onclick='readPage(").append(selected).append(")'><img alt='Page ").append(selected)
        .append(" entière' onload='fit()' src='data:image/svg+xml;base64,").append(base64).append("'></div></main>");
   }catch(Exception invalid){html.append("<main class='tile'>Page indisponible</main>");}
-  html.append("<footer><div class='range'>").append(start==end?"Page ":"Pages ").append(start);
-  if(end!=start)html.append(" à ").append(end);
-  html.append("</div><nav aria-label='Pages de l’unité'>");
+  html.append("<footer><nav aria-label='Pages de l’unité'>");
   for(int p=start;p<=end;p++){
    html.append("<button class='page ").append(p%2==0?"even":"odd").append(p>=passageFirstPage&&p<=passageLastPage?" passage":"").append("' aria-label='Page ").append(p).append(p%2==0?" paire":" impaire").append("'");
    if(p==selected)html.append(" aria-current='page'");
