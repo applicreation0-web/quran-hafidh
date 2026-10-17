@@ -274,7 +274,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     "if(!img||!img.complete||img.naturalWidth<1||!badge||Number(badge.textContent)!="+page+")return false;"+
     "if(!img.getAttribute('src').startsWith('data:image/svg+xml;base64,'))return false;"+
     "var r=img.getBoundingClientRect(),host=document.querySelector('.paper').getBoundingClientRect();"+
-    "if(r.width<=0||r.height<=0||r.left<host.left-1||r.right>host.right+1||"+
+    "if(r.width<60||r.height<95||r.left<host.left-1||r.right>host.right+1||"+
     "r.top<host.top-1||r.bottom>host.bottom+1)return false;"+
     "return document.documentElement.scrollHeight<=innerHeight+1;})()";
   for(int attempt=0;attempt<64;attempt++){
@@ -283,7 +283,12 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    scenario.onActivity(a->((android.webkit.WebView)field(screen.get(),"thumbnails"))
      .evaluateJavascript(script,v->{result.set(v);ready.countDown();}));
    assertTrue(ready.await(15,TimeUnit.SECONDS));
-   if("true".equals(result.get()))return;
+   if("true".equals(result.get())){
+    // SVG resource decoded and fitted does not guarantee WebView has painted.
+    // Give BOOX/phone compositor a real display frame before pixel evidence.
+    android.os.SystemClock.sleep(350);
+    return;
+   }
    android.os.SystemClock.sleep(250);
   }
   fail("The full original QCF page is not fitted within the Atlas viewport");
