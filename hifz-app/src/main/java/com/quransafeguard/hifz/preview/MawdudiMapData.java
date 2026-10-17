@@ -21,7 +21,11 @@ final class MawdudiMapData {
   }
  }
  static MawdudiMapData load(Context c,MawdudiPassageIndex index)throws Exception {
-  return parse(read(c,"ayah_themes_private/macros_114.json"),index);
+  AtlasPrivateV2 source=AtlasPrivateV2.load(c,index);
+  List<Macro> rows=new ArrayList<>();
+  for(AtlasPrivateV2.Unit u:source.units())
+   rows.add(new Macro(u.surah,u.start,u.end,"Unité "+u.ordinal+" · "+u.start+"–"+u.end));
+  return new MawdudiMapData(rows);
  }
  static MawdudiMapData parse(String raw,MawdudiPassageIndex index)throws JSONException {
   JSONObject root=new JSONObject(raw);

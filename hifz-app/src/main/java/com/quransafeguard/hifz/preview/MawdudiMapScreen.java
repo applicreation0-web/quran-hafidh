@@ -201,7 +201,12 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  private void showCurrentTitle(){
   if(overview){openMacro(activeMacro);return;}
-  if(!passageOpen)return;
+  if(!passageOpen){
+   Intent source=new Intent(activity,AtlasSourcePdfActivity.class);
+   source.putExtra(AtlasSourcePdfActivity.EXTRA_SURAH,surah);
+   source.putExtra(AtlasSourcePdfActivity.EXTRA_AYAH,macro().start);
+   activity.startActivity(source);return;
+  }
   if(surah==27&&focusStart>=67&&focusEnd<=82&&subnodes.length()==3){
    try {for(int k=0;k<subnodes.length();k++){
     JSONObject child=subnodes.getJSONObject(k);

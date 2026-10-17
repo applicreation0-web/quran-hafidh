@@ -95,3 +95,5 @@ jobs:
           path: ${{ runner.temp }}/code-only-for-local-private-assembly/
           retention-days: 1
           if-no-files-found: error
+
+# CP09 Atlas V2: generic public code only; user PDF, index and signing material remain offline.
