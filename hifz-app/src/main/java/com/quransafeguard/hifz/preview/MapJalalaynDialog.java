@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.graphics.Point;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -27,6 +28,9 @@ final class MapJalalaynDialog {
     private final int first;
     private final int last;
     private final Dialog dialog;
+    private final ViewGroup embeddedHost;
+    private final Runnable onEmbeddedClose;
+    private final LinearLayout shell;
     private final TafsirRepository repository;
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private final TextView heading, body;
@@ -46,6 +50,12 @@ final class MapJalalaynDialog {
     }
 
     MapJalalaynDialog(Activity activity,int surah,int first,int last,int requestedAyah) {
+        this(activity,surah,first,last,requestedAyah,null,null);
+    }
+
+    /** In Lecture, embed the same immutable offline Jalalayn text beside/below the Mushaf. */
+    MapJalalaynDialog(Activity activity,int surah,int first,int last,int requestedAyah,
+                      ViewGroup embeddedHost,Runnable onEmbeddedClose) {
         if(surah<1||surah>114)throw new IllegalArgumentException("Invalid surah");
         this.activity=activity;
         this.surah=surah;
@@ -53,9 +63,11 @@ final class MapJalalaynDialog {
         this.last=last;
         ayah=boundedAyah(first,last,requestedAyah);
         repository=new TafsirRepository(activity);
-        dialog=new Dialog(activity);
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        LinearLayout shell=Ui.column(activity);
+        this.embeddedHost=embeddedHost;
+        this.onEmbeddedClose=onEmbeddedClose;
+        dialog=embeddedHost==null?new Dialog(activity):null;
+        if(dialog!=null)dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        shell=Ui.column(activity);
         shell.setBackgroundColor(Ui.PAPER);
         shell.setPadding(Ui.dp(activity,8),Ui.dp(activity,5),Ui.dp(activity,8),Ui.dp(activity,7));
 
@@ -79,13 +91,27 @@ final class MapJalalaynDialog {
         body.setPadding(Ui.dp(activity,6),Ui.dp(activity,5),Ui.dp(activity,6),Ui.dp(activity,5));
         scroll.addView(body,new ScrollView.LayoutParams(-1,-2));
         shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
-        dialog.setContentView(shell);
-        dialog.setCanceledOnTouchOutside(true);
-        dialog.setOnDismissListener(ignored->close());
+        if(dialog!=null) {
+            dialog.setContentView(shell);
+            dialog.setCanceledOnTouchOutside(true);
+            dialog.setOnDismissListener(ignored->close());
+        }
     }
 
     void show() {
         if(closed)return;
+        if(embeddedHost!=null) {
+            if(shell.getParent()!=embeddedHost) {
+                if(shell.getParent() instanceof ViewGroup)
+                    ((ViewGroup)shell.getParent()).removeView(shell);
+                embeddedHost.removeAllViews();
+                embeddedHost.addView(shell,new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
+            }
+            embeddedHost.setVisibility(View.VISIBLE);
+            render();
+            return;
+        }
         dialog.show();
         Window window=dialog.getWindow();
         if(window!=null) {
@@ -136,12 +162,32 @@ final class MapJalalaynDialog {
         });
     }
 
-    boolean isShowing(){return !closed&&dialog.isShowing();}
+    /** Changing the focused verse refreshes the existing panel without moving the Mushaf. */
+    boolean accepts(VerseRef verse) {
+        return verse!=null&&verse.getSurah()==surah
+            &&verse.getAyah()>=first&&verse.getAyah()<=last;
+    }
+    void selectVerse(VerseRef verse) {
+        if(closed||!accepts(verse)||ayah==verse.getAyah())return;
+        ayah=verse.getAyah();
+        scroll.scrollTo(0,0);
+        render();
+    }
+    boolean isShowing(){
+        return !closed&&(dialog!=null?dialog.isShowing()
+            :embeddedHost!=null&&shell.getParent()==embeddedHost
+                &&embeddedHost.getVisibility()==View.VISIBLE);
+    }
     void close() {
         if(closed)return;
         closed=true;
         request++;
         io.shutdownNow();
-        if(dialog.isShowing())dialog.dismiss();
+        if(dialog!=null){
+            if(dialog.isShowing())dialog.dismiss();
+        }else{
+            if(shell.getParent()==embeddedHost)embeddedHost.removeView(shell);
+            if(onEmbeddedClose!=null)onEmbeddedClose.run();
+        }
     }
 }
