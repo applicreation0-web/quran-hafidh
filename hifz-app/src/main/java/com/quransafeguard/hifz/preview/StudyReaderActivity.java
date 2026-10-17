@@ -82,6 +82,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private Button atlasPassageUp,atlasPassageDown;
     private java.util.List<MawdudiPassageIndex.Passage> atlasPassages=java.util.Collections.emptyList();
     private int atlasPassagePosition=-1;
+    private boolean keepAtlasPassageOnNextPage;
     private boolean largeScreen;
     private HifzPrefs hifzPrefs;
     private GeometryRepository geometry;
@@ -208,6 +209,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             updateAtlasPassageButtons();
             atlasLimitButton=Ui.iconButton(this,"","Focus",
                 v->toggleAtlasUnitLimit());
+            atlasLimitButton.setVisibility(View.GONE); // Replace zoom/focus control with passage arrows.
             readerActions.addView(atlasLimitButton);
             updateAtlasUnitLimitButton();
         }
@@ -343,7 +345,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             } catch(RuntimeException invalidPreview) {return;}
         }
         if (next == page) { showControls(); return; }
-        if(mapUnitPreview)selectAtlasPassageOnPage(next);
+        if(mapUnitPreview&&!keepAtlasPassageOnNextPage)selectAtlasPassageOnPage(next);
+        keepAtlasPassageOnNextPage=false;
         closeSemanticTitle();
         closeTafsirPanels();
         mushaf.clearReveal();
@@ -527,7 +530,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         MawdudiPassageIndex.Passage active=atlasPassages.get(next);
         int first=Math.max(active.firstAyah,getIntent().getIntExtra("map114FocusStart",1));
         int target=GeometryRepository.get(this).pageForVerse(new VerseRef(active.surah,first));
-        if(page!=target)setPage(target);
+        if(page!=target){keepAtlasPassageOnNextPage=true;setPage(target);}
         else{
             if(!showMap114Focus())mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
             applySemanticCues();
@@ -1042,6 +1045,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         applySemanticCues();
         updateAtlasCueFooter();
         updateAtlasPassageButtons();
+        if(mapUnitPreview){
+            // Lecture Atlas has no study/debug side-beads or ornamental parallel bars.
+            // Rubʿ/Hizb badge and every original QCF glyph remain untouched.
+            mushaf.evaluateJavascript("(function(){['centermark','sidemarks'].forEach(function(id){"
+                +"var v=document.getElementById(id);if(v)v.style.setProperty('display','none','important');"
+                +"});})();",null);
+        }
         if(mapPreview&&mapPreviewUnits!=null){
             int surah=getIntent().getIntExtra("map114Surah",0);
             if(surah>=1&&surah<=114){
