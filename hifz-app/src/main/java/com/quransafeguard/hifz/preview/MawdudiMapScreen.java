@@ -23,6 +23,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private int surah,selected,page,focusStart,focusEnd;
  private boolean ready,overview=true,passageOpen=false;
  private int activeMacro;
+ private int unitWindowStart; // First of the five visible units; total number of units is unchanged.
  private java.util.List<MawdudiPassageIndex.Passage> passages;
  private MushafView mushaf;
  private Graph graph;
@@ -33,6 +34,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private boolean titleExpanded;
  private LinearLayout icons;
  private TextView passageTitle;
+ private TextView selectedPassageTitle;
  private MapQcfThumbnails thumbnails;
  private int sunHeight;
  private MapJalalaynDialog commentary;
@@ -58,6 +60,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
    passageOpen=saved.getBoolean("map114PassageOpen",false);
    int restored=saved.getInt("map114MacroSelected",activeMacro);
    if(restored>=0&&restored<macros.forSurah(surah).size())activeMacro=restored;
+   unitWindowStart=Math.max(0,Math.min(maxUnitWindowStart(),saved.getInt("map114UnitWindowStart",unitWindowStart)));
+   if(!overview)passageOpen=true;
    MawdudiMapData.Macro restoredUnit=macro();
    page=Math.max(geometry.pageForVerse(new VerseRef(surah,restoredUnit.start)),
        Math.min(MawdudiMapModel.lastPageForVerse(new VerseRef(surah,restoredUnit.end),geometry),
@@ -72,6 +76,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   selected=passages.indexOf(p);page=MawdudiMapModel.firstPage(p,geometry);focusStart=p.firstAyah;focusEnd=p.lastAyah;
   passageOpen=false;overview=macros.forSurah(s).size()>1;
   activeMacro=macroIndex(s,ayah);
+  unitWindowStart=centerUnitWindow(activeMacro);
+  if(!overview)passageOpen=true;
  }
  private int macroIndex(int s,int ayah){
   java.util.List<MawdudiMapData.Macro> items=macros.forSurah(s);
@@ -107,7 +113,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   focusEnd=first.lastAyah;
   page=geometry.pageForVerse(new VerseRef(surah,chosen.start));
   activeMacro=ordinal;
-  passageOpen=false;
+  unitWindowStart=centerUnitWindow(activeMacro);
+  passageOpen=true; // Direct full-page Muṣḥaf: no intermediate miniatures/mosaic.
   setLevel(false);
  }
  private void goBack(){
@@ -147,11 +154,18 @@ final class MawdudiMapScreen implements MushafView.Listener {
   passageTitle.setGravity(Gravity.CENTER);
   passageTitle.setMaxLines(3);passageTitle.setEllipsize(TextUtils.TruncateAt.END);
   passageTitle.setOnClickListener(v->showCurrentTitle());
-  passageTitle.setMinHeight(Ui.dp(activity,56));
+  passageTitle.setMinHeight(Ui.dp(activity,50));
   titlePanel=new ScrollView(activity);titlePanel.setFillViewport(false);
   titlePanel.setVerticalScrollBarEnabled(true);
   titlePanel.addView(passageTitle,new ScrollView.LayoutParams(-1,-2));
   root.addView(titlePanel,new LinearLayout.LayoutParams(-1,Ui.dp(activity,56)));
+  selectedPassageTitle=Ui.text(activity,"",11f,false);
+  selectedPassageTitle.setGravity(Gravity.CENTER);
+  selectedPassageTitle.setMaxLines(3);
+  selectedPassageTitle.setEllipsize(null);
+  selectedPassageTitle.setPadding(Ui.dp(activity,8),0,Ui.dp(activity,8),Ui.dp(activity,2));
+  selectedPassageTitle.setContentDescription("Titre Ayah Themes du passage actif");
+  root.addView(selectedPassageTitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,48)));
   thumbnails=new MapQcfThumbnails(activity,new MapQcfThumbnails.Listener(){
    @Override public void onPageChosen(int p){onThumbnailPage(p);}
    @Override public void onOpenReading(int p){onThumbnailPage(p);openReader();}
@@ -254,9 +268,12 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(overview){
    heading.setText(surahLabel+" · "+total+" unités");
    passageTitle.setText("");
+   selectedPassageTitle.setText("");
   }else{
    heading.setText(surahLabel+" · U"+(activeMacro+1)+"/"+total);
    passageTitle.setText(unit.label);
+   String subtitle=graph.selectedTitle();
+   selectedPassageTitle.setText(subtitle==null?"":subtitle);
   }
   heading.setContentDescription("Changer d'unité · "+heading.getText());
   int desiredHeight=sunHeight;
@@ -274,6 +291,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private void renderPage(){
   mushaf.setVisibility(View.GONE);
   passageTitle.setVisibility(overview?View.GONE:View.VISIBLE);
+  selectedPassageTitle.setVisibility(overview?View.GONE:View.VISIBLE);
   // ROOT is a map only: keep the selected unit/page cursor but never render
   // a surah-wide QCF mosaic. This also prevents costly SVG decoding on BOOX.
   thumbnails.setVisibility(overview?View.GONE:View.VISIBLE);
@@ -287,8 +305,13 @@ final class MawdudiMapScreen implements MushafView.Listener {
   int first=geometry.pageForVerse(new VerseRef(surah,unit.start));
   int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,unit.end),geometry);
   page=Math.max(first,Math.min(last,page));
-  thumbnails.setMosaic(!passageOpen);
-  thumbnails.showPages(first,last,page,surah,unit.start,unit.end,true,0,0);
+  // Always show the authentic selected QCF page. Gray shading follows the
+  // entire selected Ayah Themes passage, not just its first/last verse.
+  thumbnails.setMosaic(false);
+  int selectedFirst=geometry.pageForVerse(new VerseRef(surah,focusStart));
+  int selectedLast=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,focusEnd),geometry);
+  thumbnails.showPages(first,last,page,surah,focusStart,focusEnd,false,
+      selectedFirst,selectedLast);
  }
  private void onThumbnailPage(int desired){
   closeTitle();
@@ -303,7 +326,19 @@ final class MawdudiMapScreen implements MushafView.Listener {
   MawdudiMapData.Macro unit=macro();
   page=Math.max(geometry.pageForVerse(new VerseRef(surah,unit.start)),
       Math.min(MawdudiMapModel.lastPageForVerse(new VerseRef(surah,unit.end),geometry),desired));
-  passageOpen=true; // Selected PHYSICAL page, never a selected Ayah Themes passage.
+  passageOpen=true;
+  // A page switch retains the active passage if it intersects the page; otherwise
+  // select the first genuine canonical passage visible on that page.
+  if(page<geometry.pageForVerse(new VerseRef(surah,focusStart))
+     ||page>MawdudiMapModel.lastPageForVerse(new VerseRef(surah,focusEnd),geometry)){
+   for(VerseRef v:geometry.versesOnLines(geometry.lineIdsOnPage(page))){
+    if(v.getSurah()!=surah||v.getAyah()<unit.start||v.getAyah()>unit.end)continue;
+    MawdudiPassageIndex.Passage p=index.at(surah,v.getAyah());
+    selected=passages.indexOf(p);
+    focusStart=p.firstAyah;focusEnd=p.lastAyah;
+    break;
+   }
+  }
   refresh();
  }
  private void turn(int d){onThumbnailPage(page+d);}
@@ -321,7 +356,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
       .putExtra("map114Surah",surah)
       .putExtra("map114UnitOrdinal",activeMacro+1)
       .putExtra("map114FocusStart",unit.start)
-      .putExtra("map114FocusEnd",unit.end);
+      .putExtra("map114FocusEnd",unit.end)
+      .putExtra("map114PassageId",current().id)
+      .putExtra("map114SelectedStart",focusStart)
+      .putExtra("map114SelectedEnd",focusEnd);
   closeTitle();
   activity.startActivityForResult(intent,11436);
  }
@@ -337,16 +375,16 @@ final class MawdudiMapScreen implements MushafView.Listener {
  void save(Bundle b){
   b.putBoolean("map114Overview",overview);
   b.putBoolean("map114PassageOpen",passageOpen);
+  b.putInt("map114UnitWindowStart",unitWindowStart);
   b.putInt("map114MacroSelected",activeMacro);
   b.putInt("map114Surah",surah);
   b.putInt("map114Ayah",macro().start);
   b.putInt("map114Page",page);
-  b.putInt("map114FocusStart",macro().start);
-  b.putInt("map114FocusEnd",macro().end);
+  b.putInt("map114FocusStart",focusStart);
+  b.putInt("map114FocusEnd",focusEnd);
  }
  boolean back(){
   if(titleExpanded){closeTitle();return true;}
-  if(passageOpen){passageOpen=false;refresh();return true;}
   if(!overview&&macros.forSurah(surah).size()>1){setLevel(true);return true;}
   return false;
  }
@@ -380,53 +418,78 @@ final class MawdudiMapScreen implements MushafView.Listener {
  @Override public void onVerseTap(VerseRef verse){openReader();}
  @Override public void onSurfaceTap(){openReader();}
 
- /** Stable unit coordinates and a physical Mushaf page-scale strip. */
+ /** Five-position sliding unit rail and permanent physical QCF page overview.
+  * No source unit is split, omitted or renumbered; this is a presentation window only.
+  */
+ private int unitCount(){return macros.forSurah(surah).size();}
+ private int visibleUnitCount(){return Math.min(5,unitCount());}
+ private int maxUnitWindowStart(){return Math.max(0,unitCount()-visibleUnitCount());}
+ private int centerUnitWindow(int ordinal){
+  return Math.max(0,Math.min(maxUnitWindowStart(),ordinal-visibleUnitCount()/2));
+ }
+ private void shiftUnitWindow(int direction){
+  int next=Math.max(0,Math.min(maxUnitWindowStart(),unitWindowStart+direction));
+  if(next==unitWindowStart)return;
+  unitWindowStart=next;
+  graph.invalidate();
+  overviewGraph.invalidate();
+ }
  private int atlasHeight(int width,int height){
-  int minimum=Ui.dp(activity,macros.forSurah(surah).size()>6?190:148);
-  int desired=minimum;
-  // Keep a useful thumbnail viewport after headings and both navigation rows.
-  int budget=height-Ui.dp(activity,48+56+48+100+180);
-  return Math.max(minimum,Math.min(desired,budget));
+  // One unit row for both Al-Fatiha and 11-unit An-Nisa. The second line is
+  // reserved for the five canonical Ayah Themes passages, not for more units.
+  return Ui.dp(activity,148);
  }
- private float atlasX(int index,int total,int width){
-  int columns=Math.min(6,total);
-  return width*((index%columns)+.5f)/columns;
+ private float atlasX(int visibleOrdinal,int width){
+  return width*(visibleOrdinal+.5f)/visibleUnitCount();
  }
- private float atlasY(int index,int total){
-  return Ui.dp(activity,total>6&&index>=6?76:27);
- }
+ private float atlasY(){return Ui.dp(activity,27);}
  private int atlasUnitAt(float x,float y,int width){
-  int count=macros.forSurah(surah).size(),winner=-1;
-  float best=Ui.dp(activity,25)*Ui.dp(activity,25);
-  for(int i=0;i<count;i++){
-   float dx=x-atlasX(i,count,width),dy=y-atlasY(i,count);
-   float d=dx*dx+dy*dy;if(d<best){best=d;winner=i;}
+  if(Math.abs(y-atlasY())>Ui.dp(activity,25))return -1;
+  int nearest=-1;float best=Ui.dp(activity,27)*Ui.dp(activity,27);
+  for(int j=0;j<visibleUnitCount();j++){
+   float dx=x-atlasX(j,width);
+   if(dx*dx<best){best=dx*dx;nearest=unitWindowStart+j;}
   }
-  return winner;
+  return nearest;
  }
  private void drawAtlas(Canvas c,Paint p,int width,int height){
   java.util.List<MawdudiMapData.Macro> units=macros.forSurah(surah);
-  int total=units.size();int columns=Math.min(6,total);
+  int total=units.size(),visible=visibleUnitCount();
   p.setAntiAlias(true);p.setColor(Ui.INK);
   p.setStrokeWidth(Ui.dp(activity,1));p.setTextAlign(Paint.Align.CENTER);
-  // All units stay visible at fixed places; no sun rays, no card tiles.
-  for(int i=0;i<total;i++){
-   float x=atlasX(i,total,width),y=atlasY(i,total);
+  float y=atlasY();
+  if(visible>1){
    p.setStyle(Paint.Style.STROKE);
-   if(i%columns!=columns-1&&i+1<total&&(i+1)/columns==i/columns)
-    c.drawLine(x+Ui.dp(activity,8),y,atlasX(i+1,total,width)-Ui.dp(activity,8),y,p);
-   p.setStyle(Paint.Style.FILL);
-   c.drawCircle(x,y,Ui.dp(activity,i==activeMacro?8:4),p);
-   if(i==activeMacro){p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(Ui.dp(activity,1));c.drawCircle(x,y,Ui.dp(activity,12),p);p.setStyle(Paint.Style.FILL);}
-   p.setTextSize(Ui.dp(activity,11));c.drawText("U"+(i+1),x,y-Ui.dp(activity,16),p);
+   c.drawLine(atlasX(0,width)+Ui.dp(activity,8),y,
+       atlasX(visible-1,width)-Ui.dp(activity,8),y,p);
   }
+  for(int j=0;j<visible;j++){
+   int ordinal=unitWindowStart+j;float x=atlasX(j,width);
+   p.setStyle(Paint.Style.FILL);
+   c.drawCircle(x,y,Ui.dp(activity,ordinal==activeMacro?8:4),p);
+   if(ordinal==activeMacro){
+    p.setStyle(Paint.Style.STROKE);
+    p.setStrokeWidth(Ui.dp(activity,1));
+    c.drawCircle(x,y,Ui.dp(activity,12),p);
+    p.setStyle(Paint.Style.FILL);
+   }
+   p.setTextSize(Ui.dp(activity,11));
+   c.drawText("U"+(ordinal+1),x,y-Ui.dp(activity,16),p);
+  }
+  // Small edge marks communicate that further units exist off-screen.
+  p.setTextSize(Ui.dp(activity,12));
+  if(unitWindowStart>0)c.drawText("‹",Ui.dp(activity,5),y+Ui.dp(activity,4),p);
+  if(unitWindowStart+visible<total)c.drawText("›",width-Ui.dp(activity,5),y+Ui.dp(activity,4),p);
   int firstPage=geometry.pageForVerse(new VerseRef(surah,1));
   java.util.List<MawdudiPassageIndex.Passage> all=index.forSurah(surah);
-  int lastPage=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,all.get(all.size()-1).lastAyah),geometry);
+  int lastPage=MawdudiMapModel.lastPageForVerse(
+      new VerseRef(surah,all.get(all.size()-1).lastAyah),geometry);
   int pageCount=Math.max(1,lastPage-firstPage+1);
   float left=Ui.dp(activity,17),right=width-Ui.dp(activity,17);
-  float top=Ui.dp(activity,total>6?106:58),bottom=top+Ui.dp(activity,5);
-  p.setColor(0xffcecdc7);p.setStyle(Paint.Style.FILL);c.drawRoundRect(left,top,right,bottom,Ui.dp(activity,3),Ui.dp(activity,3),p);p.setColor(Ui.INK);
+  float top=Ui.dp(activity,58),bottom=top+Ui.dp(activity,5);
+  p.setColor(0xffcecdc7);p.setStyle(Paint.Style.FILL);
+  c.drawRoundRect(left,top,right,bottom,Ui.dp(activity,3),Ui.dp(activity,3),p);
+  p.setColor(Ui.INK);
   MawdudiMapData.Macro active=macro();
   int a=geometry.pageForVerse(new VerseRef(surah,active.start));
   int b=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,active.end),geometry);
@@ -444,11 +507,14 @@ final class MawdudiMapScreen implements MushafView.Listener {
    c.drawCircle(tick,(top+bottom)/2,Ui.dp(activity,1),p);
   }
   p.setStyle(Paint.Style.FILL);p.setTextSize(Ui.dp(activity,10));
-  p.setTextAlign(Paint.Align.LEFT);c.drawText("Pages "+firstPage+"–"+lastPage,left,bottom+Ui.dp(activity,16),p);
-  p.setTextAlign(Paint.Align.RIGHT);c.drawText("U"+(activeMacro+1)+" · "+a+"–"+b,right,bottom+Ui.dp(activity,16),p);
+  p.setTextAlign(Paint.Align.LEFT);
+  c.drawText("Pages "+firstPage+"–"+lastPage,left,bottom+Ui.dp(activity,16),p);
+  p.setTextAlign(Paint.Align.RIGHT);
+  c.drawText("U"+(activeMacro+1)+" · "+a+"–"+b,right,bottom+Ui.dp(activity,16),p);
  }
  private final class OverviewGraph extends View {
   final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+  float downX,downY;
   OverviewGraph(){super(activity);setFocusable(true);}
   int position(int ignored){return 0;}
   @Override protected void onMeasure(int w,int h){
@@ -457,7 +523,15 @@ final class MawdudiMapScreen implements MushafView.Listener {
   }
   @Override protected void onDraw(Canvas canvas){drawAtlas(canvas,paint,getWidth(),getHeight());}
   @Override public boolean onTouchEvent(MotionEvent event){
+   if(event.getAction()==MotionEvent.ACTION_DOWN){
+    downX=event.getX();downY=event.getY();return true;
+   }
    if(event.getAction()!=MotionEvent.ACTION_UP)return true;
+   float dx=event.getX()-downX,dy=event.getY()-downY;
+   if(Math.abs(dx)>Ui.dp(activity,40)&&Math.abs(dx)>Math.abs(dy)*1.2f
+       &&Math.abs(downY-atlasY())<Ui.dp(activity,30)){
+    shiftUnitWindow(dx>0?-1:1);return true;
+   }
    int i=atlasUnitAt(event.getX(),event.getY(),getWidth());
    if(i<0)return true;
    openMacro(i);performClick();return true;
@@ -547,7 +621,13 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(event.getAction()==MotionEvent.ACTION_DOWN){downX=event.getX();downY=event.getY();return true;}
   if(event.getAction()!=MotionEvent.ACTION_UP)return true;
   float dx=event.getX()-downX,dy=event.getY()-downY;
-  if(Math.abs(dx)>Ui.dp(activity,40)&&Math.abs(dx)>Math.abs(dy)*1.2f){moveWithinUnit(dx>0?1:-1);return true;}
+  if(Math.abs(dx)>Ui.dp(activity,40)&&Math.abs(dx)>Math.abs(dy)*1.2f){
+    if(Math.abs(downY-atlasY())<Ui.dp(activity,30))
+      shiftUnitWindow(dx>0?-1:1);
+    else if(Math.abs(downY-passageY(getHeight()))<Ui.dp(activity,32))
+      moveWithinUnit(dx>0?1:-1);
+    return true;
+   }
   int width=getWidth(),height=getHeight();
   int unit=atlasUnitAt(event.getX(),event.getY(),width);
   if(unit>=0){openMacro(unit);performClick();return true;}
