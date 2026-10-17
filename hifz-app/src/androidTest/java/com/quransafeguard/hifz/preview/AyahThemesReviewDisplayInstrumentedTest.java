@@ -169,8 +169,8 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
   String script="(function(){var grid=document.querySelector('.grid');"+
     "if(!grid||grid.querySelectorAll('button').length<1||grid.querySelectorAll('button').length>6)return false;"+
     "if(document.documentElement.scrollHeight>innerHeight+1)return false;"+
-    "return Array.from(grid.querySelectorAll('img')).some(x=>"+
-    "x.complete&&x.naturalWidth>0&&x.getAttribute('src').startsWith('data:image/svg+xml;base64,'));})()";
+    "return Array.from(grid.querySelectorAll('img')).every(x=>"+
+    "x.complete&&x.naturalWidth>0&&x.naturalHeight>0&&Math.abs(x.naturalWidth/x.naturalHeight-345/550)<0.03&&x.getAttribute('src').startsWith('data:image/svg+xml;base64,'));})()";
   for(int attempt=0;attempt<72;attempt++){
    CountDownLatch ready=new CountDownLatch(1);
    AtomicReference<String> result=new AtomicReference<>();
@@ -180,7 +180,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    if("true".equals(result.get()))return;
    android.os.SystemClock.sleep(250);
   }
-  fail("The Atlas must render no more than six local vector QCF pages per view");
+  fail("All displayed Atlas thumbnail SVG pages must load at the native QCF ratio");
  }
  /** Unit-only page view: original SVG fully contained, never a fake page or passage text. */
  private static void awaitAtlasFullPage(ActivityScenario<IbnKathirMapActivity> scenario,
