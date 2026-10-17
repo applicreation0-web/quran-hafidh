@@ -95,7 +95,7 @@ check(len(screens)>=8 and all_actions>=38, "active Hifz icon inventory unexpecte
 # their screen is hidden until Hifz progresses.
 expected = {
     "Accueil":"ic_ui_home","Lecture":"ic_ui_reading","Carte":"ic_ui_semantic_map",
-    "Afficher les amorces":"ic_ui_recall_key","Tafsir":"ic_ui_tafsir",
+    "Afficher les ancres":"ic_hifz_anchor","Tafsir":"ic_ui_tafsir",
     "Focus":"ic_ui_focus","Révision":"ic_ui_revision",
     "Difficulté":"ic_ui_difficulty","Annoter":"ic_ui_edit",
     "Quiz":"ic_ui_quiz","Progression":"ic_ui_progress_map",
