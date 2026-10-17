@@ -594,6 +594,15 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     @Override public void onSurfaceTap() { openPreviewInReader(); }
     @Override public void onPageSwipe(int delta) { turnPreviewPage(delta); }
 
+    /** The Atlas viewer is a separate Activity; Android Back returns its exact page. */
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
+        super.onActivityResult(requestCode,resultCode,data);
+        if(map114==null||requestCode!=11436||resultCode!=RESULT_OK||data==null)return;
+        map114.returnFromReader(data.getIntExtra("map114Surah",0),
+            data.getIntExtra("map114UnitOrdinal",0),
+            data.getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,0));
+    }
+
     @Override protected void onSaveInstanceState(Bundle out) {
         if(map114!=null){map114.save(out);super.onSaveInstanceState(out);return;}
         if (baqaraPilot != null) {
