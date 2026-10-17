@@ -22,9 +22,17 @@ final class MawdudiMapData {
  }
  static MawdudiMapData load(Context c,MawdudiPassageIndex index)throws Exception {
   AtlasPrivateV2 source=AtlasPrivateV2.load(c,index);
+  // Existing debug versions can still load without the newly approved label
+  // asset; malformed or tampered copies must not silently fall back.
+  AtlasUnitTitles approved=null;
+  try{approved=AtlasUnitTitles.load(c,source);}
+  catch(java.io.FileNotFoundException notYetPackaged){/* structural IDs remain valid */}
   List<Macro> rows=new ArrayList<>();
-  for(AtlasPrivateV2.Unit u:source.units())
-   rows.add(new Macro(u.surah,u.start,u.end,"Unité "+u.ordinal+" · "+u.start+"–"+u.end));
+  for(AtlasPrivateV2.Unit u:source.units()){
+   String title=approved==null?null:approved.forUnit(u.id);
+   rows.add(new Macro(u.surah,u.start,u.end,
+       title==null?"Unité "+u.ordinal+" · "+u.start+"–"+u.end:title));
+  }
   return new MawdudiMapData(rows);
  }
  static MawdudiMapData parse(String raw,MawdudiPassageIndex index)throws JSONException {
