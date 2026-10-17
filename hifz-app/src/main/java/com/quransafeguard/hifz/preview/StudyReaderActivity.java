@@ -111,7 +111,22 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                     if(candidate.lastAyah>=lo&&candidate.firstAyah<=hi)inside.add(candidate);
                 atlasPassages=inside;
                 if(state!=null)atlasPassagePosition=state.getInt("map114PassageIndex",-1);
-                if(atlasPassagePosition>=inside.size())atlasPassagePosition=-1;
+                else {
+                    // Direct passage selection from Atlas must survive opening Lecture
+                    // even when multiple Ayah Themes passages start on one QCF page.
+                    String requestedId=getIntent().getStringExtra("map114PassageId");
+                    int requestedStart=getIntent().getIntExtra("map114SelectedStart",-1);
+                    int requestedEnd=getIntent().getIntExtra("map114SelectedEnd",-1);
+                    for(int k=0;k<inside.size();k++){
+                        MawdudiPassageIndex.Passage candidate=inside.get(k);
+                        if(requestedId!=null&&requestedId.equals(candidate.id)
+                            &&requestedStart==candidate.firstAyah
+                            &&requestedEnd==candidate.lastAyah){
+                            atlasPassagePosition=k;break;
+                        }
+                    }
+                }
+                if(atlasPassagePosition<0||atlasPassagePosition>=inside.size())atlasPassagePosition=-1;
             }catch(RuntimeException missingIndex){atlasPassages=java.util.Collections.emptyList();}
         }
         int jumpPage = getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0);
