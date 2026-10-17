@@ -211,6 +211,47 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    });
    awaitAtlasFullPage(scenario,screen,last);
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-unit-reading-return-exact-page.png");
+   // 11-unit An-Nisa must be entirely accessible via the *same* five-position
+   // unit rail. The Ayah Themes five-position passage rail is not modified.
+   scenario.onActivity(a->{
+    try{
+     MawdudiMapScreen map=screen.get();
+     java.lang.reflect.Method choose=MawdudiMapScreen.class.getDeclaredMethod("choose",int.class,int.class);
+     java.lang.reflect.Method setLevel=MawdudiMapScreen.class.getDeclaredMethod("setLevel",boolean.class);
+     java.lang.reflect.Method openUnit=MawdudiMapScreen.class.getDeclaredMethod("openMacro",int.class);
+     choose.setAccessible(true);setLevel.setAccessible(true);openUnit.setAccessible(true);
+     choose.invoke(map,4,1);setLevel.invoke(map,true);
+     assertEquals("An-Nisa retains all 11 sourced units",11,
+       ((MawdudiMapData)field(map,"macros")).forSurah(4).size());
+     assertEquals("First window starts at U1",0,((Integer)field(map,"unitWindowStart")).intValue());
+     android.view.View rail=(android.view.View)field(map,"overviewGraph");
+     int width=rail.getWidth();
+     assertTrue("The top rail must have measurable width",width>0);
+     float y=Ui.dp(a,31);
+     for(int n=1;n<=6;n++){
+      android.view.MotionEvent down=android.view.MotionEvent.obtain(0,0,
+          android.view.MotionEvent.ACTION_DOWN,width*.75f,y,0);
+      android.view.MotionEvent up=android.view.MotionEvent.obtain(0,1,
+          android.view.MotionEvent.ACTION_UP,width*.25f,y,0);
+      rail.onTouchEvent(down);rail.onTouchEvent(up);down.recycle();up.recycle();
+      assertEquals("A swipe moves only the visible unit window",n,
+          ((Integer)field(map,"unitWindowStart")).intValue());
+     }
+     android.view.MotionEvent down=android.view.MotionEvent.obtain(0,0,
+         android.view.MotionEvent.ACTION_DOWN,width*.9f,y,0);
+     android.view.MotionEvent up=android.view.MotionEvent.obtain(0,1,
+         android.view.MotionEvent.ACTION_UP,width*.9f,y,0);
+     rail.onTouchEvent(down);rail.onTouchEvent(up);down.recycle();up.recycle();
+     assertEquals("Fifth node of last window selects An-Nisa U11",10,
+         ((Integer)field(map,"activeMacro")).intValue());
+     assertEquals("Last unit still starts on the authentic 4:176 page",
+         GeometryRepository.get(a).pageForVerse(new VerseRef(4,176)),
+         ((Integer)field(map,"page")).intValue());
+     assertTrue("Sliding does not change the Ayah Themes corpus",
+         MawdudiPassageIndex.load(a).forSurah(4).size()>=23);
+    }catch(Exception ex){throw new AssertionError(ex);}
+   });
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-an-nisa-u11-sliding-units.png");
    scenario.onActivity(a->screen.get().destroy());
   }
  }
