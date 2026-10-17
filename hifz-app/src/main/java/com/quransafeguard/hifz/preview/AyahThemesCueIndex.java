@@ -153,6 +153,31 @@ final class AyahThemesCueIndex {
         Cue cue=byId.get(id);return cue==null?null:cue.title;
     }
 
+    /** Read-only title of the canonical passage containing this verse. */
+    String titleAt(int surah,int ayah) {
+        if(surah<1||surah>114||ayah<1)return null;
+        for(Cue cue:byId.values())
+            if(cue.surah==surah&&cue.start<=ayah&&cue.end>=ayah)
+                return cue.title;
+        return null;
+    }
+
+    /** Titles of the genuine starts on this QCF page, optionally restricted to an Atlas unit.
+     * The 1,053 private Ayah Themes records are neither split nor rewritten.
+     */
+    JSONArray forUnitPage(int page,int surah,int first,int last) {
+        JSONArray all=forPage(page);
+        JSONArray filtered=new JSONArray();
+        for(int i=0;i<all.length();i++) {
+            JSONObject cue=all.optJSONObject(i);
+            if(cue==null)continue;
+            if(surah>0&&(cue.optInt("surah")!=surah
+                    ||cue.optInt("start")<first||cue.optInt("start")>last))continue;
+            filtered.put(cue);
+        }
+        return filtered;
+    }
+
     /** Refuse stale taps or locations from unrelated historical boundaries. */
     String titleForVisibleStart(int page,String id) {
         Cue cue=byId.get(id);
