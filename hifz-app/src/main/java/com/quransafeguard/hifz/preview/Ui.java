@@ -313,6 +313,7 @@ final class Ui {
         if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
         if (s.equals("carte") || s.equals("carte ibn kathīr")) return R.drawable.ic_ui_semantic_map;
         if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
+        if (s.contains("passage vers le haut") || s.contains("passage vers le bas")) return R.drawable.ic_ui_previous;
         if (s.contains("passage précédent du corpus")) return R.drawable.ic_ui_jump_prev;
         if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_jump_next;
         if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
@@ -344,7 +345,7 @@ final class Ui {
         if (s.contains("arrêter") || s.contains("arreter")) return R.drawable.ic_ui_stop;
         if (s.contains("vérifier") || s.contains("verifier")) return R.drawable.ic_ui_validate;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
-        if (s.contains("ancre") || s.contains("amorce")) return R.drawable.ic_ui_semantic_key;
+        if (s.contains("ancre") || s.contains("amorce")) return R.drawable.ic_ui_recall_key;
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
         if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
