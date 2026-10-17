@@ -161,14 +161,14 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    scenario.onActivity(a->screen.get().destroy());
   }
  }
- /** Real QCF mosaic shows every unit page using bounded raster thumbnails. */
+ /** Real QCF mosaic shows at most six native-ratio vector pages per BOOX viewport. */
  private static void awaitAtlasMosaic(ActivityScenario<IbnKathirMapActivity> scenario,
      AtomicReference<MawdudiMapScreen> screen)throws Exception {
   String script="(function(){var grid=document.querySelector('.grid');"+
-    "if(!grid||grid.querySelectorAll('button').length<4)return false;"+
+    "if(!grid||grid.querySelectorAll('button').length<1||grid.querySelectorAll('button').length>6)return false;"+
     "if(document.documentElement.scrollHeight>innerHeight+1)return false;"+
     "return Array.from(grid.querySelectorAll('img')).some(x=>"+
-    "x.complete&&x.naturalWidth>0&&x.getAttribute('src').startsWith('data:image/png'));})()";
+    "x.complete&&x.naturalWidth>0&&x.getAttribute('src').startsWith('data:image/svg+xml;base64,'));})()";
   for(int attempt=0;attempt<72;attempt++){
    CountDownLatch ready=new CountDownLatch(1);
    AtomicReference<String> result=new AtomicReference<>();
@@ -178,7 +178,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    if("true".equals(result.get()))return;
    android.os.SystemClock.sleep(250);
   }
-  fail("The Atlas must render authentic local QCF pages as a small in-memory mosaic");
+  fail("The Atlas must render no more than six local vector QCF pages per view");
  }
  /** Unit-only page view: original SVG fully contained, never a fake page or passage text. */
  private static void awaitAtlasFullPage(ActivityScenario<IbnKathirMapActivity> scenario,
