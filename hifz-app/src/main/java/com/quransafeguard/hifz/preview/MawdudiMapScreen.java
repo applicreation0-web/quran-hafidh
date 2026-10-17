@@ -168,10 +168,22 @@ final class MawdudiMapScreen implements MushafView.Listener {
   selectedPassageTitle.setTypeface(android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.ITALIC));
   selectedPassageTitle.setTextColor(Ui.INK);
   selectedPassageTitle.setGravity(Gravity.CENTER);
-  selectedPassageTitle.setMaxLines(3);
-  selectedPassageTitle.setEllipsize(null);
+  // Authentic titles may be long. Never display clipped text without access
+  // to the complete untouched source wording.
+  selectedPassageTitle.setMaxLines(2);
+  selectedPassageTitle.setEllipsize(TextUtils.TruncateAt.END);
+  selectedPassageTitle.setOnClickListener(v->{
+   if(overview)return;
+   String complete=graph.selectedTitle();
+   if(complete!=null&&!complete.trim().isEmpty())
+    new android.app.AlertDialog.Builder(activity)
+        .setTitle("Ayah Themes")
+        .setMessage(complete)
+        .setPositiveButton("Fermer",null)
+        .show();
+  });
   selectedPassageTitle.setPadding(Ui.dp(activity,8),0,Ui.dp(activity,8),Ui.dp(activity,2));
-  selectedPassageTitle.setContentDescription("Titre Ayah Themes du passage actif");
+  selectedPassageTitle.setContentDescription("Titre Ayah Themes du passage actif · toucher pour lire en entier");
   root.addView(selectedPassageTitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?44:48)));
   thumbnails=new MapQcfThumbnails(activity,new MapQcfThumbnails.Listener(){
    @Override public void onPageChosen(int p){onThumbnailPage(p);}
