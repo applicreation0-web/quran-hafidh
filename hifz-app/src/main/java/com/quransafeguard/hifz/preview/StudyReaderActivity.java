@@ -202,8 +202,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(mapUnitPreview){
             atlasPassageUp=Ui.iconButton(this,"","Passage vers le haut",v->moveAtlasPassage(-1));
             atlasPassageDown=Ui.iconButton(this,"","Passage vers le bas",v->moveAtlasPassage(1));
-            Ui.setButtonIcon(atlasPassageUp,R.drawable.ic_ui_passage_up);
-            Ui.setButtonIcon(atlasPassageDown,R.drawable.ic_ui_passage_down);
+            Ui.setButtonIcon(atlasPassageUp,R.drawable.ic_ui_previous);
+            atlasPassageUp.setRotation(90f);
+            Ui.setButtonIcon(atlasPassageDown,R.drawable.ic_ui_previous);
+            atlasPassageDown.setRotation(270f);
             readerActions.addView(atlasPassageUp);
             readerActions.addView(atlasPassageDown);
             updateAtlasPassageButtons();
