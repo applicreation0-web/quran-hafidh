@@ -182,7 +182,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
         if(mapUnitPreview){
-            atlasLimitButton=Ui.iconButton(this,"","Limiter la lecture à l'unité",
+            atlasLimitButton=Ui.iconButton(this,"","Focus",
                 v->toggleAtlasUnitLimit());
             readerActions.addView(atlasLimitButton);
             updateAtlasUnitLimitButton();
