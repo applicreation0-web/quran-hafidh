@@ -140,7 +140,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
    windowWidth=metrics.getBounds().width()-insets.left-insets.right;
   }
   sunHeight=atlasHeight(windowWidth,activity.getResources().getDisplayMetrics().heightPixels);
-  axis=new HorizontalScrollView(activity);axis.setFillViewport(true);
+  axis=new HorizontalScrollView(activity){
+   // The map graph owns horizontal touch gestures, not the empty scroll container.
+   @Override public boolean onInterceptTouchEvent(MotionEvent event){return false;}
+  };axis.setFillViewport(true);
   axis.setHorizontalScrollBarEnabled(false);
   graph=new Graph();overviewGraph=new OverviewGraph();
   axis.addView(overviewGraph,
@@ -253,6 +256,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
    // The current passage can span multiple units (4:101-104 spans U7/U8).
    // Resolve the next passage's actual unit instead of assuming one unit step.
    activeMacro=macroIndex(surah,direction>0?passage.firstAyah:passage.lastAyah);
+   unitWindowStart=centerUnitWindow(activeMacro);
   }
   selected=next;focusStart=passage.firstAyah;focusEnd=passage.lastAyah;
   passageOpen=true;
