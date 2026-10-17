@@ -118,15 +118,28 @@ final class MapQcfThumbnails extends WebView {
       .append(".current b{outline:1px solid #121211;outline-offset:1px;font-weight:bold}</style></head><body><div class='grid'>");
   for(int p=start;p<=end;p++){
    html.append("<button class='").append(p%2==0?"even":"odd").append(p==selected?" current":"")
-      .append("' aria-label='Page ").append(p).append("' onclick='MapPages.choose(").append(p).append(")'>");
-   try{
-    String svg=readSvg(getContext(),p);
-    String encoded=android.util.Base64.encodeToString(svg.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
-    html.append("<img alt='Muṣḥaf ").append(p).append("' src='data:image/svg+xml;base64,").append(encoded).append("'>");
-   }catch(Exception missing){html.append("<span>Page indisponible</span>");}
-   html.append("<b>").append(p).append("</b></button>");
+      .append("' aria-label='Page ").append(p).append("' onclick='MapPages.choose(").append(p).append(")'>")
+      .append("<img id='qcf").append(p).append("' alt='Muṣḥaf ").append(p)
+      .append("' loading='lazy'><b>").append(p).append("</b></button>");
   }
-  html.append("</div></body></html>");
+  // Each original SVG is transferred ONCE, rasterized into a tiny immutable PNG
+  // and then immediately released. Never keep 48 huge full-SVG data URLs alive.
+  html.append("</div><script>")
+      .append("var nextPage=").append(start).append(",lastPage=").append(end).append(";")
+      .append("function requestNext(){if(nextPage<=lastPage)MapPages.thumb(nextPage++);}")
+      .append("function receiveThumb(p,src){var el=document.getElementById('qcf'+p);")
+      .append("if(!el)return;var img=new Image();")
+      .append("function done(){img.onload=null;img.onerror=null;img.src='';setTimeout(requestNext,0);}")
+      .append("img.onload=function(){try{var c=document.createElement('canvas');c.width=106;c.height=162;")
+      .append("var ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,106,162);")
+      .append("var ratio=img.naturalWidth/img.naturalHeight;")
+      .append("var w=Math.min(106,Math.max(1,Math.round(162*ratio)));")
+      .append("ctx.drawImage(img,Math.floor((106-w)/2),0,w,162);")
+      .append("el.src=c.toDataURL('image/png');c.width=0;c.height=0;")
+      .append("}catch(e){el.alt='Miniature indisponible';}done();};")
+      .append("img.onerror=function(){el.alt='Miniature indisponible';done();};")
+      .append("img.src='data:image/svg+xml;base64,'+src;}")
+      .append("window.addEventListener('load',requestNext);</script></body></html>");
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
  }
  private void drawChunk(){
@@ -167,6 +180,23 @@ final class MapQcfThumbnails extends WebView {
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
  }
  private final class Bridge {
+  /** Sequential on-device rasterization of authentic local QCF SVG pages.
+   * Never loads multiple full pages in one HTML document.
+   */
+  @JavascriptInterface public void thumb(int page){
+   if(page<1||page>604)return;
+   post(()->{
+    if(!mosaicMode||page<start||page>end)return;
+    try{
+     String original=readSvg(getContext(),page);
+     String encoded=android.util.Base64.encodeToString(
+         original.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
+     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'"+encoded+"');",null);
+    }catch(Exception unavailable){
+     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'');",null);
+    }
+   });
+  }
   @JavascriptInterface public void step(int delta){post(()->MapQcfThumbnails.this.step(delta));}
   @JavascriptInterface public void choose(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onPageChosen(page);});}
   @JavascriptInterface public void open(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onOpenReading(page);});}
