@@ -245,7 +245,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      assertEquals("Fifth node of last window selects An-Nisa U11",10,
          ((Integer)field(map,"activeMacro")).intValue());
      assertEquals("Last unit still starts on the authentic 4:176 page",
-         GeometryRepository.get(a).pageForVerse(new VerseRef(4,176)),
+         GeometryRepository.get(a).pageForVerse(new com.quransafeguard.hifz.core.VerseRef(4,176)),
          ((Integer)field(map,"page")).intValue());
      assertTrue("Sliding does not change the Ayah Themes corpus",
          MawdudiPassageIndex.load(a).forSurah(4).size()>=23);
