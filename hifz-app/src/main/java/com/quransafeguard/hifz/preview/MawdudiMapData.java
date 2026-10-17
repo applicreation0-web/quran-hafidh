@@ -24,12 +24,12 @@ final class MawdudiMapData {
   AtlasPrivateV2 source=AtlasPrivateV2.load(c,index);
   // Existing debug versions can still load without the newly approved label
   // asset; malformed or tampered copies must not silently fall back.
-  AtlasUnitTitles approved=null;
-  try{approved=AtlasUnitTitles.load(c,source);}
+  java.util.Map<String,String> approved=null;
+  try{approved=readApprovedTitles(c,source);}
   catch(java.io.FileNotFoundException notYetPackaged){/* structural IDs remain valid */}
   List<Macro> rows=new ArrayList<>();
   for(AtlasPrivateV2.Unit u:source.units()){
-   String title=approved==null?null:approved.forUnit(u.id);
+   String title=approved==null?null:approved.get(u.id);
    rows.add(new Macro(u.surah,u.start,u.end,
        title==null?"Unité "+u.ordinal+" · "+u.start+"–"+u.end:title));
   }
@@ -60,6 +60,48 @@ final class MawdudiMapData {
    }
   }
   return new MawdudiMapData(macros);
+ }
+ /** Approved private summaries: exact edition-safe labels, SHA-256 pinned and unit-bound.
+  * Never treat them as literal titles copied from Maududi.
+  */
+ private static java.util.Map<String,String> readApprovedTitles(Context c,AtlasPrivateV2 index)throws Exception{
+  final String asset="atlas_private/atlas_approved_unit_titles_366_v1.json";
+  final String checksum="02b08050c290cf7e2a79cf579288b88e6b430f5a56a339059ce700dd4cc09e6b";
+  byte[] bytes;
+  try(InputStream in=c.getAssets().open(asset);ByteArrayOutputStream out=new ByteArrayOutputStream()){
+   byte[] buffer=new byte[4096];int n;
+   while((n=in.read(buffer))!=-1){
+    if(out.size()+n>150_000)throw new IllegalStateException("oversized approved headings");
+    out.write(buffer,0,n);
+   }
+   bytes=out.toByteArray();
+  }
+  StringBuilder digest=new StringBuilder();
+  for(byte b:java.security.MessageDigest.getInstance("SHA-256").digest(bytes))
+   digest.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
+  if(!checksum.equals(digest.toString()))throw new IllegalStateException("Atlas label digest mismatch");
+  JSONObject root=new JSONObject(new String(bytes,StandardCharsets.UTF_8));
+  if(!"HAAFIDH_ATLAS_USER_APPROVED_EDITORIAL_LABELS_V1".equals(root.optString("schema"))
+       ||root.optInt("unit_index_count")!=366||root.optInt("titled_unit_count")!=120
+       ||root.optBoolean("original_quotes"))throw new IllegalStateException("unapproved Atlas labels");
+  java.util.Map<String,AtlasPrivateV2.Unit> source=new java.util.HashMap<>();
+  for(AtlasPrivateV2.Unit unit:index.units())source.put(unit.id,unit);
+  JSONArray entries=root.getJSONArray("labels");
+  if(entries.length()!=120)throw new IllegalStateException("incomplete approved Atlas labels");
+  java.util.Map<String,String> labels=new java.util.HashMap<>();
+  for(int i=0;i<entries.length();i++){
+   JSONObject item=entries.getJSONObject(i);
+   String id=item.getString("id");
+   AtlasPrivateV2.Unit unit=source.get(id);
+   if(unit==null||unit.surah!=item.getInt("surah")||unit.start!=item.getInt("start")
+       ||unit.end!=item.getInt("end")
+       ||!"USER_APPROVED_EDITORIAL_SOURCE_SUMMARY".equals(item.getString("origin")))
+    throw new IllegalStateException("mismatched Atlas label");
+   String label=item.getString("title").trim();
+   if(label.isEmpty()||label.length()>240||labels.put(id,label)!=null)
+    throw new IllegalStateException("duplicate/invalid Atlas label");
+  }
+  return labels;
  }
  int count(){return all.size();}
  List<Macro> forSurah(int s){List<Macro> r=new ArrayList<>();for(Macro m:all)if(m.surah==s)r.add(m);return r;}
