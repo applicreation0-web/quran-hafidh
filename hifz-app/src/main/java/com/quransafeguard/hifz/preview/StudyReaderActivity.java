@@ -1084,6 +1084,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             Intent back=new Intent().putExtra(EXTRA_JUMP_PAGE,page)
                 .putExtra("map114Surah",getIntent().getIntExtra("map114Surah",0))
                 .putExtra("map114UnitOrdinal",getIntent().getIntExtra("map114UnitOrdinal",0));
+            if(atlasPassagePosition>=0&&atlasPassagePosition<atlasPassages.size()){
+                MawdudiPassageIndex.Passage active=atlasPassages.get(atlasPassagePosition);
+                back.putExtra("map114ReturnPassageId",active.id)
+                    .putExtra("map114ReturnPassageStart",active.firstAyah)
+                    .putExtra("map114ReturnPassageEnd",active.lastAyah);
+            }
             setResult(RESULT_OK,back);
         }
         super.finish();
