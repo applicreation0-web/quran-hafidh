@@ -58,7 +58,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
    passageOpen=saved.getBoolean("map114PassageOpen",false);
    int restored=saved.getInt("map114MacroSelected",activeMacro);
    if(restored>=0&&restored<macros.forSurah(surah).size())activeMacro=restored;
-   page=MawdudiMapModel.clampPage(current(),saved.getInt("map114Page",page),geometry);
+   MawdudiMapData.Macro restoredUnit=macro();
+   page=Math.max(geometry.pageForVerse(new VerseRef(surah,restoredUnit.start)),
+       Math.min(MawdudiMapModel.lastPageForVerse(new VerseRef(surah,restoredUnit.end),geometry),
+          saved.getInt("map114Page",page)));
    int first=saved.getInt("map114FocusStart",focusStart),last=saved.getInt("map114FocusEnd",focusEnd);
    if(current().contains(first)&&current().contains(last)&&first<=last){focusStart=first;focusEnd=last;}
   }
@@ -84,7 +87,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(commentary!=null){commentary.close();commentary=null;}
   if(axis!=null){
    axis.removeAllViews();
-   axis.addView(overview?overviewGraph:graph,
+   axis.addView(overviewGraph,
        new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,sunHeight));
   }
   refresh();
@@ -133,7 +136,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   axis=new HorizontalScrollView(activity);axis.setFillViewport(true);
   axis.setHorizontalScrollBarEnabled(false);
   graph=new Graph();overviewGraph=new OverviewGraph();
-  axis.addView(overview?overviewGraph:graph,
+  axis.addView(overviewGraph,
       new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,sunHeight));
   root.addView(axis,new LinearLayout.LayoutParams(-1,sunHeight));
   root.addOnLayoutChangeListener((v,left,topEdge,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->{
@@ -161,10 +164,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
   icons.setMinimumHeight(Ui.dp(activity,56));
   LinearLayout.LayoutParams tafsirPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
   tafsirPos.rightMargin=Ui.dp(activity,36);
-  icons.addView(Ui.iconButton(activity,"","Tafsir",v->openCommentary()),tafsirPos);
+  icons.addView(Ui.iconButton(activity,"","Mosaïque des pages",v->{passageOpen=false;refresh();}),tafsirPos);
   LinearLayout.LayoutParams readerPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
   readerPos.leftMargin=Ui.dp(activity,36);
-  icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),readerPos);
+  icons.addView(Ui.iconButton(activity,"","Lecture avec amorces",v->openReader()),readerPos);
   root.addView(icons);
   activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
   activity.setContentView(root);refresh();
@@ -188,7 +191,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(text==null||text.trim().isEmpty())return;
   if(titleExpanded){closeTitle();return;}
   titleExpanded=true;passageTitle.setMaxLines(Integer.MAX_VALUE);passageTitle.setEllipsize(null);
-  passageTitle.setText(surah+":"+focusStart+(focusStart==focusEnd?"":"–"+focusEnd)+" · "+text);
+  passageTitle.setText(text);
   // The full caption has its own bounded space; it never overlays Quran text.
   int available=activity.findViewById(android.R.id.content).getHeight();
   int width=Math.max(1,titlePanel.getWidth());
