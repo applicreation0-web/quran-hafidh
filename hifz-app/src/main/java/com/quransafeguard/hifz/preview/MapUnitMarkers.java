@@ -17,7 +17,7 @@ final class MapUnitMarkers {
  private static final String VISIBLE="unit_boundary_markers_enabled";
  private MapUnitMarkers(){}
  static boolean enabled(Context context){
-  return context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getBoolean(VISIBLE,true);
+  return context.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getBoolean(VISIBLE,false);
  }
  static boolean toggle(Context context){
   boolean value=!enabled(context);
@@ -49,7 +49,7 @@ final class MapUnitMarkers {
   render(view,page,surah,units,geometry,true);
  }
  private static void render(WebView view,int page,int surah,List<MawdudiMapData.Macro> units,GeometryRepository geometry,boolean always){
-  JSONArray markers=(always||enabled(view.getContext()))?onPage(page,surah,units,geometry):new JSONArray();
+  JSONArray markers=enabled(view.getContext())?onPage(page,surah,units,geometry):new JSONArray();
   // The only injected nodes belong to the semantic-map reading zone. They are
   // outside the Quran SVG and intercept neither Quran text nor taps.
   String js="(function(){"+
