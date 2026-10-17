@@ -367,11 +367,37 @@ final class MawdudiMapScreen implements MushafView.Listener {
   activity.startActivityForResult(intent,11436);
  }
  void returnFromReader(int returnedSurah,int ordinal,int returnedPage){
+  returnFromReader(returnedSurah,ordinal,returnedPage,null,-1,-1);
+ }
+ void returnFromReader(int returnedSurah,int ordinal,int returnedPage,
+                       String passageId,int passageStart,int passageEnd){
   if(returnedSurah!=surah||ordinal!=activeMacro+1)return;
   MawdudiMapData.Macro unit=macro();
   int first=geometry.pageForVerse(new VerseRef(surah,unit.start));
   int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,unit.end),geometry);
   page=Math.max(first,Math.min(last,returnedPage));
+  // The returned passage ID is authoritative; its exact canonical boundaries
+  // prevent choosing a different Ayah Themes passage on the same QCF page.
+  MawdudiPassageIndex.Passage matched=null;
+  for(MawdudiPassageIndex.Passage candidate:passages){
+   if(passageId!=null&&passageId.equals(candidate.id)
+      &&candidate.firstAyah==passageStart&&candidate.lastAyah==passageEnd
+      &&candidate.firstAyah<=unit.end&&candidate.lastAyah>=unit.start){
+    matched=candidate;break;
+   }
+  }
+  if(matched==null) {
+   for(VerseRef verse:geometry.versesOnLines(geometry.lineIdsOnPage(page))){
+    if(verse.getSurah()==surah&&verse.getAyah()>=unit.start&&verse.getAyah()<=unit.end){
+     matched=index.at(surah,verse.getAyah());break;
+    }
+   }
+  }
+  if(matched!=null){
+   selected=passages.indexOf(matched);
+   focusStart=matched.firstAyah;
+   focusEnd=matched.lastAyah;
+  }
   overview=false;passageOpen=true;
   refresh();
  }
