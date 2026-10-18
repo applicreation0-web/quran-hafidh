@@ -311,7 +311,7 @@ final class Ui {
         if (s.contains("effacer les notes")) return R.drawable.ic_ui_annotation_erase;
         if (s.contains("retour")) return R.drawable.ic_ui_back;
         if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
-        if (s.equals("carte") || s.equals("carte ibn kathīr")) return R.drawable.ic_ui_semantic_map;
+        if (s.equals("atlas") || s.equals("carte atlas") || s.equals("carte") || s.equals("carte ibn kathīr")) return R.drawable.ic_ui_semantic_map;
         if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
         if (s.contains("passage vers le haut") || s.contains("passage vers le bas")) return R.drawable.ic_ui_previous;
         if (s.contains("passage précédent du corpus")) return R.drawable.ic_ui_jump_prev;
