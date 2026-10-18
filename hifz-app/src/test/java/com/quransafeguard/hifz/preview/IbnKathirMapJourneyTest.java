@@ -112,7 +112,7 @@ public final class IbnKathirMapJourneyTest {
         assertFalse(activity.contains("IbnKathirTitlePack"));
         assertFalse(activity.contains("Intent.ACTION_VIEW"));
         assertTrue(manifest.contains("<activity android:name=\".IbnKathirMapActivity\""));
-        assertTrue(home.contains("homeNavLine(root, \"Carte\""));
+        assertTrue(home.contains("homeNavLine(root, \"Atlas\""));
         assertTrue(home.contains("new Intent(this, IbnKathirMapActivity.class)"));
     }
 }
