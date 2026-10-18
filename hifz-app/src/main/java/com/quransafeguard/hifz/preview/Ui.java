@@ -347,7 +347,7 @@ final class Ui {
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
         // Reader Ancres use the anchor pictogram; Amorces keep the distinct recall key.
         if (s.contains("ancre")) return R.drawable.ic_ui_semantic_anchor;
-        if (s.contains("amorce")) return R.drawable.ic_ui_semantic_key;
+        if (s.contains("amorce")) return R.drawable.ic_ui_recall_key;
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
         if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
