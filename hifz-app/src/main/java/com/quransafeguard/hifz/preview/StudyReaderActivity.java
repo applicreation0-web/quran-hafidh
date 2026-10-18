@@ -274,7 +274,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             atlasCueFooter.setEllipsize(null);
             atlasCueFooter.setOnClickListener(v->showFullAtlasCue());
             atlasCueFooter.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),Ui.dp(this,3));
-            atlasCueFooter.setContentDescription("Titres des ancres de la page");
+            atlasCueFooter.setContentDescription("Passage Ayah Themes actif sur cette page");
             readerStack.addView(atlasCueFooter,new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,52)));
         }
