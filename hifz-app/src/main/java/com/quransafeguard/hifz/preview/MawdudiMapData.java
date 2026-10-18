@@ -66,7 +66,7 @@ final class MawdudiMapData {
   */
  private static java.util.Map<String,String> readApprovedTitles(Context c,AtlasPrivateV2 index)throws Exception{
   final String asset="atlas_private/atlas_approved_unit_titles_366_v1.json";
-  final String checksum="02b08050c290cf7e2a79cf579288b88e6b430f5a56a339059ce700dd4cc09e6b";
+  final String checksum="421277c59519f2b904de23bbc1e0eee6faeb569e33ed6b425b4b9235cf82ff79";
   byte[] bytes;
   try(InputStream in=c.getAssets().open(asset);ByteArrayOutputStream out=new ByteArrayOutputStream()){
    byte[] buffer=new byte[4096];int n;
