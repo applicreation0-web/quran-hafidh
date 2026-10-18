@@ -150,3 +150,109 @@ final class AtlasPassageContext {
         return portion + " · partie du passage " + source;
     }
 }
+
+/**
+ * Versioned presentation metadata, independent of the historical 120-label pack.
+ * This parser is deliberately not activated by the legacy map loader yet.
+ * Canonical ranges come from the existing indexes; no source text or Hifz state
+ * is created, modified or approved by parsing this document.
+ */
+final class AtlasDisplayCatalog {
+    static final String SCHEMA="HAAFIDH_DISPLAY_CATALOG_V1";
+    final int revision;
+    final Map<String,String> units,passages,contexts;
+
+    private AtlasDisplayCatalog(int revision,Map<String,String> units,
+                                Map<String,String> passages,Map<String,String> contexts) {
+        this.revision=revision;
+        this.units=Collections.unmodifiableMap(units);
+        this.passages=Collections.unmodifiableMap(passages);
+        this.contexts=Collections.unmodifiableMap(contexts);
+    }
+
+    String contextTitle(String passageId,String unitId) {
+        return contexts.get(passageId+"|"+unitId);
+    }
+
+    static AtlasDisplayCatalog parse(String raw,Map<String,int[]> canonicalUnits,
+                                     Map<String,int[]> canonicalPassages)throws JSONException {
+        if(raw==null||raw.length()>2_000_000||canonicalUnits==null||canonicalPassages==null)
+            throw new IllegalArgumentException("Missing or oversized presentation catalogue");
+        JSONObject root=new JSONObject(raw);
+        int revision=integer(root,"revision");
+        if(!SCHEMA.equals(text(root,"schema"))||revision<1)
+            throw new IllegalArgumentException("Unsupported presentation catalogue");
+        JSONArray entries=root.getJSONArray("entries");
+        if(entries.length()>5000)throw new IllegalArgumentException("Too many presentation entries");
+        Map<String,String> units=new LinkedHashMap<>(),passages=new LinkedHashMap<>(),contexts=new LinkedHashMap<>();
+        Set<String> seen=new HashSet<>();
+        for(int i=0;i<entries.length();i++) {
+            JSONObject entry=entries.getJSONObject(i);
+            String level=text(entry,"level"),id=text(entry,"id");
+            int s=integer(entry,"surah"),a=integer(entry,"start"),b=integer(entry,"end");
+            if(s<1||s>114||a<1||b<a)
+                throw new IllegalArgumentException("Invalid presentation range");
+            Map<String,String> target;
+            String key=id;
+            if("UNIT".equals(level)) {
+                requireRange(canonicalUnits.get(id),s,a,b);
+                target=units;
+            } else if("PASSAGE".equals(level)) {
+                requireRange(canonicalPassages.get(id),s,a,b);
+                target=passages;
+            } else if("CONTEXT".equals(level)) {
+                String unitId=text(entry,"unit_id");
+                int[] unit=canonicalUnits.get(unitId),passage=canonicalPassages.get(id);
+                if(unit==null||passage==null||unit.length!=3||passage.length!=3||unit[0]!=s||passage[0]!=s)
+                    throw new IllegalArgumentException("Unknown presentation parents");
+                requireRange(new int[]{s,Math.max(unit[1],passage[1]),Math.min(unit[2],passage[2])},s,a,b);
+                key=id+"|"+unitId;
+                target=contexts;
+            } else throw new IllegalArgumentException("Unknown presentation level");
+            // Duplicate pending entries are invalid too: approvals must not depend on order.
+            if(!seen.add(level+"|"+key))throw new IllegalArgumentException("Duplicate presentation identity");
+            String rawTitle=text(entry,"title");
+            String title=rawTitle.trim();
+            if(title.isEmpty()||title.length()>240)
+                throw new IllegalArgumentException("Invalid presentation title");
+            for(int k=0;k<rawTitle.length();k++)if(Character.isISOControl(rawTitle.charAt(k)))
+                throw new IllegalArgumentException("Control character in presentation title");
+            if(!"ORIGINAL_EDITORIAL_SUMMARY".equals(text(entry,"origin")))
+                throw new IllegalArgumentException("Source quotations are not public display summaries");
+            for(String field:new String[]{"source_ref","edition","locator","review_id"})
+                if(text(entry,field).trim().isEmpty())
+                    throw new IllegalArgumentException("Missing presentation provenance");
+            // Read every flag, even when a previous gate is false, so malformed metadata fails closed.
+            boolean user=approval(entry,"user_approved"),source=approval(entry,"source_verified"),
+                    independent=approval(entry,"independent_verified"),rights=approval(entry,"redistributable");
+            if(user&&source&&independent&&rights)target.put(key,title);
+        }
+        return new AtlasDisplayCatalog(revision,units,passages,contexts);
+    }
+
+    private static void requireRange(int[] source,int s,int a,int b) {
+        if(source==null||source.length!=3||source[0]!=s||source[1]!=a||source[2]!=b)
+            throw new IllegalArgumentException("Changed canonical presentation boundary");
+    }
+
+    private static boolean approval(JSONObject entry,String field)throws JSONException {
+        Object value=entry.get(field);
+        if(!(value instanceof Boolean))throw new IllegalArgumentException("Approval flag must be a boolean");
+        return (Boolean)value;
+    }
+
+    private static int integer(JSONObject entry,String field)throws JSONException {
+        Object value=entry.get(field);
+        if(!(value instanceof Number))throw new IllegalArgumentException("Coordinate must be a number");
+        double number=((Number)value).doubleValue();
+        if(!Double.isFinite(number)||number<Integer.MIN_VALUE||number>Integer.MAX_VALUE||number!=Math.rint(number))
+            throw new IllegalArgumentException("Coordinate must be an exact integer");
+        return (int)number;
+    }
+
+    private static String text(JSONObject entry,String field)throws JSONException {
+        Object value=entry.get(field);
+        if(!(value instanceof String))throw new IllegalArgumentException("Presentation text must be a string");
+        return (String)value;
+    }
+}

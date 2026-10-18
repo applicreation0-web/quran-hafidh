@@ -1,3 +1,20 @@
+# Fusion Atlas / Correspondances — reprise prioritaire du 18 octobre 2026
+
+Branche unique : `work/haafidh-1171-ibn-kathir-integration-independent`.
+Mandat utilisateur courant : `Work_Quran_Haafidh_Complet (1).zip`, SHA-256 `e6138652111df555c7059c5c0d34c5c75ce09349c3506055055c0c49506e3431`.
+
+Le dernier addendum impose huit types et huit SVG exacts; l'icône Centre est un carré hachuré avec quatre traits horizontaux. Il remplace les cinq catégories et l'ergonomie contradictoire des prototypes. Les objectifs éditoriaux et les 13 décisions restent conservés. Aucune refonte de l'Atlas existant ni modification des 23 icônes gelées.
+
+Reprise technique : catalogue de présentation à effectif variable préparé et testé (13 tests comportementaux sur deux implémentations JSON), mais NON BRANCHÉ au runtime. L'ancien chargeur et ses 120 titres restent inchangés. Ce jalon ne résout pas encore le verrou privé et n'intègre aucune relation candidate.
+
+CP01 reste en cours : les lots éditoriaux privés sont préservés, les 13 décisions ont reçu une contre-lecture indépendante soutenant leurs 15 effets d'affichage. CP02 : première revue des 110 dossiers enregistrée; classification à actualiser aux huit définitions sans rejouer les lectures attestées. CP03 : parser préparé, migration non effectuée. CP04–CP07 non clôturés.
+
+Voir `FUSION_ATLAS_CORRESPONDANCES/IMPLEMENTATION_LEDGER.md` et `FUSION_ATLAS_CORRESPONDANCES/CP01_RECOVERY_AND_JALALAYN_EDITION_2026-10-18.md`. Les rapports éditoriaux et sources tierces restent hors dépôt public. Les blocs ci-dessous sont l'historique, pas l'état actuel de cette fusion.
+
+**NO-GO. Aucune APK, signature, installation ou release autorisée.**
+
+---
+
 # Atlas simplifié — debug signé du 16 octobre 2026
 
 Code final : `600058942b51a5775a5dec774d321ef0a39a236d`.
