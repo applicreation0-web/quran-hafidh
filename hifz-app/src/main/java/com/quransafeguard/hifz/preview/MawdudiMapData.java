@@ -27,6 +27,12 @@ final class MawdudiMapData {
   java.util.Map<String,String> approved=null;
   try{approved=readApprovedTitles(c,source);}
   catch(java.io.FileNotFoundException notYetPackaged){/* structural IDs remain valid */}
+  // No next private APK may display placeholder "Unité n" for the 246 missing
+  // editorial headings. The previous 120-title asset remains usable only for
+  // non-final previews until a separately approved 366-title asset is SHA-pinned.
+  if (BuildConfig.AYAH_THEMES_FINAL_PRIVATE &&
+      (approved == null || approved.size() != 366))
+   throw new IllegalStateException("Atlas private APK blocked: 366 verified titles required");
   List<Macro> rows=new ArrayList<>();
   for(AtlasPrivateV2.Unit u:source.units()){
    String title=approved==null?null:approved.get(u.id);
