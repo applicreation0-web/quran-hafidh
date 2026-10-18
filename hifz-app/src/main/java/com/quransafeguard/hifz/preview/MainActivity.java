@@ -85,7 +85,7 @@ public final class MainActivity extends android.app.Activity {
         root.addView(recentSabqiAdvisory);
 
         LinearLayout study = homeNavLine(root, "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
-        LinearLayout semanticMap = homeNavLine(root, "Carte", v ->
+        LinearLayout semanticMap = homeNavLine(root, "Atlas", v ->
             startActivity(new Intent(this, IbnKathirMapActivity.class)));
         LinearLayout free = homeNavLine(root, "Mémorisation libre", v -> startActivity(new Intent(this, FreeMemActivity.class)));
         LinearLayout parcours = homeNavLine(root, "Parcours Hifz", v -> showParcours());
