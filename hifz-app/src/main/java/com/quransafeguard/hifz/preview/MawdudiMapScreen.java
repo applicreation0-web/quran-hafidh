@@ -183,7 +183,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
         .show();
   });
   selectedPassageTitle.setPadding(Ui.dp(activity,8),0,Ui.dp(activity,8),Ui.dp(activity,2));
-  selectedPassageTitle.setContentDescription("Titre Ayah Themes du passage actif · toucher pour lire en entier");
+  selectedPassageTitle.setContentDescription("Passage Ayah Themes · toucher pour lire le titre original en entier");
   root.addView(selectedPassageTitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?44:48)));
   thumbnails=new MapQcfThumbnails(activity,new MapQcfThumbnails.Listener(){
    @Override public void onPageChosen(int p){onThumbnailPage(p);}
