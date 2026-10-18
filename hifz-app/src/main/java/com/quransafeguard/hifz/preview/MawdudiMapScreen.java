@@ -295,8 +295,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
   }else{
    heading.setText(surahLabel+" · U"+(activeMacro+1)+"/"+total);
    passageTitle.setText(unit.label);
+   passageTitle.setContentDescription("Unité Atlas · "+unit.label);
    String subtitle=graph.selectedTitle();
    selectedPassageTitle.setText(subtitle==null?"":subtitle);
+   selectedPassageTitle.setContentDescription("Passage Ayah Themes · "+(subtitle==null?"Aucun passage sélectionné":subtitle));
   }
   heading.setContentDescription("Changer d'unité · "+heading.getText());
   int desiredHeight=sunHeight;
