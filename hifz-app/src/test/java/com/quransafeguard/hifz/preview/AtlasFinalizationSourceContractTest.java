@@ -82,4 +82,20 @@ public final class AtlasFinalizationSourceContractTest {
             map.substring(map.indexOf("private void showCurrentTitle(){"),
                 map.indexOf("private void chooseUnit(){")).contains("AtlasSourcePdfActivity"));
     }
+
+    @Test public void atlasNamesAndPictogramsStayDistinct() throws Exception {
+        String home=read(ROOT+"MainActivity.java");
+        String map=read(ROOT+"MawdudiMapScreen.java");
+        String reader=read(ROOT+"StudyReaderActivity.java");
+        String ui=read(ROOT+"Ui.java");
+        assertTrue(home.contains("homeNavLine(root, \"Atlas\""));
+        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Atlas\""));
+        assertTrue(map.contains("Unité Atlas · "));
+        assertTrue(map.contains("Passage Ayah Themes · "));
+        assertTrue(reader.contains("Passage Ayah Themes actif sur cette page"));
+        assertTrue(reader.contains("\"Afficher les ancres\""));
+        assertTrue(ui.contains("s.equals(\"atlas\")"));
+        assertTrue(ui.contains("if (s.contains(\"ancre\")) return R.drawable.ic_ui_semantic_anchor;"));
+        assertTrue(ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_recall_key;"));
+    }
 }
