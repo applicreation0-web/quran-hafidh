@@ -75,7 +75,12 @@ public final class AtlasFinalizationSourceContractTest {
 
     @Test public void sourcePassagesRemainUnchangedButNeverAppearAsAtlasNodes() throws Exception {
         String map=read(ROOT+"MawdudiMapScreen.java");
-        assertTrue("Canonical passage node code remains source-only",map.contains("return titles.titleForPassage(current().id);"));
+        assertTrue("Tap opens the original unmodified Ayah Themes title",
+            map.contains("String complete=titles.titleForPassage(current().id);"));
+        assertTrue("Shared passages are bounded to their exact Atlas intersection",
+            map.contains("AtlasPassageContext.displayTitle(")
+                && map.contains("AtlasPassageContext.intersectionStart(")
+                && map.contains("AtlasPassageContext.intersectionEnd("));
         assertTrue("Atlas uses only source-backed unit labels",map.contains("passageTitle.setText(unit.label);"));
         assertTrue("No PDF action from selected unit title",map.contains("showTitle(macro().label);"));
         assertFalse("Do not open Islāḥī or Maududi commentaries from unit Atlas",
