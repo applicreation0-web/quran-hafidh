@@ -1,0 +1,11 @@
+# Contrat graphique strict : 8 SVG ; rectificatif 07 Centre carré hachuré avec 4 traits horizontaux.
+# Les 7 autres SVG sont inchangés, vérification SHA-256 ci-dessous.
+
+01_repetition.svg    SHA256 cda503000fe4962d668c608b4a13ded529ec9234b772130e3d9bf7ab61acf574
+02_ressemblance.svg    SHA256 79eff2a4bd040c8dbf19bd25131fbaf4ed78239024bcd0de3c9f490795c25088
+03_opposition.svg    SHA256 77e3062cd0d069aae20e6b6ad0dffd6e1fb9e31044a728bd2165bda898ad4958
+04_progression.svg    SHA256 2638ca417b3ead1fd0d03fa2e4b79a8ee7eb6022eb7a96c774c6496a62908c0f
+05_alternance.svg    SHA256 ade7758e0788032e7114e56a5f18b49baf330b8486682fd7d0da12e6f37a9373
+06_inversion.svg    SHA256 622ceff291fbfcc38bca732853cbd78d704cdde5da582521905e407777d25cba
+07_centre.svg    SHA256 706dd0017345cac003a1b23c4cf9b50452b65e1925e68b010d1976dd816914d9
+08_debut_fin_inclusio.svg    SHA256 6c9d8e0f86705f425cf1689ff667d57011c9397c78a31bf5e6a743c08947a561

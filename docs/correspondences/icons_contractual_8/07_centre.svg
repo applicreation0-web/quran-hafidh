@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 48" width="72" height="48" color="#111">
+  <defs><clipPath id="clip_centre_carre"><rect x="26" y="14" width="20" height="20"/></clipPath></defs>
+  <g stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none">
+    <path d="M5 17H23 M5 31H23 M49 17H67 M49 31H67"/>
+  </g>
+  <rect x="26" y="14" width="20" height="20" fill="#fff" stroke="currentColor" stroke-width="1.8"/>
+  <g clip-path="url(#clip_centre_carre)" fill="none" stroke="currentColor" stroke-width="1.35">
+    <path d="M14 35L39 10 M20 39L45 14 M26 45L51 20 M32 49L57 24 M8 29L33 4 M38 55L63 30"/>
+  </g>
+  <rect x="26" y="14" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"/>
+</svg>
