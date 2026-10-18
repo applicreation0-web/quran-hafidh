@@ -67,7 +67,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
        Math.min(MawdudiMapModel.lastPageForVerse(new VerseRef(surah,restoredUnit.end),geometry),
           saved.getInt("map114Page",page)));
    int first=saved.getInt("map114FocusStart",focusStart),last=saved.getInt("map114FocusEnd",focusEnd);
-   if(current().contains(first)&&current().contains(last)&&first<=last){focusStart=first;focusEnd=last;}
+   if(current().contains(first)&&current().contains(last)&&first<=last
+        &&first>=restoredUnit.start&&last<=restoredUnit.end){focusStart=first;focusEnd=last;}
   }
  }
  private MawdudiPassageIndex.Passage current(){return passages.get(selected);}
@@ -76,6 +77,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   selected=passages.indexOf(p);page=MawdudiMapModel.firstPage(p,geometry);focusStart=p.firstAyah;focusEnd=p.lastAyah;
   passageOpen=false;overview=macros.forSurah(s).size()>1;
   activeMacro=macroIndex(s,ayah);
+  focusStart=AtlasPassageContext.intersectionStart(p.firstAyah,macro().start);
+  focusEnd=AtlasPassageContext.intersectionEnd(p.lastAyah,macro().end);
   unitWindowStart=centerUnitWindow(activeMacro);
   if(!overview)passageOpen=true;
  }
@@ -109,8 +112,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   selected=passages.indexOf(first);
   // Never split an original Ayah Themes passage at a Maududi boundary.
   // E.g. 2:120–121 remains one passage in both adjoining units.
-  focusStart=first.firstAyah;
-  focusEnd=first.lastAyah;
+  focusStart=AtlasPassageContext.intersectionStart(first.firstAyah,chosen.start);
+  focusEnd=AtlasPassageContext.intersectionEnd(first.lastAyah,chosen.end);
   page=geometry.pageForVerse(new VerseRef(surah,chosen.start));
   activeMacro=ordinal;
   unitWindowStart=centerUnitWindow(activeMacro);
@@ -174,7 +177,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   selectedPassageTitle.setEllipsize(TextUtils.TruncateAt.END);
   selectedPassageTitle.setOnClickListener(v->{
    if(overview)return;
-   String complete=graph.selectedTitle();
+   String complete=titles.titleForPassage(current().id);
    if(complete!=null&&!complete.trim().isEmpty())
     new android.app.AlertDialog.Builder(activity)
         .setTitle("Ayah Themes")
@@ -274,7 +277,9 @@ final class MawdudiMapScreen implements MushafView.Listener {
    activeMacro=macroIndex(surah,direction>0?passage.firstAyah:passage.lastAyah);
    unitWindowStart=centerUnitWindow(activeMacro);
   }
-  selected=next;focusStart=passage.firstAyah;focusEnd=passage.lastAyah;
+  selected=next;
+  focusStart=AtlasPassageContext.intersectionStart(passage.firstAyah,macro().start);
+  focusEnd=AtlasPassageContext.intersectionEnd(passage.lastAyah,macro().end);
   passageOpen=true;
   page=geometry.pageForVerse(new VerseRef(surah,focusStart));
   refresh();
@@ -360,7 +365,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
     if(v.getSurah()!=surah||v.getAyah()<unit.start||v.getAyah()>unit.end)continue;
     MawdudiPassageIndex.Passage p=index.at(surah,v.getAyah());
     selected=passages.indexOf(p);
-    focusStart=p.firstAyah;focusEnd=p.lastAyah;
+    focusStart=AtlasPassageContext.intersectionStart(p.firstAyah,unit.start);
+    focusEnd=AtlasPassageContext.intersectionEnd(p.lastAyah,unit.end);
     break;
    }
   }
@@ -417,8 +423,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   }
   if(matched!=null){
    selected=passages.indexOf(matched);
-   focusStart=matched.firstAyah;
-   focusEnd=matched.lastAyah;
+   focusStart=AtlasPassageContext.intersectionStart(matched.firstAyah,unit.start);
+   focusEnd=AtlasPassageContext.intersectionEnd(matched.lastAyah,unit.end);
   }
   overview=false;passageOpen=true;
   refresh();
@@ -596,7 +602,13 @@ final class MawdudiMapScreen implements MushafView.Listener {
        result.add(new Node(n,child.getInt("start"),child.getInt("end"),child.getString("title")));
       }catch(JSONException invalid){throw new IllegalStateException("invalid approved QCF subnode",invalid);}
      }
-    } else result.add(new Node(n,p.firstAyah,p.lastAyah,titles.titleForPassage(p.id)));
+    } else {
+     MawdudiMapData.Macro m=macro();
+     int first=AtlasPassageContext.intersectionStart(p.firstAyah,m.start);
+     int last=AtlasPassageContext.intersectionEnd(p.lastAyah,m.end);
+     result.add(new Node(n,first,last,AtlasPassageContext.displayTitle(
+         surah,p.firstAyah,p.lastAyah,m.start,m.end,titles.titleForPassage(p.id))));
+    }
    }
    return result;
   }
@@ -611,7 +623,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
   String selectedTitle(){
    // Whole-passage focus must not borrow the first visual subnode title.
    for(Node n:nodes())if(n.index==selected&&n.first==focusStart&&n.last==focusEnd)return n.title;
-   return titles.titleForPassage(current().id);
+   MawdudiPassageIndex.Passage p=current();
+   MawdudiMapData.Macro m=macro();
+   return AtlasPassageContext.displayTitle(surah,p.firstAyah,p.lastAyah,
+       m.start,m.end,titles.titleForPassage(current().id));
   }
   @Override protected void onMeasure(int w,int h){
    setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),sunHeight);
