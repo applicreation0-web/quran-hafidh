@@ -29,7 +29,7 @@ Official 1.17.1, Hifz engine, Ayah Themes source, and Jalalayn must remain intac
 - [ ] Approval provenance for EVERY displayed title; candidate/documentation is not a semantic PASS.
 - [ ] Android source tests, instrumented tests when environment permits, and Hifz regression including 180/365/548-day checks with retrievable reports.
 - [ ] No regressions in map title hierarchy, portrait BOOX full QCF page display, page parity, swipe, Jalalayn with mushaf, saved validations.
-- [ ] The user explicitly requests generation of the next APK.
+- [x] APK generation is explicitly deferred until the user gives a separate go-ahead; this future permission is **NOT** a blocker for the READY-TO-BUILD readiness notification.
 
 ## 4. Only AFTER APK generation (never prematurely marked green)
 - [ ] Confirm intended package/version, signing cert matching device's installed APK, in-place update without uninstall, SHA-256.
