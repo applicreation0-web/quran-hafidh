@@ -35,6 +35,8 @@ public final class UiIconMappingTest {
             {"Pause", R.drawable.ic_ui_pause},
             {"Lecture", R.drawable.ic_ui_reading},
             {"Carte", R.drawable.ic_ui_semantic_map},
+            {"Atlas", R.drawable.ic_ui_semantic_map},
+            {"Carte Atlas", R.drawable.ic_ui_semantic_map},
             {"Choisir une sourate", R.drawable.ic_ui_surah_list},
             {"Mémoriser", R.drawable.ic_ui_memorize},
             {"Progression", R.drawable.ic_ui_progress_map},
