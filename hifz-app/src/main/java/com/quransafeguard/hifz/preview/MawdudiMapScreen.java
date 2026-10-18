@@ -197,7 +197,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   icons.setMinimumHeight(Ui.dp(activity,compact?48:56));
   LinearLayout.LayoutParams tafsirPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
   tafsirPos.rightMargin=Ui.dp(activity,36);
-  icons.addView(Ui.iconButton(activity,"","Carte",v->{passageOpen=false;refresh();}),tafsirPos);
+  icons.addView(Ui.iconButton(activity,"","Atlas",v->{passageOpen=false;refresh();}),tafsirPos);
   LinearLayout.LayoutParams readerPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
   readerPos.leftMargin=Ui.dp(activity,36);
   icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),readerPos);
