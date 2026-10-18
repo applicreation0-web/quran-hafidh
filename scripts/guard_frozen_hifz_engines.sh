@@ -110,6 +110,7 @@ while IFS= read -r file; do
     "$APP_ROOT/MapJalalaynDialog.java" | \
     "$APP_ROOT/MapUnitMarkers.java" | \
     "$APP_ROOT/MapQcfThumbnails.java" | \
+    "$APP_ROOT/CorrespondenceSvgFocus.java" | \
     "$APP_ROOT/AyahThemesCueIndex.java" | \
     "$APP_ROOT/AyahThemesReviewDisplay.java" | \
     "$APP_ROOT/PrivateDisplayIntegrity.java" | \

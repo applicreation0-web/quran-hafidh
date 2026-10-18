@@ -137,6 +137,7 @@ while IFS= read -r file; do
     "$prefix/MapJalalaynDialog.java" | \
     "$prefix/MapUnitMarkers.java" | \
     "$prefix/MapQcfThumbnails.java" | \
+    "$prefix/CorrespondenceSvgFocus.java" | \
     "$prefix/AyahThemesCueIndex.java" | \
     "$prefix/AyahThemesReviewDisplay.java" | \
     "$prefix/PrivateDisplayIntegrity.java" | \
