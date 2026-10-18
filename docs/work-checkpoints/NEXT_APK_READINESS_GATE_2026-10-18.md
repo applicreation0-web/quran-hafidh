@@ -9,6 +9,8 @@ Official 1.17.1, Hifz engine, Ayah Themes source, and Jalalayn must remain intac
 - [x] Distinguish **Ancres** (existing `ic_ui_semantic_anchor`) from **Amorces** (frozen Lucide `ic_ui_recall_key`).
 - [x] Cover both enabled/disabled labels in `UiIconMappingTest`.
 - [x] Update fail-closed `scripts/verify_j6_icon_roles.py` without weakening the 23-vector manifest.
+- [x] Align app appellations: **Atlas**, **Unité Atlas**, **Passage Ayah Themes**, **Ancres** (anchor) and **Amorces** (key-round); keep labels available to accessibility, not below icons.
+- [x] Freeze public UI inventory in `docs/ATLAS_APP_APPELLATIONS_ICONS_2026-10-18.md` (contains NO private editorial title data).
 - [ ] Latest-head Android/J6 workflows BOTH green; link the run IDs and recheck after final commit.
 - [ ] Visual smoke test on the target BOOX reader after an APK exists (postbuild); no screenshot can prove the new build today.
 
