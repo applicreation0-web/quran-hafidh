@@ -68,7 +68,10 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("WeeklyDashboardPlanner"));
         assertTrue("Home rows have identical compact touch targets",
             home.contains("line.setMinimumHeight(Ui.dp(this, 56))"));
-        assertTrue(home.contains("homeNavLine(root, \"Carte\""));
+        assertTrue("Atlas navigation should replace the legacy Carte label",
+            home.contains("homeNavLine(root, \"Atlas\""));
+        assertFalse("Legacy Carte label must not be shown on home",
+            home.contains("homeNavLine(root, \"Carte\""));
     }
 
     @Test public void fixedLucideSilhouettesAreActuallyPresentNotOnlyNames() throws Exception {
