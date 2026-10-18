@@ -88,6 +88,16 @@ public final class AtlasFinalizationSourceContractTest {
                 map.indexOf("private void chooseUnit(){")).contains("AtlasSourcePdfActivity"));
     }
 
+    @Test public void nextPrivateReleaseCannotDisplayUnapprovedGenericAtlasHeadings() throws Exception {
+        String data=read(ROOT+"MawdudiMapData.java");
+        assertTrue(data.contains("BuildConfig.AYAH_THEMES_FINAL_PRIVATE"));
+        assertTrue(data.contains("approved == null || approved.size() != 366"));
+        assertTrue(data.contains("Atlas private APK blocked: 366 verified titles required"));
+        // Existing 120 approved labels remain bounded and checksummed for legacy previews.
+        assertTrue(data.contains("entries.length()!=120"));
+        assertTrue(data.contains("421277c59519f2b904de23bbc1e0eee6faeb569e33ed6b425b4b9235cf82ff79"));
+    }
+
     @Test public void atlasNamesAndPictogramsStayDistinct() throws Exception {
         String home=read(ROOT+"MainActivity.java");
         String map=read(ROOT+"MawdudiMapScreen.java");
