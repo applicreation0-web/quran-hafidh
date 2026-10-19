@@ -77,6 +77,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if find hifz-app/build-private114 hifz-app/build -type f -name '*.apk' -print 2>/dev/null | grep -q .; then
-            echo 'Unexpected APK output'; exit 1
-          fi
+          apk_outputs="$(find hifz-app -type f -name '*.apk' -print)"
+          test -z "$apk_outputs" || { echo 'Unexpected APK output'; exit 1; }
