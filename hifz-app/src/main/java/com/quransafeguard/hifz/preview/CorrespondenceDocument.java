@@ -33,11 +33,21 @@ final class CorrespondenceDocument {
  static final class Focus {
   final int surah,first,last,normalNeighbor,firstPage,lastPage,initialPage;
   final boolean supported;
+  java.util.List<CorrespondenceModel.SegmentBox> segmentBoxes=java.util.Collections.emptyList();
   Focus(int s,int a,int b,int n,int fp,int lp,int ip,boolean supported){
    surah=s;first=a;last=b;normalNeighbor=n;firstPage=fp;lastPage=lp;initialPage=ip;this.supported=supported;
   }
  }
  static Focus focus(CorrespondenceModel.Relation relation,int pane,int occurrence,CorrespondenceModel.Geometry geometry){
+  if(relation.type==CorrespondenceModel.Type.CENTRE){
+   CorrespondenceModel.Anchor a=relation.anchors.get(0);
+   java.util.List<CorrespondenceModel.SegmentBox> boxes=CorrespondenceModel.exactSegmentBoxes(geometry,a);
+   boolean supported=relation.displayable()&&relation.mode==CorrespondenceModel.Mode.INTERNAL&&
+    relation.anchors.size()==1&&!boxes.isEmpty();
+   int initial=boxes.isEmpty()?a.range.firstPage:boxes.get(0).page;
+   Focus plan=new Focus(a.range.surah,a.range.start,a.range.end,0,a.range.firstPage,a.range.lastPage,initial,supported);
+   if(supported)plan.segmentBoxes=boxes;return plan;
+  }
   CorrespondenceModel.Anchor selected=relation.anchors.get(relation.mode==CorrespondenceModel.Mode.SERIES?occurrence:0);
   int original=relation.mode==CorrespondenceModel.Mode.SERIES?selected.originalIndex:pane;
   CorrespondenceModel.VerseRange range=relation.originals.get(original);
@@ -66,7 +76,12 @@ final class CorrespondenceDocument {
  }
  static Render render(String svg,Focus focus,int page){
   if(!focus.supported)return new Render(CorrespondenceSvgFocus.untouched(svg),false);
-  String rendered=CorrespondenceSvgFocus.apply(svg,focus.surah,focus.first,focus.last,focus.normalNeighbor);
+  String rendered;
+  if(!focus.segmentBoxes.isEmpty()){
+   java.util.List<double[]> boxes=new java.util.ArrayList<>();
+   for(CorrespondenceModel.SegmentBox b:focus.segmentBoxes)if(b.page==page)boxes.add(new double[]{b.x0,b.y0,b.x1,b.y1});
+   rendered=CorrespondenceSvgFocus.applyWords(svg,boxes);
+  }else rendered=CorrespondenceSvgFocus.apply(svg,focus.surah,focus.first,focus.last,focus.normalNeighbor);
   return new Render(rendered,!rendered.equals(svg));
  }
  static String html(String svg){

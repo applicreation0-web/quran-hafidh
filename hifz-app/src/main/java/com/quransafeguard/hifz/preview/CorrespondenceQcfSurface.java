@@ -170,7 +170,7 @@ final class CorrespondenceQcfSurface extends LinearLayout {
     output.write(buffer,0,count);
    }
    String svg=new String(output.toByteArray(),StandardCharsets.UTF_8);
-   if(!svg.contains("viewBox=\"0 0 345 550\"")||!svg.contains("</svg>"))throw new IllegalStateException("QCF coordinate space missing");
+   CorrespondenceSvgFocus.coordinateSpace(svg); // Preserve opening-folio origins; overlays use the same source space.
    return svg;
   }
  }

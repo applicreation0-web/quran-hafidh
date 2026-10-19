@@ -30,6 +30,38 @@ public final class CorrespondenceModel {
         int firstPage(int surah, int ayah);
         int lastPage(int surah, int ayah);
         boolean hasSegmentGeometry(int surah, int ayah, int firstWord, int lastWord);
+        /** Exact source rectangles, never inferred from an ayah polygon or a boolean flag. */
+        default List<SegmentBox> segmentBoxes(int surah,int ayah,int firstWord,int lastWord) {
+            return Collections.emptyList();
+        }
+    }
+
+    /** One source word rectangle in the authentic 345 by 550 page coordinate space. */
+    public static final class SegmentBox {
+        public final int surah,ayah,word,page;
+        public final double x0,y0,x1,y1;
+        public SegmentBox(int surah,int ayah,int word,int page,double x0,double y0,double x1,double y1) {
+            require(surah>=1&&surah<=114&&ayah>=1&&word>=1&&page>=1&&page<=604,"segment identity/page");
+            require(Double.isFinite(x0)&&Double.isFinite(y0)&&Double.isFinite(x1)&&Double.isFinite(y1)&&
+                x0>=0&&y0>=0&&x1<=345&&y1<=550&&x1>x0&&y1>y0,"segment rectangle");
+            this.surah=surah;this.ayah=ayah;this.word=word;this.page=page;
+            this.x0=x0;this.y0=y0;this.x1=x1;this.y1=y1;
+        }
+    }
+    /** Complete, unique source indices only. Empty means unavailable or ambiguous. */
+    static List<SegmentBox> exactSegmentBoxes(Geometry geometry,Anchor anchor) {
+        if(geometry==null||anchor==null||!anchor.isWordSegment())return Collections.emptyList();
+        try {
+            List<SegmentBox> boxes=geometry.segmentBoxes(anchor.range.surah,anchor.range.start,anchor.firstWord,anchor.lastWord);
+            if(boxes==null||boxes.size()!=(long)anchor.lastWord-anchor.firstWord+1)return Collections.emptyList();
+            Set<Integer> seen=new LinkedHashSet<>();
+            for(SegmentBox b:boxes)if(b==null||b.surah!=anchor.range.surah||b.ayah!=anchor.range.start||
+                b.word<anchor.firstWord||b.word>anchor.lastWord||b.page<anchor.range.firstPage||b.page>anchor.range.lastPage||
+                !seen.add(b.word))return Collections.emptyList();
+            List<SegmentBox> ordered=new ArrayList<>(boxes);
+            ordered.sort(java.util.Comparator.comparingInt(box->box.word));
+            return copy(ordered);
+        } catch(RuntimeException absent) { return Collections.emptyList(); }
     }
 
     public static final class VerseRange {
@@ -172,7 +204,8 @@ public final class CorrespondenceModel {
         Geometry checkpointGeometry() { return geometry; }
         public boolean displayable() {
             return type!=null && gates.allApproved() && completeAnchors &&
-                (type!=Type.CENTRE || (mode==Mode.INTERNAL && attestedCentralSegment));
+                (type!=Type.CENTRE || (mode==Mode.INTERNAL && attestedCentralSegment && anchors.size()==1 &&
+                    !exactSegmentBoxes(geometry,anchors.get(0)).isEmpty()));
         }
     }
 
@@ -276,6 +309,7 @@ public final class CorrespondenceModel {
                 for(int i=0;i<count;i++) {
                     int page=relation.originals.get(i).firstPage;
                     for(Anchor anchor:relation.anchors) if(anchor.originalIndex==i) { page=anchor.range.firstPage; break; }
+                    if(relation.type==Type.CENTRE)page=exactSegmentBoxes(relation.geometry,relation.anchors.get(0)).get(0).page;
                     panes.add(new Pane(page,1.0,""));
                 }
             }

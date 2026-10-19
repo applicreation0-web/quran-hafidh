@@ -86,6 +86,10 @@ public final class CorrespondenceState {
    out.writeInt(r.anchors.size());
    for(Anchor a:r.anchors){out.writeInt(a.originalIndex);writeRange(out,a.range);out.writeUTF(a.sourceLocator);
     out.writeBoolean(a.sourceAttested);out.writeInt(a.firstWord);out.writeInt(a.lastWord);
+    if(a.isWordSegment()){
+     List<SegmentBox> boxes=CorrespondenceModel.exactSegmentBoxes(g,a);out.writeInt(boxes.size());
+     for(SegmentBox b:boxes){out.writeInt(b.surah);out.writeInt(b.ayah);out.writeInt(b.word);out.writeInt(b.page);out.writeDouble(b.x0);out.writeDouble(b.y0);out.writeDouble(b.x1);out.writeDouble(b.y1);}
+    }
     int neighbor=a.range.end<g.ayahCount(a.range.surah)?a.range.end+1:(a.range.start>1?a.range.start-1:0);
     out.writeInt(neighbor);if(neighbor>0){out.writeInt(g.firstPage(a.range.surah,neighbor));out.writeInt(g.lastPage(a.range.surah,neighbor));}}
    out.writeBoolean(r.presentation!=null);

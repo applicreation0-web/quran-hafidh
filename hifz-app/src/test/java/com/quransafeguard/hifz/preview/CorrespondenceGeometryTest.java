@@ -128,4 +128,22 @@ public final class CorrespondenceGeometryTest {
             page->page==42?first:page==43?Collections.emptyList():words.get(page));
         assertFalse(missingLast.hasSegmentGeometry(2,255,49,50));
     }
+    @Test public void measuredCentralCandidateReturnsSixSeparateUnchangedSourceBoxes() {
+        java.util.List<CorrespondenceModel.SegmentBox> boxes=adapter.segmentBoxes(2,255,27,32);
+        assertEquals(6,boxes.size());
+        for(int i=0;i<6;i++) {
+            CorrespondenceModel.SegmentBox b=boxes.get(i);
+            assertEquals(27+i,b.word);assertEquals(42,b.page);
+            WordGeometryRepository.WordBox source=null;
+            for(WordGeometryRepository.WordBox w:words.get(42))if(w.key.equals("2:255:"+(27+i)))source=w;
+            assertNotNull(source);assertEquals(source.x0,b.x0,0);assertEquals(source.y0,b.y0,0);
+            assertEquals(source.x1,b.x1,0);assertEquals(source.y1,b.y1,0);
+        }
+        assertEquals(7.43,boxes.get(0).x0,0);assertEquals(332.93,boxes.get(0).y0,0);
+        assertEquals(234.19,boxes.get(5).x1,0);assertEquals(403.76,boxes.get(5).y1,0);
+        java.util.List<WordGeometryRepository.WordBox> incomplete=new ArrayList<>(words.get(42));
+        incomplete.removeIf(w->w.key.equals("2:255:29"));
+        assertTrue(new CorrespondenceGeometry(geometry,p->p==42?incomplete:words.get(p)).segmentBoxes(2,255,27,32).isEmpty());
+        try { boxes.clear();fail("mutable geometry"); } catch(UnsupportedOperationException expected) { }
+    }
 }

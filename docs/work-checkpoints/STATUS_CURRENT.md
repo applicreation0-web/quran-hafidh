@@ -1,3 +1,15 @@
+# Transmission unique — poursuite du19 octobre2026
+
+Mandat prioritaire SHA25688d97650918ae86513e1d0165b194bb0aa6b0146dce0964fcf2959c3c27fa64f. Reprise76e8536d vérifiée locale/distance, arbre propre. CI39287884379/39287884213 SUCCESS;856 tests(19core,580comportement,257contrats) et compilation des sources d'instrumentation réussis, sans assemblage APK. Instrumentation exécutée et BOOX physique NON_EXÉCUTÉS.
+
+Le delta documentaire110 est achevé individuellement hors dépôt public :77 retenues documentées,27 en attente,6 écartées justifiées. Les quatre certifications éditoriales acquises restent les seuls flags certifiés; aucune référence originale ou décision Atlas1419/46 n'est modifiée; production0. Nouvelle documentation préserve types/verdicts/lecteurs/ancres historiques et propositions distinctes hors bornes. Une attribution bibliographique nouvelle ne vaut pas certification de l'article ni QA.
+
+Correctifs source additionnels en cours de CI :capacité Centre limitée aux rectangles de mots exacts fournis par QCF(aucun effet avec simple boolean de géométrie), glyphes inchangés; restauration liée aux coordonnées de ces mots. Les pages QCF1/2 gardent leur origine négative authentique; l'overlay suit cette origine selon la convention du lecteur inchangé. Les tests locaux passent89Correspondances+8géométrie+53catalogue/contrats; une ancienne assertion de format décimal a été adaptée sans affaiblir la vérification de géométrie. Le SHA de confiance du catalogue production demeure vide.
+
+NO-GO livraison n'arrête pas le développement. Aucun APK/release autorisé. Les seuls contrôles nécessitant une étape matérielle distincte restent l'exécution Android instrumentée et la recette BOOX; les contenus dont les preuves/droits sont incomplets demeurent désactivés.
+
+---
+
 # Poursuite technique Atlas / Correspondances —19 octobre2026
 
 Reprise demandée au64572ef8, HEAD distant vérifié identique et arbre local propre. NO-GO livraison ne clôture pas le développement. Les étapes du job sources et du job compilation de64572ef8 sont réussies; conclusions des workflows à relire, instrumentationAPK ignorée. Preuves privées dansCP07_CONTINUATION, aucune ancienne CI réutilisée pour un nouveau code.

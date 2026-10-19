@@ -73,4 +73,36 @@ public class CorrespondenceDocumentTest {
    new CorrespondenceModel.Gates(true,true,true,true,true),geometry);
   assertFalse(CorrespondenceDocument.focus(relation,0,0,geometry).supported);
  }
+
+ @Test public void exactSyntheticWordBoxesEnableOnlyApprovedSegmentHatching(){
+  CorrespondenceModel.Geometry exact=new CorrespondenceModel.Geometry(){
+   public int ayahCount(int s){return 10;}public int firstPage(int s,int a){return 1;}
+   public int lastPage(int s,int a){return 1;}
+   public boolean hasSegmentGeometry(int s,int a,int f,int l){return true;}
+   public java.util.List<CorrespondenceModel.SegmentBox> segmentBoxes(int s,int a,int f,int l){
+    return Arrays.asList(new CorrespondenceModel.SegmentBox(s,a,2,1,20,30,40,50),
+     new CorrespondenceModel.SegmentBox(s,a,3,1,80,90,100,110));
+   }
+  };
+  CorrespondenceModel.VerseRange r=new CorrespondenceModel.VerseRange(1,1,1,exact);
+  CorrespondenceModel.Presentation presentation=new CorrespondenceModel.Presentation("Synthetic centre","Synthetic link",Arrays.asList(
+   new CorrespondenceModel.SourceReference("test author","test work","test edition","test locator")));
+  CorrespondenceModel.Relation relation=new CorrespondenceModel.Relation("synthetic-centre",CorrespondenceModel.Type.CENTRE,
+   CorrespondenceModel.Mode.INTERNAL,Arrays.asList(r),Arrays.asList(new CorrespondenceModel.Anchor(0,r,true,"synthetic locator",2,3)),
+   new CorrespondenceModel.Gates(true,true,true,true,true),exact,presentation);
+  assertTrue(relation.displayable());assertTrue(CorrespondenceDocument.displayable(relation,exact));
+  String glyph="<g id=\"original-glyphs\"><path d=\"M1 2L3 4\"/></g>";
+  String svg="<svg viewBox=\"0 0 345 550\">"+glyph+"</svg>";
+  CorrespondenceDocument.Focus focus=CorrespondenceDocument.focus(relation,0,0,exact);
+  CorrespondenceDocument.Render render=CorrespondenceDocument.render(svg,focus,1);
+  assertTrue(render.focusVerified);assertTrue(render.svg.contains(glyph));
+  assertTrue(render.svg.startsWith(svg.substring(0,svg.length()-6)));
+  assertTrue(render.svg.contains("corr-centre-hatch"));assertTrue(render.svg.matches("(?s).*x=\"20(?:\\.0)?\" y=\"30(?:\\.0)?\" width=\"20(?:\\.0)?\" height=\"20(?:\\.0)?\".*"));
+  assertFalse(render.svg.matches("(?s).*x=\"20(?:\\.0)?\" y=\"30(?:\\.0)?\" width=\"80(?:\\.0)?\".*"));
+  assertEquals(svg,CorrespondenceDocument.render(svg,focus,2).svg);
+  CorrespondenceModel.Relation qaClosed=new CorrespondenceModel.Relation("synthetic-centre",relation.type,relation.mode,
+   relation.originals,relation.anchors,new CorrespondenceModel.Gates(true,true,true,true,false),exact,presentation);
+  assertFalse(qaClosed.displayable());assertFalse(CorrespondenceDocument.displayable(qaClosed,exact));
+  assertEquals(svg,CorrespondenceDocument.render(svg,CorrespondenceDocument.focus(qaClosed,0,0,exact),1).svg);
+ }
 }

@@ -218,7 +218,7 @@ public final class CorrespondenceScreen extends Dialog {
    message.append("\n\n").append(source.author).append(" — ").append(source.work)
     .append("\n").append(source.edition).append("\n").append(source.locator);
   for(String locator:locators)message.append("\n\n").append(locator);
-  if(relation.type==CorrespondenceModel.Type.CENTRE)message.append("\n\nVISUEL_NON_VALIDÉ : aucune géométrie de segment central fournie à ce rendu. Page authentique intacte.");
+  if(relation.type==CorrespondenceModel.Type.CENTRE)message.append("\n\nSegment central : hachures limitées aux rectangles de mots attestés. La certification et la QA du catalogue restent distinctes de cette capacité de rendu.");
   new AlertDialog.Builder(activity).setTitle("Sources").setMessage(message).setPositiveButton("Fermer",null).show();
  }
  private final class OccurrenceRail extends View {

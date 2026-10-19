@@ -138,7 +138,7 @@ public final class CorrespondenceModelTest {
         Anchor good=new Anchor(0,whole,true,"TEST segment",2,3);
         Relation precise=new Relation("TEST-PRECISE",Type.CENTRE,Mode.INTERNAL,
             Arrays.asList(whole),Arrays.asList(good),gates(),G);
-        assertTrue(precise.displayable());
+        assertFalse(precise.displayable()); // Boolean-only geometry is not a word renderer.
         Anchor unknown=new Anchor(0,whole,true,"TEST absent segment",5,6);
         Relation absent=new Relation("TEST-ABSENT",Type.CENTRE,Mode.INTERNAL,
             Arrays.asList(whole),Arrays.asList(unknown),gates(),G);
@@ -222,7 +222,7 @@ public final class CorrespondenceModelTest {
             Arrays.asList(later,earlier),Arrays.asList(anchor(0,later),anchor(1,earlier)),gates(),G);
         assertSame(later,directed.originals.get(0)); assertSame(earlier,directed.originals.get(1));
         VerseRange whole=range(2,1,1);
-        Relation internal=new Relation("TEST-ONE-PANE",Type.CENTRE,Mode.INTERNAL,
+        Relation internal=new Relation("TEST-ONE-PANE",Type.INVERSION,Mode.INTERNAL,
             Arrays.asList(whole),Arrays.asList(new Anchor(0,whole,true,"TEST centre",2,3)),gates(),G);
         Navigation nav=new Navigation(internal,reader()); assertEquals(1,nav.snapshot().panes.size());
         rejects(()->nav.pane(1));

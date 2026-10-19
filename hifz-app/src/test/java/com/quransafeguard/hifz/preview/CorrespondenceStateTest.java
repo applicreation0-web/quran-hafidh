@@ -18,6 +18,19 @@ public final class CorrespondenceStateTest {
   return new Relation(id,Type.REPETITION,series?Mode.SERIES:Mode.TWO_PAGES,rs,as,new Gates(true,true,true,true,true),G);
  }
  private static void rejects(Runnable r){try{r.run();fail("accepted incompatible checkpoint");}catch(IllegalArgumentException expected){}}
+ private static Relation centreAt(double dx){
+  Geometry g=new Geometry(){
+   public int ayahCount(int s){return 100;}public int firstPage(int s,int a){return 2;}public int lastPage(int s,int a){return 2;}
+   public boolean hasSegmentGeometry(int s,int a,int f,int l){return true;}
+   public List<SegmentBox> segmentBoxes(int s,int a,int f,int l){return Arrays.asList(new SegmentBox(s,a,1,2,10+dx,20,20+dx,30),new SegmentBox(s,a,2,2,30+dx,20,40+dx,30));}
+  };
+  VerseRange r=new VerseRange(2,3,3,g);
+  return new Relation("centre",Type.CENTRE,Mode.INTERNAL,Arrays.asList(r),Arrays.asList(new Anchor(0,r,true,"synthetic",1,2)),new Gates(true,true,true,true,true),g);
+ }
+ @Test public void changedSourceWordCoordinatesInvalidateDurableCentreCheckpoint(){
+  CorrespondenceState state=CorrespondenceState.capture(new Navigation(centreAt(0),origin()),0,null);
+  rejects(()->state.restore(centreAt(1),origin()));
+ }
  @Test public void seriesSurvivesCodecAndFreshRelationNavigation(){
   Navigation n=new Navigation(relation(true,"fixture"),origin());
   n.selectOccurrence(2);n.setPane(0,5,2.5,"two",30,40);

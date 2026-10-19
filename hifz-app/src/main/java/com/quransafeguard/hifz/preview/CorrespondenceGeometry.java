@@ -3,6 +3,9 @@ package com.quransafeguard.hifz.preview;
 import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRef;
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -34,27 +37,34 @@ final class CorrespondenceGeometry implements CorrespondenceModel.Geometry {
         return geometry.line(geometry.lastLineIndex(new VerseRef(surah,ayah))).page;
     }
     @Override public boolean hasSegmentGeometry(int surah,int ayah,int firstWord,int lastWord) {
+        return !segmentBoxes(surah,ayah,firstWord,lastWord).isEmpty();
+    }
+    @Override public List<CorrespondenceModel.SegmentBox> segmentBoxes(int surah,int ayah,int firstWord,int lastWord) {
         if(surah<1 || surah>114 || ayah<1 || ayah>ayahCount(surah) ||
-            firstWord<1 || lastWord<firstWord) return false;
+            firstWord<1 || lastWord<firstWord) return Collections.emptyList();
         try {
             int first=firstPage(surah,ayah),last=lastPage(surah,ayah);
-            if(first<1 || last<first || last>604) return false;
+            if(first<1 || last<first || last>604) return Collections.emptyList();
             Set<Integer> found=new HashSet<>();
+            List<CorrespondenceModel.SegmentBox> result=new ArrayList<>();
             for(int page=first;page<=last;page++) {
                 List<WordGeometryRepository.WordBox> pageWords=words.forPage(page);
-                if(pageWords==null) return false;
+                if(pageWords==null) return Collections.emptyList();
                 for(WordGeometryRepository.WordBox word:pageWords) {
-                    if(word==null) return false;
+                    if(word==null) return Collections.emptyList();
                     if(word.surah!=surah || word.ayah!=ayah ||
                         word.word<firstWord || word.word>lastWord) continue;
-                    if(!validBox(word) || !found.add(word.word)) return false;
+                    if(!validBox(word) || !found.add(word.word)) return Collections.emptyList();
+                    result.add(new CorrespondenceModel.SegmentBox(surah,ayah,word.word,page,word.x0,word.y0,word.x1,word.y1));
                 }
             }
             // Every requested index must occur exactly once, including middle words.
             // Use long arithmetic to fail closed for enormous/malformed endpoints.
-            return found.size()==(long)lastWord-firstWord+1;
+            if(found.size()!=(long)lastWord-firstWord+1)return Collections.emptyList();
+            result.sort(Comparator.comparingInt(box->box.word));
+            return Collections.unmodifiableList(result);
         } catch(RuntimeException unavailableGeometry) {
-            return false;
+            return Collections.emptyList();
         }
     }
     private static boolean validBox(WordGeometryRepository.WordBox word) {

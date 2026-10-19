@@ -37,8 +37,8 @@ public class CorrespondenceCompatibilityTest {
   CorrespondenceAccess.Result result=access(r);
   assertFalse(result.hasLinks());assertFalse(result.hasOthers());assertTrue(result.visible.isEmpty());
  }
- @Test public void centreWithRealWordBoxesButNoRendererHasNoGhostButton(){
-  Relation r=internal(Type.CENTRE,true,false);assertTrue(r.displayable());noButton(r);
+ @Test public void centreWithDeclaredWordGeometryButNoExactRectanglesHasNoGhostButton(){
+  Relation r=internal(Type.CENTRE,true,false);assertFalse(r.displayable());noButton(r);
  }
  @Test public void wholeAyahCentreHasNoGhostButton(){noButton(internal(Type.CENTRE,false,false));}
  @Test public void disjointAnchorsHaveNoGhostButton(){
