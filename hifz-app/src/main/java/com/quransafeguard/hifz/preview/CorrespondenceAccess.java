@@ -61,7 +61,7 @@ final class CorrespondenceAccess {
         List<Relation> direct=new ArrayList<>(); Set<String> seen=new LinkedHashSet<>();
         // Query this target once. Never visit a sibling endpoint or expand an interval.
         for(Relation relation:index.at(surah,ayah)) {
-            if(!relation.displayable()) continue;
+            if(!CorrespondenceDocument.displayable(relation,geometry)) continue;
             boolean focal=false;
             for(Anchor anchor:relation.anchors)
                 if(anchor.sourceAttested && anchor.range.contains(surah,ayah)) { focal=true; break; }

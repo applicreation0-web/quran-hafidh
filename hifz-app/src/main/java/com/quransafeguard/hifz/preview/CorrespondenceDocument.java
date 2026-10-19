@@ -7,6 +7,29 @@ import java.util.List;
 /** Pure display plan. Context pages never alter the canonical relation ranges. */
 final class CorrespondenceDocument {
  private CorrespondenceDocument() {}
+ /** Current verse-only renderer capability, checked before access affordances or dialogs.
+  * Generic editorial approval is necessary but cannot certify this renderer. */
+ static boolean displayable(CorrespondenceModel.Relation relation,CorrespondenceModel.Geometry geometry){
+  if(relation==null || geometry==null || !relation.displayable() || relation.presentation==null)return false;
+  try {
+   for(CorrespondenceModel.VerseRange original:relation.originals){
+    CorrespondenceModel.VerseRange checked=new CorrespondenceModel.VerseRange(original.surah,original.start,original.end,geometry);
+    if(checked.firstPage!=original.firstPage || checked.lastPage!=original.lastPage)return false;
+   }
+   for(CorrespondenceModel.Anchor anchor:relation.anchors){
+    CorrespondenceModel.VerseRange checked=new CorrespondenceModel.VerseRange(anchor.range.surah,anchor.range.start,anchor.range.end,geometry);
+    if(checked.firstPage!=anchor.range.firstPage || checked.lastPage!=anchor.range.lastPage)return false;
+   }
+   if(relation.mode==CorrespondenceModel.Mode.SERIES){
+    for(int occurrence=0;occurrence<relation.anchors.size();occurrence++)
+     if(!focus(relation,0,occurrence,geometry).supported)return false;
+   } else {
+    int panes=relation.mode==CorrespondenceModel.Mode.TWO_PAGES?2:1;
+    for(int pane=0;pane<panes;pane++)if(!focus(relation,pane,0,geometry).supported)return false;
+   }
+   return true;
+  } catch(IllegalArgumentException invalidGeometry){return false;}
+ }
  static final class Focus {
   final int surah,first,last,normalNeighbor,firstPage,lastPage,initialPage;
   final boolean supported;

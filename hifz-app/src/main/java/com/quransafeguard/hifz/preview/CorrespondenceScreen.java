@@ -39,7 +39,7 @@ public final class CorrespondenceScreen extends Dialog {
  public static boolean show(Activity activity,CorrespondenceModel.Relation relation,
                             CorrespondenceModel.ReaderSnapshot origin,CorrespondenceModel.Geometry geometry,
                             Listener listener){
-  if(relation==null||!relation.displayable())return false;
+  if(!CorrespondenceDocument.displayable(relation,geometry))return false;
   if(activity==null||activity.isFinishing()||activity.isDestroyed()||origin==null||geometry==null)return false;
   new CorrespondenceScreen(activity,relation,origin,geometry,listener).show();return true;
  }
@@ -67,6 +67,10 @@ public final class CorrespondenceScreen extends Dialog {
   toolbar.addView(heading,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
   toolbar.addView(CorrespondenceQcfSurface.action(activity,R.drawable.ic_ui_info,"Sources de la correspondance",v->sources()),square(48));
   root.addView(toolbar,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(activity,56)));
+  TextView fact=new TextView(activity);fact.setText(relation.presentation.factualLink);
+  fact.setTextColor(Ui.INK);fact.setTextSize(12);fact.setMaxLines(2);
+  fact.setPadding(Ui.dp(activity,12),0,Ui.dp(activity,12),Ui.dp(activity,4));
+  root.addView(fact,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
   if(relation.mode==CorrespondenceModel.Mode.SERIES){
    rail=new OccurrenceRail();root.addView(rail,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(activity,64)));
   }
@@ -135,7 +139,7 @@ public final class CorrespondenceScreen extends Dialog {
   windowStart=Math.max(0,Math.min(relation.anchors.size()-rail.count(),occurrence-rail.count()/2));rail.invalidate();updateHeading();
  }
  private void updateHeading(){
-  String text=label(relation.type);
+  String text=relation.presentation.shortTitle;
   if(relation.mode==CorrespondenceModel.Mode.SERIES)text+=" · "+(occurrence+1)+"/"+relation.anchors.size()+" · "+reference(navigation.activeAnchor().range);
   if(navigation.enlargedPane()>=0)text+=" · "+(navigation.enlargedPane()==0?"A":"B");
   heading.setText(text);
@@ -144,6 +148,9 @@ public final class CorrespondenceScreen extends Dialog {
   LinkedHashSet<String> locators=new LinkedHashSet<>();
   for(CorrespondenceModel.Anchor anchor:relation.anchors)locators.add(anchor.sourceLocator);
   StringBuilder message=new StringBuilder(relation.id);
+  for(CorrespondenceModel.SourceReference source:relation.presentation.sources)
+   message.append("\n\n").append(source.author).append(" — ").append(source.work)
+    .append("\n").append(source.edition).append("\n").append(source.locator);
   for(String locator:locators)message.append("\n\n").append(locator);
   if(relation.type==CorrespondenceModel.Type.CENTRE)message.append("\n\nVISUEL_NON_VALIDÉ : aucune géométrie de segment central fournie à ce rendu. Page authentique intacte.");
   new AlertDialog.Builder(activity).setTitle("Sources").setMessage(message).setPositiveButton("Fermer",null).show();
@@ -157,11 +164,16 @@ public final class CorrespondenceScreen extends Dialog {
   }
   float x(int index){return getWidth()*(index+.5f)/count();}
   @Override protected void onDraw(Canvas canvas){
-   super.onDraw(canvas);paint.setColor(Ui.INK);paint.setStrokeWidth(Ui.dp(activity,1));float y=Ui.dp(activity,31);
+   super.onDraw(canvas);paint.setColor(Ui.INK);paint.setStrokeWidth(Ui.dp(activity,1));float y=Ui.dp(activity,40);
    if(count()>1)canvas.drawLine(x(0)+Ui.dp(activity,8),y,x(count()-1)-Ui.dp(activity,8),y,paint);
    for(int j=0;j<count();j++){
     int ordinal=windowStart+j;boolean active=ordinal==occurrence;
-    paint.setStyle(Paint.Style.FILL);canvas.drawCircle(x(j),y,Ui.dp(activity,active?9:5),paint);
+    paint.setStyle(Paint.Style.FILL);paint.setTextAlign(Paint.Align.CENTER);
+    paint.setTypeface(active?android.graphics.Typeface.DEFAULT_BOLD:android.graphics.Typeface.DEFAULT);
+    paint.setTextSize(Ui.dp(activity,10));
+    canvas.drawText(Integer.toString(ordinal+1),x(j),Ui.dp(activity,11),paint);
+    canvas.drawText(reference(relation.anchors.get(ordinal).range),x(j),Ui.dp(activity,24),paint);
+    canvas.drawCircle(x(j),y,Ui.dp(activity,active?9:5),paint);
     if(active){paint.setStyle(Paint.Style.STROKE);canvas.drawCircle(x(j),y,Ui.dp(activity,14),paint);}
    }
    paint.setStyle(Paint.Style.FILL);paint.setTextAlign(Paint.Align.CENTER);paint.setTextSize(Ui.dp(activity,12));
@@ -174,7 +186,7 @@ public final class CorrespondenceScreen extends Dialog {
    if(event.getActionMasked()!=MotionEvent.ACTION_UP)return true;
    float dx=event.getX()-downX,dy=event.getY()-downY;
    if(Math.abs(dx)>Ui.dp(activity,40)&&Math.abs(dx)>Math.abs(dy)*1.2f){shift(dx>0?-1:1);return true;}
-   if(Math.abs(event.getY()-Ui.dp(activity,31))<=Ui.dp(activity,24)&&getWidth()>0){
+   if(Math.abs(event.getY()-Ui.dp(activity,40))<=Ui.dp(activity,24)&&getWidth()>0){
     int slot=Math.max(0,Math.min(count()-1,(int)(event.getX()*count()/getWidth())));select(windowStart+slot);performClick();
    }
    return true;

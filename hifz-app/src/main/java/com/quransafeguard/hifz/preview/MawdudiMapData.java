@@ -8,8 +8,13 @@ import org.json.*;
 /** Display headings are separate presentation metadata, never Quran/Hifz data. */
 final class MawdudiMapData {
  static final class Macro {
-  final int surah,start,end;final String label;
-  Macro(int s,int a,int b,String t){surah=s;start=a;end=b;label=t;}
+  final int surah,start,end;final String id,label;
+  Macro(int s,int a,int b,String t){this(String.format(Locale.ROOT,"s%03da%03db%03d",s,a,b),s,a,b,t);}
+  Macro(String id,int s,int a,int b,String t){
+   if(s<1||s>114||a<1||b<a||!String.format(Locale.ROOT,"s%03da%03db%03d",s,a,b).equals(id))
+    throw new IllegalArgumentException("Mismatched Atlas macro identity");
+   this.id=id;surah=s;start=a;end=b;label=t;
+  }
  }
  private final List<Macro> all;
  private final AtlasDisplayCatalog catalog;
@@ -44,7 +49,7 @@ final class MawdudiMapData {
     throw new IllegalStateException("Atlas private APK blocked: 366 verified titles required");
    List<Macro> rows=new ArrayList<>();
    for(AtlasPrivateV2.Unit u:source.units())
-    rows.add(new Macro(u.surah,u.start,u.end,catalog.unitTitle(u.id,u.ordinal)));
+    rows.add(new Macro(u.id,u.surah,u.start,u.end,catalog.unitTitle(u.id,u.ordinal)));
    return new MawdudiMapData(rows,catalog,units,passages);
   }
   // Existing debug versions can still load without the newly approved label
@@ -61,7 +66,7 @@ final class MawdudiMapData {
   List<Macro> rows=new ArrayList<>();
   for(AtlasPrivateV2.Unit u:source.units()){
    String title=approved==null?null:approved.get(u.id);
-   rows.add(new Macro(u.surah,u.start,u.end,
+   rows.add(new Macro(u.id,u.surah,u.start,u.end,
        title==null?"Unité "+u.ordinal+" · "+u.start+"–"+u.end:title));
   }
   return new MawdudiMapData(rows,null,units,passages);
@@ -202,6 +207,9 @@ final class AtlasDisplayCatalog {
     static final String SCHEMA="HAAFIDH_DISPLAY_CATALOG_V1";
     static final String ASSET="atlas/atlas_display_catalog_v1.json";
     final int revision;
+    // Editorial approval retains the exact chosen wording, independently of
+    // bibliography certification and permission to expose it at runtime.
+    final Map<String,String> approvedUnits,approvedPassages,approvedContexts;
     final Map<String,String> units,passages,contexts;
     private final Map<String,int[]> canonicalUnits,canonicalPassages;
 
@@ -231,8 +239,12 @@ final class AtlasDisplayCatalog {
 
     private AtlasDisplayCatalog(int revision,Map<String,String> units,
                                 Map<String,String> passages,Map<String,String> contexts,
-                                Map<String,int[]> canonicalUnits,Map<String,int[]> canonicalPassages) {
+                                Map<String,String> approvedUnits,Map<String,String> approvedPassages,
+                                Map<String,String> approvedContexts,Map<String,int[]> canonicalUnits,Map<String,int[]> canonicalPassages) {
         this.revision=revision;
+        this.approvedUnits=Collections.unmodifiableMap(approvedUnits);
+        this.approvedPassages=Collections.unmodifiableMap(approvedPassages);
+        this.approvedContexts=Collections.unmodifiableMap(approvedContexts);
         this.units=Collections.unmodifiableMap(units);
         this.passages=Collections.unmodifiableMap(passages);
         this.contexts=Collections.unmodifiableMap(contexts);
@@ -285,6 +297,8 @@ final class AtlasDisplayCatalog {
         JSONArray entries=root.getJSONArray("entries");
         if(entries.length()>5000)throw new IllegalArgumentException("Too many presentation entries");
         Map<String,String> units=new LinkedHashMap<>(),passages=new LinkedHashMap<>(),contexts=new LinkedHashMap<>();
+        Map<String,String> approvedUnits=new LinkedHashMap<>(),approvedPassages=new LinkedHashMap<>(),
+                approvedContexts=new LinkedHashMap<>();
         Set<String> seen=new HashSet<>();
         for(int i=0;i<entries.length();i++) {
             JSONObject entry=entries.getJSONObject(i);
@@ -313,21 +327,28 @@ final class AtlasDisplayCatalog {
             if(!seen.add(level+"|"+key))throw new IllegalArgumentException("Duplicate presentation identity");
             String rawTitle=text(entry,"title");
             String title=rawTitle.trim();
-            if(title.isEmpty()||title.length()>240)
+            String origin=text(entry,"origin");
+            boolean originalPassage="PASSAGE".equals(level)&&"ORIGINAL_AYAH_THEMES_TITLE".equals(origin);
+            if(title.isEmpty()||title.length()>(originalPassage?1000:240))
                 throw new IllegalArgumentException("Invalid presentation title");
             for(int k=0;k<rawTitle.length();k++)if(Character.isISOControl(rawTitle.charAt(k)))
                 throw new IllegalArgumentException("Control character in presentation title");
-            if(!"ORIGINAL_EDITORIAL_SUMMARY".equals(text(entry,"origin")))
-                throw new IllegalArgumentException("Source quotations are not public display summaries");
+            if(!"ORIGINAL_EDITORIAL_SUMMARY".equals(origin)&&!originalPassage)
+                throw new IllegalArgumentException("Unsupported presentation title origin");
             for(String field:new String[]{"source_ref","edition","locator","review_id"})
                 if(text(entry,field).trim().isEmpty())
                     throw new IllegalArgumentException("Missing presentation provenance");
             // Read every flag, even when a previous gate is false, so malformed metadata fails closed.
             boolean user=approval(entry,"user_approved"),source=approval(entry,"source_verified"),
                     independent=approval(entry,"independent_verified"),rights=approval(entry,"redistributable");
+            if(user) {
+                Map<String,String> approved="UNIT".equals(level)?approvedUnits:
+                        "PASSAGE".equals(level)?approvedPassages:approvedContexts;
+                approved.put(key,rawTitle);
+            }
             if(user&&source&&independent&&rights)target.put(key,title);
         }
-        return new AtlasDisplayCatalog(revision,units,passages,contexts,canonicalUnits,canonicalPassages);
+        return new AtlasDisplayCatalog(revision,units,passages,contexts,approvedUnits,approvedPassages,approvedContexts,canonicalUnits,canonicalPassages);
     }
 
     private static void requireRange(int[] source,int s,int a,int b) {

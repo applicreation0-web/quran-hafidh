@@ -88,6 +88,29 @@ public final class CorrespondenceModel {
         public boolean allApproved() { return source && classification && anchors && visual && qa; }
     }
 
+    /** Supplied by the reviewed editorial pipeline; never inferred from a type or verse. */
+    public static final class SourceReference {
+        public final String author, work, edition, locator;
+        public SourceReference(String author,String work,String edition,String locator) {
+            this.author=nonBlank(author); this.work=nonBlank(work);
+            this.edition=nonBlank(edition); this.locator=nonBlank(locator);
+        }
+    }
+    public static final class Presentation {
+        public final String shortTitle, factualLink;
+        public final List<SourceReference> sources;
+        public Presentation(String shortTitle,String factualLink,List<SourceReference> sources) {
+            this.shortTitle=nonBlank(shortTitle); this.factualLink=nonBlank(factualLink);
+            require(sources!=null && !sources.isEmpty(),"documented presentation sources required");
+            for(SourceReference source:sources) require(source!=null,"null presentation source");
+            this.sources=copy(sources);
+        }
+    }
+    private static String nonBlank(String value) {
+        require(value!=null && !value.trim().isEmpty(),"documented non-empty metadata required");
+        return value.trim();
+    }
+
     public static final class Relation {
         public final String id;
         /** Null denotes unresolved classification, not a ninth public type. */
@@ -98,10 +121,17 @@ public final class CorrespondenceModel {
         public final List<VerseRange> originals;
         public final List<Anchor> anchors;
         public final Gates gates;
+        /** Null means not prepared for the current UI; the generic model stays reusable. */
+        public final Presentation presentation;
         private final boolean completeAnchors, attestedCentralSegment;
         private final Geometry geometry;
         public Relation(String id,Type type,Mode mode,List<VerseRange> originals,
                         List<Anchor> anchors,Gates gates,Geometry geometry) {
+            this(id,type,mode,originals,anchors,gates,geometry,null);
+        }
+        public Relation(String id,Type type,Mode mode,List<VerseRange> originals,
+                        List<Anchor> anchors,Gates gates,Geometry geometry,Presentation presentation) {
+            this.presentation=presentation;
             require(id!=null && !id.trim().isEmpty() && mode!=null && gates!=null && geometry!=null,
                 "relation identity/mode/gates/geometry");
             require(originals!=null && anchors!=null,"relation ranges/anchors");

@@ -270,7 +270,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(mapUnitPreview){
             atlasCueFooter=Ui.text(this,"",11f,true);
             atlasCueFooter.setGravity(Gravity.CENTER);
-            atlasCueFooter.setMaxLines(3);
+            atlasCueFooter.setMaxLines(5);
             atlasCueFooter.setEllipsize(null);
             atlasCueFooter.setOnClickListener(v->showFullAtlasCue());
             atlasCueFooter.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),Ui.dp(this,3));
@@ -556,9 +556,29 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             atlasCueFooter.setText("Aucune ancre sur cette page");return;
         }
         MawdudiPassageIndex.Passage active=atlasPassages.get(atlasPassagePosition);
-        String title=ayahThemesCues.titleForPassage(active.id);
-        atlasCueFooter.setText(title==null?"Aucune ancre sur cette page":
-            active.surah+":"+active.firstAyah+" · "+title);
+        String sourceTitle=ayahThemesCues.titleForPassage(active.id);
+        String title=sourceTitle;
+        String unitTitle="";
+        if(mapPreviewUnits!=null){
+            int first=getIntent().getIntExtra("map114FocusStart",active.firstAyah);
+            MawdudiMapData.Macro unit=mapPreviewUnits.at(active.surah,first);
+            unitTitle=mapPreviewUnits.displayUnitTitle(unit.id);
+            title=mapPreviewUnits.displayContextTitle(active.id,unit.id,sourceTitle);
+        }
+        if(title==null||title.isEmpty()){
+            atlasCueFooter.setText("Aucune ancre sur cette page");return;
+        }
+        SpannableStringBuilder caption=new SpannableStringBuilder();
+        if(!unitTitle.isEmpty()){
+            caption.append(unitTitle);
+            caption.setSpan(new StyleSpan(Typeface.BOLD),0,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            caption.setSpan(new RelativeSizeSpan(1.25f),0,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            caption.append("\n");
+        }
+        int passageStart=caption.length();
+        caption.append(active.surah+":"+active.firstAyah+"–"+active.lastAyah+" · "+title);
+        caption.setSpan(new StyleSpan(Typeface.ITALIC),passageStart,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        atlasCueFooter.setText(caption);
     }
 
     private void showControls() {

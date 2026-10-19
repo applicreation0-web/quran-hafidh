@@ -17,6 +17,10 @@ public final class CorrespondenceAccessTest {
         public boolean hasSegmentGeometry(int s,int a,int f,int l) { return false; }
     };
     private static VerseRange range(int s,int a,int b) { return new VerseRange(s,a,b,G); }
+    private static Presentation presentation() {
+        return new Presentation("SYNTHETIC title","SYNTHETIC factual link",Arrays.asList(
+            new SourceReference("SYNTHETIC author","SYNTHETIC work","SYNTHETIC edition","SYNTHETIC locator")));
+    }
     private static Gates approved() { return new Gates(true,true,true,true,true); }
     private static Anchor anchor(int origin,VerseRange r) {
         return new Anchor(origin,r,true,"SYNTHETIC test locator",0,0);
@@ -24,7 +28,7 @@ public final class CorrespondenceAccessTest {
     private static Relation pair(String id,int aS,int aA,int bS,int bA,Gates gates) {
         VerseRange a=range(aS,aA,aA),b=range(bS,bA,bA);
         return new Relation(id,Type.RESSEMBLANCE,Mode.TWO_PAGES,Arrays.asList(a,b),
-            Arrays.asList(anchor(0,a),anchor(0,a),anchor(1,b)),gates,G);
+            Arrays.asList(anchor(0,a),anchor(0,a),anchor(1,b)),gates,G,presentation());
     }
     private static CorrespondenceAccess.Origin origin(CorrespondenceAccess.Surface surface) {
         ReaderSnapshot snapshot=new ReaderSnapshot(2,2,2,"unit-id","passage-id","mask-opaque",
@@ -82,7 +86,7 @@ public final class CorrespondenceAccessTest {
     @Test public void contextualOriginalBoundsDoNotBecomeFocalLinks() {
         VerseRange context=range(2,1,5),focal=range(2,2,2),other=range(3,3,3);
         Relation r=new Relation("TEST-FOCUS",Type.RESSEMBLANCE,Mode.TWO_PAGES,
-            Arrays.asList(context,other),Arrays.asList(anchor(0,focal),anchor(1,other)),approved(),G);
+            Arrays.asList(context,other),Arrays.asList(anchor(0,focal),anchor(1,other)),approved(),G,presentation());
         CorrespondenceAccess access=access(r); CorrespondenceAccess.Origin original=origin(CorrespondenceAccess.Surface.SABQI);
         assertTrue(access.at(original,2,1).visible.isEmpty()); assertEquals(1,access.at(original,2,2).visible.size());
         assertTrue(access.at(original,2,5).visible.isEmpty());

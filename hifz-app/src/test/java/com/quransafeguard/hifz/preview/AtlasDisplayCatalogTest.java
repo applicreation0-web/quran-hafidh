@@ -30,6 +30,45 @@ public final class AtlasDisplayCatalogTest {
     private static AtlasDisplayCatalog parse(JSONArray rows)throws Exception {
         return AtlasDisplayCatalog.parse(pack(rows),units(),passages());
     }
+    @Test public void editorialApprovalSurvivesWithoutSourceCertificationOrRuntimeRights()throws Exception {
+        for(String gate:new String[]{"source_verified","independent_verified","redistributable"}) {
+            AtlasDisplayCatalog c=parse(new JSONArray().put(entry("UNIT",U,5,11,26).put(gate,false)));
+            assertEquals(gate,"Synthetic approved label",c.approvedUnits.get(U));
+            assertTrue(c.units.isEmpty());
+            assertFalse(c.unitTitle(U,1).equals("Synthetic approved label"));
+        }
+    }
+    @Test public void originalPassageHeadingCanExceedEditorialSummaryLimitWithoutTruncation()throws Exception {
+        char[] letters=new char[302];Arrays.fill(letters,'x');String exact=new String(letters);
+        JSONObject e=entry("PASSAGE",P,5,7,11).put("origin","ORIGINAL_AYAH_THEMES_TITLE")
+            .put("title",exact).put("redistributable",false);
+        AtlasDisplayCatalog c=parse(new JSONArray().put(e));
+        assertEquals(exact,c.approvedPassages.get(P));assertTrue(c.passages.isEmpty());
+        reject(new JSONArray().put(entry("PASSAGE",P,5,7,11).put("title",exact)));
+        char[] oversized=new char[1001];Arrays.fill(oversized,'x');
+        reject(new JSONArray().put(e.put("title",new String(oversized))));
+    }
+    @Test public void originalPassageTitlesRemainDistinctFromEditorialSummaries()throws Exception {
+        JSONObject e=entry("PASSAGE",P,5,7,11).put("origin","ORIGINAL_AYAH_THEMES_TITLE")
+            .put("source_verified",false).put("independent_verified",false).put("redistributable",false);
+        AtlasDisplayCatalog c=parse(new JSONArray().put(e));
+        assertTrue(c.passages.isEmpty());
+        assertEquals("Admissible source",c.passageTitle(P,"Admissible source"));
+        reject(new JSONArray().put(entry("UNIT",U,5,11,26).put("origin","ORIGINAL_AYAH_THEMES_TITLE")));
+    }
+    @Test public void canonicalMacroIdentityIsStableAndExplicitMismatchFails() {
+        assertEquals(U,new MawdudiMapData.Macro(5,11,26,"Synthetic").id);
+        assertEquals(U,new MawdudiMapData.Macro(U,5,11,26,"Synthetic").id);
+        try { new MawdudiMapData.Macro(P,5,11,26,"Synthetic");fail("Changed unit identity accepted"); }
+        catch(IllegalArgumentException expected) {}
+    }
+    @Test public void unapprovedWordingIsNotAnEditorialApprovalAndApprovedMapsAreImmutable()throws Exception {
+        AtlasDisplayCatalog c=parse(new JSONArray().put(entry("UNIT",U,5,11,26).put("user_approved",false)));
+        assertTrue(c.approvedUnits.isEmpty());
+        c=parse(new JSONArray().put(entry("UNIT",U,5,11,26).put("source_verified",false)));
+        try { c.approvedUnits.put(U,"Replacement");fail("Editorial approval mutable"); }
+        catch(UnsupportedOperationException expected) {}
+    }
     @Test public void absentEntriesAreNeutralNotAnInvalidFixedCount()throws Exception {
         AtlasDisplayCatalog c=parse(new JSONArray());
         assertTrue(c.units.isEmpty());assertTrue(c.passages.isEmpty());assertTrue(c.contexts.isEmpty());

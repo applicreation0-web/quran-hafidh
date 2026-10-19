@@ -52,12 +52,13 @@ public final class AtlasFinalizationSourceContractTest {
             map.contains("shiftUnitWindow(dx>0?-1:1)"));
         assertTrue("Active unit remains distinctly circled",
             map.contains("ordinal==activeMacro"));
-        assertTrue("Second five-position Ayah Themes rail is retained",
-            map.contains("Math.min(5,items.size())"));
+        assertFalse("19 October supersedes the old double rail: passages belong to Lecture",
+            map.contains("class Graph extends View"));
+        assertFalse("No passage node is drawn on the unit map",map.contains("passageX("));
+        assertFalse("No initial miniature mosaic",map.contains("setMosaic(true)"));
         assertTrue("Unit title is larger and bold",map.contains("Ui.text(activity,\"\",16f,true)"));
-        assertTrue("Passage title is smaller and italic",
-            map.contains("Ui.text(activity,\"\",12.5f,false)")
-                &&map.contains("Typeface.ITALIC"));
+        assertFalse("Passage titles are shown in Lecture, never as a map rail",
+            map.contains("selectedPassageTitle=Ui.text"));
         assertTrue("Only direct authentic QCF full page is shown",
             map.contains("thumbnails.setMosaic(false)"));
         assertFalse("No redundant third page band above Mushaf",
@@ -73,16 +74,24 @@ public final class AtlasFinalizationSourceContractTest {
             map.contains("activity.startActivityForResult(intent,11436)"));
     }
 
+    @Test public void mapRestoresTheActualSelectedPassageInsteadOfTheUnitBeginning() throws Exception {
+        String map=read(ROOT+"MawdudiMapScreen.java");
+        assertTrue("Saved verse must select the actual passage after activity recreation",
+            map.contains("b.putInt(\"map114Ayah\",focusStart);"));
+        assertTrue(map.contains("b.putInt(\"map114UnitWindowStart\",unitWindowStart);"));
+        assertTrue(map.contains("b.putInt(\"map114Page\",page);"));
+    }
+
     @Test public void sourcePassagesRemainUnchangedButNeverAppearAsAtlasNodes() throws Exception {
         String map=read(ROOT+"MawdudiMapScreen.java");
-        assertTrue("Tap opens the original unmodified Ayah Themes title",
-            map.contains("String complete=titles.titleForPassage(current().id);"));
+        assertTrue("Canonical Passage display title is resolved without rewriting its source",
+            map.contains("macros.displayPassageTitle(current().id,titles.titleForPassage(current().id))"));
         assertTrue("Shared passages are bounded to their exact Atlas intersection",
-            map.contains("AtlasPassageContext.displayTitle(")
+            map.contains("macros.displayContextTitle(")
                 && map.contains("AtlasPassageContext.intersectionStart(")
                 && map.contains("AtlasPassageContext.intersectionEnd("));
-        assertTrue("Atlas uses only source-backed unit labels",map.contains("passageTitle.setText(unit.label);"));
-        assertTrue("No PDF action from selected unit title",map.contains("showTitle(macro().label);"));
+        assertTrue("Atlas uses only source-backed unit labels",map.contains("passageTitle.setText(macros.displayUnitTitle(unit.id));"));
+        assertTrue("No PDF action from selected unit title",map.contains("showTitle(macros.displayUnitTitle(macro().id));"));
         assertFalse("Do not open Islāḥī or Maududi commentaries from unit Atlas",
             map.substring(map.indexOf("private void showCurrentTitle(){"),
                 map.indexOf("private void chooseUnit(){")).contains("AtlasSourcePdfActivity"));
@@ -106,7 +115,8 @@ public final class AtlasFinalizationSourceContractTest {
         assertTrue(home.contains("homeNavLine(root, \"Atlas\""));
         assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Atlas\""));
         assertTrue(map.contains("Unité Atlas · "));
-        assertTrue(map.contains("Passage Ayah Themes · "));
+        assertFalse("Passage captions belong to Lecture, not the unit-only Atlas",
+            map.contains("Passage Ayah Themes · "));
         assertTrue(reader.contains("Passage Ayah Themes actif sur cette page"));
         assertTrue(reader.contains("\"Afficher les ancres\""));
         assertTrue(ui.contains("s.equals(\"atlas\")"));
