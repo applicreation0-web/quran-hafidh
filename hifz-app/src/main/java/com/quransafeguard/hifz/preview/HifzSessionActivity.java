@@ -55,6 +55,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean annotationEnabled = false;
     private TextView program, progress, timerText;
     private LinearLayout actions, audioHost;
+    private LinearLayout correspondenceActions;
     private HifzAudioDialog audioPlayer;
     private SessionClock clock;
     private final EinkController eink = new EinkController();
@@ -219,6 +220,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
+        correspondenceActions = Ui.row(this);
+        correspondenceActions.setVisibility(View.GONE);
+        controlBar.addView(correspondenceActions);
         if (!MURAJAAH_ACTIVE.equals(mode)) {
             annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
             annotationButton.setSelected(annotationEnabled);
@@ -1795,6 +1799,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(ITQAN.equals(mode))applyItqanAnchors();
         boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();
         mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);
+        CorrespondenceEntryPoints.populateSabqi(this, correspondenceActions, mode,
+            currentSelection, currentPage, displayedMask(), currentLineIds);
     }
 
     /** True when an anchored post-An-Nās page has an amorce without exact geometry: that page

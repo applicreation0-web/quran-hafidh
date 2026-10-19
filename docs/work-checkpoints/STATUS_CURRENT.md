@@ -1,3 +1,15 @@
+# Poursuite technique Atlas / Correspondances —19 octobre2026
+
+Reprise demandée au64572ef8, HEAD distant vérifié identique et arbre local propre. NO-GO livraison ne clôture pas le développement. Les étapes du job sources et du job compilation de64572ef8 sont réussies; conclusions des workflows à relire, instrumentationAPK ignorée. Preuves privées dansCP07_CONTINUATION, aucune ancienne CI réutilisée pour un nouveau code.
+
+Raccordement produit ajouté dans Atlas/Lecture/Sabqi, via activité consultative non exportée; le cycle normal de pause de la séance est conservé. Catalogue de production vide et SHA de confiance non attribué : aucun contenu non certifié activé. Package final exige preuve de droits, cinq gates, bibliographie et compatibilité du rendu. Aucun titre approuvé n'est rouvert.
+
+Restauration durable des positions A/B, occurrences, agrandissement et rail; contrôle du contexte/géométrie et de l'autorisation à la réouverture. Course de restauration asynchrone du viewport corrigée. Atlas→Lecture utilise les limites canoniques des Passages partagés; toutes les entrées Lecture privilégient l'état sauvegardé sur le saut initial; titreUnité16sp/Passage12sp. Trois insertions UI seulement dansHifzSessionActivity, retirées octet par octet par un vérificateur dédié pour retrouver le blob gelé4d52f8bc.
+
+La CI compile les sources Android sans paquet, contrôle le graphe des dépendances et interdit assemblage/packaging/signature/installation avant exécution. Les nouveaux tests d'instrumentation ne sont compilés que si ce graphe ne nécessite aucun APK. Compilation ≠ test Android exécuté; Android natif et BOOX PHYSIQUE restent NON_EXÉCUTÉS sans instruction APK et environnement de test adaptés. Les XML JUnit complets sont désormais conservés séparément des rapports historiques.
+
+---
+
 # Fusion Atlas / Correspondances — mandat final du 19 octobre 2026
 
 Branche unique : `work/haafidh-1171-ibn-kathir-integration-independent`.

@@ -145,6 +145,12 @@ while IFS= read -r file; do
     "$prefix/CorrespondenceScreen.java" | \
     "$prefix/CorrespondenceSwipe.java" | \
     "$prefix/CorrespondenceAccess.java" | \
+    "$prefix/CorrespondenceState.java" | \
+    "$prefix/CorrespondenceStateViewport.java" | \
+    "$prefix/CorrespondenceCatalog.java" | \
+    "$prefix/CorrespondenceRuntime.java" | \
+    "$prefix/CorrespondenceEntryPoints.java" | \
+    "$prefix/CorrespondenceActivity.java" | \
     "$prefix/AyahThemesCueIndex.java" | \
     "$prefix/AyahThemesReviewDisplay.java" | \
     "$prefix/PrivateDisplayIntegrity.java" | \

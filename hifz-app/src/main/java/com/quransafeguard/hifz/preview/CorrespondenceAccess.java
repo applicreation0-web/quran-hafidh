@@ -43,11 +43,38 @@ final class CorrespondenceAccess {
         List<Relation> others() { return remaining; }
     }
 
+    static final class Link {
+        final Relation relation;final Origin origin;
+        Link(Relation r,Origin o){relation=r;origin=o;}
+    }
+    static final class Choices {
+        final List<Link> visible,remaining;
+        Choices(List<Link> all){int n=Math.min(DEFAULT_VISIBLE_LIMIT,all.size());visible=frozen(all.subList(0,n));remaining=frozen(all.subList(n,all.size()));}
+    }
+    Choices over(List<Origin> origins){
+        require(origins!=null,"origins required");List<Link> links=new ArrayList<>();Set<String> ids=new LinkedHashSet<>();
+        for(Origin origin:origins){
+            Result found=forWorkedRange(origin);List<Relation> all=new ArrayList<>(found.visible);all.addAll(found.others());
+            for(Relation r:all)if(ids.add(r.id))links.add(new Link(r,origin));
+        }
+        return new Choices(links);
+    }
+
     private final Index index;
     private final Geometry geometry;
     CorrespondenceAccess(Index index,Geometry geometry) {
         require(index!=null && geometry!=null,"approved direct index and geometry required");
         this.index=index; this.geometry=geometry;
+    }
+    Result forWorkedRange(Origin origin) {
+        require(origin!=null,"origin required");
+        List<Relation> direct=new ArrayList<>();Set<String> seen=new LinkedHashSet<>();
+        for(int ayah=origin.workedRange.start;ayah<=origin.workedRange.end;ayah++) {
+            Result found=at(origin,origin.workedRange.surah,ayah);
+            List<Relation> all=new ArrayList<>(found.visible);all.addAll(found.others());
+            for(Relation relation:all)if(seen.add(relation.id))direct.add(relation);
+        }
+        return new Result(origin,direct);
     }
     Result at(Origin origin,int surah,int ayah) {
         require(origin!=null,"origin required");

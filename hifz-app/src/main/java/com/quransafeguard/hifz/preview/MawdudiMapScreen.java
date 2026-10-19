@@ -28,7 +28,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private TextView heading;
  private ScrollView titlePanel;
  private boolean titleExpanded;
- private LinearLayout icons;
+ private LinearLayout icons,correspondenceHost;
  private TextView passageTitle;
  private MapQcfThumbnails thumbnails;
  private int sunHeight;
@@ -51,6 +51,14 @@ final class MawdudiMapScreen implements MushafView.Listener {
    page=Math.max(geometry.pageForVerse(new VerseRef(surah,restoredUnit.start)),
        Math.min(MawdudiMapModel.lastPageForVerse(new VerseRef(surah,restoredUnit.end),geometry),
           saved.getInt("map114Page",page)));
+   String restoredId=saved.getString("map114SelectedPassageId");
+   for(int k=0;k<passages.size();k++){
+    MawdudiPassageIndex.Passage candidate=passages.get(k);
+    if(candidate.id.equals(restoredId)&&candidate.firstAyah<=restoredUnit.end
+        &&candidate.lastAyah>=restoredUnit.start){selected=k;break;}
+   }
+   focusStart=AtlasPassageContext.intersectionStart(current().firstAyah,restoredUnit.start);
+   focusEnd=AtlasPassageContext.intersectionEnd(current().lastAyah,restoredUnit.end);
    int first=saved.getInt("map114FocusStart",focusStart),last=saved.getInt("map114FocusEnd",focusEnd);
    if(current().contains(first)&&current().contains(last)&&first<=last
         &&first>=restoredUnit.start&&last<=restoredUnit.end){focusStart=first;focusEnd=last;}
@@ -170,6 +178,9 @@ final class MawdudiMapScreen implements MushafView.Listener {
   readerPos.leftMargin=Ui.dp(activity,36);
   icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),readerPos);
   root.addView(icons);
+  correspondenceHost=Ui.row(activity);correspondenceHost.setGravity(Gravity.CENTER);
+  correspondenceHost.setVisibility(View.GONE);
+  root.addView(correspondenceHost);
   activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
   activity.setContentView(root);refresh();
  }
@@ -253,6 +264,15 @@ final class MawdudiMapScreen implements MushafView.Listener {
   }
   overviewGraph.requestLayout();overviewGraph.invalidate();
   renderPage();
+  updateCorrespondences();
+ }
+ private void updateCorrespondences(){
+  if(correspondenceHost==null)return;
+  if(overview){correspondenceHost.removeAllViews();correspondenceHost.setVisibility(View.GONE);return;}
+  CorrespondenceEntryPoints.populate(activity,correspondenceHost,
+      CorrespondenceEntryPoints.origin(activity,CorrespondenceAccess.Surface.ATLAS,"atlas-unit",
+          surah,focusStart,page,macro().id,current().id,
+          "focus:"+focusStart+"-"+focusEnd,""+surah+":"+focusStart,focusStart,focusEnd));
  }
  private void renderPage(){
   mushaf.setVisibility(View.GONE);
@@ -327,8 +347,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
       .putExtra("map114FocusStart",unit.start)
       .putExtra("map114FocusEnd",unit.end)
       .putExtra("map114PassageId",current().id)
-      .putExtra("map114SelectedStart",focusStart)
-      .putExtra("map114SelectedEnd",focusEnd);
+      .putExtra("map114SelectedStart",current().firstAyah)
+      .putExtra("map114SelectedEnd",current().lastAyah);
   closeTitle();
   activity.startActivityForResult(intent,11436);
  }
@@ -376,6 +396,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   // Restoring at the unit beginning loses a later selected passage on that same page.
   b.putInt("map114Ayah",focusStart);
   b.putInt("map114Page",page);
+  b.putString("map114SelectedPassageId",current().id);
   b.putInt("map114FocusStart",focusStart);
   b.putInt("map114FocusEnd",focusEnd);
  }

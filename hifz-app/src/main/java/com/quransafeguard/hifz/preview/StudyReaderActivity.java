@@ -10,6 +10,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.RelativeSizeSpan;
+import android.text.style.AbsoluteSizeSpan;
 import android.text.style.StyleSpan;
 import android.text.style.SuperscriptSpan;
 import android.view.Gravity;
@@ -66,7 +67,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private android.app.Dialog semanticTitleDialog;
     /** Phone Tafsir: a non-modal bottom panel inside the reader (Mushaf stays tappable above it). */
     private FrameLayout bottomTafsir;
-    private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
+    private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir, correspondenceHost;
     private FrameLayout readerPane;
     private TextView surahPicker;
     private TextView rubPicker;
@@ -81,6 +82,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private java.util.List<MawdudiPassageIndex.Passage> atlasPassages=java.util.Collections.emptyList();
     private int atlasPassagePosition=-1;
     private boolean keepAtlasPassageOnNextPage;
+    private boolean restoreAtlasTafsir;
     private boolean largeScreen;
     private HifzPrefs hifzPrefs;
     private GeometryRepository geometry;
@@ -110,8 +112,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 for(MawdudiPassageIndex.Passage candidate:MawdudiPassageIndex.load(this).forSurah(s))
                     if(candidate.lastAyah>=lo&&candidate.firstAyah<=hi)inside.add(candidate);
                 atlasPassages=inside;
-                if(state!=null)atlasPassagePosition=state.getInt("map114PassageIndex",-1);
-                else {
+                if(state!=null){
+                    String savedId=state.getString("map114ReaderPassageId");
+                    for(int k=0;k<inside.size();k++)
+                        if(inside.get(k).id.equals(savedId)){atlasPassagePosition=k;break;}
+                    // Compatibility with already-saved activities on the same catalog.
+                    if(savedId==null)atlasPassagePosition=state.getInt("map114PassageIndex",-1);
+                } else {
                     // Direct passage selection from Atlas must survive opening Lecture
                     // even when multiple Ayah Themes passages start on one QCF page.
                     String requestedId=getIntent().getStringExtra("map114PassageId");
@@ -129,11 +136,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 if(atlasPassagePosition<0||atlasPassagePosition>=inside.size())atlasPassagePosition=-1;
             }catch(RuntimeException missingIndex){atlasPassages=java.util.Collections.emptyList();}
         }
-        int jumpPage = getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0);
+        int jumpPage = state==null ? getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0) : 0;
         page = jumpPage >= 1 && jumpPage <= 604
             ? jumpPage : getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
-        if(mapPreview&&state!=null)page=state.getInt("map114ReaderPage",page);
-        String jumpVerse = getIntent().getStringExtra(EXTRA_JUMP_VERSE);
+        if(state!=null)page=state.getInt("map114ReaderPage",page);
+        // A saved reader cursor wins over the original one-shot launch jump.
+        String jumpVerse = state!=null ? state.getString("map114SelectedVerse")
+            : getIntent().getStringExtra(EXTRA_JUMP_VERSE);
         if (jumpVerse != null) {
             try { pendingJumpVerse = GeometryRepository.parseVerse(jumpVerse); } catch (RuntimeException malformed) { /* ignore */ }
         }
@@ -146,6 +155,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticCuesEnabled=ayahThemesCues!=null
             && (mapPreview||getSharedPreferences("hifz_study",MODE_PRIVATE)
                 .getBoolean("ayah_themes_start_markers_visible",true));
+
+        if(state!=null){
+            semanticCuesEnabled=ayahThemesCues!=null&&state.getBoolean("map114SemanticCues",semanticCuesEnabled);
+            controlsVisible=state.getBoolean("map114ControlsVisible",true);
+            restoreAtlasTafsir=state.getBoolean("map114TafsirOpen",false);
+        }
 
         rootRow = new LinearLayout(this);
         rootRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -236,6 +251,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        correspondenceHost=Ui.row(this);
+        correspondenceHost.setGravity(Gravity.CENTER);
+        correspondenceHost.setVisibility(View.GONE);
+        readerStack.addView(correspondenceHost,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+
         pageRail = Ui.row(this);
         pageRail.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), Ui.dp(this, 1));
         // Must stay the exact same size as rubPicker below: pageRail centers each child by its
@@ -268,7 +289,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // Caption is beneath the real 15-line QCF page, never over the text.
         // Refresh it on every physical page change, not only when a word is tapped.
         if(mapUnitPreview){
-            atlasCueFooter=Ui.text(this,"",11f,true);
+            atlasCueFooter=Ui.text(this,"",12f,false);
+            atlasCueFooter.setMinHeight(Ui.dp(this,56));
             atlasCueFooter.setGravity(Gravity.CENTER);
             atlasCueFooter.setMaxLines(5);
             atlasCueFooter.setEllipsize(null);
@@ -276,7 +298,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             atlasCueFooter.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),Ui.dp(this,3));
             atlasCueFooter.setContentDescription("Passage Ayah Themes actif sur cette page");
             readerStack.addView(atlasCueFooter,new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,52)));
+                ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
         }
 
         if (!largeScreen) {
@@ -363,7 +385,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 }
             } catch(RuntimeException invalidPreview) {return;}
         }
-        if (next == page) { showControls(); return; }
+        if (next == page) { keepAtlasPassageOnNextPage=false;showControls(); return; }
         if(mapUnitPreview&&!keepAtlasPassageOnNextPage)selectAtlasPassageOnPage(next);
         keepAtlasPassageOnNextPage=false;
         closeSemanticTitle();
@@ -404,6 +426,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         selected = verse;
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
         if(!mapUnitPreview)mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
+        updateCorrespondences();
         refreshOpenTafsir(verse);
         if (tafsirWasOpen && !largeScreen) hideControls(); else showControls();
     }
@@ -420,7 +443,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(label==null){closeSemanticTitle();return;}
         showControls();
         if(mapUnitPreview){
-            if(atlasCueFooter!=null)atlasCueFooter.setText(label);
+            updateAtlasCueFooter();
             return;
         }
         semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
@@ -500,6 +523,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         int last=getIntent().getIntExtra("map114FocusEnd",0);
         try{
             GeometryRepository qcf=geometry!=null?geometry:GeometryRepository.get(this);
+            if(atlasPassagePosition>=0&&atlasPassagePosition<atlasPassages.size()){
+                MawdudiPassageIndex.Passage active=atlasPassages.get(atlasPassagePosition);
+                int lo=Math.max(first,active.firstAyah),hi=Math.min(last,active.lastAyah);
+                if(nextPage>=qcf.pageForVerse(new VerseRef(s,lo))
+                    &&nextPage<=MawdudiMapModel.lastPageForVerse(new VerseRef(s,hi),qcf))return;
+            }
             for(VerseRef verse:qcf.versesOnLines(qcf.lineIdsOnPage(nextPage))){
                 if(verse.getSurah()!=s||verse.getAyah()<first||verse.getAyah()>last)continue;
                 for(int k=0;k<atlasPassages.size();k++)
@@ -534,6 +563,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             updateAtlasCueFooter();
         }
         updateAtlasPassageButtons();
+        updateCorrespondences();
     }
 
     private void showFullAtlasCue(){
@@ -547,9 +577,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void updateAtlasCueFooter(){
         if(!mapUnitPreview||atlasCueFooter==null)return;
-        if(!semanticCuesEnabled||ayahThemesCues==null){
-            atlasCueFooter.setText("Ancres masquées");return;
-        }
+        if(ayahThemesCues==null)return;
         if(atlasPassagePosition<0||atlasPassagePosition>=atlasPassages.size())
             selectAtlasPassageOnPage(page);
         if(atlasPassagePosition<0||atlasPassagePosition>=atlasPassages.size()){
@@ -572,7 +600,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(!unitTitle.isEmpty()){
             caption.append(unitTitle);
             caption.setSpan(new StyleSpan(Typeface.BOLD),0,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            caption.setSpan(new RelativeSizeSpan(1.25f),0,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            caption.setSpan(new AbsoluteSizeSpan(Math.round(16f*getResources().getDisplayMetrics().scaledDensity)),0,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             caption.append("\n");
         }
         int passageStart=caption.length();
@@ -581,17 +609,41 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         atlasCueFooter.setText(caption);
     }
 
+    private void updateCorrespondences(){
+        if(correspondenceHost==null)return;
+        if(!controlsVisible){correspondenceHost.setVisibility(View.GONE);return;}
+        int s=selected==null?0:selected.getSurah(),a=selected==null?0:selected.getAyah();
+        String unitId=null,passageId=null;
+        int first=a,last=a;
+        if(mapUnitPreview&&atlasPassagePosition>=0&&atlasPassagePosition<atlasPassages.size()){
+            MawdudiPassageIndex.Passage active=atlasPassages.get(atlasPassagePosition);
+            s=active.surah;
+            first=Math.max(active.firstAyah,getIntent().getIntExtra("map114FocusStart",active.firstAyah));
+            last=Math.min(active.lastAyah,getIntent().getIntExtra("map114FocusEnd",active.lastAyah));
+            if(a<first||a>last)a=first;
+            passageId=active.id;
+            if(mapPreviewUnits!=null)unitId=mapPreviewUnits.at(s,first).id;
+        }
+        if(s==0||a==0){correspondenceHost.removeAllViews();correspondenceHost.setVisibility(View.GONE);return;}
+        CorrespondenceEntryPoints.populate(this,correspondenceHost,
+            CorrespondenceEntryPoints.origin(this,CorrespondenceAccess.Surface.LECTURE,
+                mapUnitPreview?"atlas-unit":"lecture",s,a,page,unitId,passageId,
+                "cues:"+semanticCuesEnabled+";focus:"+first+"-"+last,s+":"+a,first,last));
+    }
+
     private void showControls() {
         controlsVisible = true;
         topControls.setVisibility(View.VISIBLE);
         readerActions.setVisibility(View.VISIBLE);
         pageRail.setVisibility(View.VISIBLE);
+        updateCorrespondences();
         scheduleAutoHide();
     }
 
     private void hideControls() {
         if (topControls == null || readerActions == null || pageRail == null) return;
         controlsVisible = false;
+        if(correspondenceHost!=null)correspondenceHost.setVisibility(View.GONE);
         topControls.setVisibility(View.GONE);
         readerActions.setVisibility(View.GONE);
         pageRail.setVisibility(View.GONE);
@@ -1020,7 +1072,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                     if(v.getSurah()==surah&&v.getAyah()>=first&&v.getAyah()<=last&&!focus.contains(v))
                         focus.add(v);
                 if(focus.isEmpty())return false;
-                selected=focus.get(0);
+                if(selected==null||!focus.contains(selected))selected=focus.get(0);
                 tafsirButton.setContentDescription("Tafsir "+selected.getSurah()+":"+selected.getAyah());
                 // The focus veil is the only selection: no unrelated weak-spot outlines.
                 mushaf.setHighlightVerses(java.util.Collections.emptyList());
@@ -1054,7 +1106,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         } catch(RuntimeException invalidMapFocus) {return false;}
     }
     @Override protected void onSaveInstanceState(Bundle out) {
-        if(mapPreview)out.putInt("map114ReaderPage",page);
+        // All Lecture entry points consume their Intent jump only once.
+        out.putInt("map114ReaderPage",page);
+        out.putString("map114SelectedVerse",selected==null?null:selected.getSurah()+":"+selected.getAyah());
+        out.putBoolean("map114SemanticCues",semanticCuesEnabled);
+        out.putBoolean("map114ControlsVisible",controlsVisible);
+        out.putBoolean("map114TafsirOpen",isTafsirOpen());
+        if(atlasPassagePosition>=0&&atlasPassagePosition<atlasPassages.size())
+            out.putString("map114ReaderPassageId",atlasPassages.get(atlasPassagePosition).id);
         if(mapUnitPreview)out.putInt("map114PassageIndex",atlasPassagePosition);
         super.onSaveInstanceState(out);
     }
@@ -1079,6 +1138,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         applySemanticCues();
         updateAtlasCueFooter();
         updateAtlasPassageButtons();
+        updateCorrespondences();
+        boolean keepControlsHidden=!controlsVisible;
+        if(restoreAtlasTafsir){restoreAtlasTafsir=false;if(selected!=null)openTafsir();}
+        if(keepControlsHidden)hideControls();
         if(mapUnitPreview){
             // Lecture Atlas has no study/debug side-beads or ornamental parallel bars.
             // Rubʿ/Hizb badge and every original QCF glyph remain untouched.
@@ -1124,6 +1187,16 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (keyCode == KeyEvent.KEYCODE_PAGE_DOWN) { go(1); return true; }
         return super.onKeyDown(keyCode, event);
     }
+    @Override protected void onPause() {
+        if(mushaf!=null)mushaf.removeCallbacks(autoHide);
+        super.onPause();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if(controlsVisible)scheduleAutoHide();
+    }
+
     @Override protected void onDestroy() {
         if(mapPreviewJalalayn!=null){mapPreviewJalalayn.close();mapPreviewJalalayn=null;}
         io.shutdownNow();

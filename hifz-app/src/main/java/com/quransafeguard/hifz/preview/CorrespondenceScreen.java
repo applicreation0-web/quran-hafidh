@@ -17,6 +17,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Isolated, demand-only reader. No production relation is provided or inferred here. */
 public final class CorrespondenceScreen extends Dialog {
@@ -31,30 +33,93 @@ public final class CorrespondenceScreen extends Dialog {
  private LinearLayout body;
  private TextView heading;
  private OccurrenceRail rail;
- private boolean closed;
+ private boolean closed,detached;
+ private static final String CHECKPOINT="correspondence.checkpoint.v1";
  private int occurrence,windowStart;
  private CorrespondenceQcfSurface.State[] comparison;
 
- /** Returns false without constructing a dialog when any editorial/visual/QA gate is closed. */
+ /** Compatibility entry point; hosts needing lifecycle restoration retain the instance from open. */
  public static boolean show(Activity activity,CorrespondenceModel.Relation relation,
                             CorrespondenceModel.ReaderSnapshot origin,CorrespondenceModel.Geometry geometry,
                             Listener listener){
-  if(!CorrespondenceDocument.displayable(relation,geometry))return false;
-  if(activity==null||activity.isFinishing()||activity.isDestroyed()||origin==null||geometry==null)return false;
-  new CorrespondenceScreen(activity,relation,origin,geometry,listener).show();return true;
+  return open(activity,relation,origin,geometry,listener)!=null;
+ }
+ public static CorrespondenceScreen open(Activity activity,CorrespondenceModel.Relation relation,
+                            CorrespondenceModel.ReaderSnapshot origin,CorrespondenceModel.Geometry geometry,
+                            Listener listener){
+  return launch(activity,relation,origin,geometry,null,listener);
+ }
+ /** The host must resolve the relation from its current trusted catalogue, never from saved data. */
+ public static CorrespondenceScreen restore(Activity activity,CorrespondenceModel.Relation relation,
+                            CorrespondenceModel.ReaderSnapshot origin,CorrespondenceModel.Geometry geometry,
+                            Bundle checkpoint,Listener listener){
+  try{
+   if(checkpoint==null||!checkpoint.containsKey(CHECKPOINT))return null;
+   return restore(activity,relation,origin,geometry,
+    CorrespondenceState.decode(checkpoint.getByteArray(CHECKPOINT)),listener);
+  }catch(RuntimeException invalid){return null;}
+ }
+ public static CorrespondenceScreen restore(Activity activity,CorrespondenceModel.Relation relation,
+                            CorrespondenceModel.ReaderSnapshot origin,CorrespondenceModel.Geometry geometry,
+                            CorrespondenceState checkpoint,Listener listener){
+  if(checkpoint==null)return null;
+  return launch(activity,relation,origin,geometry,checkpoint,listener);
+ }
+ private static CorrespondenceScreen launch(Activity activity,CorrespondenceModel.Relation relation,
+                            CorrespondenceModel.ReaderSnapshot origin,CorrespondenceModel.Geometry geometry,
+                            CorrespondenceState checkpoint,Listener listener){
+  if(activity==null||activity.isFinishing()||activity.isDestroyed()||origin==null||geometry==null)return null;
+  CorrespondenceScreen dialog=null;
+  try{
+   if(!CorrespondenceDocument.displayable(relation,geometry)||!CorrespondenceState.sameGeometry(relation,geometry))return null;
+   dialog=new CorrespondenceScreen(activity,relation,origin,geometry,checkpoint,listener);
+   dialog.show();return dialog;
+  }catch(RuntimeException invalid){
+   if(dialog!=null)dialog.detachForHostDestruction();
+   return null;
+  }
  }
  private CorrespondenceScreen(Activity activity,CorrespondenceModel.Relation relation,
-                              CorrespondenceModel.ReaderSnapshot origin,CorrespondenceModel.Geometry geometry,Listener listener){
+                              CorrespondenceModel.ReaderSnapshot origin,CorrespondenceModel.Geometry geometry,
+                              CorrespondenceState checkpoint,Listener listener){
   super(activity);this.activity=activity;this.relation=relation;this.geometry=geometry;this.listener=listener;
-  navigation=new CorrespondenceModel.Navigation(relation,origin);
+  navigation=checkpoint==null?new CorrespondenceModel.Navigation(relation,origin):checkpoint.restore(relation,origin);
   int count=relation.mode==CorrespondenceModel.Mode.TWO_PAGES?2:1;
   surfaces=new CorrespondenceQcfSurface[count];panels=new LinearLayout[count];
+  if(checkpoint!=null){
+   occurrence=checkpoint.selectedOccurrence;windowStart=checkpoint.windowStart;
+   if(checkpoint.comparison!=null){
+    comparison=new CorrespondenceQcfSurface.State[count];
+    for(int p=0;p<count;p++)comparison[p]=viewport(checkpoint.comparison.get(p));
+   }
+  }
   setOnDismissListener(dialog->{
-   if(closed)return;closed=true;
-   for(CorrespondenceQcfSurface surface:surfaces)if(surface!=null)surface.destroy();
-   if(listener!=null)listener.onClosed(navigation.returnToOrigin());
+   if(closed)return;closed=true;destroySurfaces();
+   if(!detached&&!activity.isDestroyed()&&!activity.isFinishing()&&!activity.isChangingConfigurations()&&listener!=null)
+    listener.onClosed(navigation.returnToOrigin());
   });
  }
+ private static CorrespondenceQcfSurface.State viewport(CorrespondenceModel.Pane pane){
+  return new CorrespondenceQcfSurface.State(pane.page,(float)pane.zoom,pane.scrollX,pane.scrollY);
+ }
+ /** Primitive byte-array Bundle only: safe for Activity saved state and process recreation. */
+ public Bundle saveCheckpoint(){Bundle result=new Bundle();result.putByteArray(CHECKPOINT,saveState().encode());return result;}
+ public CorrespondenceState saveState(){
+  if(closed||detached)throw new IllegalStateException("Closed correspondence screen");
+  for(int p=0;p<surfaces.length;p++)if(surfaces[p]!=null)remember(p);
+  List<CorrespondenceModel.Pane> savedComparison=null;
+  if(comparison!=null&&navigation.enlargedPane()>=0){
+   savedComparison=new ArrayList<>();
+   for(int p=0;p<comparison.length;p++){
+    CorrespondenceQcfSurface.State state=comparison[p];
+    savedComparison.add(new CorrespondenceModel.Pane(state.page,state.zoom,navigation.pane(p).selection,state.x,state.y));
+   }
+  }
+  return CorrespondenceState.capture(navigation,windowStart,savedComparison);
+ }
+ /** Host onDestroy calls this after saving. No reader callback or learning mutation is issued. */
+ public void detachForHostDestruction(){detached=true;setOnDismissListener(null);destroySurfaces();closed=true;dismiss();}
+ private void destroySurfaces(){for(CorrespondenceQcfSurface surface:surfaces)if(surface!=null)surface.destroy();}
  @Override protected void onCreate(Bundle state){
   super.onCreate(state);requestWindowFeature(Window.FEATURE_NO_TITLE);
   LinearLayout root=new LinearLayout(activity);root.setOrientation(LinearLayout.VERTICAL);
@@ -87,7 +152,7 @@ public final class CorrespondenceScreen extends Dialog {
     panel.addView(bar,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(activity,48)));
    surfaces[p]=new CorrespondenceQcfSurface(activity);panel.addView(surfaces[p],new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
    panels[p]=panel;
-   surfaces[p].show(CorrespondenceDocument.focus(relation,p,0,geometry),null);
+   surfaces[p].show(CorrespondenceDocument.focus(relation,p,occurrence,geometry),viewport(navigation.pane(p)));
   }
   setContentView(root);layoutPanels();updateHeading();
  }
@@ -124,8 +189,9 @@ public final class CorrespondenceScreen extends Dialog {
     CorrespondenceQcfSurface.State target=comparison[p];
     if(surfaces[p].state().page!=target.page)surfaces[p].show(CorrespondenceDocument.focus(relation,p,occurrence,geometry),target);
     else surfaces[p].restoreViewport(target);
+    navigation.setPane(p,target.page,target.zoom,navigation.pane(p).selection,target.x,target.y);
    }
-   updateHeading();return;
+   comparison=null;updateHeading();return;
   }
   dismiss();
  }
@@ -160,7 +226,7 @@ public final class CorrespondenceScreen extends Dialog {
   OccurrenceRail(){super(activity);setFocusable(true);setContentDescription("Occurrences. Balayer latéralement pour parcourir la frise; flèches clavier pour sélectionner.");}
   int count(){return Math.min(Math.min(5,relation.anchors.size()),getWidth()==0?5:Math.max(1,getWidth()/Ui.dp(activity,48)));}
   @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
-   super.onSizeChanged(w,h,oldw,oldh);windowStart=Math.max(0,Math.min(relation.anchors.size()-count(),occurrence-count()/2));
+   super.onSizeChanged(w,h,oldw,oldh);windowStart=Math.max(0,Math.min(relation.anchors.size()-count(),windowStart));
   }
   float x(int index){return getWidth()*(index+.5f)/count();}
   @Override protected void onDraw(Canvas canvas){

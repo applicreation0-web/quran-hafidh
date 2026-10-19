@@ -1,0 +1,12 @@
+// Fail before executing the first task, even if an Android dependency later adds packaging.
+gradle.taskGraph.whenReady { graph ->
+    def blocked = graph.allTasks.findAll { task ->
+        def n = task.name
+        def lower = n.toLowerCase(java.util.Locale.ROOT)
+        lower.startsWith('assemble') || lower.startsWith('install') ||
+        lower.startsWith('connected') || lower.startsWith('sign') || lower.startsWith('zipalign') ||
+        (lower.startsWith('package') && !n.endsWith('Resources')) ||
+        (lower.startsWith('bundle') && !n.endsWith('Jar'))
+    }
+    if (!blocked.isEmpty()) throw new GradleException('NON_EXECUTE: no APK authorization: ' + blocked*.path.join(', '))
+}

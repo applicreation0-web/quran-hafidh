@@ -41,6 +41,28 @@ public final class CorrespondenceAccessTest {
     private static void rejects(Runnable operation) {
         try { operation.run(); fail("invalid access accepted"); } catch(IllegalArgumentException expected) { }
     }
+    @Test public void exactSelectionsAcrossSurahsRetainEachDirectLinksOwnOrigin() {
+        Relation first=pair("TEST-FIRST",2,2,4,4,approved());
+        Relation second=pair("TEST-SECOND",3,3,5,5,approved());
+        CorrespondenceAccess.Origin a=origin(CorrespondenceAccess.Surface.SABQI);
+        CorrespondenceAccess.Origin b=new CorrespondenceAccess.Origin(CorrespondenceAccess.Surface.SABQI,"SABQI",
+            new ReaderSnapshot(3,3,3,"","","mask",1,"3:3"),range(3,3,3));
+        try {
+            java.lang.reflect.Method method=CorrespondenceAccess.class.getDeclaredMethod("over",List.class);
+            Object choices=method.invoke(access(first,second),Arrays.asList(a,b));
+            java.lang.reflect.Field visible=choices.getClass().getDeclaredField("visible");
+            List<?> links=(List<?>)visible.get(choices);assertEquals(2,links.size());
+            java.lang.reflect.Field context=links.get(1).getClass().getDeclaredField("origin");
+            assertSame(b,context.get(links.get(1)));
+        } catch(ReflectiveOperationException missing){throw new AssertionError("Multi-surah direct access missing",missing);}
+    }
+    @Test public void workedPassageIncludesLaterDirectAnchorsWithoutInferringSiblingRelations() {
+        Relation later=pair("TEST-LATER",2,4,3,3,approved());
+        Relation sibling=pair("TEST-SIBLING",3,3,4,4,approved());
+        CorrespondenceAccess.Result result=access(later,sibling).forWorkedRange(origin(CorrespondenceAccess.Surface.LECTURE));
+        assertEquals(Arrays.asList(later),result.visible);
+        assertFalse(result.hasOthers());
+    }
     @Test public void noApprovedRelationProducesEmptyAccessAndNoPhantomAffordance() {
         CorrespondenceAccess.Result result=access().at(origin(CorrespondenceAccess.Surface.LECTURE),2,2);
         assertTrue(result.visible.isEmpty()); assertFalse(result.hasLinks());

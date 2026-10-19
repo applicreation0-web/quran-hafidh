@@ -72,7 +72,17 @@ jobs:
           gradle-version: '9.5.0'
       - name: Compile private-flag Android code and test without assembling a package
         shell: bash
-        run: gradle --no-daemon :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:compileDebugJavaWithJavac --stacktrace
+        run: gradle --no-daemon --init-script scripts/no_apk.init.gradle :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:compileDebugJavaWithJavac --stacktrace
+      - name: Compile instrumentation sources only when the dependency graph needs no APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :hifz-app:compileDebugAndroidTestJavaWithJavac --dry-run > "$RUNNER_TEMP/instrumentation-compile-graph.txt"
+          if python3 scripts/check_no_apk_task_graph.py "$RUNNER_TEMP/instrumentation-compile-graph.txt"; then
+            gradle --no-daemon --init-script scripts/no_apk.init.gradle :hifz-app:compileDebugAndroidTestJavaWithJavac --stacktrace
+          else
+            echo 'NON_EXECUTE: instrumentation compilation requires a forbidden package dependency'
+          fi
       - name: Assert compilation produced no APK
         shell: bash
         run: |

@@ -118,6 +118,12 @@ while IFS= read -r file; do
     "$APP_ROOT/CorrespondenceScreen.java" | \
     "$APP_ROOT/CorrespondenceSwipe.java" | \
     "$APP_ROOT/CorrespondenceAccess.java" | \
+    "$APP_ROOT/CorrespondenceState.java" | \
+    "$APP_ROOT/CorrespondenceStateViewport.java" | \
+    "$APP_ROOT/CorrespondenceCatalog.java" | \
+    "$APP_ROOT/CorrespondenceRuntime.java" | \
+    "$APP_ROOT/CorrespondenceEntryPoints.java" | \
+    "$APP_ROOT/CorrespondenceActivity.java" | \
     "$APP_ROOT/AyahThemesCueIndex.java" | \
     "$APP_ROOT/AyahThemesReviewDisplay.java" | \
     "$APP_ROOT/PrivateDisplayIntegrity.java" | \

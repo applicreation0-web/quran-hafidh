@@ -19,6 +19,13 @@ public final class AtlasFinalizationSourceContractTest {
     }
     private static final String ROOT="hifz-app/src/main/java/com/quransafeguard/hifz/preview/";
 
+    @Test public void backgroundConsultationSuspendsAutoHideWithoutRevealingHiddenControls()throws Exception {
+        String reader=read(ROOT+"StudyReaderActivity.java");
+        assertTrue(reader.contains("@Override protected void onPause()"));
+        assertTrue(reader.contains("if(mushaf!=null)mushaf.removeCallbacks(autoHide);"));
+        assertTrue(reader.contains("if(controlsVisible)scheduleAutoHide();"));
+    }
+
     @Test public void weeklyGoalLabelsUsePagesOnlyWithoutChangingSchedules() throws Exception {
         String home=read(ROOT+"MainActivity.java");
         assertTrue(home.contains("navLine(path, \"Apprentissage\", \"1 page/semaine\""));
@@ -123,4 +130,51 @@ public final class AtlasFinalizationSourceContractTest {
         assertTrue(ui.contains("if (s.contains(\"ancre\")) return R.drawable.ic_ui_semantic_anchor;"));
         assertTrue(ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_recall_key;"));
     }
+    @Test public void sharedPassageLaunchCarriesCanonicalBoundsSeparatelyFromFocus() throws Exception {
+        String map=read(ROOT+"MawdudiMapScreen.java");
+        assertTrue(map.contains(".putExtra(\"map114SelectedStart\",current().firstAyah)"));
+        assertTrue(map.contains(".putExtra(\"map114SelectedEnd\",current().lastAyah)"));
+        assertTrue(map.contains("b.putString(\"map114SelectedPassageId\",current().id)"));
+    }
+
+    @Test public void readerRestorationSupersedesLaunchVerseAndRetainsSelectedFocus() throws Exception {
+        String reader=read(ROOT+"StudyReaderActivity.java");
+        assertTrue(reader.contains("state.getString(\"map114SelectedVerse\")"));
+        assertTrue(reader.contains("out.putBoolean(\"map114SemanticCues\",semanticCuesEnabled)"));
+        assertTrue(reader.contains("out.putBoolean(\"map114TafsirOpen\",isTafsirOpen())"));
+        assertTrue(reader.contains("if(selected==null||!focus.contains(selected))selected=focus.get(0);"));
+    }
+
+    @Test public void readerUnitCaptionUsesActualSixteenSpAndCanonicalPopup() throws Exception {
+        String reader=read(ROOT+"StudyReaderActivity.java");
+        assertTrue(reader.contains("new AbsoluteSizeSpan(Math.round(16f*getResources().getDisplayMetrics().scaledDensity))"));
+        assertTrue(reader.contains("caption.setSpan(new StyleSpan(Typeface.ITALIC)"));
+        int start=reader.indexOf("private void showFullAtlasCue()");
+        int end=reader.indexOf("private void updateAtlasCueFooter()",start);
+        assertTrue(reader.substring(start,end).contains("ayahThemesCues.titleForPassage(active.id)"));
+    }
+
+    @Test public void correspondenceEntryPointsUseSeparateHostsAndClippedContext() throws Exception {
+        String reader=read(ROOT+"StudyReaderActivity.java"),map=read(ROOT+"MawdudiMapScreen.java");
+        assertTrue(reader.contains("CorrespondenceEntryPoints.populate(this,correspondenceHost,"));
+        assertTrue(map.contains("CorrespondenceEntryPoints.populate(activity,correspondenceHost,"));
+        assertTrue(map.contains("if(overview){correspondenceHost.removeAllViews();"));
+        assertTrue(reader.contains("int first=a,last=a;"));
+        assertTrue(reader.contains("Math.max(active.firstAyah,getIntent().getIntExtra"));
+        assertTrue(reader.contains("Math.min(active.lastAyah,getIntent().getIntExtra"));
+    }
+
+    @Test public void ordinaryLectureRestoresCursorInsteadOfReplayingInitialJump() throws Exception {
+        String reader=read(ROOT+"StudyReaderActivity.java");
+        assertTrue("Only a fresh activity may consume the initial page jump",
+            reader.contains("int jumpPage = state==null ? getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0) : 0;"));
+        assertTrue(reader.contains("if(state!=null)page=state.getInt(\"map114ReaderPage\",page);"));
+        assertTrue(reader.contains("String jumpVerse = state!=null ? state.getString(\"map114SelectedVerse\")"));
+        int start=reader.indexOf("@Override protected void onSaveInstanceState(Bundle out)");
+        int end=reader.indexOf("@Override public void onReady()",start);
+        assertFalse("Every Lecture activity saves its cursor and presentation state",
+            reader.substring(start,end).contains("if(mapPreview){"));
+        assertTrue(reader.contains("if (!mapPreview) getSharedPreferences(\"hifz_study\", MODE_PRIVATE).edit().putInt(\"page\", page).apply();"));
+    }
+
 }

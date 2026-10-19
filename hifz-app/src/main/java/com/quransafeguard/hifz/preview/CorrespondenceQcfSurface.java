@@ -40,6 +40,7 @@ final class CorrespondenceQcfSurface extends LinearLayout {
  private boolean loading;
  private State restore;
  private State requestedState;
+ private final CorrespondenceStateViewport<State> viewportIntent=new CorrespondenceStateViewport<>();
  private String expectedDocument="";
  private final java.util.Map<Integer,State> pageStates=new java.util.HashMap<>();
  private final CorrespondenceSwipe swipe=new CorrespondenceSwipe();
@@ -61,14 +62,14 @@ final class CorrespondenceQcfSurface extends LinearLayout {
    @Override public void onPageFinished(WebView view,String url){
     if(disposed||restore==null||!expectedDocument.equals(url))return;
     loading=false;position.setText(readyCaption);updateButtons();
-    State target=restore;restore=null;int finishedGeneration=generation;
+    State target=restore;restore=null;int finishedGeneration=generation;long token=viewportIntent.revision();
     // The ready callback may belong to the old document. Only restore the selected page.
-    if(target.page==page)view.post(()->{if(!disposed&&!loading&&generation==finishedGeneration&&target.page==page)view.scrollTo(target.x,target.y);});
+    if(target.page==page)view.post(()->applyViewport(finishedGeneration,token));
    }
   });
   web.setOnTouchListener((view,event)->{
    int action=event.getActionMasked();
-   if(action==MotionEvent.ACTION_DOWN)swipe.begin(event.getX(),event.getY(),zoom());
+   if(action==MotionEvent.ACTION_DOWN){viewportIntent.cancel();swipe.begin(event.getX(),event.getY(),zoom());}
    if(action==MotionEvent.ACTION_POINTER_DOWN||event.getPointerCount()>1)swipe.multiplePointers();
    if(action==MotionEvent.ACTION_CANCEL)swipe.cancel();
    if(action==MotionEvent.ACTION_UP){
@@ -101,14 +102,21 @@ final class CorrespondenceQcfSurface extends LinearLayout {
   if(target<focus.firstPage||target>focus.lastPage)target=focus.initialPage;
   load(new State(target,state==null?1f:state.zoom,state==null?0:state.x,state==null?0:state.y));
  }
- State state(){return loading&&requestedState!=null?requestedState:new State(page,zoom(),web.getScrollX(),web.getScrollY());}
+ State state(){
+  State intended=viewportIntent.pending(generation,page);
+  return intended!=null?intended:loading&&requestedState!=null?requestedState:new State(page,zoom(),web.getScrollX(),web.getScrollY());
+ }
  void restoreViewport(State state){
-  web.post(()->{
-   if(disposed||loading||state.page!=page)return;
-   float factor=state.zoom/zoom();
-   if(Math.abs(factor-1f)>0.01f)web.zoomBy(factor);
-   web.scrollTo(state.x,state.y);
-  });
+  if(disposed||state==null||state.page!=page)return;
+  int request=generation;long token=viewportIntent.request(state,request,page);
+  web.post(()->applyViewport(request,token));
+ }
+ private void applyViewport(int request,long token){
+  if(disposed||loading||generation!=request)return;
+  State target=viewportIntent.pending(token,request,page);if(target==null)return;
+  float factor=target.zoom/zoom();
+  if(Math.abs(factor-1f)>0.01f)web.zoomBy(factor);
+  web.scrollTo(target.x,target.y);viewportIntent.complete(token);
  }
  private float zoom(){return Math.max(0.1f,web.getScale()/getResources().getDisplayMetrics().density);}
  private void step(int delta){
@@ -121,7 +129,8 @@ final class CorrespondenceQcfSurface extends LinearLayout {
  private void load(State state){
   page=state.page;loading=true;restore=null;requestedState=state;
   swipe.cancel();
-  int request=++generation;if(pending!=null)pending.cancel(true);
+  int request=++generation;viewportIntent.cancel();viewportIntent.request(state,request,page);
+  if(pending!=null)pending.cancel(true);
   position.setText("p. "+page+" · chargement");updateButtons();
   CorrespondenceDocument.Focus requestFocus=focus;
   // Do not clear the old folio while decoding: avoid a white/black flash on E-Ink.
@@ -166,7 +175,7 @@ final class CorrespondenceQcfSurface extends LinearLayout {
   }
  }
  void destroy(){
-  if(disposed)return;disposed=true;++generation;
+  if(disposed)return;disposed=true;++generation;viewportIntent.cancel();
   swipe.cancel();
   if(pending!=null)pending.cancel(true);decoder.shutdownNow();
   web.stopLoading();web.setOnTouchListener(null);web.setWebViewClient(new WebViewClient());

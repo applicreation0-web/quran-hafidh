@@ -169,6 +169,7 @@ public final class CorrespondenceModel {
             this.id=id; this.type=type; this.mode=mode; this.gates=gates; this.geometry=geometry;
             this.scope=surahs.size()==1 ? Scope.INTRA : Scope.INTER;
         }
+        Geometry checkpointGeometry() { return geometry; }
         public boolean displayable() {
             return type!=null && gates.allApproved() && completeAnchors &&
                 (type!=Type.CENTRE || (mode==Mode.INTERNAL && attestedCentralSegment));
@@ -230,7 +231,7 @@ public final class CorrespondenceModel {
         public final String selection;
         public final int scrollX,scrollY;
         private Pane(int page,double zoom,String selection) { this(page,zoom,selection,0,0); }
-        private Pane(int page,double zoom,String selection,int scrollX,int scrollY) {
+        Pane(int page,double zoom,String selection,int scrollX,int scrollY) {
             checkView(page,zoom,selection);
             require(scrollX>=0 && scrollY>=0,"pane pan");
             this.page=page; this.zoom=zoom; this.selection=selection;
@@ -252,7 +253,7 @@ public final class CorrespondenceModel {
         public final int selectedOccurrence,enlargedPane;
         public final ReaderSnapshot origin;
         private final Navigation owner;
-        private final List<Pane> occurrencePanes;
+        public final List<Pane> occurrencePanes;
         private Snapshot(Navigation nav) {
             owner=nav; panes=copy(nav.panes); occurrencePanes=copy(nav.occurrencePanes);
             selectedOccurrence=nav.selectedOccurrence; enlargedPane=nav.enlargedPane; origin=nav.origin;
