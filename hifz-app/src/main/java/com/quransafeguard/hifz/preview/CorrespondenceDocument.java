@@ -1,0 +1,59 @@
+package com.quransafeguard.hifz.preview;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+/** Pure display plan. Context pages never alter the canonical relation ranges. */
+final class CorrespondenceDocument {
+ private CorrespondenceDocument() {}
+ static final class Focus {
+  final int surah,first,last,normalNeighbor,firstPage,lastPage,initialPage;
+  final boolean supported;
+  Focus(int s,int a,int b,int n,int fp,int lp,int ip,boolean supported){
+   surah=s;first=a;last=b;normalNeighbor=n;firstPage=fp;lastPage=lp;initialPage=ip;this.supported=supported;
+  }
+ }
+ static Focus focus(CorrespondenceModel.Relation relation,int pane,int occurrence,CorrespondenceModel.Geometry geometry){
+  CorrespondenceModel.Anchor selected=relation.anchors.get(relation.mode==CorrespondenceModel.Mode.SERIES?occurrence:0);
+  int original=relation.mode==CorrespondenceModel.Mode.SERIES?selected.originalIndex:pane;
+  CorrespondenceModel.VerseRange range=relation.originals.get(original);
+  List<CorrespondenceModel.Anchor> anchors=new ArrayList<>();
+  if(relation.mode==CorrespondenceModel.Mode.SERIES)anchors.add(selected);
+  else for(CorrespondenceModel.Anchor a:relation.anchors)if(a.originalIndex==original)anchors.add(a);
+  anchors.sort(Comparator.comparingInt(a->a.range.start));
+  int first=anchors.get(0).range.start,last=first,initial=anchors.get(0).range.firstPage;
+  boolean supported=relation.type!=CorrespondenceModel.Type.CENTRE;
+  for(CorrespondenceModel.Anchor a:anchors){
+   // This renderer has verse geometry only. Never masquerade as a word renderer,
+   // or fill gaps between several separate anchors as if they were attested.
+   supported &= !a.isWordSegment() && a.range.surah==range.surah && a.range.start<=last+1;
+   last=Math.max(last,a.range.end);
+  }
+  int neighbor=0,fp=range.firstPage,lp=range.lastPage;
+  if(relation.mode==CorrespondenceModel.Mode.SERIES){
+   neighbor=last<geometry.ayahCount(range.surah)?last+1:first>1?first-1:0;
+   if(neighbor>0){fp=Math.min(fp,geometry.firstPage(range.surah,neighbor));lp=Math.max(lp,geometry.lastPage(range.surah,neighbor));}
+  }
+  return new Focus(range.surah,first,last,neighbor,fp,lp,initial,supported);
+ }
+ static final class Render {
+  final String svg;final boolean focusVerified;
+  Render(String svg,boolean verified){this.svg=svg;focusVerified=verified;}
+ }
+ static Render render(String svg,Focus focus,int page){
+  if(!focus.supported)return new Render(CorrespondenceSvgFocus.untouched(svg),false);
+  String rendered=CorrespondenceSvgFocus.apply(svg,focus.surah,focus.first,focus.last,focus.normalNeighbor);
+  return new Render(rendered,!rendered.equals(svg));
+ }
+ static String html(String svg){
+  // SVG bytes and every glyph remain inline and local, with no script/bridge.
+  return "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
+   +"<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:\">"
+   +"<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#faf8f2;}"
+   +"body{display:flex;align-items:center;justify-content:center;padding:4px;}"
+   +"svg{display:block;width:100%;height:100%;background:transparent;overflow:visible;}"
+   +"</style></head><body>"
+   +svg+"</body></html>";
+ }
+}

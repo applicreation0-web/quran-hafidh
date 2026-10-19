@@ -139,6 +139,10 @@ while IFS= read -r file; do
     "$prefix/MapQcfThumbnails.java" | \
     "$prefix/CorrespondenceSvgFocus.java" | \
     "$prefix/CorrespondenceModel.java" | \
+    "$prefix/CorrespondenceGeometry.java" | \
+    "$prefix/CorrespondenceDocument.java" | \
+    "$prefix/CorrespondenceQcfSurface.java" | \
+    "$prefix/CorrespondenceScreen.java" | \
     "$prefix/AyahThemesCueIndex.java" | \
     "$prefix/AyahThemesReviewDisplay.java" | \
     "$prefix/PrivateDisplayIntegrity.java" | \
