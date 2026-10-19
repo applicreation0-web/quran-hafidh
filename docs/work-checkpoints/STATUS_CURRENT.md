@@ -1,3 +1,24 @@
+# Fusion Atlas / Correspondances — deuxième screening prioritaire du 19 octobre 2026
+
+Branche unique : `work/haafidh-1171-ibn-kathir-integration-independent`.
+Nouveau mandat fourni : `Work_Quran_Haafidh_Complet_Reprise_Screening_1419 (1).zip`, SHA-256 `c8a364da4c2e2230dcc8d2e9590953a2b4d5aaf9c967e205049d805186a084c9`.
+
+La première passe privée couvre 366 unités et 1053 passages; elle n'est pas une certification globale. Le nouvel addendum ordonne une DEUXIÈME lecture intégrale indépendante des1419 titres, y compris ceux déjà acceptés, avec conclusion aveugle avant comparaison. Les premiers lots ne remplacent pas les1419 preuves individuelles requises. Les13 décisions utilisateur sont conservées. Nouveaux registres séparés; aucun ancien résultat effacé ou recompensé comme nouvelle lecture.
+
+Les110 dossiers ont reçu une révision éditoriale provisoire aux huit types :48 retenus non certifiés,43 à corriger,19 non résolus. Aucun corpus approuvé de production. Les huit dessins exacts et les23 anciens pictogrammes restent figés.
+
+Code préparé : modèle gated non transitif, focus de versets authentique, deux surfaces QCF ou exception série/interne, frise maximale cinq points, accès contextuel pur sans branchement produit. Native viewer/BOOX, hachures centrales et restauration du cycle de vie non validés. Le prochain contrôle doit refuser les modes incompatibles plutôt que croire leurs seuls flags.
+
+CP03 : chargeur optionnel ordinaire à effectif variable et APIs de présentation préparés; absent→legacy inchangé, présent invalide→échec explicite.40 tests isolés passent sur deux JSON,120 métadonnées historiques préservées, sans certification ni activation de catalogue réel. L'ancien chargeur reste pour rollback; le problème privé n'est pas déclaré résolu.
+
+L'ancien workflow Android déclenché sur push assemblait des APK pour émulateur malgré son intitulé. Écart consigné, puis bloque sur push : instrumentation seulement après ordre distinct via workflow_dispatch opt-in et garde de script. Aucun APK livré ni installation sur l'appareil utilisateur. Tests sources/JVM et compilation restent autorisés. Ne pas affirmer «aucun APK jamais créé» : l'ancienne CI en générait pour son émulateur.
+
+**NO-GO. CP01 deuxième screening et CP07 non clôturés. Aucun nouvel assemblage/signature/installation/release APK autorisé.**
+
+Les sections ci-dessous sont les checkpoints historiques, pas l'état courant.
+
+---
+
 # Fusion Atlas / Correspondances — reprise prioritaire du 18 octobre 2026
 
 Branche unique : `work/haafidh-1171-ibn-kathir-integration-independent`.

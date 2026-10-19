@@ -5,14 +5,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.json.*;
 
-/** Source-safe macro headings are a separate private display asset, never Quran/Hifz data. */
+/** Display headings are separate presentation metadata, never Quran/Hifz data. */
 final class MawdudiMapData {
  static final class Macro {
   final int surah,start,end;final String label;
   Macro(int s,int a,int b,String t){surah=s;start=a;end=b;label=t;}
  }
  private final List<Macro> all;
- private MawdudiMapData(List<Macro> rows){all=Collections.unmodifiableList(rows);}
+ private final AtlasDisplayCatalog catalog;
+ private final Map<String,int[]> unitRanges,passageRanges;
+ private MawdudiMapData(List<Macro> rows){this(rows,null,Collections.emptyMap(),Collections.emptyMap());}
+ private MawdudiMapData(List<Macro> rows,AtlasDisplayCatalog catalog,
+                        Map<String,int[]> units,Map<String,int[]> passages){
+  all=Collections.unmodifiableList(new ArrayList<>(rows));this.catalog=catalog;
+  unitRanges=units;passageRanges=passages;
+ }
  static String read(Context c,String asset)throws Exception {
   try(InputStream in=c.getAssets().open(asset);ByteArrayOutputStream out=new ByteArrayOutputStream()) {
    byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1){if(out.size()+n>2_000_000)throw new IllegalStateException("oversized map pack");out.write(b,0,n);}
@@ -22,6 +29,24 @@ final class MawdudiMapData {
  }
  static MawdudiMapData load(Context c,MawdudiPassageIndex index)throws Exception {
   AtlasPrivateV2 source=AtlasPrivateV2.load(c,index);
+  Map<String,int[]> units=new LinkedHashMap<>(),passages=new LinkedHashMap<>();
+  for(AtlasPrivateV2.Unit u:source.units())units.put(u.id,new int[]{u.surah,u.start,u.end});
+  for(MawdudiPassageIndex.Passage p:index.all())
+   passages.put(p.id,new int[]{p.surah,p.firstAyah,p.lastAyah});
+  // An absent optional asset preserves the exact legacy path. Once present,
+  // all read/validation errors propagate: a broken update cannot revive legacy labels.
+  AtlasDisplayCatalog catalog=AtlasDisplayCatalog.readOptional(new AtlasDisplayCatalog.AssetSource(){
+   public String[] list(String directory)throws IOException{return c.getAssets().list(directory);}
+   public InputStream open(String path)throws IOException{return c.getAssets().open(path);}
+  },units,passages);
+  if(catalog!=null){
+   if(BuildConfig.AYAH_THEMES_FINAL_PRIVATE&&catalog.units.size()!=366)
+    throw new IllegalStateException("Atlas private APK blocked: 366 verified titles required");
+   List<Macro> rows=new ArrayList<>();
+   for(AtlasPrivateV2.Unit u:source.units())
+    rows.add(new Macro(u.surah,u.start,u.end,catalog.unitTitle(u.id,u.ordinal)));
+   return new MawdudiMapData(rows,catalog,units,passages);
+  }
   // Existing debug versions can still load without the newly approved label
   // asset; malformed or tampered copies must not silently fall back.
   java.util.Map<String,String> approved=null;
@@ -39,7 +64,7 @@ final class MawdudiMapData {
    rows.add(new Macro(u.surah,u.start,u.end,
        title==null?"Unité "+u.ordinal+" · "+u.start+"–"+u.end:title));
   }
-  return new MawdudiMapData(rows);
+  return new MawdudiMapData(rows,null,units,passages);
  }
  static MawdudiMapData parse(String raw,MawdudiPassageIndex index)throws JSONException {
   JSONObject root=new JSONObject(raw);
@@ -110,6 +135,22 @@ final class MawdudiMapData {
   return labels;
  }
  int count(){return all.size();}
+ AtlasDisplayCatalog displayCatalog(){return catalog;}
+ String displayUnitTitle(String id){
+  int[] r=unitRanges.get(id);
+  if(r==null)throw new IllegalArgumentException("Unknown Atlas unit");
+  return at(r[0],r[1]).label;
+ }
+ String displayPassageTitle(String id,String admissibleSource){
+  if(!passageRanges.containsKey(id))throw new IllegalArgumentException("Unknown canonical passage");
+  return catalog==null?(admissibleSource==null?"":admissibleSource):catalog.passageTitle(id,admissibleSource);
+ }
+ String displayContextTitle(String passageId,String unitId,String admissibleSource){
+  if(catalog!=null)return catalog.contextTitle(passageId,unitId,admissibleSource);
+  int[] p=passageRanges.get(passageId),u=unitRanges.get(unitId);
+  if(p==null||u==null||p[0]!=u[0])throw new IllegalArgumentException("Unknown presentation parents");
+  return AtlasPassageContext.displayTitle(p[0],p[1],p[2],u[1],u[2],admissibleSource);
+ }
  List<Macro> forSurah(int s){List<Macro> r=new ArrayList<>();for(Macro m:all)if(m.surah==s)r.add(m);return r;}
  Macro at(int s,int a){for(Macro m:all)if(m.surah==s&&m.start<=a&&m.end>=a)return m;throw new IllegalArgumentException("macro verse");}
 }
@@ -153,21 +194,80 @@ final class AtlasPassageContext {
 
 /**
  * Versioned presentation metadata, independent of the historical 120-label pack.
- * This parser is deliberately not activated by the legacy map loader yet.
+ * The optional asset uses ordinary versioned metadata; absence retains legacy.
  * Canonical ranges come from the existing indexes; no source text or Hifz state
  * is created, modified or approved by parsing this document.
  */
 final class AtlasDisplayCatalog {
     static final String SCHEMA="HAAFIDH_DISPLAY_CATALOG_V1";
+    static final String ASSET="atlas/atlas_display_catalog_v1.json";
     final int revision;
     final Map<String,String> units,passages,contexts;
+    private final Map<String,int[]> canonicalUnits,canonicalPassages;
+
+    interface AssetSource {
+        String[] list(String directory)throws IOException;
+        InputStream open(String path)throws IOException;
+    }
+
+    static AtlasDisplayCatalog readOptional(AssetSource assets,Map<String,int[]> units,
+                                            Map<String,int[]> passages)throws IOException,JSONException {
+        String[] names=assets.list("atlas");
+        if(names==null)throw new IOException("Cannot list Atlas display assets");
+        if(!Arrays.asList(names).contains("atlas_display_catalog_v1.json"))return null;
+        try(InputStream in=assets.open(ASSET);ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] buffer=new byte[4096];int n;
+            while((n=in.read(buffer))!=-1){
+                if(out.size()+n>2_000_000)throw new IOException("Oversized presentation catalogue");
+                out.write(buffer,0,n);
+            }
+            // String(byte[], UTF_8) silently replaces malformed bytes. A damaged
+            // versioned title must be rejected, not displayed with changed text.
+            String raw=StandardCharsets.UTF_8.newDecoder()
+                    .decode(java.nio.ByteBuffer.wrap(out.toByteArray())).toString();
+            return parse(raw,units,passages);
+        }
+    }
 
     private AtlasDisplayCatalog(int revision,Map<String,String> units,
-                                Map<String,String> passages,Map<String,String> contexts) {
+                                Map<String,String> passages,Map<String,String> contexts,
+                                Map<String,int[]> canonicalUnits,Map<String,int[]> canonicalPassages) {
         this.revision=revision;
         this.units=Collections.unmodifiableMap(units);
         this.passages=Collections.unmodifiableMap(passages);
         this.contexts=Collections.unmodifiableMap(contexts);
+        this.canonicalUnits=copyRanges(canonicalUnits);
+        this.canonicalPassages=copyRanges(canonicalPassages);
+    }
+
+    private static Map<String,int[]> copyRanges(Map<String,int[]> original){
+        Map<String,int[]> copy=new LinkedHashMap<>();
+        for(Map.Entry<String,int[]> e:original.entrySet())copy.put(e.getKey(),e.getValue().clone());
+        return Collections.unmodifiableMap(copy);
+    }
+
+    String unitTitle(String id,int ordinal){
+        int[] r=canonicalUnits.get(id);
+        if(r==null||ordinal<1)throw new IllegalArgumentException("Unknown Atlas unit");
+        String approved=units.get(id);
+        return approved==null?"Unité "+ordinal+" · "+r[1]+"–"+r[2]:approved;
+    }
+
+    String passageTitle(String id,String admissibleSource){
+        if(!canonicalPassages.containsKey(id))throw new IllegalArgumentException("Unknown canonical passage");
+        String approved=passages.get(id);
+        return approved==null?(admissibleSource==null?"":admissibleSource):approved;
+    }
+
+    String contextTitle(String passageId,String unitId,String admissibleSource){
+        int[] p=canonicalPassages.get(passageId),u=canonicalUnits.get(unitId);
+        if(p==null||u==null||p[0]!=u[0])throw new IllegalArgumentException("Unknown presentation parents");
+        // Validate even an unlabelled intersection. A full passage label is never
+        // inherited by a partial intersection without its own approved context.
+        String neutral=AtlasPassageContext.displayTitle(p[0],p[1],p[2],u[1],u[2],admissibleSource);
+        String local=contextTitle(passageId,unitId);
+        if(local!=null)return local;
+        return u[1]<=p[1]&&u[2]>=p[2]?passageTitle(passageId,admissibleSource):neutral;
     }
 
     String contextTitle(String passageId,String unitId) {
@@ -227,7 +327,7 @@ final class AtlasDisplayCatalog {
                     independent=approval(entry,"independent_verified"),rights=approval(entry,"redistributable");
             if(user&&source&&independent&&rights)target.put(key,title);
         }
-        return new AtlasDisplayCatalog(revision,units,passages,contexts);
+        return new AtlasDisplayCatalog(revision,units,passages,contexts,canonicalUnits,canonicalPassages);
     }
 
     private static void requireRange(int[] source,int s,int a,int b) {

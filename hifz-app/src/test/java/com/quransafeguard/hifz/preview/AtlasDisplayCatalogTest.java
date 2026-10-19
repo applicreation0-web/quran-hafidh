@@ -115,6 +115,71 @@ public final class AtlasDisplayCatalogTest {
                 reject(new JSONArray().put(entry("UNIT",U,5,11,26).put(key,value)));
         }
     }
+    private static final class Assets implements AtlasDisplayCatalog.AssetSource {
+        final Map<String,byte[]> files=new HashMap<>();
+        boolean denyOpen;
+        public String[] list(String directory) { return files.isEmpty()?new String[0]:new String[]{"atlas_display_catalog_v1.json"}; }
+        public java.io.InputStream open(String path)throws java.io.IOException {
+            if(denyOpen)throw new java.io.FileNotFoundException("present but unreadable");
+            return new java.io.ByteArrayInputStream(files.get(path));
+        }
+        Assets present(String raw) { files.put("atlas/atlas_display_catalog_v1.json",raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));return this; }
+    }
+    @Test public void absentOptionalAssetPreservesLegacySelection()throws Exception {
+        assertNull(AtlasDisplayCatalog.readOptional(new Assets(),units(),passages()));
+    }
+    @Test public void presentOptionalAssetIsOrdinaryVersionedMetadata()throws Exception {
+        Assets assets=new Assets().present(pack(new JSONArray().put(entry("UNIT",U,5,11,26))));
+        AtlasDisplayCatalog c=AtlasDisplayCatalog.readOptional(assets,units(),passages());
+        assertEquals("Synthetic approved label",c.unitTitle(U,2));
+        assertEquals(1,c.revision);
+    }
+    @Test public void malformedOrUnreadablePresentAssetNeverBecomesMissing()throws Exception {
+        for(String raw:new String[]{"{", "{}", pack(new JSONArray().put(entry("UNIT",U,5,12,26)))}) {
+            try{AtlasDisplayCatalog.readOptional(new Assets().present(raw),units(),passages());fail("Present bad asset fell back");}
+            catch(JSONException|IllegalArgumentException expected){}
+        }
+        Assets denied=new Assets().present(pack(new JSONArray()));denied.denyOpen=true;
+        try{AtlasDisplayCatalog.readOptional(denied,units(),passages());fail("Unreadable present asset fell back");}
+        catch(java.io.IOException expected){}
+    }
+    @Test public void invalidUtf8CannotBecomeAReplacementCharacterApprovedTitle()throws Exception {
+        Assets assets=new Assets().present(pack(new JSONArray().put(entry("UNIT",U,5,11,26))));
+        byte[] raw=assets.files.get(AtlasDisplayCatalog.ASSET);
+        byte[] marker="Synthetic approved label".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        for(int i=0;i<raw.length-marker.length;i++) {
+            if(raw[i]==marker[0]&&raw[i+1]==marker[1]) { raw[i]=(byte)0x80;break; }
+        }
+        try{AtlasDisplayCatalog.readOptional(assets,units(),passages());fail("Invalid UTF-8 admitted");}
+        catch(java.io.IOException expected){}
+    }
+    @Test public void pendingUnitIsNeutralAndPendingPassageKeepsAdmissibleSource()throws Exception {
+        JSONArray entries=new JSONArray().put(entry("UNIT",U,5,11,26).put("source_verified",false))
+            .put(entry("PASSAGE",P,5,7,11).put("redistributable",false));
+        AtlasDisplayCatalog c=parse(entries);
+        assertEquals("Unité 2 · 11–26",c.unitTitle(U,2));
+        assertEquals("Synthetic source",c.passageTitle(P,"Synthetic source"));
+    }
+    @Test public void approvedLocal511DoesNotReplaceTheFullPassageDisplay()throws Exception {
+        AtlasDisplayCatalog c=parse(new JSONArray().put(entry("CONTEXT",P,5,11,11).put("unit_id",U)));
+        assertEquals("Synthetic approved label",c.contextTitle(P,U,"Synthetic source"));
+        assertEquals("Synthetic source",c.passageTitle(P,"Synthetic source"));
+    }
+    @Test public void fullPassageApprovalCannotLeakIntoAnUnapprovedLocalContext()throws Exception {
+        AtlasDisplayCatalog c=parse(new JSONArray().put(entry("PASSAGE",P,5,7,11)));
+        assertEquals("5:11 · partie du passage 5:7–11",c.contextTitle(P,U,"Synthetic source"));
+        assertEquals("Synthetic approved label",c.passageTitle(P,"Synthetic source"));
+    }
+    @Test public void canonicalMapsAndOrderRemainUntouchedAndLaterMutationCannotChangeDisplay()throws Exception {
+        Map<String,int[]> us=units(),ps=passages();
+        AtlasDisplayCatalog c=AtlasDisplayCatalog.parse(pack(new JSONArray()),us,ps);
+        assertEquals(U,new ArrayList<>(us.keySet()).get(0));
+        assertArrayEquals(new int[]{5,11,26},us.get(U));
+        assertArrayEquals(new int[]{5,7,11},ps.get(P));
+        us.get(U)[1]=12;ps.clear();
+        assertEquals("Unité 2 · 11–26",c.unitTitle(U,2));
+        assertEquals("5:11 · partie du passage 5:7–11",c.contextTitle(P,U,"Synthetic source"));
+    }
     private static void reject(JSONArray rows)throws Exception {
         try{parse(rows);fail("Invalid catalogue accepted");}catch(JSONException|IllegalArgumentException expected){}
     }
