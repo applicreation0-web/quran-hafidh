@@ -12,7 +12,18 @@ final class CorrespondenceRuntime {
  final CorrespondenceCatalog catalog;
  final CorrespondenceModel.Geometry geometry;
  private CorrespondenceRuntime(CorrespondenceCatalog c,CorrespondenceModel.Geometry g){catalog=c;geometry=g;}
+ // One immutable package snapshot per process: repeated Atlas/reader/session entries
+ // must not repeatedly decode geometry or observe different catalogue instances.
+ private static volatile CorrespondenceRuntime cached;
  static CorrespondenceRuntime load(Context context){
+  CorrespondenceRuntime current=cached;
+  if(current!=null)return current;
+  synchronized(CorrespondenceRuntime.class){
+   if(cached==null)cached=read(context);
+   return cached;
+  }
+ }
+ private static CorrespondenceRuntime read(Context context){
   if(APPROVED_SHA256.isEmpty())return new CorrespondenceRuntime(CorrespondenceCatalog.empty(),null);
   try {
    CorrespondenceModel.Geometry geometry=new CorrespondenceGeometry(GeometryRepository.get(context),WordGeometryRepository.shared(context));

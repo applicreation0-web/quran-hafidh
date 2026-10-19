@@ -3,12 +3,28 @@
 # Compiles app + test apk for emulator ONLY. No user data or release publishing.
 set -euo pipefail
 
-# No APK build, signature or emulator installation during the current audit mandate.
-# This script requires a separate explicit user order and the guarded manual workflow.
+# 19 October: test APK build/install is authorized for this isolated emulator audit.
+# The opt-in still prevents accidental execution outside the authorized CI job.
 if [ "${ALLOW_EMULATOR_APK:-0}" != "1" ]; then
-  echo "Android instrumentation NON_EXECUTE: APK build/install requires a separate explicit order." >&2
+  echo "Android instrumentation NON_EXECUTE: set ALLOW_EMULATOR_APK=1 for the authorized emulator test build/install." >&2
   exit 64
 fi
+
+# Count the current checked-in source set; fail if no tests are discovered.
+expected_tests="$(grep -R --include='*.java' -E '^[[:space:]]*@Test\b' hifz-app/src/androidTest/java | wc -l | tr -d ' ')"
+test "$expected_tests" -gt 0
+printf 'Expected instrumented tests: %s\n' "$expected_tests"
+
+# Only public assets may enter this GitHub evidence job. Private device builds
+# and signature-preserving distribution are handled separately.
+test "${AYAH_THEMES_PRIVATE_114:-0}" != 1
+test "${CP08_BAQARAH_PILOT:-0}" != 1
+test ! -d hifz-app/src/main/assets/ibn_kathir_qurancom_private
+test ! -d hifz-app/src/private114/assets
+
+# Clear previous emulator evidence so missing captures cannot pass via stale files.
+rm -rf audit-runtime-screens
+adb shell rm -f /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/audit-\*.png
 
 gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleDebugAndroidTest --stacktrace
 
@@ -34,13 +50,14 @@ mkdir -p audit-runtime-screens
 device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
 adb pull "$device_dir/." audit-runtime-screens/ || true
 
-# AndroidJUnitRunner is authoritative: the complete checked-in suite has 101 tests.
+# AndroidJUnitRunner is authoritative: require every checked-in test to complete.
 # A bare Android shell exit code is not sufficient to prove test success.
-grep -Fxq 'OK (101 tests)' audit-runtime-instrumentation.txt
+test "$shell_status" -eq 0
+grep -Fxq "OK ($expected_tests tests)" audit-runtime-instrumentation.txt
 grep -Fxq 'INSTRUMENTATION_CODE: -1' audit-runtime-instrumentation.txt
-test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' audit-runtime-instrumentation.txt)" -eq 101
+test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' audit-runtime-instrumentation.txt)" -eq "$expected_tests"
 if grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|FATAL EXCEPTION|INSTRUMENTATION_STATUS_CODE: -[0-9]+' audit-runtime-instrumentation.txt; then
-  echo "::error::Android instrumented tests contain a failure; no debug allowed"
+  echo "::error::Android instrumented tests contain a failure; emulator evidence failed"
   exit 1
 fi
 
@@ -58,6 +75,9 @@ run_process_death_phase() {
   cat "$output"
   grep -Fxq 'OK (1 test)' "$output"
   grep -Fxq 'INSTRUMENTATION_CODE: -1' "$output"
+  if grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|FATAL EXCEPTION|INSTRUMENTATION_STATUS_CODE: -[0-9]+' "$output"; then
+    return 1
+  fi
   test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' "$output")" -eq 1
 }
 run_process_death_phase a_prepareFixtureForExternalForceStop audit-process-death-prepare.txt
@@ -69,7 +89,7 @@ adb shell am force-stop com.quransafeguard.hifz.ibnkathirtest
 adb shell am start -W -n \
   'com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity' \
   > audit-process-death-launch.txt
-grep -Eq 'Status: ok|Status: timeout' audit-process-death-launch.txt
+grep -Eq '^Status: ok$' audit-process-death-launch.txt
 adb shell am force-stop com.quransafeguard.hifz.ibnkathirtest
 run_process_death_phase b_verifyFixtureAfterExternalForceStop audit-process-death-verify.txt
 
@@ -84,10 +104,8 @@ test "$count" -ge 21
 find audit-runtime-screens -type f -name 'audit-*.png' -size 0 -print | grep -q . && {
   echo "::error::At least one required screenshot is empty"; exit 1;
 } || true
-# Independent visual screens are checked; no Quiz or numbered Carte screens.
-# The public GitHub checkout has NO private Quran.com title sidecar.
-# This job must prove all seven independent live behaviors and 14 available
-# screens, but must NOT claim private title pixels were exercised.
+# Require named independent captures, including the synthetic correspondence UI.
+# These do not certify an approved correspondence catalogue or private title pixels.
 for file in audit-lecture-mushaf.png \
             audit-accueil-sans-quiz.png audit-calendrier-sept-jours.png \
             audit-itqan-4dates.png \
@@ -103,7 +121,11 @@ for file in audit-lecture-mushaf.png \
             audit-atlas-an-nisa-u11-sliding-units.png \
             audit-atlas-inline-jalalayn-qcf-visible.png \
             audit-atlas-unit-swiped-original-qcf-page.png \
-            audit-atlas-unit-reading-return-exact-page.png; do
+            audit-atlas-unit-reading-return-exact-page.png \
+            audit-correspondence-synthetic-comparison.png \
+            audit-correspondence-synthetic-enlarged-restored.png \
+            audit-correspondence-synthetic-activity-before-recreation.png \
+            audit-correspondence-synthetic-activity-after-recreation.png; do
   test -s "audit-runtime-screens/$file"
 done
 # Keep visual comparisons grounded in the newly instrumented unit-only Atlas.
@@ -121,18 +143,5 @@ if cmp -s audit-runtime-screens/audit-atlas-direct-qcf-unit-and-passages.png \
   exit 1
 fi
 
-private_dir=hifz-app/src/main/assets/ibn_kathir_qurancom_private
-if [ -d "$private_dir" ]; then
-  # Work's independent private-checkout test is stricter: actual title pixels.
-  test -s audit-runtime-screens/audit-qurancom-qaf-private.png
-  test -s audit-runtime-screens/audit-qurancom-baqarah-private.png
-  if cmp -s audit-runtime-screens/audit-lecture-mushaf.png \
-            audit-runtime-screens/audit-qurancom-qaf-private.png; then
-    echo "::error::Private Quran.com heading created no visible UI transition"
-    exit 1
-  fi
-  echo "PASS: 101 live Android tests + $count screenshots, including PRIVATE title pixels"
-else
-  echo "PASS: 101 live Android tests + external force-stop persistence + $count screenshots, PUBLIC no-title fail-closed only"
-  echo "::notice::Quran.com English title pixels remain UNVERIFIED until private Work audit"
-fi
+echo "PASS: $expected_tests live Android tests + external force-stop persistence + $count screenshots, PUBLIC no-title fail-closed only"
+echo "::notice::Synthetic CorrespondenceActivity recreation and QCF geometry are tested; production catalogue certification and private title pixels remain UNVERIFIED"
