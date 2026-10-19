@@ -1,9 +1,4 @@
-name: Quran Haafidh 114 — code-only private-flag staging for OFFLINE local signing
-# Isolated JVM fixture paths fixed (2026-10-16); preserve all 446 tests.
-# ATLAS QCF: fit captions to their text and preserve page space, including two-row Baqarah.
-# STAGING FINALE DU 17-10-2026: CI code-only, aucune ressource privee; compilation du HEAD courant pour signature locale.
-# FINALISATION CP5 2026-10-16: rebuild code-only after weekly page goals, even/odd badges, centered Tafsir/Lecture and An-Naml title fix.
-# HISTORICAL SUN-173 QCF AUDIT: all 604 SVG thumbnails enabled after 762348-byte corpus maximum check; 173 units, source titles and active recall protected; offline private signing only.
+name: Quran Haafidh 114 — private-flag compilation ONLY — no APK
 
 on:
   push:
@@ -75,40 +70,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Compile private-flag Android code without private data
+      - name: Compile private-flag Android code and test without assembling a package
         shell: bash
-        run: gradle --no-daemon :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:assembleDebug --stacktrace
-      - name: Stage only code, signing tools, and NO private texts
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:compileDebugJavaWithJavac --stacktrace
+      - name: Assert compilation produced no APK
         shell: bash
         run: |
           set -euo pipefail
-          out="$RUNNER_TEMP/code-only-for-local-private-assembly"
-          mkdir -p "$out"
-          mapfile -t apks < <(find hifz-app/build-private114/outputs/apk/debug -type f -name '*.apk')
-          test "${#apks[@]}" -eq 1
-          cp "${apks[0]}" "$out/CODE-ONLY-NOT-INSTALLABLE.apk"
-          python3 - "$out/CODE-ONLY-NOT-INSTALLABLE.apk" <<'PY'
-          import zipfile,sys
-          with zipfile.ZipFile(sys.argv[1]) as archive:
-              forbidden=('assets/ayah_themes_private/', 'assets/atlas_private/')
-              assert not [name for name in archive.namelist() if name.startswith(forbidden)]
-          print('PASS: no private Ayah Themes, Atlas index, unit titles or PDF in public CI')
-          PY
-          sdk="$ANDROID_HOME/build-tools/36.0.0"
-          cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
-          cp "$sdk/zipalign" "$out/zipalign"
-          if test -f "$sdk/lib64/libc++.so"; then cp "$sdk/lib64/libc++.so" "$out/libc++.so"; fi
-          printf 'Only compiled PRIVATE-FLAG CODE; ZERO private texts. Inject 3 exact private source assets and re-sign on local machine. Source: %s\n' "$(git rev-parse HEAD)" > "$out/README-CODE-ONLY-NOT-INSTALLABLE.txt"
-          (cd "$out" && sha256sum CODE-ONLY-NOT-INSTALLABLE.apk apksigner.jar zipalign > SHA256SUMS.txt)
-      - uses: actions/upload-artifact@v4
-        with:
-          name: haafidh-private114-CODE-ONLY-NO-TITLES-${{ github.sha }}
-          path: ${{ runner.temp }}/code-only-for-local-private-assembly/
-          retention-days: 1
-          if-no-files-found: error
-
-# CP10 Atlas BOOX units-only, memory-safe thumbnails. Build current CI-green HEAD code only; inject exact verified private assets and sign only offline. No secrets on runner.
-
-# Atlas Ancres source and icon contracts updated; staging must rebuild exact current HEAD.
-
-# CI staging trigger after Android 101/101 PASS at 00a77c6a; code-only, no private assets or signing secrets.
+          if find hifz-app/build-private114 hifz-app/build -type f -name '*.apk' -print 2>/dev/null | grep -q .; then
+            echo 'Unexpected APK output'; exit 1
+          fi

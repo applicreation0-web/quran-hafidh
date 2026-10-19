@@ -1,3 +1,20 @@
+# Fusion Atlas / Correspondances — mandat final du 19 octobre 2026
+
+Branche unique : `work/haafidh-1171-ibn-kathir-integration-independent`.
+ZIP maître SHA-256 `6d995f4e1185536abf9ac5cb670d1eb02a4c3f8a438c184bb65e3a7643f753a3`.
+
+Les 1419 titres et 46 décisions utilisateur sont définitivement arbitrés. La deuxième lecture intégrale demandée par le mandat précédent est ANNULÉE et conservée seulement comme historique. Aucun CP00 ou audit acquis n'est recommencé. Approbation éditoriale, certification bibliographique, droits, runtime et QA BOOX restent distincts.
+
+CP01/03 : staging privé exact 366 Unités +1053 Passages, 114 sourates, 1143 intersections et89 Passages partagés. Parité historique120/120;47 tests JVM sur deux variantes JSON. Le catalogue final n'est pas activé : droits et certification séparés restent fermés, rollback historique conservé. Aucun titre privé ajouté à Git ou CI.
+
+CP02 :110 IDs/historiques conservés;4 certifications éditoriales ciblées,87 à corriger,19 non résolus;0 relation production autorisée. CP04 : gate commun Access/Screen refuse Centre, segments et ancres disjointes non pris en charge; métadonnées bibliographiques requises. CP05 : carte Unités seules, QCF pleine page, cinq points maximum, retour Passage/page conservé; titres Unité/Passage hiérarchisés dans Lecture. Ces changements attendent revue et CI au nouveau HEAD.
+
+**Rectification CI / interdiction APK :** l'ancien workflow émulateur ET le workflow dit «code-only private-flag» assemblaient des APK. Les PASS anciens de ce dernier ne sont donc PAS des preuves de compilation seule. Le premier est désormais désactivé par défaut (opt-in manuel distinct); le second est remplacé par compilation Java et tests seuls, sans export d'APK ni d'outils de signature. Trois tests de garde passent. Aucun APK livré à l'utilisateur ou installé sur son appareil dans cette reprise; aucun nouvel assemblage autorisé.
+
+**NO-GO.** Native Android, restauration après interruption et BOOX PHYSIQUE NON EXÉCUTÉS. Activation privée et raccordement Correspondances production restent bloqués par leurs preuves manquantes. Les sections suivantes sont historiques et ne remplacent pas ce mandat.
+
+---
+
 # Fusion Atlas / Correspondances — deuxième screening prioritaire du 19 octobre 2026
 
 Branche unique : `work/haafidh-1171-ibn-kathir-integration-independent`.

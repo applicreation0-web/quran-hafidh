@@ -15,4 +15,11 @@ class NoApkDefault(unittest.TestCase):
   self.assertIn("if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_emulator_apk }}",workflow)
   self.assertIn('default: false',workflow)
   self.assertIn("ALLOW_EMULATOR_APK: ${{ inputs.allow_emulator_apk && '1' || '0' }}",workflow)
+ def test_private_flag_staging_only_compiles_without_apk_or_signing_export(self):
+  workflow=(ROOT/'.github/workflows/haafidh-private114-offline-finalize.yml').read_text()
+  self.assertIn(':hifz-app:compileDebugJavaWithJavac',workflow)
+  self.assertNotIn(':hifz-app:assembleDebug',workflow)
+  self.assertNotIn('actions/upload-artifact',workflow)
+  self.assertNotIn('apksigner.jar',workflow)
+  self.assertNotIn('CODE-ONLY-NOT-INSTALLABLE.apk',workflow)
 if __name__=='__main__':unittest.main()
