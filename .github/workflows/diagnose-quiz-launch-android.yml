@@ -4,6 +4,12 @@ on:
     branches:
       - work/haafidh-1171-ibn-kathir-integration-independent
   workflow_dispatch:
+    inputs:
+      allow_emulator_apk:
+        description: 'Requires a separate explicit user order authorizing test APK build and emulator installation'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -14,9 +20,10 @@ concurrency:
 
 jobs:
   reproduce:
-    # The CP-06 marker changes only its public staging workflow; the frozen
-    # application tree already owns the 100/100 Android evidence.
-    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[cp06-staging-only]') }}
+    # Latest 18 October mandate forbids any APK build/install without a separate order.
+    # Source/JVM and compile-only workflows still run on every authorized branch push.
+    # Instrumented Android evidence stays NON_EXECUTE during this no-APK mission.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_emulator_apk }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
