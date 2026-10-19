@@ -58,6 +58,8 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Run all 101 Hifz Android tests and collect authorized pixels
+        env:
+          ALLOW_EMULATOR_APK: ${{ inputs.allow_emulator_apk && '1' || '0' }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34

@@ -42,7 +42,8 @@ final class CorrespondenceQcfSurface extends LinearLayout {
  private State requestedState;
  private String expectedDocument="";
  private final java.util.Map<Integer,State> pageStates=new java.util.HashMap<>();
- private float downX,downY;
+ private final CorrespondenceSwipe swipe=new CorrespondenceSwipe();
+ private String readyCaption="";
 
  CorrespondenceQcfSurface(Context context){
   super(context);setOrientation(VERTICAL);setBackgroundColor(PAPER);
@@ -59,19 +60,20 @@ final class CorrespondenceQcfSurface extends LinearLayout {
    @Override public boolean shouldOverrideUrlLoading(WebView view,String url){return true;}
    @Override public void onPageFinished(WebView view,String url){
     if(disposed||restore==null||!expectedDocument.equals(url))return;
-    loading=false;updateButtons();
-    State target=restore;restore=null;
+    loading=false;position.setText(readyCaption);updateButtons();
+    State target=restore;restore=null;int finishedGeneration=generation;
     // The ready callback may belong to the old document. Only restore the selected page.
-    if(target.page==page)view.post(()->{if(!disposed&&!loading&&target.page==page)view.scrollTo(target.x,target.y);});
+    if(target.page==page)view.post(()->{if(!disposed&&!loading&&generation==finishedGeneration&&target.page==page)view.scrollTo(target.x,target.y);});
    }
   });
   web.setOnTouchListener((view,event)->{
-   if(event.getActionMasked()==MotionEvent.ACTION_DOWN){downX=event.getX();downY=event.getY();}
-   if(event.getActionMasked()==MotionEvent.ACTION_UP){
-    float dx=event.getX()-downX,dy=event.getY()-downY;
-    if(zoom()<=1.05f&&Math.abs(dx)>Ui.dp(context,56)&&Math.abs(dx)>Math.abs(dy)*1.4f){
-     step(dx>0?1:-1);return true;
-    }
+   int action=event.getActionMasked();
+   if(action==MotionEvent.ACTION_DOWN)swipe.begin(event.getX(),event.getY(),zoom());
+   if(action==MotionEvent.ACTION_POINTER_DOWN||event.getPointerCount()>1)swipe.multiplePointers();
+   if(action==MotionEvent.ACTION_CANCEL)swipe.cancel();
+   if(action==MotionEvent.ACTION_UP){
+    int direction=swipe.finish(event.getX(),event.getY(),zoom(),Ui.dp(context,56));
+    if(direction!=0){step(direction);return true;}
    }
    return false;
   });
@@ -118,6 +120,7 @@ final class CorrespondenceQcfSurface extends LinearLayout {
  }
  private void load(State state){
   page=state.page;loading=true;restore=null;requestedState=state;
+  swipe.cancel();
   int request=++generation;if(pending!=null)pending.cancel(true);
   position.setText("p. "+page+" · chargement");updateButtons();
   CorrespondenceDocument.Focus requestFocus=focus;
@@ -133,8 +136,9 @@ final class CorrespondenceQcfSurface extends LinearLayout {
      // Synthetic document identity only: no request is made to this reserved host.
      // It lets onPageFinished reject an older page after a fast occurrence change.
      expectedDocument="https://qcf.invalid/document/"+request;
+     readyCaption="p. "+page+(rendered.focusVerified?"":" · VISUEL_NON_VALIDÉ");
      web.loadDataWithBaseURL(expectedDocument,html,"text/html","UTF-8",null);
-     position.setText("p. "+page+(rendered.focusVerified?"":" · VISUEL_NON_VALIDÉ"));updateButtons();
+     updateButtons();
     });
    }catch(Exception unavailable){
     web.post(()->{
@@ -163,6 +167,7 @@ final class CorrespondenceQcfSurface extends LinearLayout {
  }
  void destroy(){
   if(disposed)return;disposed=true;++generation;
+  swipe.cancel();
   if(pending!=null)pending.cancel(true);decoder.shutdownNow();
   web.stopLoading();web.setOnTouchListener(null);web.setWebViewClient(new WebViewClient());
   removeView(web);web.destroy();

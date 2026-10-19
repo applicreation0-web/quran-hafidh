@@ -28,6 +28,8 @@ jobs:
         run: python3 scripts/test_mawdudi_ocr_page_reconcile.py
       - name: CP02 OCR retention regression (synthetic data only)
         run: python3 scripts/test_mawdudi_hocr_epub_retention.py
+      - name: Verify default CI cannot build or install emulator APKs
+        run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_no_apk_default_guard.py
       - name: Freeze all Hifz engines, core, persistence and Mushaf renderer
         shell: bash
         run: bash scripts/guard_frozen_hifz_engines.sh

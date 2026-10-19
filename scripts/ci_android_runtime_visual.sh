@@ -3,6 +3,13 @@
 # Compiles app + test apk for emulator ONLY. No user data or release publishing.
 set -euo pipefail
 
+# No APK build, signature or emulator installation during the current audit mandate.
+# This script requires a separate explicit user order and the guarded manual workflow.
+if [ "${ALLOW_EMULATOR_APK:-0}" != "1" ]; then
+  echo "Android instrumentation NON_EXECUTE: APK build/install requires a separate explicit order." >&2
+  exit 64
+fi
+
 gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleDebugAndroidTest --stacktrace
 
 mapfile -t debug_apks < <(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' | sort)

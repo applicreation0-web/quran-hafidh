@@ -116,6 +116,8 @@ while IFS= read -r file; do
     "$APP_ROOT/CorrespondenceDocument.java" | \
     "$APP_ROOT/CorrespondenceQcfSurface.java" | \
     "$APP_ROOT/CorrespondenceScreen.java" | \
+    "$APP_ROOT/CorrespondenceSwipe.java" | \
+    "$APP_ROOT/CorrespondenceAccess.java" | \
     "$APP_ROOT/AyahThemesCueIndex.java" | \
     "$APP_ROOT/AyahThemesReviewDisplay.java" | \
     "$APP_ROOT/PrivateDisplayIntegrity.java" | \
