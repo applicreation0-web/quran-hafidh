@@ -7,8 +7,9 @@ import java.io.InputStream;
 /** Offline trusted-package boundary. An absent reviewed pin keeps every production entry disabled. */
 final class CorrespondenceRuntime {
  static final String ASSET="correspondences/approved_v1.json";
- // No production subset has passed rights, source, render and native QA. Never derive this from an Intent/asset.
- private static final String APPROVED_SHA256="";
+ // Private offline-only hash of four previously substantiated relations; no other IDs are admitted.
+ // Source JSON remains exclusively in the private BOOX overlay, never in GitHub.
+ private static final String APPROVED_SHA256="6fcbe644df3b990760d6b8e886ac60bc66d187dcff09dc0e411cf5a4a47c7ce0";
  final CorrespondenceCatalog catalog;
  final CorrespondenceModel.Geometry geometry;
  private CorrespondenceRuntime(CorrespondenceCatalog c,CorrespondenceModel.Geometry g){catalog=c;geometry=g;}
