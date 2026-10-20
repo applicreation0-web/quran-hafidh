@@ -2,7 +2,7 @@ name: J4 QCF Refrain QA (No APK)
 on:
   push:
     branches:
-      - work/haafidh-1171-ibn-kathir-integration-independent
+      - work/haafidh-1171-atlas-correspondances
     paths:
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/Correspondence*.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/Correspondence*.java'
