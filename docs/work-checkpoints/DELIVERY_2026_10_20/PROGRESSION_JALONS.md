@@ -78,3 +78,12 @@ Frise actuelle : `[J0 ✓]──[J1 ✓]──[J2 ◐]──[J3 ◐: 110 réconc
 - **Cinq contrôles Python privés J4 exécutés et PASS** : comptage, préservation des bornes, 8 correspondances de type/icône, cas litigieux, schéma non activable. Pack privé : `QURAN_HAAFIDH_J4_PREPARATION_110_MODES_ICONES_SANS_ACTIVATION_2026-10-20.zip`, SHA-256 `a38c32e64f5e115f53182814dbb7b08152549d0a0e33276f5a4c194d11c278a6`. Conserver ce pack **hors dépôt public**.
 - Écarts de rendu identifiés et non masqués : R033 centre sur mots QCF et preuve focale ; R032 centre à l'échelle de toute la sourate ; R078 quatre positions alternées ; R026 sous-plage jour/nuit ; R038 inclusio formelle non démontrée.
 - **J4 non terminé** : cette grille est un *staging documentaire*, pas `approved_v1.json`. Source, droits, foyers visuels et QA native ne sont pas validés en masse. `APPROVED_SHA256` demeure vide. **0 relation activée, 0 APK livré, Hifz/Atlas inchangés.**
+
+## J3 — arbitrage de typologie ciblé sur les 24 en attente (20 octobre 2026)
+
+- Mission limitée aux **huit types de relations**, pas aux droits ni à l'autorisation Android. Les 110 identifiants et plages historiques ont été conservés.
+- Lecture critique des 24 dossiers à partir des précédents contrôles textuels, bibliographies et objections existants : **7 types établis sur les preuves déjà réunies, 8 types sous réserve de correction de foyers/périmètre, 9 relations non suffisamment démontrées pour leur attribuer un type.**
+- Le total documentaire des fiches **avec type retenu ou proposé devient 95/110** : 80 documentées déjà typées, 15 des 24 en attente avec type; neuf sans type et six écartées. Les compteurs historiques **80 documentées / 24 en attente / 6 écartées** restent inchangés; ce n'est **pas** une nouvelle certification scientifique ou un nombre de relations approuvées pour la production.
+- Correction exemplaire : une ressemblance entre ouverture et clôture ne doit pas être automatiquement nommée inclusio formelle; un centre attesté au niveau de toute une sourate ne doit pas être présenté comme centre interne d'une plage plus courte.
+- Tableau par ID, justification, type, huit icônes et actions ciblées consignés dans un **pack privé hors GitHub public**, `QURAN_HAAFIDH_J3_ARBITRAGE_CIBLE_24_2026-10-20.zip` (SHA-256 `3cc0924fcb41b3b7d9035bdf13eaa706199e8fdb69b03c35dd09650e4992255e`).
+- Aucun catalogue `approved_v1.json` ni aucune relation activés. Les huit icônes et Hifz/Atlas inchangés. Les ajustements de focalisation et la recette Android/BOOX sont toujours en J4/J5.
