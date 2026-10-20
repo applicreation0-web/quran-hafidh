@@ -201,15 +201,42 @@ public final class AtlasDisplayCatalogTest {
         assertNull(AtlasDisplayCatalog.readOptional(new Assets(),units(),passages()));
     }
     @Test public void presentOptionalAssetIsOrdinaryVersionedMetadata()throws Exception {
-        Assets assets=new Assets().present(pack(new JSONArray().put(entry("UNIT",U,5,11,26))));
-        AtlasDisplayCatalog c=AtlasDisplayCatalog.readOptional(assets,units(),passages());
-        assertEquals("Synthetic approved label",c.unitTitle(U,2));
-        assertEquals(1,c.revision);
+        String synthetic=pack(new JSONArray().put(entry("UNIT",U,5,11,26)));
+        // Parsing the synthetic fixture stays valid in all variants.
+        AtlasDisplayCatalog parsed=AtlasDisplayCatalog.parse(synthetic,units(),passages());
+        assertEquals("Synthetic approved label",parsed.unitTitle(U,2));
+        assertEquals(1,parsed.revision);
+        Assets assets=new Assets().present(synthetic);
+        if(BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW){
+            // Private114 must reject arbitrary synthetics: its real 1419-title
+            // catalogue is authenticated using a pinned SHA-256 outside GitHub.
+            try{AtlasDisplayCatalog.readOptional(assets,units(),passages());
+                fail("Private preview accepted an unpinned synthetic catalogue");}
+            catch(java.io.IOException expected){
+                assertTrue(expected.getMessage().contains("integrity mismatch"));
+            }
+        }else{
+            AtlasDisplayCatalog loaded=AtlasDisplayCatalog.readOptional(assets,units(),passages());
+            assertEquals("Synthetic approved label",loaded.unitTitle(U,2));
+            assertEquals(1,loaded.revision);
+        }
     }
     @Test public void malformedOrUnreadablePresentAssetNeverBecomesMissing()throws Exception {
         for(String raw:new String[]{"{", "{}", pack(new JSONArray().put(entry("UNIT",U,5,12,26)))}) {
-            try{AtlasDisplayCatalog.readOptional(new Assets().present(raw),units(),passages());fail("Present bad asset fell back");}
+            // Always check schema and boundaries independently of byte-level pinning.
+            try{AtlasDisplayCatalog.parse(raw,units(),passages());fail("Malformed catalogue parsed");}
             catch(JSONException|IllegalArgumentException expected){}
+            if(BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW){
+                try{AtlasDisplayCatalog.readOptional(new Assets().present(raw),units(),passages());
+                    fail("Private loader accepted unpinned synthetic bytes");}
+                catch(java.io.IOException expected){
+                    assertTrue(expected.getMessage().contains("integrity mismatch"));
+                }
+            }else{
+                try{AtlasDisplayCatalog.readOptional(new Assets().present(raw),units(),passages());
+                    fail("Present bad asset fell back");}
+                catch(JSONException|IllegalArgumentException expected){}
+            }
         }
         Assets denied=new Assets().present(pack(new JSONArray()));denied.denyOpen=true;
         try{AtlasDisplayCatalog.readOptional(denied,units(),passages());fail("Unreadable present asset fell back");}
