@@ -44,13 +44,23 @@ final class MawdudiMapData {
    public InputStream open(String path)throws IOException{return c.getAssets().open(path);}
   },units,passages);
   if(catalog!=null){
-   if(BuildConfig.AYAH_THEMES_FINAL_PRIVATE&&catalog.units.size()!=366)
+   // Personal BOOX debug uses the exact editorial approvals, NOT source/rights gates.
+   // Ordinary builds and all publication/release checks keep the certified path.
+   if(BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW&&
+      (catalog.approvedUnits.size()!=366||catalog.approvedPassages.size()!=1053))
+    throw new IllegalStateException("Private Atlas preview requires all 1419 user-approved titles");
+   if(BuildConfig.AYAH_THEMES_FINAL_PRIVATE&&!BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW
+       &&catalog.units.size()!=366)
     throw new IllegalStateException("Atlas private APK blocked: 366 verified titles required");
    List<Macro> rows=new ArrayList<>();
    for(AtlasPrivateV2.Unit u:source.units())
-    rows.add(new Macro(u.id,u.surah,u.start,u.end,catalog.unitTitle(u.id,u.ordinal)));
+    rows.add(new Macro(u.id,u.surah,u.start,u.end,
+      BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW?
+        catalog.privatePreviewUnitTitle(u.id):catalog.unitTitle(u.id,u.ordinal)));
    return new MawdudiMapData(rows,catalog,units,passages);
   }
+  if(BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW)
+   throw new IllegalStateException("Private Atlas preview needs the integrity-pinned 1419-title catalogue");
   // Existing debug versions can still load without the newly approved label
   // asset; malformed or tampered copies must not silently fall back.
   java.util.Map<String,String> approved=null;
@@ -153,10 +163,14 @@ final class MawdudiMapData {
  }
  String displayPassageTitle(String id,String admissibleSource){
   if(!passageRanges.containsKey(id))throw new IllegalArgumentException("Unknown canonical passage");
-  return catalog==null?(admissibleSource==null?"":admissibleSource):catalog.passageTitle(id,admissibleSource);
+  return catalog==null?(admissibleSource==null?"":admissibleSource):
+   BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW?catalog.privatePreviewPassageTitle(id):
+      catalog.passageTitle(id,admissibleSource);
  }
  String displayContextTitle(String passageId,String unitId,String admissibleSource){
-  if(catalog!=null)return catalog.contextTitle(passageId,unitId,admissibleSource);
+  if(catalog!=null)return BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW?
+    catalog.privatePreviewContextTitle(passageId,unitId,admissibleSource):
+    catalog.contextTitle(passageId,unitId,admissibleSource);
   int[] p=passageRanges.get(passageId),u=unitRanges.get(unitId);
   if(p==null||u==null||p[0]!=u[0])throw new IllegalArgumentException("Unknown presentation parents");
   return AtlasPassageContext.displayTitle(p[0],p[1],p[2],u[1],u[2],admissibleSource);
@@ -236,8 +250,14 @@ final class AtlasDisplayCatalog {
             }
             // String(byte[], UTF_8) silently replaces malformed bytes. A damaged
             // versioned title must be rejected, not displayed with changed text.
+            byte[] checkedBytes=out.toByteArray();
+            // SHA pin authenticates private editorial text without adding it to GitHub.
+            // Never relax certification flags or trust the contents of an arbitrary APK asset.
+            if(BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW&&!PrivateDisplayIntegrity.matches(
+                    checkedBytes,"065ec0dd68c488efacbd9e77635bf9d531b4cbb2b1bc82db7853ad4da0c02c9c"))
+                throw new IOException("Private Atlas editorial catalogue integrity mismatch");
             String raw=StandardCharsets.UTF_8.newDecoder()
-                    .decode(java.nio.ByteBuffer.wrap(out.toByteArray())).toString();
+                    .decode(java.nio.ByteBuffer.wrap(checkedBytes)).toString();
             return parse(raw,units,passages);
         }
     }
@@ -268,6 +288,33 @@ final class AtlasDisplayCatalog {
         if(r==null||ordinal<1)throw new IllegalArgumentException("Unknown Atlas unit");
         String approved=units.get(id);
         return approved==null?"Unité "+ordinal+" · "+r[1]+"–"+r[2]:approved;
+    }
+
+    /** Preview-only selection of immutable user-approved editorial text; never certification. */
+    String privatePreviewUnitTitle(String id){
+        if(!canonicalUnits.containsKey(id))throw new IllegalArgumentException("Unknown Atlas unit");
+        String title=approvedUnits.get(id);
+        if(title==null)throw new IllegalStateException("Unapproved private Atlas unit");
+        return title;
+    }
+
+    String privatePreviewPassageTitle(String id){
+        if(!canonicalPassages.containsKey(id))throw new IllegalArgumentException("Unknown canonical passage");
+        String title=approvedPassages.get(id);
+        if(title==null)throw new IllegalStateException("Unapproved private Atlas passage");
+        return title;
+    }
+
+    String privatePreviewContextTitle(String passageId,String unitId,String admissibleSource){
+        int[] p=canonicalPassages.get(passageId),u=canonicalUnits.get(unitId);
+        if(p==null||u==null||p[0]!=u[0])throw new IllegalArgumentException("Unknown presentation parents");
+        int start=Math.max(u[1],p[1]),end=Math.min(u[2],p[2]);
+        if(start>end)throw new IllegalArgumentException("No passage/Atlas intersection");
+        String local=approvedContexts.get(passageId+"|"+unitId);
+        if(local!=null)return local;
+        if(start==p[1]&&end==p[2])return privatePreviewPassageTitle(passageId);
+        // A clipped Ayah Themes passage must not inherit its complete source title.
+        return AtlasPassageContext.displayTitle(p[0],p[1],p[2],u[1],u[2],admissibleSource);
     }
 
     String passageTitle(String id,String admissibleSource){
