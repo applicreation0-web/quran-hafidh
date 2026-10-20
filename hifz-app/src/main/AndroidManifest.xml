@@ -14,6 +14,8 @@
         <activity android:name=".WeakVersesActivity" android:exported="false" />
         <activity android:name=".ProgressMapActivity" android:exported="false" />
         <activity android:name=".IbnKathirMapActivity" android:exported="false" />
+        <!-- Canonical user-facing Atlas; legacy activity remains internal for regression migration. -->
+        <activity android:name=".AtlasMapActivity" android:exported="false" />
         <activity android:name=".CorrespondenceActivity" android:exported="false" />
         <activity android:name=".AtlasSourcePdfActivity" android:exported="false" />
         <activity
