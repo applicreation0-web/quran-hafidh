@@ -127,8 +127,8 @@ public final class AtlasFinalizationSourceContractTest {
         assertTrue(reader.contains("Passage Ayah Themes actif sur cette page"));
         assertTrue(reader.contains("\"Afficher les ancres\""));
         assertTrue(ui.contains("s.equals(\"atlas\")"));
-        assertTrue(ui.contains("if (s.contains(\"ancre\")) return R.drawable.ic_ui_semantic_anchor;"));
-        assertTrue(ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_recall_key;"));
+        assertTrue(ui.contains("if (s.contains(\"ancre\") || s.contains(\"amorce\")) return R.drawable.ic_ui_semantic_anchor;"));
+        assertFalse("Legacy Amorces must no longer call the recall-key icon",ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_recall_key;"));
     }
     @Test public void sharedPassageLaunchCarriesCanonicalBoundsSeparatelyFromFocus() throws Exception {
         String map=read(ROOT+"MawdudiMapScreen.java");
