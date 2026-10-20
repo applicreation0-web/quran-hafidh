@@ -41,8 +41,15 @@ public class CorrespondenceCompatibilityTest {
   Relation r=internal(Type.CENTRE,true,false);assertFalse(r.displayable());noButton(r);
  }
  @Test public void wholeAyahCentreHasNoGhostButton(){noButton(internal(Type.CENTRE,false,false));}
- @Test public void disjointAnchorsHaveNoGhostButton(){
-  Relation r=internal(Type.INVERSION,false,true);assertTrue(r.displayable());noButton(r);
+ @Test public void disjointAnchorsExposeOnlyAttestedVersesAfterExactQcfSupport(){
+  Relation r=internal(Type.INVERSION,false,true);assertTrue(r.displayable());
+  assertTrue(CorrespondenceDocument.displayable(r,g));
+  assertEquals(Arrays.asList(r),access(r).visible);
+  assertTrue(new Index(Arrays.asList(r)).at(2,3).isEmpty());
+  assertTrue(new Index(Arrays.asList(r)).at(2,4).isEmpty());
+  assertEquals(2,CorrespondenceDocument.focus(r,0,0,g).focalRanges.size());
+  assertEquals(1,r.originals.get(0).start);
+  assertEquals(5,r.originals.get(0).end);
  }
  @Test public void ordinaryWordSegmentHasNoGhostButton(){
   Relation r=internal(Type.RESSEMBLANCE,true,false);assertTrue(r.displayable());noButton(r);
