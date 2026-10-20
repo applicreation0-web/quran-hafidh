@@ -35,6 +35,29 @@ public final class MawdudiMapDataTest {
   assertEquals(121,data.at(2,121).start);
   assertEquals(121,data.at(3,175).start);assertEquals(200,data.at(3,175).end);
  }
+ @Test public void parsedMacrosExposeUnitAndCanonicalPassageDisplayTitles()throws Exception {
+  MawdudiPassageIndex index=AyahThemesCueIndexTest.canonical();
+  MawdudiMapData data=MawdudiMapData.parse(synthetic().toString(),index);
+  // Same legacy parsed fixture and U4 selection used by the native graph test.
+  MawdudiMapData.Macro unit=data.at(3,175);
+  assertEquals("s003a121b200",unit.id);
+  assertEquals("SYNTHETIC MACRO",data.displayUnitTitle(unit.id));
+  for(int surah=1;surah<=114;surah++)for(MawdudiMapData.Macro m:data.forSurah(surah))
+   assertEquals(m.label,data.displayUnitTitle(m.id));
+  for(MawdudiPassageIndex.Passage passage:index.all()) {
+   String title="SYNTHETIC passage "+passage.id;
+   assertEquals(title,data.displayPassageTitle(passage.id,title));
+   for(MawdudiMapData.Macro m:data.forSurah(passage.surah)) {
+    if(passage.firstAyah>m.end||passage.lastAyah<m.start)continue;
+    assertEquals(AtlasPassageContext.displayTitle(passage.surah,passage.firstAyah,
+      passage.lastAyah,m.start,m.end,title),data.displayContextTitle(passage.id,m.id,title));
+   }
+  }
+  try{data.displayUnitTitle("s003a121b199");fail("unknown unit accepted");}
+  catch(IllegalArgumentException expected){}
+  try{data.displayPassageTitle("missing", "SYNTHETIC");fail("unknown passage accepted");}
+  catch(IllegalArgumentException expected){}
+ }
  @Test public void inventedSplitOrOverlapFailsClosed()throws Exception {
   JSONObject raw=synthetic();raw.getJSONArray("macros").getJSONObject(0).put("end",6);
   try{MawdudiMapData.parse(raw.toString(),AyahThemesCueIndexTest.canonical());fail("gap accepted");}catch(IllegalStateException expected){}

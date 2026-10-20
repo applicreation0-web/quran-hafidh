@@ -20,6 +20,7 @@ import java.util.Locale;
 final class MapQcfThumbnails extends WebView {
  interface Listener { void onPageChosen(int page); default void onOpenReading(int page){onPageChosen(page);} }
  private String renderKey="";
+ private volatile boolean disposed;
  private int passageFirstPage,passageLastPage;
  private final Listener listener;
  private int start,end,selected;
@@ -38,7 +39,7 @@ final class MapQcfThumbnails extends WebView {
  }
  /** The two QCF modes have separate render cache identities. */
  void setMosaic(boolean value) {
-  if(mosaicMode==value)return;
+  if(disposed||mosaicMode==value)return;
   mosaicMode=value;mosaicFirst=-1;renderKey="";
  }
  MapQcfThumbnails(Context context,Listener listener){
@@ -57,6 +58,7 @@ final class MapQcfThumbnails extends WebView {
   showPages(first,last,selectedPage,s,firstAyah,lastAyah,boundariesOnly,boundariesOnly?0:first,boundariesOnly?0:last);
  }
  void showPages(int first,int last,int selectedPage,int s,int firstAyah,int lastAyah,boolean boundariesOnly,int focusFirstPage,int focusLastPage){
+  if(disposed)return;
   if(s<0||s>114||firstAyah<0||lastAyah<0||firstAyah>lastAyah)throw new IllegalArgumentException("QCF verse highlight range");
   if(first<1||last>604||last<first)throw new IllegalArgumentException("QCF thumbnail range");
   int chosen=Math.max(first,Math.min(last,selectedPage));
@@ -70,6 +72,7 @@ final class MapQcfThumbnails extends WebView {
   drawChunk();
  }
  private void step(int delta){
+  if(disposed)return;
   int next=Math.max(start,Math.min(end,selected+(delta<0?-1:1)));
   if(next!=selected&&listener!=null)listener.onPageChosen(next);
  }
@@ -202,13 +205,19 @@ final class MapQcfThumbnails extends WebView {
       .append("</script></body></html>");
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
  }
+ /** Invalidate queued bridge work before releasing the native WebView. */
+ @Override public void destroy(){
+  if(disposed)return;
+  disposed=true;++fullGeneration;++mosaicGeneration;
+  removeJavascriptInterface("MapPages");stopLoading();super.destroy();
+ }
  private final class Bridge {
   @JavascriptInterface public void full(int page,int generation){
-   if(page<1||page>604)return;
+   if(disposed||page<1||page>604)return;
    final int s,a,b;
    final boolean only;
    synchronized(MapQcfThumbnails.this){
-    if(mosaicMode||page!=selected||generation!=fullGeneration)return;
+    if(disposed||mosaicMode||page!=selected||generation!=fullGeneration)return;
     s=markSurah;a=markFirst;b=markLast;only=markOnlyBoundaries;
    }
    String encoded;
@@ -219,7 +228,7 @@ final class MapQcfThumbnails extends WebView {
    }catch(Exception unavailable){encoded="";}
    final String prepared=encoded;
    post(()->{
-    if(mosaicMode||generation!=fullGeneration||page!=selected)return;
+    if(disposed||mosaicMode||generation!=fullGeneration||page!=selected)return;
     evaluateJavascript("if(window.receiveFull)receiveFull('"+prepared+"',"+generation+");",null);
    });
   }
@@ -227,7 +236,7 @@ final class MapQcfThumbnails extends WebView {
    * Only inject the prepared authentic SVG after validating its generation.
    */
   @JavascriptInterface public void thumb(int page,int generation){
-   if(page<1||page>604)return;
+   if(disposed||page<1||page>604)return;
    String encoded;
    try{
     String original=cachedSvg(page);
@@ -236,14 +245,14 @@ final class MapQcfThumbnails extends WebView {
    }catch(Exception unavailable){encoded="";}
    final String prepared=encoded;
    post(()->{
-    if(!mosaicMode||generation!=mosaicGeneration||page<mosaicFirst||page>Math.min(end,mosaicFirst+5))return;
+    if(disposed||!mosaicMode||generation!=mosaicGeneration||page<mosaicFirst||page>Math.min(end,mosaicFirst+5))return;
     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'"+prepared+"',"+generation+");",null);
    });
   }
-  @JavascriptInterface public void ready(int generation){post(()->{if(mosaicMode&&generation==mosaicGeneration)invalidate();});}
-  @JavascriptInterface public void shift(int delta){post(()->MapQcfThumbnails.this.shiftMosaic(delta));}
+  @JavascriptInterface public void ready(int generation){post(()->{if(!disposed&&mosaicMode&&generation==mosaicGeneration)invalidate();});}
+  @JavascriptInterface public void shift(int delta){post(()->{if(!disposed)MapQcfThumbnails.this.shiftMosaic(delta);});}
   @JavascriptInterface public void step(int delta){post(()->MapQcfThumbnails.this.step(delta));}
-  @JavascriptInterface public void choose(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onPageChosen(page);});}
-  @JavascriptInterface public void open(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onOpenReading(page);});}
+  @JavascriptInterface public void choose(int page){if(page>=start&&page<=end)post(()->{if(!disposed&&page>=start&&page<=end&&listener!=null)listener.onPageChosen(page);});}
+  @JavascriptInterface public void open(int page){if(page>=start&&page<=end)post(()->{if(!disposed&&page>=start&&page<=end&&listener!=null)listener.onOpenReading(page);});}
  }
 }

@@ -125,8 +125,9 @@ public final class CorrespondenceNavigationInstrumentedTest {
    assertVisibleInk(scenario,current);
    scenario.onActivity(activity->{
     current[0].onBackPressed();assertEquals(2,((LinearLayout)field(current[0],"body")).getChildCount());
-    current[0].onBackPressed();
    });
+   awaitRendered(scenario,current);assertVisibleInk(scenario,current);
+   scenario.onActivity(activity->current[0].onBackPressed());
    InstrumentationRegistry.getInstrumentation().waitForIdleSync();assertEquals(1,callbacks.get());
   }
  }
@@ -201,7 +202,10 @@ public final class CorrespondenceNavigationInstrumentedTest {
     assertVisibleInk(scenario,current);
     scenario.onActivity(activity->activity.onBackPressed());
     InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-    scenario.onActivity(activity->{assertFalse(activity.isFinishing());assertEquals(2,((LinearLayout)field(current[0],"body")).getChildCount());activity.onBackPressed();});
+    scenario.onActivity(activity->{assertFalse(activity.isFinishing());assertEquals(2,((LinearLayout)field(current[0],"body")).getChildCount());});
+    awaitRendered(scenario,current);assertVisibleInk(scenario,current);
+    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-correspondence-synthetic-activity-comparison-restored.png");
+    scenario.onActivity(activity->activity.onBackPressed());
     InstrumentationRegistry.getInstrumentation().waitForIdleSync();
     assertEquals(androidx.lifecycle.Lifecycle.State.DESTROYED,scenario.getState());
    }
@@ -239,42 +243,62 @@ public final class CorrespondenceNavigationInstrumentedTest {
  }
  private static void awaitRendered(ActivityScenario<? extends android.app.Activity> scenario,CorrespondenceScreen[] current){
   long until=android.os.SystemClock.uptimeMillis()+20000;
-  boolean[] ready={false};
+  boolean[] ready={false};String[] status={"No surface observed"};
   while(android.os.SystemClock.uptimeMillis()<until){
    scenario.onActivity(activity->{
-    ready[0]=true;
+    ready[0]=true;int visible=0;StringBuilder diagnostics=new StringBuilder();
     for(CorrespondenceQcfSurface surface:(CorrespondenceQcfSurface[])field(current[0],"surfaces")){
      android.webkit.WebView web=(android.webkit.WebView)field(surface,"web");
      android.widget.TextView caption=(android.widget.TextView)field(surface,"position");
      assertFalse("Authentic QCF asset could not load",caption.getText().toString().contains("indisponible"));
      assertFalse("QCF focus must be verified",caption.getText().toString().contains("VISUEL_NON_VALIDÉ"));
      assertFalse("Production QCF WebView must stay script-free",web.getSettings().getJavaScriptEnabled());
-     ready[0]&=!(Boolean)field(surface,"loading")&&(!web.isShown()||web.getContentHeight()>0);
+     diagnostics.append(" [").append(caption.getText()).append(" shown=").append(web.isShown())
+      .append(" loading=").append(field(surface,"loading")).append(" height=").append(web.getContentHeight()).append(']');
+     // An enlarged comparison deliberately detaches its other WebView. Android
+     // may defer that document's completion until it is attached again. Its
+     // requested viewport remains in the checkpoint; require paint when shown.
+     if(web.isShown()){
+      visible++;ready[0]&=!(Boolean)field(surface,"loading")&&web.getContentHeight()>0;
+     }
     }
+    ready[0]&=visible>0;status[0]=diagnostics.toString();
    });
    if(ready[0]){InstrumentationRegistry.getInstrumentation().waitForIdleSync();return;}
    android.os.SystemClock.sleep(100);
   }
-  fail("Timed out waiting for authentic QCF WebView content");
+  fail("Timed out waiting for authentic QCF WebView content:"+status[0]);
  }
  private static void assertVisibleInk(ActivityScenario<? extends android.app.Activity> scenario,CorrespondenceScreen[] current){
-  java.util.List<android.graphics.Rect> areas=new java.util.ArrayList<>();
-  scenario.onActivity(activity->{
-   for(CorrespondenceQcfSurface surface:(CorrespondenceQcfSurface[])field(current[0],"surfaces")){
-    android.webkit.WebView web=(android.webkit.WebView)field(surface,"web");
-    android.graphics.Rect area=new android.graphics.Rect();if(web.getGlobalVisibleRect(area))areas.add(area);
-   }
-  });
-  assertFalse("At least one folio must be visibly laid out",areas.isEmpty());
-  android.graphics.Bitmap image=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
-  assertNotNull(image);
-  try{for(android.graphics.Rect area:areas){
-   int dark=0;for(int y=Math.max(0,area.top);y<Math.min(image.getHeight(),area.bottom);y+=2)
-    for(int x=Math.max(0,area.left);x<Math.min(image.getWidth(),area.right);x+=2){
-     int pixel=image.getPixel(x,y);if(android.graphics.Color.red(pixel)<150&&android.graphics.Color.green(pixel)<150&&android.graphics.Color.blue(pixel)<150)dark++;
+  long until=android.os.SystemClock.uptimeMillis()+10000;
+  String failure="At least one folio must be visibly laid out";
+  do{
+   java.util.List<android.graphics.Rect> areas=new java.util.ArrayList<>();
+   scenario.onActivity(activity->{
+    for(CorrespondenceQcfSurface surface:(CorrespondenceQcfSurface[])field(current[0],"surfaces")){
+     android.webkit.WebView web=(android.webkit.WebView)field(surface,"web");
+     android.graphics.Rect area=new android.graphics.Rect();if(web.getGlobalVisibleRect(area))areas.add(area);
     }
-   assertTrue("QCF viewport must contain rendered ink, not a blank WebView",dark>100);
-  }}finally{image.recycle();}
+   });
+   android.graphics.Bitmap image=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+   assertNotNull(image);
+   boolean ink=!areas.isEmpty();
+   try{for(android.graphics.Rect area:areas){
+    // Count actual ink pixels. Sampling every other row and column can miss
+    // most thin QCF strokes in a small pane (the short 3:2 focus has 188 actual
+    // dark pixels but only 34 sampled pixels on the CI emulator).
+    int dark=0;for(int y=Math.max(0,area.top);y<Math.min(image.getHeight(),area.bottom);y++)
+     for(int x=Math.max(0,area.left);x<Math.min(image.getWidth(),area.right);x++){
+      int pixel=image.getPixel(x,y);if(android.graphics.Color.red(pixel)<150&&android.graphics.Color.green(pixel)<150&&android.graphics.Color.blue(pixel)<150)dark++;
+     }
+    if(dark<=100){ink=false;failure="QCF viewport must contain rendered ink, not a blank WebView: "+dark+" dark pixels in "+area;}
+   }}finally{image.recycle();}
+   if(ink)return;
+   // onPageFinished/contentHeight do not guarantee a compositor frame. Wait
+   // for actual screenshot ink after a folio is reattached, without a fixed delay.
+   android.os.SystemClock.sleep(100);
+  }while(android.os.SystemClock.uptimeMillis()<until);
+  fail(failure);
  }
 
 }

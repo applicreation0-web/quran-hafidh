@@ -19,7 +19,6 @@ final class MawdudiMapData {
  private final List<Macro> all;
  private final AtlasDisplayCatalog catalog;
  private final Map<String,int[]> unitRanges,passageRanges;
- private MawdudiMapData(List<Macro> rows){this(rows,null,Collections.emptyMap(),Collections.emptyMap());}
  private MawdudiMapData(List<Macro> rows,AtlasDisplayCatalog catalog,
                         Map<String,int[]> units,Map<String,int[]> passages){
   all=Collections.unmodifiableList(new ArrayList<>(rows));this.catalog=catalog;
@@ -95,7 +94,13 @@ final class MawdudiMapData {
     macros.add(new Macro(s,range[0],range[1],label));
    }
   }
-  return new MawdudiMapData(macros);
+  // Parsed legacy/synthetic maps use the same validated display identities as
+  // loaded maps. The screen resolves both unit and passage titles by these IDs.
+  Map<String,int[]> units=new LinkedHashMap<>(),passages=new LinkedHashMap<>();
+  for(Macro m:macros)units.put(m.id,new int[]{m.surah,m.start,m.end});
+  for(MawdudiPassageIndex.Passage p:index.all())
+   passages.put(p.id,new int[]{p.surah,p.firstAyah,p.lastAyah});
+  return new MawdudiMapData(macros,null,units,passages);
  }
  /** Approved private summaries: exact edition-safe labels, SHA-256 pinned and unit-bound.
   * Never treat them as literal titles copied from Maududi.

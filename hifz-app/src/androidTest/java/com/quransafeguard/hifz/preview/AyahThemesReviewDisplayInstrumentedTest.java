@@ -102,18 +102,24 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    awaitAtlasFullPage(scenario,screen,first);
    scenario.onActivity(a->{
     assertEquals("Unit 4 must be selected",3,((Integer)field(screen.get(),"activeMacro")).intValue());
-    assertEquals("Atlas displays the selected unit graph, not the root overview","Graph",
-      ((android.widget.HorizontalScrollView)field(screen.get(),"axis")).getChildAt(0).getClass().getSimpleName());
+    android.widget.HorizontalScrollView rail=(android.widget.HorizontalScrollView)field(screen.get(),"axis");
+    assertEquals("Atlas has a single unit rail",1,rail.getChildCount());
+    assertSame("Selected unit keeps the same unit-only rail",field(screen.get(),"overviewGraph"),rail.getChildAt(0));
+    assertFalse("Selecting U4 opens its page below the rail",(Boolean)field(screen.get(),"overview"));
+    assertEquals("Four Al-Imran units fit in the first rail window",0,
+      ((Integer)field(screen.get(),"unitWindowStart")).intValue());
     assertTrue("Unit goes straight to physical QCF, without an intermediate mosaic",
       (Boolean)field(screen.get(),"passageOpen"));
     android.widget.TextView unitTitle=(android.widget.TextView)field(screen.get(),"passageTitle");
-    android.widget.TextView sourceTitle=(android.widget.TextView)field(screen.get(),"selectedPassageTitle");
-    assertTrue("Unit heading must be larger",unitTitle.getTextSize()>sourceTitle.getTextSize());
+    assertEquals("Atlas caption is the selected unit heading","SYNTHETIC macro heading",unitTitle.getText().toString());
+    assertEquals("Selected unit caption is visible",android.view.View.VISIBLE,unitTitle.getVisibility());
     assertTrue("Unit heading must be bold",
       (unitTitle.getTypeface().getStyle()&android.graphics.Typeface.BOLD)!=0);
-    assertTrue("Selected source heading must be italic",
-      (sourceTitle.getTypeface().getStyle()&android.graphics.Typeface.ITALIC)!=0);
-    assertTrue("No empty source title",sourceTitle.length()>0);
+    for(java.lang.reflect.Field f:MawdudiMapScreen.class.getDeclaredFields())
+     assertNotEquals("Source passage headings belong to Lecture, not a second Atlas rail",
+       "selectedPassageTitle",f.getName());
+    assertFalse("Canonical source heading remains available for Lecture",
+      screen.get().selectedPassageTitle().isEmpty());
     assertEquals("Direct QCF starts at the first unit page",first,((Integer)field(screen.get(),"page")).intValue());
    });
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-direct-qcf-unit-and-passages.png");
@@ -127,7 +133,12 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    swipeAtlasPage(scenario,screen,true);
    awaitAtlasFullPage(scenario,screen,first+2);
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-unit-swiped-original-qcf-page.png");
-   scenario.onActivity(a->screen.get().openReader());
+   scenario.onActivity(a->{
+    java.util.List<MawdudiPassageIndex.Passage> passages=
+      (java.util.List<MawdudiPassageIndex.Passage>)field(screen.get(),"passages");
+    selected.set(passages.get((Integer)field(screen.get(),"selected")));
+    screen.get().openReader();
+   });
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
    AtomicReference<StudyReaderActivity> reader=new AtomicReference<>();
    for(int attempt=0;attempt<44;attempt++){
@@ -188,7 +199,15 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     assertTrue("Atlas reading must be unit-scoped",(Boolean)field(reader.get(),"mapUnitPreview"));
     assertNotNull("Atlas has an explicit previous-passage arrow",field(reader.get(),"atlasPassageUp"));
     assertNotNull("Atlas has an explicit next-passage arrow",field(reader.get(),"atlasPassageDown"));
-    assertTrue("Atlas focus resolves a real passage",((Integer)field(reader.get(),"atlasPassagePosition"))>=0);
+    int position=(Integer)field(reader.get(),"atlasPassagePosition");
+    assertTrue("Atlas focus resolves a real passage",position>=0);
+    java.util.List<MawdudiPassageIndex.Passage> readerPassages=
+      (java.util.List<MawdudiPassageIndex.Passage>)field(reader.get(),"atlasPassages");
+    MawdudiPassageIndex.Passage opened=readerPassages.get(position);
+    assertEquals("Lecture opens the exact passage selected on the Atlas page",selected.get().id,opened.id);
+    assertEquals(selected.get().firstAyah,reader.get().getIntent().getIntExtra("map114SelectedStart",-1));
+    assertEquals(selected.get().lastAyah,reader.get().getIntent().getIntExtra("map114SelectedEnd",-1));
+    assertEquals(selected.get().id,reader.get().getIntent().getStringExtra("map114PassageId"));
     assertNotNull("Page-dependent Ayah Themes footer",(android.widget.TextView)field(reader.get(),"atlasCueFooter"));
     assertEquals(121,reader.get().getIntent().getIntExtra("map114FocusStart",-1));
     assertEquals(200,reader.get().getIntent().getIntExtra("map114FocusEnd",-1));
@@ -200,6 +219,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     }catch(Exception e){throw new AssertionError(e);}
     assertEquals("Reader must stop at the precise unit's last physical page",last,
       ((Integer)field(reader.get(),"page")).intValue());
+    selected.set(readerPassages.get((Integer)field(reader.get(),"atlasPassagePosition")));
    });
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(
        android.view.KeyEvent.KEYCODE_BACK);
@@ -208,6 +228,12 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     assertEquals("Back returns to the very same QCF page",last,
       ((Integer)field(screen.get(),"page")).intValue());
     assertEquals(3,((Integer)field(screen.get(),"activeMacro")).intValue());
+    java.util.List<MawdudiPassageIndex.Passage> passages=
+      (java.util.List<MawdudiPassageIndex.Passage>)field(screen.get(),"passages");
+    MawdudiPassageIndex.Passage returned=passages.get((Integer)field(screen.get(),"selected"));
+    assertEquals("Back restores the exact canonical passage, including same-page choices",selected.get().id,returned.id);
+    assertEquals(Math.max(121,returned.firstAyah),((Integer)field(screen.get(),"focusStart")).intValue());
+    assertEquals(Math.min(200,returned.lastAyah),((Integer)field(screen.get(),"focusEnd")).intValue());
    });
    awaitAtlasFullPage(scenario,screen,last);
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-unit-reading-return-exact-page.png");
