@@ -110,3 +110,11 @@ Frise actuelle : `[J0 ✓]──[J1 ✓]──[J2 ◐]──[J3 ◐: 110 réconc
 - Vérification des références documentaires : R047 = 54:17,22,32,40 ; R048 = les 31 positions 55:13,16,18,21,23,25,28,30,32,34,36,38,40,42,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77. Bornes privées inchangées, aucune transcription arabe mise dans le dépôt public.
 - **Non clôturé en production :** `CorrespondenceRuntime.APPROVED_SHA256` vide, `approved_v1.json` non autorisé, aucune relation active. Les relations et leurs droits/foyers exacts doivent franchir les portes du catalogue. R032 macro-centre et les autres relations litigieuses nécessitent encore des preuves/rendus. Recette Android instrumentée/BOOX et APK complet **pas encore validés**.
 - Source d'audit native Hifz indépendante : workflow `Hifz native emulator regression` ; distinguer son verdict d'une installation BOOX réelle.
+
+## J4 — reprise après pause et contrôle Android (20 octobre 2026)
+
+- **J4 refrains, implémentation fonctionnelle terminée** : Ar-Raḥmān 31 occurrences / frise coulissante de cinq points / repères voisins ; Al-Qamar quatre occurrences ; QCF réel avec voisin précédent et suivant normaux et refrain grisé ; passage de pages QCF autorisé sans modifier les ancrages historiques.
+- **Contrôles JVM et contrat UI/icônes PASS** sur `0e1d0798d20faaa9aef4887bba2f2d103c65ac8e` : https://github.com/applicreation0-web/quran-hafidh/actions/runs/39459122128
+- **Contrôles instrumentés Android sur émulateur PASS** sur `feb044b843621d016d18770464dcbb4365fcd6cc` : https://github.com/applicreation0-web/quran-hafidh/actions/runs/39460310500 ; journaux : **108 tests Android**, redémarrage forcé, 32 captures ; tests incluent navigation Correspondances synthétiques, QCF, retour Atlas et préservation état Hifz. Ce **n'est PAS** un contrôle BOOX physique ni une activation du catalogue de production.
+- **Bloqueurs restant hors du code de refrains** : catalogue individuel `approved_v1.json` et SHA de certification (actuellement vide), droits et foyers exacts de chaque relation, structures complexes (notamment R032), BOOX physique/signature privée de mise à jour. Pas de release publique ou privée finale sans ces portes.
+- **Statut honnête : J4 fonctionnalité Refrains = DONE et automatisation = PASS ; livraison globale Correspondances / APK privé = NON LIVRÉE**.
