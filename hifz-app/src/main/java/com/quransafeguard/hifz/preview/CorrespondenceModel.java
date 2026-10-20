@@ -315,9 +315,13 @@ public final class CorrespondenceModel {
             }
         }
         public Pane pane(int pane) { require(pane>=0 && pane<panes.size(),"pane index"); return panes.get(pane); }
-        /** Display context is distinct from the immutable source relation bounds.
-         * A series may show the next verse (or previous at the end of a surah),
-         * including its authentic continuation page. This never creates an anchor. */
+        /** Context is display-only: the original refrain ranges and approved anchors never change.
+         * Keep BOTH immediate verses visible, even across authentic QCF page boundaries.
+         */
+        public int previousNeighbor() {
+            Anchor a=activeAnchor();
+            return a.range.start>1 ? a.range.start-1 : 0;
+        }
         public int normalNeighbor() {
             Anchor a=activeAnchor();
             return a.range.end<relation.geometry.ayahCount(a.range.surah) ? a.range.end+1 :
@@ -327,9 +331,11 @@ public final class CorrespondenceModel {
             pane(pane);
             if(relation.mode!=Mode.SERIES)return relation.originals.get(pane);
             Anchor a=activeAnchor();VerseRange original=relation.originals.get(a.originalIndex);
-            int neighbor=normalNeighbor();
-            return new VerseRange(original.surah,neighbor==0?original.start:Math.min(original.start,neighbor),
-                Math.max(original.end,neighbor),relation.geometry);
+            int before=previousNeighbor(),after=normalNeighbor();
+            int first=original.start,last=original.end;
+            if(before>0){first=Math.min(first,before);last=Math.max(last,before);}
+            if(after>0){first=Math.min(first,after);last=Math.max(last,after);}
+            return new VerseRange(original.surah,first,last,relation.geometry);
         }
         public void setPane(int pane,int page,double zoom,String selection) {
             setPane(pane,page,zoom,selection,0,0);
