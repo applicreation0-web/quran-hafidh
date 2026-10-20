@@ -61,3 +61,11 @@
 - J4 intégration des données finales, J5 Android/BOOX signé : **NON EXÉCUTÉS dans cette reprise**. Aucun APK livré ; aucun moteur Hifz ni titre Atlas modifié. Ne pas interpréter ce checkpoint de preuve comme une certification finale.
 
 Frise actuelle : `[J0 ✓]──[J1 ✓]──[J2 ◐]──[J3 ◐: 110 réconciliés, certification ouverte]──[J4 ○]──[J5 ○]`.
+
+## J4/J5 — contrôle préparatoire après consolidation, 20 octobre 2026
+
+- **Test local exécuté** contre le registre privé de 110 : 110 IDs uniques, ventilation 80/24/6, quatre certifications éditoriales historiques R030/R037/R047/R048 et drapeaux de production bloqués 110/110 : **PASS**. Test négatif (production activée artificiellement) : **REJET CORRECT**. Script et résultat conservés uniquement dans le pack privé, pas dans le dépôt public.
+- **Revue statique J4** : `CorrespondenceCatalog` vérifie SHA-256, schéma, gates et droits ; `CorrespondenceRuntime` conserve le hash approuvé vide (aucune activation). Contrôles de géométrie ayah/mot, correspondance directe, RESTAURATION, contexte Atlas/Lecture/Sabqi, WebView QCF hors ligne et activité non exportée inspectés, sans garantie d'exécution native.
+- **Non-régression par Git** : depuis le dernier SHA applicatif `26f7f619c11c855424786e0380463fc33850db5e`, la comparaison avec la branche affiche seulement des fichiers de documentation. **Aucun changement au code**, pas de tests Android nouveaux.
+- **J4 encore bloqué** par certification individuelle, droits, foyers QCF et portes de QA non attestées. **J5 non clos** : Gradle/Android/BOOX physique, restauration installée, signature compatible et APK final ne sont pas validés.
+- Pack privé de cette reprise : `QURAN_HAAFIDH_J3_CONSOLIDATION_PRIVEE_ET_FRISE_2026-10-20.zip`, SHA-256 `fb94bfde39e4ae16698754883ef65d36dd7049c6bce9ae816a1f651a289b11c7`. Ce ZIP reste hors dépôt public.
