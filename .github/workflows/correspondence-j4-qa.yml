@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Check correspondence icon sources and Android bindings
         run: |
           python3 scripts/test_correspondence_type_icon_wiring.py
@@ -29,11 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
       - name: Install Android compilation SDK
         run: |
           yes | sdkmanager --licenses > /dev/null || true
