@@ -34,3 +34,10 @@
 
 ## Usage futur
 Toute nouvelle tâche et tout Work doit utiliser **la nouvelle branche** `work/haafidh-1171-atlas-correspondances`. Lire ce checkpoint et `PROGRESSION_JALONS.md`, ne pas réintégrer d'anciens headings Ibn Kathīr dans le produit.
+
+## Preuves finales de la migration des noms et de l'entrée Atlas
+
+- **CI Hifz / Atlas / QCF SUCCESS :** https://github.com/applicreation0-web/quran-hafidh/actions/runs/39483801141 — deux jobs SUCCESS, dont source freeze Hifz + 23 pictos, JVM Hifz et vérifications de rendu/contrats.
+- **Compilation privée Atlas SUCCESS :** https://github.com/applicreation0-web/quran-hafidh/actions/runs/39484149989 — code compilé avec les indicateurs privés, test et garde-fous passés. **Aucun APK assemblé ni signé**.
+- Le fait que ces workflows soient verts démontre le routage, la compatibilité compilation et les sources protégées dans les scénarios couverts ; **pas** l'absence physique de toutes les anciennes classes du paquet, ni un test BOOX ou une certification des relations.
+- Nettoyage actif terminé ; suppression définitive du vieux code `IbnKathir*` (encore nécessaire à certaines anciennes instrumentations) **distincte** et non autorisée par ce simple renommage sans remplacement des tests.
