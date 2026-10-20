@@ -253,9 +253,16 @@ final class AtlasDisplayCatalog {
             byte[] checkedBytes=out.toByteArray();
             // SHA pin authenticates private editorial text without adding it to GitHub.
             // Never relax certification flags or trust the contents of an arbitrary APK asset.
-            if(BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW&&!PrivateDisplayIntegrity.matches(
-                    checkedBytes,"065ec0dd68c488efacbd9e77635bf9d531b4cbb2b1bc82db7853ad4da0c02c9c"))
-                throw new IOException("Private Atlas editorial catalogue integrity mismatch");
+            if(BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW){
+                boolean exact;
+                try {
+                    exact=PrivateDisplayIntegrity.matches(
+                        checkedBytes,"065ec0dd68c488efacbd9e77635bf9d531b4cbb2b1bc82db7853ad4da0c02c9c");
+                }catch(Exception digestUnavailable){
+                    throw new IOException("Cannot verify private Atlas editorial catalogue",digestUnavailable);
+                }
+                if(!exact)throw new IOException("Private Atlas editorial catalogue integrity mismatch");
+            }
             String raw=StandardCharsets.UTF_8.newDecoder()
                     .decode(java.nio.ByteBuffer.wrap(checkedBytes)).toString();
             return parse(raw,units,passages);
