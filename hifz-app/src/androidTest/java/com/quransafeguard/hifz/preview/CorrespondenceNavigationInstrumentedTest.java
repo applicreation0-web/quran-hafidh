@@ -206,8 +206,17 @@ public final class CorrespondenceNavigationInstrumentedTest {
     awaitRendered(scenario,current);assertVisibleInk(scenario,current);
     HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-correspondence-synthetic-activity-comparison-restored.png");
     scenario.onActivity(activity->activity.onBackPressed());
-    InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-    assertEquals(androidx.lifecycle.Lifecycle.State.DESTROYED,scenario.getState());
+    // finish() initiates an asynchronous Android lifecycle transition. A main-
+    // thread idle barrier alone does not guarantee that onDestroy has run.
+    // Never force the scenario to DESTROYED: the real Back behavior must do it.
+    long closeDeadline=android.os.SystemClock.uptimeMillis()+10000;
+    while(scenario.getState()!=androidx.lifecycle.Lifecycle.State.DESTROYED
+        &&android.os.SystemClock.uptimeMillis()<closeDeadline){
+     InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+     android.os.SystemClock.sleep(50);
+    }
+    assertEquals("Second Back must finish and destroy the comparison activity",
+      androidx.lifecycle.Lifecycle.State.DESTROYED,scenario.getState());
    }
    assertEquals("Synthetic comparison must not write learning state",before,context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE).getAll());
   } finally { cached.set(null,originalRuntime); }
