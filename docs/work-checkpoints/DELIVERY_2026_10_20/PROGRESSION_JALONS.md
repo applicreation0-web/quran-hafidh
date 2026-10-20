@@ -69,3 +69,12 @@ Frise actuelle : `[J0 ✓]──[J1 ✓]──[J2 ◐]──[J3 ◐: 110 réconc
 - **Non-régression par Git** : depuis le dernier SHA applicatif `26f7f619c11c855424786e0380463fc33850db5e`, la comparaison avec la branche affiche seulement des fichiers de documentation. **Aucun changement au code**, pas de tests Android nouveaux.
 - **J4 encore bloqué** par certification individuelle, droits, foyers QCF et portes de QA non attestées. **J5 non clos** : Gradle/Android/BOOX physique, restauration installée, signature compatible et APK final ne sont pas validés.
 - Pack privé de cette reprise : `QURAN_HAAFIDH_J3_CONSOLIDATION_PRIVEE_ET_FRISE_2026-10-20.zip`, SHA-256 `fb94bfde39e4ae16698754883ef65d36dd7049c6bce9ae816a1f651a289b11c7`. Ce ZIP reste hors dépôt public.
+
+## J4 — correspondance type/icône et pré-assemblage vérifiés (20 octobre 2026)
+
+- J3 **typologie seulement** : 110 références originales préservées ; 80 documentées et typées, 14 typages provisoires sur 24 en attente, 10 non classés, six écartés. Typé != certifié. Les N001–N008 restent hors périmètre.
+- Test de rapprochement entre le registre historique et les 110 lignes de J3 : **110/110 bornes exactes**, sans modification des IDs ni des limites ; 80 dossiers documentés répartis en **69 `TWO_PAGES` / 9 `SERIES` / 2 `INTERNAL`**, sans cardinalité actuellement incompatible.
+- Les huit SVG/Android drawables contractuels et les associations Java déjà présentes ont été vérifiés. Nouveau contrôle de régression public uniquement, sans contenu privé : `scripts/test_correspondence_type_icon_wiring.py` (SHA de création `947cf4fb6cc1475e65d7fd0d1614e4a7bf727e79`). Son exécution CI sur Android reste **à faire** ; ne pas annoncer de PASS Android.
+- **Cinq contrôles Python privés J4 exécutés et PASS** : comptage, préservation des bornes, 8 correspondances de type/icône, cas litigieux, schéma non activable. Pack privé : `QURAN_HAAFIDH_J4_PREPARATION_110_MODES_ICONES_SANS_ACTIVATION_2026-10-20.zip`, SHA-256 `a38c32e64f5e115f53182814dbb7b08152549d0a0e33276f5a4c194d11c278a6`. Conserver ce pack **hors dépôt public**.
+- Écarts de rendu identifiés et non masqués : R033 centre sur mots QCF et preuve focale ; R032 centre à l'échelle de toute la sourate ; R078 quatre positions alternées ; R026 sous-plage jour/nuit ; R038 inclusio formelle non démontrée.
+- **J4 non terminé** : cette grille est un *staging documentaire*, pas `approved_v1.json`. Source, droits, foyers visuels et QA native ne sont pas validés en masse. `APPROVED_SHA256` demeure vide. **0 relation activée, 0 APK livré, Hifz/Atlas inchangés.**
