@@ -91,6 +91,7 @@ while IFS= read -r file; do
     "$APP_ROOT/ItqanFourSessionSnapshot.java" | \
     "$APP_ROOT/ItqanFourSessionStore.java" | \
     "$APP_ROOT/MainActivity.java" | \
+    "$APP_ROOT/AtlasMapActivity.java" | \
     "$APP_ROOT/FreeMemActivity.java" | \
     "$APP_ROOT/QuranSurahNames.java" | \
     "$APP_ROOT/SettingsActivity.java" | \
