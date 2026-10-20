@@ -34,6 +34,8 @@ final class CorrespondenceDocument {
   final int surah,first,last,normalNeighbor,previousNeighbor,firstPage,lastPage,initialPage;
   final boolean supported;
   java.util.List<CorrespondenceModel.SegmentBox> segmentBoxes=java.util.Collections.emptyList();
+  /** Disjoint source-attested verse ranges: never manufacture gray focus over the gaps. */
+  java.util.List<CorrespondenceModel.VerseRange> focalRanges=java.util.Collections.emptyList();
   Focus(int s,int a,int b,int n,int previous,int fp,int lp,int ip,boolean supported){
    surah=s;first=a;last=b;normalNeighbor=n;previousNeighbor=previous;
    firstPage=fp;lastPage=lp;initialPage=ip;this.supported=supported;
@@ -61,7 +63,7 @@ final class CorrespondenceDocument {
   for(CorrespondenceModel.Anchor a:anchors){
    // This renderer has verse geometry only. Never masquerade as a word renderer,
    // or fill gaps between several separate anchors as if they were attested.
-   supported &= !a.isWordSegment() && a.range.surah==range.surah && a.range.start<=last+1;
+   supported &= !a.isWordSegment() && a.range.surah==range.surah;
    last=Math.max(last,a.range.end);
   }
   int neighbor=0,previous=0,fp=range.firstPage,lp=range.lastPage;
@@ -76,7 +78,13 @@ final class CorrespondenceDocument {
     lp=Math.max(lp,geometry.lastPage(range.surah,n));
    }
   }
-  return new Focus(range.surah,first,last,neighbor,previous,fp,lp,initial,supported);
+  Focus plan=new Focus(range.surah,first,last,neighbor,previous,fp,lp,initial,supported);
+  if(anchors.size()>1){
+   java.util.List<CorrespondenceModel.VerseRange> discrete=new ArrayList<>();
+   for(CorrespondenceModel.Anchor a:anchors)discrete.add(a.range);
+   plan.focalRanges=java.util.Collections.unmodifiableList(discrete);
+  }
+  return plan;
  }
  static final class Render {
   final String svg;final boolean focusVerified;
@@ -89,6 +97,8 @@ final class CorrespondenceDocument {
    java.util.List<double[]> boxes=new java.util.ArrayList<>();
    for(CorrespondenceModel.SegmentBox b:focus.segmentBoxes)if(b.page==page)boxes.add(new double[]{b.x0,b.y0,b.x1,b.y1});
    rendered=CorrespondenceSvgFocus.applyWords(svg,boxes);
+  }else if(!focus.focalRanges.isEmpty()){
+   rendered=CorrespondenceSvgFocus.applyDiscrete(svg,focus.surah,focus.focalRanges);
   }else rendered=CorrespondenceSvgFocus.apply(svg,focus.surah,focus.first,focus.last,focus.normalNeighbor,focus.previousNeighbor);
   return new Render(rendered,!rendered.equals(svg));
  }
