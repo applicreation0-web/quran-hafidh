@@ -144,3 +144,14 @@ Frise actuelle : `[J0 ✓]──[J1 ✓]──[J2 ◐]──[J3 ◐: 110 réconc
 - **Preuve CI** : [J4 QCF Refrain QA #39474497127](https://github.com/applicreation0-web/quran-hafidh/actions/runs/39474497127) = **deux jobs SUCCESS** (contrats icônes / lecture seule et Gradle JVM QCF). Ce n'est ni une validation BOOX physique ni une autorisation éditoriale.
 - Tableau privé **non exécutable**, hors dépôt public, `J4_ARBITRAGE_REEL_10_DOSSIERS_2026-10-20.zip`, SHA-256 `4adec44b19cbc9213913a7cd58133c7d566068eb11e3c5ca346cb55315b12d7a`. Il contient chaque ID, les limites d'origine, le type proposé, la preuve disponible, la correction nécessaire et le verdict technique, sans drapeau d'approbation.
 - **Restants** : tests visuels individuels, validation de provenance/droits et preuves pour les dix, rendu à quatre rôles et vue macrostructure, puis BOOX physique et compatibilité de signature. `APPROVED_SHA256` demeure vide.
+
+## Nettoyage actif — Ibn Kathīr → Atlas + Correspondances (20 octobre 2026)
+
+- **NOUVELLE BRANCHE de référence :** `work/haafidh-1171-atlas-correspondances`. Ancienne branche `work/haafidh-1171-ibn-kathir-integration-independent` **figée comme archive technique** (sans suppression de données Git).
+- **Navigation Atlas corrigée :** accueil → `AtlasMapActivity` → `MawdudiMapScreen` → lecture QCF / panneau Jalalayn. Aucun repli utilisateur vers la carte documentaire Ibn Kathīr, aucun retour aux titres ou commentaires Ibn Kathīr.
+- Suppression des trois workflows obsolètes **sur la nouvelle branche uniquement** : `ibn-kathir-engine-frozen.yml`, `haafidh-ibn-kathir-debug.yml`, `quran-com-original-ibn-kathir-titles.yml`.
+- Workflows actifs retargetés et nouveau `haafidh-atlas-correspondances-regression.yml` (source freeze Hifz, 23+8 pictos, QCF, Atlas, Correspondances), sans APK ni publication.
+- **PREUVE CI :** https://github.com/applicreation0-web/quran-hafidh/actions/runs/39483801141 — tests Hifz freeze & icons **SUCCESS**, tests JVM Hifz+Atlas+QCF/source contracts **SUCCESS**.
+- Les anciens symboles `IbnKathir*` et l'enregistrement non exporté de l'activité sont conservés **seulement pour l'ancienne couverture d'instrumentation** et les essais de migration. Ils ne sont pas le parcours Atlas public depuis l'accueil. Leur élimination complète reste une **opération distincte après migration des tests**, et ne doit pas faire perdre les garanties Hifz.
+- Voir `docs/work-checkpoints/DELIVERY_2026_10_20/NETTOYAGE_IBN_KATHIR_VERS_ATLAS_2026-10-20.md`.
+- Aucun changement des compteurs documentaires, aucun `approved_v1.json`, aucun changement du `APPROVED_SHA256`, aucun APK signé ou release finale.
