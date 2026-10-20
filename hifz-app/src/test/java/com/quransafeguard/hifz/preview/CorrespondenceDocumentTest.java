@@ -128,16 +128,18 @@ public class CorrespondenceDocumentTest {
   assertEquals(17,focus.normalNeighbor);
   assertEquals(530,focus.firstPage);assertEquals(531,focus.lastPage);
   assertEquals(16,r.originals.get(1).start);assertEquals(16,r.originals.get(1).end);
-  String page="<svg viewBox=\"0 0 345 550\">"
+  String pageBefore="<svg viewBox=\"0 0 345 550\">"
    +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"15\" d=\"M1 1L5 5Z\"/>"
-   +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"16\" d=\"M6 6L10 10Z\"/>"
+   +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"16\" d=\"M6 6L10 10Z\"/></svg>";
+  String pageAfter="<svg viewBox=\"0 0 345 550\">"
    +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"17\" d=\"M11 11L15 15Z\"/>"
    +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"18\" d=\"M16 16L20 20Z\"/></svg>";
-  CorrespondenceDocument.Render rendered=CorrespondenceDocument.render(page,focus,530);
-  assertTrue(rendered.focusVerified);
-  assertTrue(rendered.svg.contains("<path d=\"M1 1L5 5Z\" fill=\"black\""));
-  assertTrue(rendered.svg.contains("<path d=\"M11 11L15 15Z\" fill=\"black\""));
-  assertTrue(rendered.svg.contains("<path d=\"M6 6L10 10Z\" fill=\"#999\""));
-  assertFalse(rendered.svg.contains("<path d=\"M16 16L20 20Z\" fill=\"black\""));
+  CorrespondenceDocument.Render before=CorrespondenceDocument.render(pageBefore,focus,530);
+  CorrespondenceDocument.Render after=CorrespondenceDocument.render(pageAfter,focus,531);
+  assertTrue(before.focusVerified);assertTrue(after.focusVerified);
+  assertTrue(before.svg.contains("<path d=\"M1 1L5 5Z\" fill=\"black\""));
+  assertTrue(before.svg.contains("<path d=\"M6 6L10 10Z\" fill=\"#999\""));
+  assertTrue(after.svg.contains("<path d=\"M11 11L15 15Z\" fill=\"black\""));
+  assertFalse(after.svg.contains("<path d=\"M16 16L20 20Z\" fill=\"black\""));
  }
 }
