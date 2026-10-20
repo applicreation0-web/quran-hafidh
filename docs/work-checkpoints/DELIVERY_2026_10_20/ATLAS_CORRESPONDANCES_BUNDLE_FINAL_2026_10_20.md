@@ -1,5 +1,18 @@
 # Quran Haafidh — Consolidation privée 20 octobre (sans APK et sans atteinte aux acquis)
 
+## Livraison unique — instruction utilisateur du 20 octobre 2026 (prioritaire)
+
+**NE PAS remettre d'APK à l'utilisateur tant que toutes les fonctionnalités prévues ne sont pas terminées, intégrées et éprouvées ensemble.** Cette instruction supersède tout plan antérieur prévoyant un debug Atlas intermédiaire ou un prototype Correspondances livré à l'utilisateur.
+
+- **Hifz** : préserver moteurs, contenus, réglages, progression, données, cycle de séance et invariants ; contrôler la restauration et la non-régression.
+- **Atlas** : les 366 Unités, 1 053 Passages et 1 419 titres définitifs, navigation muṣḥaf QCF/Lecture/Jalalayn, retours exacts et écran BOOX. Pas de titres provisoires, pas de réouverture générale de l'éditorial.
+- **Correspondances** : terminer le traitement **des 110 propositions** sur les dossiers et addenda récents ; documenter pour chaque relation une décision finale motivée, la source bibliographique, les ancres exactes et le mode d'affichage. Intégrer **toutes** celles finalement admises, sans quota arbitraire ni activation fictive des relations contestées. Huit types et icônes contractuels, vrai muṣḥaf, surlignage/fade-away, comparaison, frise et restauration.
+- **Intégration** : toutes les entrées depuis Atlas/Lecture/séances Hifz, source offline, absence de régression, tests Android et vérification BOOX physique, audit fond/forme/sécurité/éditorial et corrections jusqu'au vert.
+- **APK** : autorisé en interne pour compilation et tests uniquement ; **aucune transmission d'APK partiel**, aucune publication publique ni release finale sans validation utilisateur. Les clés et données privées restent hors GitHub/CI publics.
+
+Cette instruction fixe l'ordre : finir fonctionnalités et preuves documentaires → intégration réciproque → tests/audits → construction finale privée/signature/compatibilité → vérification physique et éventuelles corrections → soumission **d'un candidat complet uniquement**. Le NO-GO release n'interrompt jamais les corrections et contrôles réalisables.
+
+
 ## Source exacte et compatibilité Git
 
 Branche unique : `work/haafidh-1171-ibn-kathir-integration-independent`.
