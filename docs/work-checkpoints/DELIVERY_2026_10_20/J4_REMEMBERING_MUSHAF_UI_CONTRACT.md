@@ -56,3 +56,12 @@ Le chemin de mémoire demeure **repérer sur la page réelle → reconnaître le
 3. Étendre **un seul lecteur** pour les ancres discontinues et les structures internes/globales démontrées ; tests négatifs pour les raccourcis trompeurs.
 4. Auditer rendu QCF/BOOX, restauration/no Hifz writes et droits, puis autoriser uniquement le sous-ensemble complètement conforme.
 5. Un APK privé complet après J5 seulement. Aucune publication publique sans autorisation.
+
+## Rectificatif ferme — refrains Ar-Raḥmān / Al-Qamar
+
+- **Style Atlas obligatoire : cinq pastilles visibles et coulissantes pour les 31 occurrences d'Ar-Raḥmān** (55:13,16,18,21,23,25,28,30,32,34,36,38,40,42,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77). Le point actif est agrandi et **doublement cerclé** ; swipe horizontal ou commandes discrètes permettent de parcourir toute la série sans 31 boutons simultanés.
+- Sélection d'une pastille : afficher **le mushaf QCF authentique** au verset choisi, avec **le refrain grisé, les versets précédent et suivant entièrement normaux, le reste en fade-away**. Si le voisin est sur une autre page, permettre le feuilletage réel au lieu de fabriquer une page fusionnée.
+- **Al-Qamar : quatre occurrences 54:17,22,32,40**. Même règle contextuelle verset précédent/refrain/verset suivant, mais frise de quatre pastilles ; la chaîne narrative crée le rappel Nūḥ → ʿĀd → Thamūd → Lūṭ → Pharaon (chaque refrain encadre la transition au récit suivant). Ne pas convertir cette règle en point de progression Hifz.
+- **Remembering** : sous la frise, un repère facultatif d'une seule ligne, constitué de deux *mots-balises arabes attestés*, pris dans le verset précédent et le suivant, avec leurs initiales et un **mot-clé court** indiquant le contexte (*étiquette mnémotechnique proposée*, non titre de tafsīr). Exemple Ar-Raḥmān 55:21 : **برزخ ↔ لؤلؤ** ; 55:63 : **جنتان ↔ مدهامتان**. Les initiales seules se répètent trop souvent : ne jamais les présenter comme identifiant unique.
+- Conserver une même frise graphique que les Unités Atlas (légèrement réduite pour les répétitions), sans ajouter une carte graphique alternative, une grille de 31 boutons, un quiz, un score, ni des textes explicatifs longs.
+- Prototype autonome vérifié 31/31 références et fenêtre coulissante 5/5 ; présente le vrai texte arabe voisin mais **PAS les vrais tracés QCF**. Fichier privé transmis séparément : `QURAN_HAAFIDH_RAHMAN_5_POINTS_REMEMBERING_31_OCCURRENCES.html`. Le contrôle QCF réel reste obligatoire en J4/J5 ; aucune relation activée.
