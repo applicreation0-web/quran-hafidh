@@ -4,14 +4,14 @@
 
 ## Frise de livraison à reprendre au prochain jalon
 
-`[J0 ATLAS/HIFZ ✓]──[J1 110 DOSSIERS ✓]──[J2 CONTRE-EXPERTISE ◐]──[J3 CERTIFICATIONS ○]──[J4 CATALOGUE/QCF ○]──[J5 TESTS/LIVRAISON ○]`
+`[J0 ATLAS/HIFZ ✓]──[J1 110 DOSSIERS ✓]──[J2 LECTURE 110 ✓ / CONTRE-AVIS ◐]──[J3 CERTIFICATIONS ◐]──[J4 CATALOGUE/QCF ○]──[J5 TESTS/LIVRAISON ○]`
 
 | Jalon | État vérifié | Preuve ou blocage | Action suivante |
 |---|---|---|---|
 | J0 Socle Atlas/Hifz | **ACQUIS** | Atlas 366+1 053 titres verrouillés, 1 419 correspondances approuvées ; code applicatif 26f7f619, 3 CI réussies dont 108 tests Android synthétiques. BOOX physique non testé. | Ne pas modifier les acquis ; tests globaux en J5. |
 | J1 Inventaire documentaire | **ACQUIS** | 110/110 IDs ; 80 retenues/documentées, 24 en attente, 6 écartées, références originales préservées. | Distinguer admission et certification. |
-| J2 Revue contradictoire | **EN COURS** | Précontrôle de 110 dossiers ; sept cas prioritaires R011, R021, R026, R032, R033, R038, R078 examinés par sources directes. **Ce n'est pas une seconde expertise indépendante externe.** | Relecture critique des autres dossiers et preuves indépendantes. |
-| J3 Certification par dossier | **À TERMINER** | 4 certifications éditoriales historiques R030/R037/R047/R048 ; 106 autres ne disposent pas de seconde lecture sémantique indépendante attestée. | Relecture indépendante, sources/versets/limites, droits, refus motivé des hypothèses insuffisantes. |
+| J2 Lectures et audit contradictoire | **COUVERTURE DOCUMENTAIRE 110/110 ; CONTRE-AVIS INDÉPENDANT EN COURS** | 15 revues ciblées historiques + 39 approfondies + 56 courtes ; chaque dossier a une objection. Jalalayn 734 locateurs recollés ; 1 157 occurrences de versets et 9 693 positions de mots recomptées sur les quatre lots de l'ancien APK, hashes conformes ; aucune divergence statique. | Ne pas confondre recollation et vérification indépendante ; obtenir des preuves spécifiques et contradicteurs externes avant certification. |
+| J3 Certification par dossier | **EN COURS — 14 RECOUPEMENTS CIBLÉS** | 7 corroborations antérieures + 7 nouveaux examens textuels directs (R058, R068, R069, R073, R075, R078, R083). 4 certifications éditoriales historiques R030/R037/R047/R048 ; 0 nouvelle certification. R033 : 50 rectangles statiques positionnés en 9 segments, non validés sur appareil. | Relecture scientifique individuelle indépendante, limites formelles, droits et QA ; 96 dossiers sans recoupement externe ciblé enregistré. |
 | J4 Catalogue utilisable et QCF | **À TERMINER** | Architecture Android existante ; 0 relation autorisée en production, ancrages focaux et QA native non certifiés. | Catalogue approuvé, 8 types/icônes, vrais foyers QCF, fade-away, restauration sans régression. |
 | J5 QA globale puis APK complet | **À TERMINER** | 108 tests Android sur corpus public/synthétique ; aucune recette BOOX de l'application complète. | Test intégré privé, BOOX, audits et corrections ; un seul APK complet à soumettre après validation. |
 
@@ -35,3 +35,16 @@
 - Texte coranique 109 : https://quran.com/al-kafirun ; 18 : https://quran.com/al-kahf
 
 **Aucune attestation bibliographique générale n'est convertie en preuve par ID automatiquement.** La grille documentaire et les corrections restent hors de l'application jusqu'à certification individuelle. Les ressources privées demeurent hors GitHub.
+
+## Mise à jour probante — 20 octobre, J2/J3
+
+- Sources de contrôle : *registres privés conservés hors GitHub*, base Jalalayn de l'ancien APK signé, quatre JSON `assets/reader109/word-boxes` dont SHA-256 revérifiés, et deux lots de corroborations externes.
+- 110/110 dossiers de J2 couverts, dont **56 lectures courtes** ; clôture de la **couverture locale**, **pas** d'un audit contradictoire humain ou intermodèle réellement indépendant.
+- **14 dossiers** font l'objet d'un recoupement externe ciblé : R028, R031, R040, R048, R057, R059, R071, R058, R068, R069, R073, R075, R078, R083. Aucun passage automatique de « documentée » à « certifiée ».
+- **R071** : 94:5 diffère de 94:6 par `فَ` initial ; seule la proposition commune constitue une répétition exacte.
+- **R078** : 109:3 et 109:5 sont répétés ; 109:2 et 109:4 diffèrent. L'alternance des positions énonciatives reste défendable, pas une répétition intégrale des 4 versets.
+- **R083** : 62:10 permet la dispersion après la prière ; 62:11 réprouve la dispersion de l'assemblée avant sa clôture. Éviter une fausse opposition entre dispersion en soi et prière.
+- **R033** : les rectangles des 50 mots présents en page 42 sont confirmés par les références statiques, avec segmentation 9 membres ; cela ne prouve ni la structure par expertise scientifique indépendante ni la réussite du surlignage hachuré sur Android/BOOX.
+- Tout contrôle du contenu privé reste **hors dépôt**, dépôt uniquement pour les compteurs, corrections de méthode et sources publiques.
+- ZIP privé produit pour transmission : `QURAN_HAAFIDH_CORRESPONDANCES_J3_14_ET_FRISE_2026-10-20.zip`; SHA-256 `7531014070e1e6059c318e13987dd826d8f657df93694246963f2864be56087d`. Frise interactive locale J3_14.html, table 110 IDs, sources et manifest.
+- Règle absolue : **0 relation en production, 0 certification nouvelle, 0 APK transmis**. Atlas et Hifz inchangés.
