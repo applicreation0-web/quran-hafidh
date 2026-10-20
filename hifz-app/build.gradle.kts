@@ -339,6 +339,8 @@ android {
     buildTypes {
         getByName("debug") {
             buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", private114.toString())
+            // Private BOOX preview: display user-approved wording without granting source/rights certification.
+            buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", private114.toString())
             isDebuggable = false
             // Isolated personal test install; never overwrites the official 1.17.1 package.
             applicationIdSuffix = if (private114) ".ayahthemes114private" else if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
@@ -346,6 +348,7 @@ android {
         }
         getByName("release") {
             buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", "false")
+            buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", "false")
             isMinifyEnabled = false
             isDebuggable = false
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
