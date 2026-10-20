@@ -25,7 +25,8 @@ final class CorrespondenceRuntime {
   }
  }
  private static CorrespondenceRuntime read(Context context){
-  if(APPROVED_SHA256.isEmpty())return new CorrespondenceRuntime(CorrespondenceCatalog.empty(),null);
+  // JVM source tests have no Android Context: fail closed without calling stub Log.w.
+  if(context==null || APPROVED_SHA256.isEmpty())return new CorrespondenceRuntime(CorrespondenceCatalog.empty(),null);
   try {
    CorrespondenceModel.Geometry geometry=new CorrespondenceGeometry(GeometryRepository.get(context),WordGeometryRepository.shared(context));
    byte[] bytes;
