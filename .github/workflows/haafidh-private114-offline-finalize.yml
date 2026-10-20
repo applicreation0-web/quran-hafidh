@@ -14,6 +14,8 @@ on:
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapScreen.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/Correspondence*.java
       - hifz-app/src/test/java/com/quransafeguard/hifz/preview/Correspondence*Test.java
+      # Synthetic parser/pin test changes must re-run the private-flag variant.
+      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasDisplayCatalogTest.java
       - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/Correspondence*Test.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java
