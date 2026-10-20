@@ -257,6 +257,32 @@ public final class CorrespondenceModelTest {
         assertEquals(20,original.end);
         rejects(()->nav.setPane(0,57,1.0,"outside context"));
     }
+    @Test public void refrainShowsPreviousAndNextVerseAcrossRealPageBoundariesWithoutRewritingAnchor() {
+        Navigation nav=new Navigation(series(31),reader());
+        nav.selectOccurrence(20); // ayah 21; previous ayah 20 belongs to preceding QCF folio.
+        VerseRange source=nav.relation.originals.get(20);
+        assertEquals(21,source.start);
+        assertEquals(21,source.end);
+        assertEquals(20,nav.previousNeighbor());
+        assertEquals(22,nav.normalNeighbor());
+        VerseRange context=nav.viewport(0);
+        assertEquals(20,context.start);
+        assertEquals(22,context.end);
+        assertEquals(55,context.firstPage);
+        assertEquals(56,context.lastPage);
+        nav.setPane(0,55,1.0,"previous neighbor QCF page");
+        nav.setPane(0,56,1.0,"refrain and following verse");
+        assertEquals(21,source.start);
+        assertEquals(21,source.end);
+        assertEquals(21,nav.activeAnchor().range.start);
+    }
+    @Test public void refrainAtFirstAyahUsesOnlyExistingNeighbors() {
+        Navigation nav=new Navigation(series(4),reader());
+        assertEquals(0,nav.previousNeighbor());
+        assertEquals(2,nav.normalNeighbor());
+        assertEquals(1,nav.viewport(0).start);
+        assertEquals(2,nav.viewport(0).end);
+    }
     @Test public void enlargedPaneAndOriginRetainPanCoordinatesExactly() {
         ReaderSnapshot origin=new ReaderSnapshot(2,10,3,"u","p","mask",2.0,"s",85,120);
         Navigation nav=new Navigation(pair("TEST-PAN",range(2,9,10),range(4,1,20),gates()),origin);
