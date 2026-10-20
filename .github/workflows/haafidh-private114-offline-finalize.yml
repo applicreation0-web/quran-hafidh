@@ -23,6 +23,9 @@ on:
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasMapActivity.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
       - hifz-app/src/main/AndroidManifest.xml
+      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasActiveEntrySourceContractTest.java
+      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/BooxPortraitHomeSourceContractTest.java
+      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/IbnKathirMapJourneyTest.java
   workflow_dispatch:
 
 permissions:
