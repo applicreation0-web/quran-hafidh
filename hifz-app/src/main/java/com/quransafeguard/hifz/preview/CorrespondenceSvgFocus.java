@@ -77,6 +77,46 @@ final class CorrespondenceSvgFocus {
   for(String d:gray)append(overlay,d,"#999","0.23");
   return svg.replace("</svg>",overlay+"</svg>");
  }
+ /** Gray ONLY the verse polygons belonging to separately attested QCF focal ranges.
+  * All intervening verses remain outside focus; no bounding-union fiction.
+  * This does not represent word-level geometry or prove an editorial classification.
+  */
+ static String applyDiscrete(String svg,int surah,List<CorrespondenceModel.VerseRange> ranges) {
+  if(surah<1||surah>114||ranges==null||ranges.size()<2)
+   throw new IllegalArgumentException("At least two attested verse anchors required");
+  CoordinateSpace space=coordinateSpace(svg);
+  if(svg.contains("id=\"corr-focus-mask\""))throw new IllegalArgumentException("Focus requires original SVG");
+  for(CorrespondenceModel.VerseRange r:ranges)
+   if(r==null||r.surah!=surah||r.start<1||r.end<r.start)
+    throw new IllegalArgumentException("Focal verse outside documented surah");
+  List<String> gray=new ArrayList<>();
+  Matcher paths=PATH.matcher(svg);
+  while(paths.find()) {
+   String css=null,s=null,a=null,d=null;Matcher attrs=ATTRIBUTE.matcher(paths.group());
+   while(attrs.find()){
+    switch(attrs.group(1)){
+     case "class":css=attrs.group(3);break;
+     case "surah":s=attrs.group(3);break;
+     case "ayah":a=attrs.group(3);break;
+     case "d":d=attrs.group(3);break;
+     default:break;
+    }
+   }
+   if(css==null||!java.util.Arrays.asList(css.split("\\s+")).contains("ayahPolygon")||
+      !Integer.toString(surah).equals(s)||a==null||d==null)continue;
+   int ayah;try{ayah=Integer.parseInt(a);}catch(NumberFormatException invalid){continue;}
+   if(!d.matches("[MmZzLlHhVvCcSsQqTtAa0-9eE+.,\\s-]+"))continue;
+   for(CorrespondenceModel.VerseRange r:ranges)if(ayah>=r.start&&ayah<=r.end){
+    gray.add(d);break;
+   }
+  }
+  if(gray.isEmpty())return svg; // No focus geometry: preserve the original QCF page.
+  StringBuilder overlay=new StringBuilder("<defs><mask id=\"corr-focus-mask\" maskUnits=\"userSpaceOnUse\" "+space.frame()+"><rect "+space.frame()+" fill=\"white\"/>");
+  for(String d:gray)append(overlay,d,"black",null);
+  overlay.append("</mask></defs><rect "+space.frame()+" fill=\"#faf8f2\" opacity=\"0.84\" mask=\"url(#corr-focus-mask)\" pointer-events=\"none\"/>");
+  for(String d:gray)append(overlay,d,"#999","0.23");
+  return svg.replace("</svg>",overlay+"</svg>");
+ }
  /** A display overlay confined to each exact word rectangle, never a bounding union. */
  static String applyWords(String svg,List<double[]> boxes){
   CoordinateSpace space=coordinateSpace(svg);
