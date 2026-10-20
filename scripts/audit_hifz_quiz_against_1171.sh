@@ -142,6 +142,7 @@ while IFS= read -r file; do
     "$prefix/CorrespondenceGeometry.java" | \
     "$prefix/CorrespondenceDocument.java" | \
     "$prefix/CorrespondenceQcfSurface.java" | \
+    "$prefix/CorrespondenceRefrainCue.java" | \
     "$prefix/CorrespondenceScreen.java" | \
     "$prefix/CorrespondenceSwipe.java" | \
     "$prefix/CorrespondenceAccess.java" | \
