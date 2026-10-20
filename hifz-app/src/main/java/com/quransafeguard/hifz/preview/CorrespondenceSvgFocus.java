@@ -38,7 +38,12 @@ final class CorrespondenceSvgFocus {
  private CorrespondenceSvgFocus() {}
  static String untouched(String svg) { return svg; }
  static String apply(String svg,int surah,int first,int last,int normalNeighbor) {
-  if(surah<1||surah>114||first<1||last<first||last>286||normalNeighbor<0||normalNeighbor>286)
+  return apply(svg,surah,first,last,normalNeighbor,0);
+ }
+ /** For refrains, leave BOTH adjacent ayat normal even when they cross QCF pages. */
+ static String apply(String svg,int surah,int first,int last,int normalNeighbor,int precedingNeighbor) {
+  if(surah<1||surah>114||first<1||last<first||last>286||normalNeighbor<0||normalNeighbor>286||
+      precedingNeighbor<0||precedingNeighbor>286)
    throw new IllegalArgumentException("Invalid focus range");
   CoordinateSpace space=coordinateSpace(svg);
   // Reapplying a display veil to a previously transformed page could stack fades.
@@ -61,7 +66,7 @@ final class CorrespondenceSvgFocus {
    // Restrict reused geometry to SVG path commands/numbers. Never copy markup.
    if(!d.matches("[MmZzLlHhVvCcSsQqTtAa0-9eE+.,\\s-]+"))continue;
    if(ayah>=first&&ayah<=last)gray.add(d);
-   else if(ayah==normalNeighbor)normal.add(d);
+   else if(ayah==normalNeighbor||ayah==precedingNeighbor)normal.add(d);
   }
   // Missing focus geometry must leave the authentic page intact, not dim everything.
   if(gray.isEmpty()&&normal.isEmpty())return svg;
