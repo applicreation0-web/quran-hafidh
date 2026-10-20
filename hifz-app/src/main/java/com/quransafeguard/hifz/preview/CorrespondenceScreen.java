@@ -32,6 +32,7 @@ public final class CorrespondenceScreen extends Dialog {
  private final LinearLayout[] panels;
  private LinearLayout body;
  private TextView heading;
+ private TextView fact;
  private OccurrenceRail rail;
  private boolean closed,detached;
  private static final String CHECKPOINT="correspondence.checkpoint.v1";
@@ -132,7 +133,7 @@ public final class CorrespondenceScreen extends Dialog {
   toolbar.addView(heading,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
   toolbar.addView(CorrespondenceQcfSurface.action(activity,R.drawable.ic_ui_info,"Sources de la correspondance",v->sources()),square(48));
   root.addView(toolbar,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(activity,56)));
-  TextView fact=new TextView(activity);fact.setText(relation.presentation.factualLink);
+  fact=new TextView(activity);fact.setText(relation.presentation.factualLink);
   fact.setTextColor(Ui.INK);fact.setTextSize(12);fact.setMaxLines(2);
   fact.setPadding(Ui.dp(activity,12),0,Ui.dp(activity,12),Ui.dp(activity,4));
   root.addView(fact,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -209,6 +210,10 @@ public final class CorrespondenceScreen extends Dialog {
   if(relation.mode==CorrespondenceModel.Mode.SERIES)text+=" · "+(occurrence+1)+"/"+relation.anchors.size()+" · "+reference(navigation.activeAnchor().range);
   if(navigation.enlargedPane()>=0)text+=" · "+(navigation.enlargedPane()==0?"A":"B");
   heading.setText(text);
+  if(fact!=null && relation.mode==CorrespondenceModel.Mode.SERIES){
+   String cue=CorrespondenceRefrainCue.forOccurrence(relation,occurrence);
+   fact.setText(cue.isEmpty()?relation.presentation.factualLink:cue);
+  }
  }
  private void sources(){
   LinkedHashSet<String> locators=new LinkedHashSet<>();
@@ -224,7 +229,7 @@ public final class CorrespondenceScreen extends Dialog {
  private final class OccurrenceRail extends View {
   final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);float downX,downY;
   OccurrenceRail(){super(activity);setFocusable(true);setContentDescription("Occurrences. Balayer latéralement pour parcourir la frise; flèches clavier pour sélectionner.");}
-  int count(){return Math.min(Math.min(5,relation.anchors.size()),getWidth()==0?5:Math.max(1,getWidth()/Ui.dp(activity,48)));}
+  int count(){return Math.min(5,relation.anchors.size());} // Exact Atlas five-dot window
   @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
    super.onSizeChanged(w,h,oldw,oldh);windowStart=Math.max(0,Math.min(relation.anchors.size()-count(),windowStart));
   }
