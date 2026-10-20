@@ -154,6 +154,39 @@ public final class AtlasDisplayCatalogTest {
                 reject(new JSONArray().put(entry("UNIT",U,5,11,26).put(key,value)));
         }
     }
+    @Test public void privateBooxPreviewShowsUserApprovedTextWithoutClaimingSourceOrRights()throws Exception {
+        JSONArray rows=new JSONArray()
+            .put(entry("UNIT",U,5,11,26).put("source_verified",false).put("independent_verified",false).put("redistributable",false))
+            .put(entry("PASSAGE",P,5,7,11).put("source_verified",false).put("independent_verified",false).put("redistributable",false));
+        AtlasDisplayCatalog c=parse(rows);
+        assertEquals("Synthetic approved label",c.privatePreviewUnitTitle(U));
+        assertEquals("Synthetic approved label",c.privatePreviewPassageTitle(P));
+        assertTrue("Private preview must not alter certified unit data",c.units.isEmpty());
+        assertTrue("Private preview must not alter certified passage data",c.passages.isEmpty());
+        assertEquals("Unité 2 · 11–26",c.unitTitle(U,2));
+        assertEquals("Synthetic admissible source",c.passageTitle(P,"Synthetic admissible source"));
+        assertEquals("5:11 · partie du passage 5:7–11",
+            c.privatePreviewContextTitle(P,U,"Synthetic admissible source"));
+    }
+    @Test public void privateBooxPreviewNeverReplacesAClippedPassageWithFullTitle()throws Exception {
+        JSONArray rows=new JSONArray().put(entry("UNIT",U,5,11,26))
+            .put(entry("PASSAGE",P,5,7,11))
+            .put(entry("CONTEXT",P,5,11,11).put("unit_id",U)
+                .put("source_verified",false).put("independent_verified",false).put("redistributable",false));
+        AtlasDisplayCatalog c=parse(rows);
+        assertEquals("Synthetic approved label",c.privatePreviewContextTitle(P,U,"source"));
+        assertTrue("Preview-only context must not become a certified context",c.contexts.isEmpty());
+    }
+    @Test public void privateBooxPreviewFailsOnUnapprovedOrUnknownIdentity()throws Exception {
+        AtlasDisplayCatalog c=parse(new JSONArray()
+            .put(entry("UNIT",U,5,11,26).put("user_approved",false)));
+        try{c.privatePreviewUnitTitle(U);fail("Unapproved private unit exposed");}
+        catch(IllegalStateException expected){}
+        try{c.privatePreviewPassageTitle(P);fail("Absent private passage exposed");}
+        catch(IllegalStateException expected){}
+        try{c.privatePreviewUnitTitle("s005a012b026");fail("Wrong canonical ID exposed");}
+        catch(IllegalArgumentException expected){}
+    }
     private static final class Assets implements AtlasDisplayCatalog.AssetSource {
         final Map<String,byte[]> files=new HashMap<>();
         boolean denyOpen;
