@@ -5,6 +5,9 @@ on:
       - work/haafidh-1171-atlas-correspondances
     paths:
       - '.github/workflows/haafidh-boox-private-debug-staging.yml'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasFinalizationSourceContractTest.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/UiIconMappingTest.java'
   workflow_dispatch:
 permissions:
   contents: read
