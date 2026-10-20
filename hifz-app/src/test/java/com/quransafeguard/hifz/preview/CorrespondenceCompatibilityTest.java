@@ -51,6 +51,21 @@ public class CorrespondenceCompatibilityTest {
   assertEquals(1,r.originals.get(0).start);
   assertEquals(5,r.originals.get(0).end);
  }
+ @Test public void alternanceRequiresRoleAwareRendererNotTwoIndistinguishableGrayBlocks(){
+  VerseRange first=range(109,2,3),second=range(109,4,5);
+  Relation r=new Relation("SYNTHETIC FOUR ROLES",Type.ALTERNANCE,Mode.TWO_PAGES,
+    Arrays.asList(first,second),Arrays.asList(
+     new Anchor(0,range(109,2,2),true,"role1",0,0),
+     new Anchor(0,range(109,3,3),true,"role2",0,0),
+     new Anchor(1,range(109,4,4),true,"role3",0,0),
+     new Anchor(1,range(109,5,5),true,"role4",0,0)),
+    new Gates(true,true,true,true,true),g,presentation());
+  assertTrue("Generic scientific flags are independent of rendering",r.displayable());
+  assertFalse("Must not conflate four roles in two gray panels",CorrespondenceDocument.displayable(r,g));
+  CorrespondenceAccess.Origin origin=new CorrespondenceAccess.Origin(CorrespondenceAccess.Surface.LECTURE,
+    "opaque",new ReaderSnapshot(109,2,109,"u","p","mask",1,"s"),range(109,2,5));
+  assertTrue(new CorrespondenceAccess(new Index(Arrays.asList(r)),g).at(origin,109,2).visible.isEmpty());
+ }
  @Test public void ordinaryWordSegmentHasNoGhostButton(){
   Relation r=internal(Type.RESSEMBLANCE,true,false);assertTrue(r.displayable());noButton(r);
  }
