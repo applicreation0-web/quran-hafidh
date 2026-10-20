@@ -50,4 +50,4 @@ jobs:
       - name: Fetch authentic public mushaf pages
         run: bash scripts/fetch_mushaf_pages.sh
       - name: Run Android JVM unit tests, NO APK, NO signing
-        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
