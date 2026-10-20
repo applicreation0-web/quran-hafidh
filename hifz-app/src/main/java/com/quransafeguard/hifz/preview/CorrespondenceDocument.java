@@ -11,6 +11,9 @@ final class CorrespondenceDocument {
   * Generic editorial approval is necessary but cannot certify this renderer. */
  static boolean displayable(CorrespondenceModel.Relation relation,CorrespondenceModel.Geometry geometry){
   if(relation==null || geometry==null || !relation.displayable() || relation.presentation==null)return false;
+  // Alternance requires distinct grammatical roles/pairs. This reader currently paints
+  // all verse polygons alike: never advertise an approved four-role structure as two gray blocks.
+  if(relation.type==CorrespondenceModel.Type.ALTERNANCE)return false;
   try {
    for(CorrespondenceModel.VerseRange original:relation.originals){
     CorrespondenceModel.VerseRange checked=new CorrespondenceModel.VerseRange(original.surah,original.start,original.end,geometry);
