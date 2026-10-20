@@ -1,0 +1,96 @@
+name: Quran Haafidh — BOOX debug build for OFFLINE private assembly
+on:
+  push:
+    branches:
+      - work/haafidh-1171-atlas-correspondances
+    paths:
+      - '.github/workflows/haafidh-boox-private-debug-staging.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-boox-offline-staging-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  compile-and-export:
+    name: Compile current source and export unsigned staging + Android signing tools
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enforce unmodified Hifz engine and review of approved icon grammar
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/guard_frozen_hifz_engines.sh
+          bash scripts/audit_hifz_quiz_against_1171.sh
+          python3 scripts/verify_contractual_ui_icons.py
+          python3 scripts/verify_j6_icon_roles.py
+          python3 scripts/test_correspondence_icon_contract.py
+      - name: Supply only non-private build label and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p hifz-app/src/private114/assets
+          cat > hifz-app/src/private114/AndroidManifest.xml <<EOF
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"><application android:label="Quran Haafidh Privé 114" tools:replace="android:label"><meta-data android:name="quran.haafidh.source_sha" android:value="$(git rev-parse HEAD)" /></application></manifest>
+          EOF
+          test ! -e hifz-app/src/private114/assets/atlas
+          test ! -e hifz-app/src/private114/assets/atlas_private
+          test ! -e hifz-app/src/private114/assets/correspondences
+          test ! -e hifz-app/src/private114/assets/ayah_themes_private
+          git check-ignore -q hifz-app/src/private114/AndroidManifest.xml
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Verify 604 authentic QCF pages at immutable source pin
+        run: bash scripts/fetch_mushaf_pages.sh
+      - name: Run JVM + source-contract QA and compile debug with current code
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:assembleDebug --stacktrace
+      - name: Export public-code ONLY unfinalized APK and Android signing tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/haafidh-offline-staging"
+          mkdir -p "$out"
+          mapfile -t apks < <(find hifz-app/build-private114/outputs/apk/debug hifz-app/build/outputs/apk/debug -type f -name '*.apk' 2>/dev/null)
+          test "${#apks[@]}" -eq 1 || { echo "Expected exactly one debug APK, found ${#apks[@]}"; exit 1; }
+          cp "${apks[0]}" "$out/UNFINALIZED-PRIVATE-ASSETS-MISSING-DO-NOT-INSTALL.apk"
+          python3 - "$out/UNFINALIZED-PRIVATE-ASSETS-MISSING-DO-NOT-INSTALL.apk" <<'PY'
+          import sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as package:
+              names=set(package.namelist())
+          for prefix in ("assets/atlas_private/","assets/ayah_themes_private/","assets/correspondences/"):
+              assert not any(x.startswith(prefix) for x in names), "Private data unexpectedly in public staging"
+          print("PASS: public staging contains no private corpus; must be assembled and signed offline")
+          PY
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          test -s "$sdk/lib/apksigner.jar"
+          test -x "$sdk/zipalign"
+          cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
+          cp "$sdk/zipalign" "$out/zipalign"
+          cp "$sdk/lib64/libc++.so" "$out/libc++.so"
+          printf 'OFFLINE ASSEMBLY ONLY. No private atlas/correspondence assets, no historical signing. This is NOT an installable final debug.\nSource: %s\n' "$(git rev-parse HEAD)" > "$out/README.txt"
+          (cd "$out" && sha256sum * > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HAAFIDH-BOOX-OFFLINE-UNFINALIZED-${{ github.sha }}
+          path: ${{ runner.temp }}/haafidh-offline-staging
+          retention-days: 3
+          if-no-files-found: error
