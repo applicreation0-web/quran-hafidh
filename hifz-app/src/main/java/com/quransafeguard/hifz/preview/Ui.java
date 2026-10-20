@@ -345,9 +345,9 @@ final class Ui {
         if (s.contains("arrêter") || s.contains("arreter")) return R.drawable.ic_ui_stop;
         if (s.contains("vérifier") || s.contains("verifier")) return R.drawable.ic_ui_validate;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
-        // Reader Ancres use the anchor pictogram; Amorces keep the distinct recall key.
-        if (s.contains("ancre")) return R.drawable.ic_ui_semantic_anchor;
-        if (s.contains("amorce")) return R.drawable.ic_ui_recall_key;
+        // Legacy Amorces are now Ancres: the same reviewed anchor pictogram on every entry.
+        // Preserve the old label only as a compatibility alias for persisted/accessibility callers.
+        if (s.contains("ancre") || s.contains("amorce")) return R.drawable.ic_ui_semantic_anchor;
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
         if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
