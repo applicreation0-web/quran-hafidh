@@ -64,12 +64,35 @@ public class CorrespondenceDocumentTest {
   CorrespondenceDocument.Render render=CorrespondenceDocument.render(svg,CorrespondenceDocument.focus(relation,0,0,geometry),1);
   assertEquals(svg,render.svg);assertFalse(render.focusVerified);
  }
- @Test public void separateAnchorsDoNotInventFocusAcrossTheGap(){
+ @Test public void separateAnchorsPaintOnlyExactSourceVersesAndLeaveGapDimmed(){
   CorrespondenceModel.VerseRange original=new CorrespondenceModel.VerseRange(1,1,5,geometry);
   CorrespondenceModel.Relation relation=new CorrespondenceModel.Relation("gap",CorrespondenceModel.Type.INVERSION,
    CorrespondenceModel.Mode.INTERNAL,Arrays.asList(original),Arrays.asList(
     new CorrespondenceModel.Anchor(0,new CorrespondenceModel.VerseRange(1,1,1,geometry),true,"fixture",0,0),
     new CorrespondenceModel.Anchor(0,new CorrespondenceModel.VerseRange(1,5,5,geometry),true,"fixture",0,0)),
+   new CorrespondenceModel.Gates(true,true,true,true,true),geometry);
+  CorrespondenceDocument.Focus f=CorrespondenceDocument.focus(relation,0,0,geometry);
+  assertTrue(f.supported);assertEquals(2,f.focalRanges.size());
+  assertEquals(1,f.focalRanges.get(0).start);assertEquals(5,f.focalRanges.get(1).start);
+  String svg="<svg viewBox=\"0 0 345 550\">"
+   +"<path class=\"ayahPolygon\" surah=\"1\" ayah=\"1\" d=\"M1 1L5 5Z\"/>"
+   +"<path class=\"ayahPolygon\" surah=\"1\" ayah=\"3\" d=\"M6 6L10 10Z\"/>"
+   +"<path class=\"ayahPolygon\" surah=\"1\" ayah=\"5\" d=\"M11 11L15 15Z\"/></svg>";
+  CorrespondenceDocument.Render output=CorrespondenceDocument.render(svg,f,1);
+  assertTrue(output.focusVerified);
+  assertTrue(output.svg.contains("d=\"M1 1L5 5Z\" fill=\"#999\""));
+  assertTrue(output.svg.contains("d=\"M11 11L15 15Z\" fill=\"#999\""));
+  assertFalse(output.svg.contains("d=\"M6 6L10 10Z\" fill=\"#999\""));
+  assertFalse(output.svg.contains("d=\"M6 6L10 10Z\" fill=\"black\""));
+  assertEquals(1,relation.originals.get(0).start);assertEquals(5,relation.originals.get(0).end);
+ }
+ @Test public void segmentWordsCannotBeFakedAsDiscreteWholeVerseHighlights(){
+  CorrespondenceModel.VerseRange whole=new CorrespondenceModel.VerseRange(1,1,5,geometry);
+  CorrespondenceModel.Relation relation=new CorrespondenceModel.Relation("word-unsupported",
+   CorrespondenceModel.Type.INVERSION,CorrespondenceModel.Mode.INTERNAL,Arrays.asList(whole),
+   Arrays.asList(
+    new CorrespondenceModel.Anchor(0,new CorrespondenceModel.VerseRange(1,1,1,geometry),true,"exact-words",1,2),
+    new CorrespondenceModel.Anchor(0,new CorrespondenceModel.VerseRange(1,5,5,geometry),true,"context",0,0)),
    new CorrespondenceModel.Gates(true,true,true,true,true),geometry);
   assertFalse(CorrespondenceDocument.focus(relation,0,0,geometry).supported);
  }
