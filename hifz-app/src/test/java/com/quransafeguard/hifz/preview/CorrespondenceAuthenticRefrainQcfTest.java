@@ -81,4 +81,10 @@ public final class CorrespondenceAuthenticRefrainQcfTest {
  @Test public void rahmanAllThirtyOneRefrainPolygonsAndBothNeighborsAreAuthentic()throws Exception {
   check(55,RAHMAN);
  }
+ @Test public void additionalBiblicalReminderPairHasRealQcfVersePolygons()throws Exception {
+  check(2,new int[]{47,122});
+ }
+ @Test public void yusufDreamAndFulfillmentHaveRealQcfVersePolygons()throws Exception {
+  check(12,new int[]{4,100});
+ }
 }
