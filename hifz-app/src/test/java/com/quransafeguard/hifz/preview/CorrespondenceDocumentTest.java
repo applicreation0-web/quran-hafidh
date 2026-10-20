@@ -105,4 +105,39 @@ public class CorrespondenceDocumentTest {
   assertFalse(qaClosed.displayable());assertFalse(CorrespondenceDocument.displayable(qaClosed,exact));
   assertEquals(svg,CorrespondenceDocument.render(svg,CorrespondenceDocument.focus(qaClosed,0,0,exact),1).svg);
  }
+
+ @Test public void refrainKeepsBothRealNeighborAyatNormalAndFadesUnrelatedAyat(){
+  CorrespondenceModel.Geometry qcf=new CorrespondenceModel.Geometry(){
+   public int ayahCount(int surah){return 78;}
+   public int firstPage(int surah,int ayah){return ayah<=16?530:ayah<=17?531:532;}
+   public int lastPage(int surah,int ayah){return firstPage(surah,ayah);}
+   public boolean hasSegmentGeometry(int s,int a,int f,int l){return false;}
+  };
+  int[] verses={13,16,18,21};
+  java.util.List<CorrespondenceModel.VerseRange> originals=new java.util.ArrayList<>();
+  java.util.List<CorrespondenceModel.Anchor> anchors=new java.util.ArrayList<>();
+  for(int i=0;i<verses.length;i++){
+   CorrespondenceModel.VerseRange x=new CorrespondenceModel.VerseRange(55,verses[i],verses[i],qcf);
+   originals.add(x);anchors.add(new CorrespondenceModel.Anchor(i,x,true,"fixture source",0,0));
+  }
+  CorrespondenceModel.Relation r=new CorrespondenceModel.Relation("SYNTHETIC-REFRAIN",
+   CorrespondenceModel.Type.REPETITION,CorrespondenceModel.Mode.SERIES,originals,anchors,
+   new CorrespondenceModel.Gates(true,true,true,true,true),qcf);
+  CorrespondenceDocument.Focus focus=CorrespondenceDocument.focus(r,0,1,qcf);
+  assertEquals(15,focus.previousNeighbor);
+  assertEquals(17,focus.normalNeighbor);
+  assertEquals(530,focus.firstPage);assertEquals(531,focus.lastPage);
+  assertEquals(16,r.originals.get(1).start);assertEquals(16,r.originals.get(1).end);
+  String page="<svg viewBox=\"0 0 345 550\">"
+   +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"15\" d=\"M1 1L5 5Z\"/>"
+   +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"16\" d=\"M6 6L10 10Z\"/>"
+   +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"17\" d=\"M11 11L15 15Z\"/>"
+   +"<path class=\"ayahPolygon\" surah=\"55\" ayah=\"18\" d=\"M16 16L20 20Z\"/></svg>";
+  CorrespondenceDocument.Render rendered=CorrespondenceDocument.render(page,focus,530);
+  assertTrue(rendered.focusVerified);
+  assertTrue(rendered.svg.contains("<path d=\"M1 1L5 5Z\" fill=\"black\""));
+  assertTrue(rendered.svg.contains("<path d=\"M11 11L15 15Z\" fill=\"black\""));
+  assertTrue(rendered.svg.contains("<path d=\"M6 6L10 10Z\" fill=\"#999\""));
+  assertFalse(rendered.svg.contains("<path d=\"M16 16L20 20Z\" fill=\"black\""));
+ }
 }
