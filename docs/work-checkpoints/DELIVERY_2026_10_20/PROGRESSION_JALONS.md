@@ -4,14 +4,14 @@
 
 ## Frise de livraison à reprendre au prochain jalon
 
-`[J0 ATLAS/HIFZ ✓]──[J1 110 DOSSIERS ✓]──[J2 LECTURE 110 ✓ / CONTRE-AVIS ◐]──[J3 CERTIFICATIONS ◐]──[J4 CATALOGUE/QCF ○]──[J5 TESTS/LIVRAISON ○]`
+`[J0 ATLAS/HIFZ ✓]──[J1 110 DOSSIERS ✓]──[J2 LECTURE 110 ✓ / CONTRE-AVIS ◐]──[J3 TRIAGE 110 ✓ / CERTIFICATIONS ◐]──[J4 CATALOGUE/QCF ○]──[J5 TESTS/LIVRAISON ○]`
 
 | Jalon | État vérifié | Preuve ou blocage | Action suivante |
 |---|---|---|---|
 | J0 Socle Atlas/Hifz | **ACQUIS** | Atlas 366+1 053 titres verrouillés, 1 419 correspondances approuvées ; code applicatif 26f7f619, 3 CI réussies dont 108 tests Android synthétiques. BOOX physique non testé. | Ne pas modifier les acquis ; tests globaux en J5. |
 | J1 Inventaire documentaire | **ACQUIS** | 110/110 IDs ; 80 retenues/documentées, 24 en attente, 6 écartées, références originales préservées. | Distinguer admission et certification. |
 | J2 Lectures et audit contradictoire | **COUVERTURE DOCUMENTAIRE 110/110 ; CONTRE-AVIS INDÉPENDANT EN COURS** | 15 revues ciblées historiques + 39 approfondies + 56 courtes ; chaque dossier a une objection. Jalalayn 734 locateurs recollés ; 1 157 occurrences de versets et 9 693 positions de mots recomptées sur les quatre lots de l'ancien APK, hashes conformes ; aucune divergence statique. | Ne pas confondre recollation et vérification indépendante ; obtenir des preuves spécifiques et contradicteurs externes avant certification. |
-| J3 Certification par dossier | **EN COURS — 14 RECOUPEMENTS CIBLÉS** | 7 corroborations antérieures + 7 nouveaux examens textuels directs (R058, R068, R069, R073, R075, R078, R083). 4 certifications éditoriales historiques R030/R037/R047/R048 ; 0 nouvelle certification. R033 : 50 rectangles statiques positionnés en 9 segments, non validés sur appareil. | Relecture scientifique individuelle indépendante, limites formelles, droits et QA ; 96 dossiers sans recoupement externe ciblé enregistré. |
+| J3 Certification par dossier | **EN COURS — TRIAGE 110/110, CERTIFICATION INDIVIDUELLE OUVERTE** | 110/110 dossiers ont reçu un contre-test documentaire/lexical gradué (46 deux témoins arabes, 13 progressions, 24 ressemblances, 27 structures ou types ouverts). **Source supplémentaire vérifiée dans l’original arabe : al-Suyūṭī, *Marāṣid al-Maṭāliʿ*, p. 51/54/69/70/73/75/83 : sept attestations ciblées R038/R049/R051/R057/R079/R085/R089 ; contre-épreuve de bornes R084 (64:4 vs 64:1).** 4 certifications historiques, 0 nouvelle ; 0 production. | Valider individuellement la catégorie exacte et les frontières ; indépendance savante/droits/QCF/QA avant activation. |
 | J4 Catalogue utilisable et QCF | **À TERMINER** | Architecture Android existante ; 0 relation autorisée en production, ancrages focaux et QA native non certifiés. | Catalogue approuvé, 8 types/icônes, vrais foyers QCF, fade-away, restauration sans régression. |
 | J5 QA globale puis APK complet | **À TERMINER** | 108 tests Android sur corpus public/synthétique ; aucune recette BOOX de l'application complète. | Test intégré privé, BOOX, audits et corrections ; un seul APK complet à soumettre après validation. |
 
