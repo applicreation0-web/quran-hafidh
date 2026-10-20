@@ -31,11 +31,12 @@ final class CorrespondenceDocument {
   } catch(IllegalArgumentException invalidGeometry){return false;}
  }
  static final class Focus {
-  final int surah,first,last,normalNeighbor,firstPage,lastPage,initialPage;
+  final int surah,first,last,normalNeighbor,previousNeighbor,firstPage,lastPage,initialPage;
   final boolean supported;
   java.util.List<CorrespondenceModel.SegmentBox> segmentBoxes=java.util.Collections.emptyList();
-  Focus(int s,int a,int b,int n,int fp,int lp,int ip,boolean supported){
-   surah=s;first=a;last=b;normalNeighbor=n;firstPage=fp;lastPage=lp;initialPage=ip;this.supported=supported;
+  Focus(int s,int a,int b,int n,int previous,int fp,int lp,int ip,boolean supported){
+   surah=s;first=a;last=b;normalNeighbor=n;previousNeighbor=previous;
+   firstPage=fp;lastPage=lp;initialPage=ip;this.supported=supported;
   }
  }
  static Focus focus(CorrespondenceModel.Relation relation,int pane,int occurrence,CorrespondenceModel.Geometry geometry){
@@ -45,7 +46,7 @@ final class CorrespondenceDocument {
    boolean supported=relation.displayable()&&relation.mode==CorrespondenceModel.Mode.INTERNAL&&
     relation.anchors.size()==1&&!boxes.isEmpty();
    int initial=boxes.isEmpty()?a.range.firstPage:boxes.get(0).page;
-   Focus plan=new Focus(a.range.surah,a.range.start,a.range.end,0,a.range.firstPage,a.range.lastPage,initial,supported);
+   Focus plan=new Focus(a.range.surah,a.range.start,a.range.end,0,0,a.range.firstPage,a.range.lastPage,initial,supported);
    if(supported)plan.segmentBoxes=boxes;return plan;
   }
   CorrespondenceModel.Anchor selected=relation.anchors.get(relation.mode==CorrespondenceModel.Mode.SERIES?occurrence:0);
@@ -63,12 +64,19 @@ final class CorrespondenceDocument {
    supported &= !a.isWordSegment() && a.range.surah==range.surah && a.range.start<=last+1;
    last=Math.max(last,a.range.end);
   }
-  int neighbor=0,fp=range.firstPage,lp=range.lastPage;
+  int neighbor=0,previous=0,fp=range.firstPage,lp=range.lastPage;
   if(relation.mode==CorrespondenceModel.Mode.SERIES){
-   neighbor=last<geometry.ayahCount(range.surah)?last+1:first>1?first-1:0;
-   if(neighbor>0){fp=Math.min(fp,geometry.firstPage(range.surah,neighbor));lp=Math.max(lp,geometry.lastPage(range.surah,neighbor));}
+   // Refrain remembering: both actual adjacent ayat stay legible, not only the next.
+   // Both may occur on separate QCF pages; their pages are display context, never anchors.
+   previous=first>1?first-1:0;
+   neighbor=last<geometry.ayahCount(range.surah)?last+1:0;
+   if(neighbor==0)neighbor=previous;
+   for(int n:new int[]{previous,neighbor})if(n>0){
+    fp=Math.min(fp,geometry.firstPage(range.surah,n));
+    lp=Math.max(lp,geometry.lastPage(range.surah,n));
+   }
   }
-  return new Focus(range.surah,first,last,neighbor,fp,lp,initial,supported);
+  return new Focus(range.surah,first,last,neighbor,previous,fp,lp,initial,supported);
  }
  static final class Render {
   final String svg;final boolean focusVerified;
@@ -81,7 +89,7 @@ final class CorrespondenceDocument {
    java.util.List<double[]> boxes=new java.util.ArrayList<>();
    for(CorrespondenceModel.SegmentBox b:focus.segmentBoxes)if(b.page==page)boxes.add(new double[]{b.x0,b.y0,b.x1,b.y1});
    rendered=CorrespondenceSvgFocus.applyWords(svg,boxes);
-  }else rendered=CorrespondenceSvgFocus.apply(svg,focus.surah,focus.first,focus.last,focus.normalNeighbor);
+  }else rendered=CorrespondenceSvgFocus.apply(svg,focus.surah,focus.first,focus.last,focus.normalNeighbor,focus.previousNeighbor);
   return new Render(rendered,!rendered.equals(svg));
  }
  static String html(String svg){
