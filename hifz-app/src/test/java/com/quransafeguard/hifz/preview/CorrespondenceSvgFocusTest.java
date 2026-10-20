@@ -54,6 +54,30 @@ public class CorrespondenceSvgFocusTest {
   assertTrue(words.contains("x=\"46.6891\""));
   assertTrue(words.contains("viewBox=\"-53.3109 -198.4777 345 550\""));
  }
+ @Test public void disjointFocusPreservesEveryGlyphAndDoesNotPretendGapIsFocal(){
+  CorrespondenceModel.Geometry g=new CorrespondenceModel.Geometry(){
+   public int ayahCount(int s){return 10;}
+   public int firstPage(int s,int a){return 1;}
+   public int lastPage(int s,int a){return 1;}
+   public boolean hasSegmentGeometry(int s,int a,int first,int last){return false;}
+  };
+  String glyph="<g id=\"glyphs\"><path id=\"original\" d=\"M4 4L5 5\"/></g>";
+  String svg="<svg viewBox=\"0 0 345 550\">"+glyph
+   +"<path class=\"ayahPolygon\" surah=\"54\" ayah=\"1\" d=\"M1 1L2 2Z\"/>"
+   +"<path class=\"ayahPolygon\" surah=\"54\" ayah=\"3\" d=\"M3 3L4 4Z\"/>"
+   +"<path class=\"ayahPolygon\" surah=\"54\" ayah=\"5\" d=\"M5 5L6 6Z\"/></svg>";
+  java.util.List<CorrespondenceModel.VerseRange> ranges=java.util.Arrays.asList(
+   new CorrespondenceModel.VerseRange(54,1,1,g),new CorrespondenceModel.VerseRange(54,5,5,g));
+  String highlighted=CorrespondenceSvgFocus.applyDiscrete(svg,54,ranges);
+  assertTrue(highlighted.contains(glyph));
+  assertTrue(highlighted.contains("d=\"M1 1L2 2Z\" fill=\"#999\""));
+  assertTrue(highlighted.contains("d=\"M5 5L6 6Z\" fill=\"#999\""));
+  assertFalse(highlighted.contains("d=\"M3 3L4 4Z\" fill=\"#999\""));
+  String missing="<svg viewBox=\"0 0 345 550\">"+glyph+"</svg>";
+  assertEquals(missing,CorrespondenceSvgFocus.applyDiscrete(missing,54,ranges));
+  try{CorrespondenceSvgFocus.applyDiscrete(highlighted,54,ranges);fail();}
+  catch(IllegalArgumentException expected){}
+ }
  @Test public void emptyWordGeometryNeverFadesTheAuthenticPage(){
   String svg="<svg viewBox=\"0 0 345 550\"><g id=\"glyphs\"/></svg>";
   assertEquals(svg,CorrespondenceSvgFocus.applyWords(svg,java.util.Collections.emptyList()));
