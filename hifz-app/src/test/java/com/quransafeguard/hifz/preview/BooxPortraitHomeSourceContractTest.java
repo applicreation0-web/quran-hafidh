@@ -58,7 +58,9 @@ public final class BooxPortraitHomeSourceContractTest {
             assertTrue("Missing "+label,home.contains("homeNavLine(root, \""+label+"\""));
         }
         assertTrue(home.contains("new Intent(this, StudyReaderActivity.class)"));
-        assertTrue(home.contains("new Intent(this, IbnKathirMapActivity.class)"));
+        assertTrue(home.contains("new Intent(this, AtlasMapActivity.class)"));
+        assertFalse("Legacy Ibn Kathir map must no longer be Home Atlas",
+            home.contains("new Intent(this, IbnKathirMapActivity.class)"));
         assertTrue(home.contains("new Intent(this, FreeMemActivity.class)"));
         assertFalse(home.contains("new Intent(this, QuizActivity.class)"));
         assertFalse(home.contains("homeNavLine(root, \"Quiz\""));
