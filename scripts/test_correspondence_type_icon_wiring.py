@@ -56,11 +56,14 @@ class CorrespondenceTypeIconWiringTest(unittest.TestCase):
         self.assertIsNotNone(pin)
         if pin.group(1):
             self.assertRegex(pin.group(1), r"^[a-f0-9]{64}$")
-            approved = ROOT / "hifz-app/src/main/assets/correspondences/approved_v1.json"
-            self.assertTrue(approved.is_file())
-            self.assertEqual(pin.group(1), hashlib.sha256(approved.read_bytes()).hexdigest())
+            # The approved catalogue is a PRIVATE OFFLINE overlay, not a public
+            # source asset. This source test must not force its publication.
+            public_catalogue = ROOT / "hifz-app/src/main/assets/correspondences/approved_v1.json"
+            self.assertFalse(public_catalogue.exists(), "Private correspondence rows leaked to GitHub")
+            self.assertIn('static final String ASSET="correspondences/approved_v1.json"', runtime)
+            self.assertIn("CorrespondenceCatalog.parse(bytes,APPROVED_SHA256,geometry)", runtime)
         else:
-            self.assertIn("if(APPROVED_SHA256.isEmpty())return new CorrespondenceRuntime(CorrespondenceCatalog.empty(),null)", runtime)
+            self.assertIn("APPROVED_SHA256.isEmpty()", runtime)
 
 if __name__ == "__main__":
     unittest.main()
