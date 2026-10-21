@@ -154,6 +154,7 @@ while IFS= read -r file; do
     "$prefix/CorrespondenceEntryPoints.java" | \
     "$prefix/CorrespondenceActivity.java" | \
     "$prefix/CorrespondenceDirectoryActivity.java" | \
+    "$prefix/CorrespondenceMushafActivity.java" | \
     "$prefix/CorrespondenceReferenceActivity.java" | \
     "$prefix/AyahThemesCueIndex.java" | \
     "$prefix/AyahThemesReviewDisplay.java" | \
