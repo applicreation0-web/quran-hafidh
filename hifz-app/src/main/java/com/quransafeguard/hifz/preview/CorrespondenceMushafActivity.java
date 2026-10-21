@@ -228,18 +228,20 @@ public final class CorrespondenceMushafActivity extends Activity {
       &&ranges.length()>2;
   boolean pair=!series||seriesCompare;
   int begin=series?seriesOrdinal:referenceWindow;
-  int end=pair?Math.min(ranges.length(),begin+2):begin+1;
-  if(end<=begin){returnToPage();return;}
-  // An internal relation or two verses on one physical folio needs only one Muṣḥaf.
-  boolean samePage=end-begin==2&&samePhysicalPage(ranges.optJSONObject(begin),ranges.optJSONObject(begin+1));
-  int count=samePage?1:end-begin;
+  // Refrain 31/31 still compares with occurrence 1/31 (not an empty right pane).
+  int secondary=series?(begin+1)%ranges.length():begin+1;
+  int requested=pair&&ranges.length()>1&&secondary<ranges.length()?2:1;
+  // A single folio suffices only when both ranges share its exact page.
+  boolean samePage=requested==2&&samePhysicalPage(
+      ranges.optJSONObject(begin),ranges.optJSONObject(secondary));
+  int count=samePage?1:requested;
   visible=new CorrespondenceQcfSurface[count];
   for(int i=0;i<count;i++){
-   int position=begin+i;
+   int position=i==0?begin:secondary;
    JSONObject a=ranges.optJSONObject(position);
    if(a==null)continue;
    CorrespondenceDocument.Focus focus=samePage
-       ?mergedFocus(a,ranges.optJSONObject(begin+1)):focus(a);
+       ?mergedFocus(a,ranges.optJSONObject(secondary)):focus(a);
    if(focus==null)continue;
    LinearLayout column=Ui.column(this);
    TextView where=Ui.text(this,(count>1?(i==0?"A · ":"B · "):"")+ref(a),11,true);
@@ -363,8 +365,11 @@ public final class CorrespondenceMushafActivity extends Activity {
   if(active==null||visible==null)return;
   JSONArray r=refs(active);if(r==null)return;
   int initial="REPETITION".equals(active.optString("type"))&&r.length()>2?seriesOrdinal:referenceWindow;
-  for(int i=0;i<visible.length;i++)if(visible[i]!=null)
-   remembered.put(initial+i,visible[i].state());
+  for(int i=0;i<visible.length;i++)if(visible[i]!=null){
+   int ordinal="REPETITION".equals(active.optString("type"))&&seriesCompare
+       ?(initial+i)%r.length():initial+i;
+   remembered.put(ordinal,visible[i].state());
+  }
  }
  private void returnToPage(){
   release();remembered.clear();showPlainPage(page);
