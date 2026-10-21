@@ -60,11 +60,25 @@ public final class CorrespondenceMushafActivity extends Activity {
   int previous=getSharedPreferences("hifz_study",MODE_PRIVATE).getInt("page",1);
   page=clamp(saved==null?getIntent().getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,previous)
       :saved.getInt("folio",previous));
-  String id=saved==null?null:saved.getString("relation");
+  String id=saved==null?getIntent().getStringExtra("relationId"):saved.getString("relation");
   if(id!=null)for(JSONObject entry:historic)if(id.equals(entry.optString("id"))){active=entry;break;}
   seriesOrdinal=saved==null?0:saved.getInt("occurrence",0);
   referenceWindow=saved==null?0:saved.getInt("referenceWindow",0);
   alternanceRole=saved==null?0:saved.getInt("alternanceRole",0);
+  if(saved==null&&active!=null&&"REPETITION".equals(active.optString("type"))){
+   // When launched from Atlas or Lecture, highlight the occurrence actually
+   // touched, not always the first occurrence of the source relation.
+   int contextSurah=getIntent().getIntExtra("contextSurah",-1);
+   int contextAyah=getIntent().getIntExtra("contextAyah",-1);
+   JSONArray positions=refs(active);
+   if(positions!=null)for(int i=0;i<positions.length();i++){
+    JSONObject range=positions.optJSONObject(i);
+    if(range!=null&&range.optInt("surah")==contextSurah
+       &&contextAyah>=range.optInt("start")&&contextAyah<=range.optInt("end")){
+     seriesOrdinal=i;break;
+    }
+   }
+  }
   seriesCompare=saved!=null&&saved.getBoolean("seriesCompare",false);
   build();
  }
@@ -242,6 +256,10 @@ public final class CorrespondenceMushafActivity extends Activity {
    if(a==null)continue;
    CorrespondenceDocument.Focus focus=samePage
        ?mergedFocus(a,ranges.optJSONObject(secondary)):focus(a);
+   if(!samePage){
+    CorrespondenceDocument.Focus certified=approvedFocus(i,position,series);
+    if(certified!=null)focus=certified;
+   }
    if(focus==null)continue;
    LinearLayout column=Ui.column(this);
    TextView where=Ui.text(this,(count>1?(i==0?"A · ":"B · "):"")+ref(a),11,true);
@@ -341,6 +359,23 @@ public final class CorrespondenceMushafActivity extends Activity {
    return new CorrespondenceDocument.Focus(s,a,b,after,before,fp,lp,fp,false);
   }
   return new CorrespondenceDocument.Focus(s,a,b,after,before,fp,lp,fp,true);
+ }
+ /** The trusted runtime's exact anchors outrank the documentary verse range.
+  * This preserves existing word-level limits and source checks in approved links. */
+ private CorrespondenceDocument.Focus approvedFocus(int pane,int occurrence,boolean series){
+  if(active==null||runtime==null||runtime.geometry==null)return null;
+  CorrespondenceModel.Relation relation=runtime.find(active.optString("id"));
+  if(relation==null||!CorrespondenceDocument.displayable(relation,runtime.geometry))return null;
+  try {
+   if(relation.mode==CorrespondenceModel.Mode.SERIES&&series
+       &&occurrence>=0&&occurrence<relation.anchors.size())
+    return CorrespondenceDocument.focus(relation,0,occurrence,runtime.geometry);
+   if(relation.mode==CorrespondenceModel.Mode.TWO_PAGES&&pane<2)
+    return CorrespondenceDocument.focus(relation,pane,0,runtime.geometry);
+   if(relation.mode==CorrespondenceModel.Mode.INTERNAL&&pane==0)
+    return CorrespondenceDocument.focus(relation,0,0,runtime.geometry);
+  }catch(RuntimeException invalid){return null;}
+  return null;
  }
  private CorrespondenceDocument.Focus mergedFocus(JSONObject a,JSONObject b){
   CorrespondenceDocument.Focus first=focus(a),second=focus(b);
