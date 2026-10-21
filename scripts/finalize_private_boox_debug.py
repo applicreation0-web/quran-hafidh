@@ -147,6 +147,9 @@ def assemble(staging, private_pack, out, expected_sha, old_apk, tmp):
             old=manifest_identity(z.read('AndroidManifest.xml'))
         require(old.get('package')==identity['package'],'Different package from previous user debug')
         require(old.get('versionCode',100000)<=identity['versionCode'],'Downgrade would invalidate safe in-place update')
+        previous_signer=run(['java','-jar',str(signerjar),'verify','--print-certs',str(old_apk)])
+        require(PINNED_SIGNER_SHA256 in previous_signer.lower(),
+                'Previous APK has a different signing certificate; do not install over it')
     env=os.environ.copy();env['LD_LIBRARY_PATH']=str(tmp)
     aligned=tmp/'aligned-unsigned.apk'
     run([str(zipalign),'-P','16','-f','4',str(pre),str(aligned)],env)
