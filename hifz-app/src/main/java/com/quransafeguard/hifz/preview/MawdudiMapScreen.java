@@ -30,7 +30,6 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private boolean titleExpanded;
  private LinearLayout icons,correspondenceHost;
  private TextView passageTitle;
- private TextView passageSubtitle;
  private MapQcfThumbnails thumbnails;
  private int sunHeight;
  private MapJalalaynDialog commentary;
@@ -162,26 +161,6 @@ final class MawdudiMapScreen implements MushafView.Listener {
   titlePanel.setVerticalScrollBarEnabled(true);
   titlePanel.addView(passageTitle,new ScrollView.LayoutParams(-1,-2));
   root.addView(titlePanel,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?48:56)));
-  // Restore the last user-approved BOOX Atlas subtitle, beneath the Unit title.
-  passageSubtitle=Ui.text(activity,"",12.5f,false);
-  passageSubtitle.setTypeface(android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.ITALIC));
-  passageSubtitle.setTextColor(Ui.INK);
-  passageSubtitle.setGravity(Gravity.CENTER);
-  passageSubtitle.setMaxLines(2);
-  passageSubtitle.setEllipsize(TextUtils.TruncateAt.END);
-  passageSubtitle.setPadding(Ui.dp(activity,8),0,Ui.dp(activity,8),Ui.dp(activity,2));
-  passageSubtitle.setContentDescription("Titre Ayah Themes de l’ancre active · toucher pour lire en entier");
-  passageSubtitle.setOnClickListener(v->{
-   if(overview)return;
-   String complete=selectedPassageTitle();
-   if(complete!=null&&!complete.trim().isEmpty())
-    new android.app.AlertDialog.Builder(activity)
-      .setTitle("Ayah Themes")
-      .setMessage(complete)
-      .setPositiveButton("Fermer",null)
-      .show();
-  });
-  root.addView(passageSubtitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?44:48)));
   thumbnails=new MapQcfThumbnails(activity,new MapQcfThumbnails.Listener(){
    @Override public void onPageChosen(int p){onThumbnailPage(p);}
    @Override public void onOpenReading(int p){onThumbnailPage(p);openReader();}
@@ -269,11 +248,9 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(overview){
    heading.setText(surahLabel+" · "+total+" unités");
    passageTitle.setText("");
-   passageSubtitle.setText("");
   }else{
    heading.setText(surahLabel+" · U"+(activeMacro+1)+"/"+total);
    passageTitle.setText(macros.displayUnitTitle(unit.id));
-   passageSubtitle.setText(selectedPassageTitle());
    passageTitle.setContentDescription("Unité Atlas · "+macros.displayUnitTitle(unit.id));
   }
   heading.setContentDescription("Changer d'unité · "+heading.getText());
@@ -301,7 +278,6 @@ final class MawdudiMapScreen implements MushafView.Listener {
   mushaf.setVisibility(View.GONE);
   titlePanel.setVisibility(overview?View.GONE:View.VISIBLE);
   passageTitle.setVisibility(overview?View.GONE:View.VISIBLE);
-  passageSubtitle.setVisibility(overview?View.GONE:View.VISIBLE);
   // ROOT is a map only: keep the selected unit/page cursor but never render
   // a surah-wide QCF mosaic. This also prevents costly SVG decoding on BOOX.
   thumbnails.setVisibility(overview?View.GONE:View.VISIBLE);
