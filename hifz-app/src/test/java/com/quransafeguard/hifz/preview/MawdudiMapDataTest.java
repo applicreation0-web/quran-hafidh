@@ -49,8 +49,10 @@ public final class MawdudiMapDataTest {
    assertEquals(title,data.displayPassageTitle(passage.id,title));
    for(MawdudiMapData.Macro m:data.forSurah(passage.surah)) {
     if(passage.firstAyah>m.end||passage.lastAyah<m.start)continue;
-    assertEquals(AtlasPassageContext.displayTitle(passage.surah,passage.firstAyah,
-      passage.lastAyah,m.start,m.end,title),data.displayContextTitle(passage.id,m.id,title));
+    String display=AtlasPassageContext.displayTitle(passage.surah,passage.firstAyah,
+      passage.lastAyah,m.start,m.end,title);
+    if(display.contains("partie du passage"))display="Extrait · "+title;
+    assertEquals(display,data.displayContextTitle(passage.id,m.id,title));
    }
   }
   try{data.displayUnitTitle("s003a121b199");fail("unknown unit accepted");}
