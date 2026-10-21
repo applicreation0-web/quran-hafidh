@@ -252,7 +252,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   String type=active.optString("type","Non établi");
   boolean approved=runtime!=null&&runtime.find(active.optString("id"))!=null;
   shortLink.setText(active.optString("id")+" · "+type+(approved?" · vérifiée":" · proposé"));
-  caption.setText("CENTRE".equals(active.optString("type"))&&!approved
+  caption.setText(("CENTRE".equals(active.optString("type"))||"R033".equals(active.optString("id")))&&!approved
       ?"Centre interne : mots non certifiés · aucun faux surlignage"
       :active.optString("title")+" · "+
        (series?(seriesOrdinal+1)+"/"+ranges.length():"folio(s) QCF originaux"));
@@ -275,7 +275,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   int fp=geometry.pageForVerse(new VerseRef(s,a));
   int lp=MawdudiMapModel.lastPageForVerse(new VerseRef(s,b),geometry);
   int before=a>1?a-1:0,after=b<QuranCanon.INSTANCE.ayahCount(s)?b+1:0;
-  if(active!=null&&"CENTRE".equals(active.optString("type"))){
+  if(active!=null&&("CENTRE".equals(active.optString("type")) || "R033".equals(active.optString("id")))){
    // A whole-ayah gray polygon is NEVER evidence for an intra-ayah centre.
    // Only an independently certified relation with exact QCF word boxes may
    // request segment-specific highlighting, otherwise preserve the real folio.
