@@ -30,8 +30,8 @@ import org.json.JSONObject;
 /** Mushaf-first read-only relations. The 110 documentary dossiers remain
  * unchanged and no proposed literary classification is granted approval. */
 public final class CorrespondenceMushafActivity extends Activity {
- private static final String ASSET="correspondences/historical_110_v1.json";
- private static final String SHA="b46c0e7d7800cbb1cfe34c72a39328339608d9b4e0ede5397dcd780de32aa8a2";
+ private static final String ASSET="correspondences/reviewed_110_v2.json";
+ private static final String SHA="d9867ba3ade9c8902fa98cad76cfe92662a7bfc0a9a30946cdd1707c230c6bb7";
  private final List<JSONObject> historic=new ArrayList<>();
  private final Map<Integer,List<JSONObject>> byPage=new HashMap<>();
  private final Map<Integer,CorrespondenceQcfSurface.State> remembered=new HashMap<>();
@@ -113,7 +113,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   if(!SHA.equals(sha.toString()))throw new IllegalStateException("Incorrect private registry");
   JSONObject root=new JSONObject(new String(bytes,StandardCharsets.UTF_8));
   JSONArray rows=root.getJSONArray("entries");
-  if(!"HAAFIDH_CORRESPONDENCE_HISTORICAL_110_DIRECTORY_V1".equals(root.getString("schema"))
+  if(!"HAAFIDH_CORRESPONDENCES_REVIEWED_110_V2".equals(root.getString("schema"))
       ||root.getInt("count")!=110||rows.length()!=110)
    throw new IllegalArgumentException("Wrong historical registry");
   for(int i=0;i<rows.length();i++){
@@ -121,6 +121,24 @@ public final class CorrespondenceMushafActivity extends Activity {
    if(!String.format(Locale.ROOT,"R%03d",i+1).equals(e.getString("id")))
     throw new IllegalArgumentException("Non-canonical dossier");
    historic.add(e);
+   JSONArray historical=e.optJSONArray("original_refs");
+   JSONArray checkedFocus=refs(e);
+   if(historical==null||historical.length()==0||checkedFocus==null||checkedFocus.length()==0)
+    throw new IllegalArgumentException("Incomplete original/focal boundaries");
+   for(int j=0;j<checkedFocus.length();j++){
+    JSONObject focus=checkedFocus.getJSONObject(j);
+    boolean contained=false;
+    for(int k=0;k<historical.length();k++){
+     JSONObject original=historical.getJSONObject(k);
+     if(focus.getInt("surah")==original.getInt("surah")
+      &&focus.getInt("start")>=original.getInt("start")
+      &&focus.getInt("end")<=original.getInt("end")){contained=true;break;}
+    }
+    if(!contained)throw new IllegalArgumentException("Focus outside immutable Quranic bounds");
+   }
+   // Rejected and unclassified hypotheses remain accessible only by exact ID;
+   // never offer an unsupported pictogram on an unrelated page.
+   if(e.optBoolean("excluded_from_recommendations",false))continue;
    JSONArray ranges=refs(e);if(ranges==null||ranges.length()==0)
     throw new IllegalArgumentException("Missing original reference bounds");
    for(int j=0;j<ranges.length();j++){
@@ -228,8 +246,6 @@ public final class CorrespondenceMushafActivity extends Activity {
  }
  private void addRelationNode(JSONObject row){
   String type=row.optString("type","");
-  // R033 depicts a non-certified CENTRE study without modifying its source type.
-  if("R033".equals(row.optString("id")))type="CENTRE";
   boolean approved=runtime!=null&&runtime.find(row.optString("id"))!=null;
   LinearLayout cell=Ui.column(this);cell.setGravity(Gravity.CENTER);
   cell.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);
@@ -242,7 +258,7 @@ public final class CorrespondenceMushafActivity extends Activity {
    TextView unknown=Ui.text(this,"?",19,true);unknown.setGravity(Gravity.CENTER);
    cell.addView(unknown,new LinearLayout.LayoutParams(Ui.dp(this,40),Ui.dp(this,39)));
   }
-  TextView id=Ui.text(this,row.optString("id")+(approved?" ✓":("R033".equals(row.optString("id"))?" · étude":" · proposé")),10,false);
+  TextView id=Ui.text(this,row.optString("id")+(approved?" ✓":("ÉTUDE_SANS_CERTIFICATION".equals(row.optString("type_strength"))?" · étude":" · proposé")),10,false);
   id.setGravity(Gravity.CENTER);id.setSingleLine(true);
   cell.addView(id,new LinearLayout.LayoutParams(-1,Ui.dp(this,26)));
   cell.setContentDescription(row.optString("id")+" · "+type+
@@ -298,7 +314,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   String type=active.optString("type","Non établi");
   boolean approved=runtime!=null&&runtime.find(active.optString("id"))!=null;
   shortLink.setText(active.optString("id")+" · "+type+(approved?" · vérifiée":" · proposé"));
-  caption.setText(("CENTRE".equals(active.optString("type"))||"R033".equals(active.optString("id")))&&!approved
+  caption.setText("CENTRE".equals(active.optString("type"))&&!approved
       ?"Centre interne : mots non certifiés · aucun faux surlignage"
       :active.optString("title")+" · "+
        (series?(seriesOrdinal+1)+"/"+ranges.length():"folio(s) QCF originaux"));
@@ -358,7 +374,6 @@ public final class CorrespondenceMushafActivity extends Activity {
   if(selectedGlyph==null)return;
   if(item==null){selectedGlyph.setVisibility(View.GONE);return;}
   String type=item.optString("type","");
-  if("R033".equals(item.optString("id")))type="CENTRE";
   if(!classified(type)){selectedGlyph.setVisibility(View.GONE);return;}
   selectedGlyph.setImageResource(CorrespondenceScreen.icon(CorrespondenceModel.Type.valueOf(type)));
   selectedGlyph.setImageTintList(null);
@@ -383,7 +398,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   int fp=geometry.pageForVerse(new VerseRef(s,a));
   int lp=MawdudiMapModel.lastPageForVerse(new VerseRef(s,b),geometry);
   int before=a>1?a-1:0,after=b<QuranCanon.INSTANCE.ayahCount(s)?b+1:0;
-  if(active!=null&&("CENTRE".equals(active.optString("type")) || "R033".equals(active.optString("id")))){
+  if(active!=null&&"CENTRE".equals(active.optString("type"))){
    // A whole-ayah gray polygon is NEVER evidence for an intra-ayah centre.
    // Only an independently certified relation with exact QCF word boxes may
    // request segment-specific highlighting, otherwise preserve the real folio.
@@ -391,6 +406,10 @@ public final class CorrespondenceMushafActivity extends Activity {
    if(approved!=null&&approved.type==CorrespondenceModel.Type.CENTRE
        &&runtime.geometry!=null&&CorrespondenceDocument.displayable(approved,runtime.geometry))
     return CorrespondenceDocument.focus(approved,0,0,runtime.geometry);
+   return new CorrespondenceDocument.Focus(s,a,b,after,before,fp,lp,fp,false);
+  }
+  if(active!=null&&("R011".equals(active.optString("id"))||"R053".equals(active.optString("id")))){
+   // The repeated unit is an internal formula, not an entire identical ayah.
    return new CorrespondenceDocument.Focus(s,a,b,after,before,fp,lp,fp,false);
   }
   return new CorrespondenceDocument.Focus(s,a,b,after,before,fp,lp,fp,true);
@@ -488,10 +507,16 @@ public final class CorrespondenceMushafActivity extends Activity {
        .setPositiveButton("Fermer",null).show();return;
   }
   boolean approved=runtime!=null&&runtime.find(active.optString("id"))!=null;
+  String docStatus=active.optString("documentary_status","");
   String message=active.optString("title")+"\n"+
-      (approved?"Relation vérifiée.":"Classification proposée, non certifiée.")+
+      (approved?"Relation vérifiée.":
+       ("ÉCARTÉ".equals(docStatus)?"Rapprochement documentaire écarté.":
+        "Classification littéraire proposée, non certifiée."))+
       "\n\n"+active.optString("reason")+
-      "\n\nSource : "+active.optString("source");
+      "\n\nRéférence : "+active.optString("source")+
+      "\n"+active.optString("source_url")+
+      "\n\nStatut documentaire : "+docStatus+
+      "\nLimites : "+active.optString("focus_rationale");
   new AlertDialog.Builder(this).setTitle(active.optString("id")+" · Sources")
       .setMessage(message).setPositiveButton("Fermer",null).show();
  }
