@@ -58,4 +58,15 @@ public final class CorrespondenceMushafFirstContractTest {
   assertTrue(screen.contains("series=\"REPETITION\".equals(active.optString(\"type\"))"));
   assertTrue(screen.contains("renderOccurrenceRail(ranges)"));
  }
+ @Test public void relationGlyphNeverDisappearsWhenEnteringTwoQcfFolios()throws Exception{
+  String screen=code(ROOT+"CorrespondenceMushafActivity.java");
+  String entry=code(ROOT+"CorrespondenceEntryPoints.java");
+  assertTrue(screen.contains("selectedGlyph.setImageResource(CorrespondenceScreen.icon("));
+  assertTrue(screen.contains("setActiveGlyph(active);"));
+  assertTrue(screen.contains("setActiveGlyph(null);"));
+  assertTrue(entry.contains("new Intent(activity,CorrespondenceMushafActivity.class)"));
+  assertTrue(entry.contains("origin.snapshot.page"));
+  assertTrue(entry.contains("origin.snapshot.ayah"));
+ }
+
 }
