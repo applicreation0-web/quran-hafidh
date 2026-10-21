@@ -230,7 +230,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   folios.addView(full,new LinearLayout.LayoutParams(0,-1,1));
   full.setPageListener(p->{
    if(active!=null||p==page)return;
-   page=p;location.setText("Page courante · p. "+page);
+   page=p;exploringTypes=false;location.setText("Page courante · p. "+page);
    caption.setText("Muṣḥaf QCF · page "+page);
    renderPageLinks();
   });
@@ -271,7 +271,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  }
  private void showTypeExplorer(){
   relationButtons.removeAllViews();strip.setVisibility(View.VISIBLE);
-  shortLink.setText("Types de correspondances · toucher pour revenir à la page");
+  shortLink.setText("8 types · toucher pour revenir à la page");
   for(CorrespondenceModel.Type type:CorrespondenceModel.Type.values()){
    int target=0,wrapped=0;
    for(int p=1;p<=604;p++){
