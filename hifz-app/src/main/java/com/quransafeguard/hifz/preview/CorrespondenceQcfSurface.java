@@ -24,6 +24,7 @@ import java.util.concurrent.Future;
 /** A single authentic QCF folio. No script interface, network, corpus or learning state. */
 final class CorrespondenceQcfSurface extends LinearLayout {
  static final int PAPER=0xfffaf8f2;
+ interface PageListener{void onQcfPageShown(int page);}
  static final class State {
   final int page,x,y;final float zoom;
   State(int page,float zoom,int x,int y){this.page=page;this.zoom=zoom;this.x=x;this.y=y;}
@@ -45,6 +46,8 @@ final class CorrespondenceQcfSurface extends LinearLayout {
  private final java.util.Map<Integer,State> pageStates=new java.util.HashMap<>();
  private final CorrespondenceSwipe swipe=new CorrespondenceSwipe();
  private String readyCaption="";
+ private PageListener pageListener;
+ void setPageListener(PageListener listener){pageListener=listener;}
 
  CorrespondenceQcfSurface(Context context){
   super(context);setOrientation(VERTICAL);setBackgroundColor(PAPER);
@@ -63,6 +66,7 @@ final class CorrespondenceQcfSurface extends LinearLayout {
    @Override public void onPageFinished(WebView view,String url){
     if(disposed||restore==null||!expectedDocument.equals(url))return;
     loading=false;position.setText(readyCaption);updateButtons();
+    if(pageListener!=null)pageListener.onQcfPageShown(page);
     State target=restore;restore=null;int finishedGeneration=generation;long token=viewportIntent.revision();
     // The ready callback may belong to the old document. Only restore the selected page.
     if(target.page==page)view.post(()->applyViewport(finishedGeneration,token));
@@ -183,7 +187,7 @@ final class CorrespondenceQcfSurface extends LinearLayout {
   if(disposed)return;disposed=true;++generation;viewportIntent.cancel();
   swipe.cancel();
   if(pending!=null)pending.cancel(true);decoder.shutdownNow();
-  web.stopLoading();web.setOnTouchListener(null);web.setWebViewClient(new WebViewClient());
+  pageListener=null;web.stopLoading();web.setOnTouchListener(null);web.setWebViewClient(new WebViewClient());
   removeView(web);web.destroy();
  }
 }
