@@ -14,7 +14,7 @@ public final class AtlasDisplayTitleFormatterTest {
  @Test public void preservesExistingArabicNamesWithoutDuplicatingParentheses(){
   assertEquals("Ādam (آدم) and Ibrāhīm (إبراهيم)",
     AtlasDisplayTitleFormatter.display("Ādam (آدم) and Ibrāhīm (إبراهيم)"));
-  assertEquals("ʿĪsā (عيسى) son of Maryam (مريم)",
+  assertEquals("Who was ʿĪsā (عيسى) son of Maryam (مريم)?",
     AtlasDisplayTitleFormatter.display("Who was Jesus son of Mary?"));
  }
  @Test public void retainsUnchangedNonPersonalTitlesAndNoVerseNumbersInserted(){
