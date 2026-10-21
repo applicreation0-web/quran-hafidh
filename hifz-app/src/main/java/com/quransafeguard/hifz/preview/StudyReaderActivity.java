@@ -571,7 +571,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         MawdudiPassageIndex.Passage active=atlasPassages.get(atlasPassagePosition);
         String label=ayahThemesCues==null?null:ayahThemesCues.titleForPassage(active.id);
         if(label==null)return;
-        semanticTitleDialog=SemanticTitlePopup.showEnglish(this,MawdudiMapScreen.cleanPassageCaption(label),semanticTitleDialog);
+        semanticTitleDialog=SemanticTitlePopup.showEnglish(this,AtlasDisplayTitleFormatter.display(MawdudiMapScreen.cleanPassageCaption(label)),semanticTitleDialog);
         SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions);
     }
 
