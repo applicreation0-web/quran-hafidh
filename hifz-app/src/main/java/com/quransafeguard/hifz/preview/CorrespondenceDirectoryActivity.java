@@ -10,6 +10,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.HorizontalScrollView;
+import android.graphics.drawable.GradientDrawable;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -36,6 +38,11 @@ public final class CorrespondenceDirectoryActivity extends Activity {
     private CorrespondenceRuntime runtime;
     private LinearLayout results;
     private EditText search;
+    private LinearLayout typeRail;
+    // An empty selection opens the families overview; 'TOUS' explicitly browses 110 dossiers.
+    private String selectedFamily="ACCUEIL";
+    private static final String[] FAMILIES={"REPETITION","RESSEMBLANCE","OPPOSITION","PROGRESSION",
+        "ALTERNANCE","INVERSION","CENTRE","DEBUT_FIN_INCLUSIO"};
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -62,10 +69,16 @@ public final class CorrespondenceDirectoryActivity extends Activity {
         TextView info=Ui.text(this,status,12,false);
         info.setPadding(Ui.dp(this,10),Ui.dp(this,8),Ui.dp(this,10),Ui.dp(this,8));
         root.addView(info);
+        HorizontalScrollView navigator=new HorizontalScrollView(this);
+        navigator.setHorizontalScrollBarEnabled(false);navigator.setFillViewport(false);
+        typeRail=Ui.row(this);typeRail.setGravity(Gravity.CENTER_VERTICAL);
+        navigator.addView(typeRail,new android.widget.FrameLayout.LayoutParams(-2,Ui.dp(this,88)));
+        root.addView(navigator,new LinearLayout.LayoutParams(-1,Ui.dp(this,88)));
+        renderTypeRail();
         search=new EditText(this);
         search.setSingleLine(true);
         search.setTextSize(14);
-        search.setHint("N° de dossier, sourate ou relation");
+        search.setHint("Chercher parmi les 110 dossiers");
         search.setContentDescription("Rechercher une correspondance");
         search.setPadding(Ui.dp(this,12),Ui.dp(this,8),Ui.dp(this,12),Ui.dp(this,8));
         root.addView(search,new LinearLayout.LayoutParams(-1,Ui.dp(this,52)));
@@ -82,6 +95,48 @@ public final class CorrespondenceDirectoryActivity extends Activity {
             @Override public void afterTextChanged(Editable e){}
         });
         render("");
+    }
+
+    /** Atlas-like eight-family pictogram rail. Icons identify navigation categories,
+     * not documentary approval of each historical proposal. */
+    private void renderTypeRail(){
+        typeRail.removeAllViews();
+        addFamily("ACCUEIL","Départ",null);
+        addFamily("TOUS","110",null);
+        for(String code:FAMILIES) {
+            CorrespondenceModel.Type type=CorrespondenceModel.Type.valueOf(code);
+            addFamily(code,CorrespondenceScreen.label(type),type);
+        }
+        addFamily("NON_ETABLI","Sans type",null);
+    }
+    private void addFamily(String family,String label,CorrespondenceModel.Type type){
+        boolean selected=family.equals(selectedFamily);
+        LinearLayout node=Ui.column(this);node.setGravity(Gravity.CENTER);
+        node.setPadding(Ui.dp(this,6),Ui.dp(this,3),Ui.dp(this,6),Ui.dp(this,2));
+        GradientDrawable outline=new GradientDrawable();
+        outline.setColor(Ui.PAPER);
+        if(selected){outline.setCornerRadius(Ui.dp(this,8));outline.setStroke(Ui.dp(this,2),Ui.INK);}
+        node.setBackground(outline);
+        if(type!=null){
+            ImageView icon=new ImageView(this);
+            icon.setImageResource(CorrespondenceScreen.icon(type));
+            icon.setImageTintList(null);
+            icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            node.addView(icon,new LinearLayout.LayoutParams(Ui.dp(this,38),Ui.dp(this,42)));
+        }else{
+            TextView marker=Ui.text(this,family.equals("ACCUEIL")?"⌂":family.equals("TOUS")?"110":"?",14,true);
+            marker.setGravity(Gravity.CENTER);
+            node.addView(marker,new LinearLayout.LayoutParams(Ui.dp(this,38),Ui.dp(this,42)));
+        }
+        TextView name=Ui.text(this,label,10,false);name.setGravity(Gravity.CENTER);
+        name.setSingleLine(true);
+        node.addView(name,new LinearLayout.LayoutParams(-1,Ui.dp(this,24)));
+        node.setContentDescription(label+" · famille de relations");
+        node.setClickable(true);node.setFocusable(true);
+        node.setOnClickListener(v->{
+            selectedFamily=family;renderTypeRail();render(search.getText().toString());
+        });
+        typeRail.addView(node,new LinearLayout.LayoutParams(Ui.dp(this,92),Ui.dp(this,77)));
     }
 
     private void loadHistoricalIndex(){
@@ -125,6 +180,16 @@ public final class CorrespondenceDirectoryActivity extends Activity {
         results.removeAllViews();
         String needle=query.toLowerCase(Locale.ROOT).trim();
         int shown=0;
+        if(needle.isEmpty() && "ACCUEIL".equals(selectedFamily)){
+            TextView lead=Ui.text(this,"Relations vérifiées · "+runtime.catalog.relations.size()+
+                "\nChoisir une famille ci-dessus pour parcourir les propositions.",13,false);
+            lead.setPadding(Ui.dp(this,12),Ui.dp(this,14),Ui.dp(this,12),Ui.dp(this,16));
+            results.addView(lead);
+            for(CorrespondenceModel.Relation relation:runtime.catalog.relations){
+                addApproved(relation);shown++;
+            }
+            return;
+        }
         if(historic.size()==110){
             for(JSONObject entry:historic){
                 String id=entry.optString("id");
@@ -133,6 +198,10 @@ public final class CorrespondenceDirectoryActivity extends Activity {
                 String refs=references(entry.optJSONArray("refs"));
                 String searchable=(id+" "+label+" "+type+" "+refs).toLowerCase(Locale.ROOT);
                 if(!searchable.contains(needle))continue;
+                if(needle.isEmpty() && !"TOUS".equals(selectedFamily)
+                   && !"ACCUEIL".equals(selectedFamily)
+                   && !( "NON_ETABLI".equals(selectedFamily)
+                        ? !isKnownFamily(type) : selectedFamily.equals(type)))continue;
                 addEntry(entry,id,label,type,refs);
                 shown++;
             }
@@ -152,9 +221,13 @@ public final class CorrespondenceDirectoryActivity extends Activity {
             results.addView(empty);
         }
     }
+    private static boolean isKnownFamily(String type){
+        for(String known:FAMILIES)if(known.equals(type))return true;
+        return false;
+    }
     private void addApproved(CorrespondenceModel.Relation relation){
         String label=relation.id+" · "+relation.presentation.shortTitle;
-        appendRow(label,relation.type.name()+" · Consulter",relation.type,()->openApproved(relation));
+        appendRow(label,CorrespondenceScreen.label(relation.type)+" · Vérifiée",relation.type,relation.id,()->openApproved(relation));
     }
     private void addEntry(JSONObject entry,String id,String title,String type,String refs){
         CorrespondenceModel.Relation approved=runtime.find(id);
@@ -162,19 +235,40 @@ public final class CorrespondenceDirectoryActivity extends Activity {
         // A historical proposal keeps the neutral information pictogram.
         CorrespondenceModel.Type iconType=approved==null?null:approved.type;
         String status=approved!=null?"CONSULTABLE":entry.optString("status").equals("NON_RÉSOLU")?"TYPE NON ÉTABLI":"TYPE PROPOSÉ";
-        appendRow(id+" · "+title,refs+" · "+status,iconType,()->{
-            if(approved!=null)openApproved(approved);else details(entry);
+        appendRow(id+" · "+title,refs+" · "+status,iconType,id,()->{
+            if(approved!=null)openApproved(approved);
+            else if(entry.optJSONArray("refs")!=null&&entry.optJSONArray("refs").length()>0
+                    &&entry.optJSONArray("refs").length()<=40)
+                startActivity(new Intent(this,CorrespondenceReferenceActivity.class)
+                    .putExtra("relationId",id));
+            else details(entry);
         });
     }
-    private void appendRow(String title,String subtitle,CorrespondenceModel.Type type,Runnable open){
+    private void appendRow(String title,String subtitle,CorrespondenceModel.Type type,String id,Runnable open){
         LinearLayout row=Ui.row(this);
         row.setPadding(Ui.dp(this,2),Ui.dp(this,8),Ui.dp(this,2),Ui.dp(this,8));
         row.setMinimumHeight(Ui.dp(this,68));
         row.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView icon=new ImageView(this);
-        icon.setImageResource(type==null?R.drawable.ic_ui_info:CorrespondenceScreen.icon(type));
-        icon.setPadding(Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8));
-        row.addView(icon,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
+        // The eight relation icons indicate *verified* relationships only.
+        // A proposed historical dossier receives a neutral ordinal dot, not "i"
+        // repeated 110 times or a pictogram falsely claiming certification.
+        if(type!=null){
+            ImageView icon=new ImageView(this);
+            icon.setImageResource(CorrespondenceScreen.icon(type));
+            icon.setImageTintList(null);
+            icon.setPadding(Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8));
+            row.addView(icon,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
+        }else{
+            TextView dot=Ui.text(this,id.substring(1),12,false);
+            dot.setGravity(Gravity.CENTER);
+            GradientDrawable ring=new GradientDrawable();
+            ring.setColor(Ui.PAPER);ring.setShape(GradientDrawable.OVAL);
+            ring.setStroke(Ui.dp(this,1),Ui.INK);
+            dot.setBackground(ring);
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(Ui.dp(this,38),Ui.dp(this,38));
+            params.leftMargin=Ui.dp(this,5);params.rightMargin=Ui.dp(this,5);
+            row.addView(dot,params);
+        }
         LinearLayout text=Ui.column(this);
         TextView heading=Ui.text(this,title,14,true);
         TextView description=Ui.text(this,subtitle,11,false);
