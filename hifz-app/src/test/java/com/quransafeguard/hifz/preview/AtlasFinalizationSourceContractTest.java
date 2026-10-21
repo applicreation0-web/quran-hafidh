@@ -155,6 +155,9 @@ public final class AtlasFinalizationSourceContractTest {
         String reader=read(ROOT+"StudyReaderActivity.java");
         assertTrue(reader.contains("new AbsoluteSizeSpan(Math.round(16f*getResources().getDisplayMetrics().scaledDensity))"));
         assertTrue(reader.contains("caption.setSpan(new StyleSpan(Typeface.ITALIC)"));
+        assertTrue("Ayah Themes subtitle must be title-only",reader.contains("caption.append(MawdudiMapScreen.cleanPassageCaption(title))"));
+        assertFalse("Never prefix verse ranges to the Atlas subtitle",reader.contains("caption.append(active.surah+\":\"+active.firstAyah"));
+        assertTrue("Map subtitle remains source Ayah Themes title",read(ROOT+"MawdudiMapScreen.java").contains("passageSubtitle.setText(graph.selectedTitle())"));
         int start=reader.indexOf("private void showFullAtlasCue()");
         int end=reader.indexOf("private void updateAtlasCueFooter()",start);
         assertTrue(reader.substring(start,end).contains("ayahThemesCues.titleForPassage(active.id)"));
