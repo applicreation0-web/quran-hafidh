@@ -92,6 +92,20 @@ final class CorrespondenceQcfSurface extends LinearLayout {
   footer.addView(position,new LayoutParams(0,LayoutParams.WRAP_CONTENT,1));
   footer.addView(next,new LayoutParams(Ui.dp(context,48),Ui.dp(context,48)));
   addView(footer,new LayoutParams(LayoutParams.MATCH_PARENT,Ui.dp(context,48)));
+  // A complete QCF folio has an immutable 345:550 ratio. Keep the page and
+  // its navigation together at the TOP of the comparison instead of placing
+  // a small centred page halfway down an oversized vertical WebView.
+  addOnLayoutChangeListener((view,l,t,r,b,ol,ot,or_,ob)->{
+   int width=r-l,height=b-t;
+   if(width<=0||height<=0)return;
+   int available=Math.max(Ui.dp(context,96),height-Ui.dp(context,48));
+   int natural=(int)Math.ceil(width*550d/345d);
+   int target=Math.min(natural,available);
+   LayoutParams lp=(LayoutParams)web.getLayoutParams();
+   if(lp.height!=target || lp.weight!=0f){
+    web.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,target));
+   }
+  });
  }
  static ImageButton action(Context context,int resource,String description,OnClickListener click){
   ImageButton button=new ImageButton(context);button.setImageResource(resource);
@@ -154,7 +168,7 @@ final class CorrespondenceQcfSurface extends LinearLayout {
      // Synthetic document identity only: no request is made to this reserved host.
      // It lets onPageFinished reject an older page after a fast occurrence change.
      expectedDocument="https://qcf.invalid/document/"+request;
-     readyCaption="p. "+page+(rendered.focusVerified?"":" · VISUEL_NON_VALIDÉ");
+     readyCaption="p. "+page+(rendered.focusVerified?"":" · sans surlignage");
      web.loadDataWithBaseURL(expectedDocument,html,"text/html","UTF-8",null);
      updateButtons();
     });
