@@ -63,6 +63,13 @@ public final class CorrespondenceMushafFirstContractTest {
   assertTrue(screen.contains("series=\"REPETITION\".equals(active.optString(\"type\"))"));
   assertTrue(screen.contains("renderOccurrenceRail(ranges)"));
  }
+ @Test public void onlyOriginalEightyAppearInVisualExplorerOrDirectSearch()throws Exception{
+  String screen=code(ROOT+"CorrespondenceMushafActivity.java");
+  assertTrue(screen.contains("retainedCount!=80||pendingCount!=24||rejectedCount!=6"));
+  assertTrue(screen.contains("CorrespondenceEligibility.retainedForDiscovery(historicStatus,"));
+  assertTrue(screen.contains("CorrespondenceEligibility.retainedForDiscovery(row.optString("));
+  assertTrue(screen.contains("CorrespondenceEligibility.retainedForDiscovery("));
+ }
  @Test public void reviewedSuyutiCatalogPreservesHistoricVerseLimits()throws Exception{
   String screen=code(ROOT+"CorrespondenceMushafActivity.java");
   assertTrue(screen.contains("correspondences/reviewed_110_v2.json"));

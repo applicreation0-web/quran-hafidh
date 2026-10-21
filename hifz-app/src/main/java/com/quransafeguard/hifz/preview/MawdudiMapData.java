@@ -166,7 +166,7 @@ final class MawdudiMapData {
   String selected=catalog==null?(admissibleSource==null?"":admissibleSource):
    BuildConfig.ATLAS_PRIVATE_EDITORIAL_PREVIEW?catalog.privatePreviewPassageTitle(id):
       catalog.passageTitle(id,admissibleSource);
-  return AtlasDisplayTitleFormatter.display(selected);
+  return AtlasDisplayTitleFormatter.displayPassage(selected);
  }
  String displayContextTitle(String passageId,String unitId,String admissibleSource){
   int[] p=passageRanges.get(passageId),u=unitRanges.get(unitId);
@@ -181,7 +181,7 @@ final class MawdudiMapData {
   // Ayah Themes heading is still named explicitly as a partial excerpt.
   if(selected!=null&&selected.matches("^\\d+:\\d+.*\\bpartie du passage\\b.*"))
     selected="Extrait · "+displayPassageTitle(passageId,admissibleSource);
-  return AtlasDisplayTitleFormatter.display(selected);
+  return AtlasDisplayTitleFormatter.displayPassage(selected);
  }
  List<Macro> forSurah(int s){List<Macro> r=new ArrayList<>();for(Macro m:all)if(m.surah==s)r.add(m);return r;}
  Macro at(int s,int a){for(Macro m:all)if(m.surah==s&&m.start<=a&&m.end>=a)return m;throw new IllegalArgumentException("macro verse");}

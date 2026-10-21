@@ -20,7 +20,7 @@ final class AtlasDisplayTitleFormatter {
    StringBuilder names=new StringBuilder();
    for(String v:variants){if(names.length()>0)names.append("|");names.append(Pattern.quote(v));}
    String pair="(?:\\s*\\((?:"+names+")\\))?";
-   String alreadyArabic="(?:\\s*\\("+Pattern.quote(arabic)+"\\))?";
+   String alreadyArabic="(?:\\s*\\("+Pattern.quote(arabic)+"\\))*";
    // A literal Arabic name is not a type of punctuation to erase.
    match=Pattern.compile("(?<![\\p{L}\\p{N}])(?:"+names+")"+pair+alreadyArabic+
         "(?![\\p{L}\\p{N}])",Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE);
@@ -62,11 +62,19 @@ final class AtlasDisplayTitleFormatter {
   if(original==null||original.isEmpty())return original==null?"":original;
   // Some original Ayah Themes titles contain literal "\\t" text separators.
   // Suppress these visible artefacts only when rendering; preserve source bytes.
-  String text=original.replace("\\t"," ").replace("\\n"," ");
+  String text=original.replace("\\t"," ").replace("\\n"," ").replace("\\r"," ");
+  text=text.replace("&nbsp;"," ").replace("&quot;","\"").replace("&apos;","\u0027")
+      .replace("&#39;","\u0027").replace("&#x27;","\u0027").replace("&lt;","<")
+      .replace("&gt;",">").replace("&amp;","&").replace("\\\"","\"");
   for(Name n:PERSONAL_NAMES){
    Matcher m=n.match.matcher(text);
    text=m.replaceAll(Matcher.quoteReplacement(n.label));
   }
   return text;
+ }
+ /** Only Ayah Themes subtitles suppress numeric ranges; canonical source is untouched. */
+ static String displayPassage(String original){
+  String text=display(original);
+  return text.replaceFirst("^\\s*\\d{1,3}:\\d{1,3}(?:\\s*[–-]\\s*\\d{1,3})?\\s*[·—–:]\\s+","");
  }
 }

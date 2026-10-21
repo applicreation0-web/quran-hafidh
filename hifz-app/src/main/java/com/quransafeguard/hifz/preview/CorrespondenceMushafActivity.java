@@ -64,7 +64,8 @@ public final class CorrespondenceMushafActivity extends Activity {
   page=clamp(saved==null?getIntent().getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,previous)
       :saved.getInt("folio",previous));
   String id=saved==null?getIntent().getStringExtra("relationId"):saved.getString("relation");
-  if(id!=null)for(JSONObject entry:historic)if(id.equals(entry.optString("id"))){active=entry;break;}
+  if(id!=null)for(JSONObject entry:historic)if(id.equals(entry.optString("id"))&&CorrespondenceEligibility.retainedForDiscovery(
+      entry.optString("documentary_status",""),entry.optBoolean("excluded_from_recommendations",false))){active=entry;break;}
   seriesOrdinal=saved==null?0:saved.getInt("occurrence",0);
   referenceWindow=saved==null?0:saved.getInt("referenceWindow",0);
   alternanceRole=saved==null?0:saved.getInt("alternanceRole",0);
@@ -120,8 +121,14 @@ public final class CorrespondenceMushafActivity extends Activity {
   if(!"HAAFIDH_CORRESPONDENCES_REVIEWED_110_V2".equals(root.getString("schema"))
       ||root.getInt("count")!=110||rows.length()!=110)
    throw new IllegalArgumentException("Wrong historical registry");
+  int retainedCount=0,pendingCount=0,rejectedCount=0;
   for(int i=0;i<rows.length();i++){
    JSONObject e=rows.getJSONObject(i);
+   String historicStatus=e.optString("documentary_status","");
+   if("RETENUE_DOCUMENTÉE".equals(historicStatus))retainedCount++;
+   else if("EN_ATTENTE_PREUVE".equals(historicStatus))pendingCount++;
+   else if("ÉCARTÉE_JUSTIFIÉE".equals(historicStatus))rejectedCount++;
+   else throw new IllegalStateException("Unknown historical documentary status");
    if(!String.format(Locale.ROOT,"R%03d",i+1).equals(e.getString("id")))
     throw new IllegalArgumentException("Non-canonical dossier");
    historic.add(e);
@@ -142,7 +149,8 @@ public final class CorrespondenceMushafActivity extends Activity {
    }
    // Rejected and unclassified hypotheses remain accessible only by exact ID;
    // never offer an unsupported pictogram on an unrelated page.
-   if(e.optBoolean("excluded_from_recommendations",false))continue;
+   if(!CorrespondenceEligibility.retainedForDiscovery(historicStatus,
+       e.optBoolean("excluded_from_recommendations",false)))continue;
    JSONArray ranges=refs(e);if(ranges==null||ranges.length()==0)
     throw new IllegalArgumentException("Missing original reference bounds");
    for(int j=0;j<ranges.length();j++){
@@ -163,6 +171,8 @@ public final class CorrespondenceMushafActivity extends Activity {
     }
    }
   }
+  if(retainedCount!=80||pendingCount!=24||rejectedCount!=6)
+   throw new IllegalStateException("Original 80/24/6 editorial scope changed");
  }
  private void build(){
   LinearLayout root=Ui.column(this);root.setBackgroundColor(Ui.PAPER);
@@ -635,7 +645,9 @@ public final class CorrespondenceMushafActivity extends Activity {
       .setPositiveButton("Aller",(dialog,which)->{
        String value=field.getText().toString().trim().toUpperCase(Locale.ROOT);
        if(value.matches("R[0-9]{3}")){
-        for(JSONObject row:historic)if(value.equals(row.optString("id"))){
+        for(JSONObject row:historic)if(value.equals(row.optString("id"))
+         &&CorrespondenceEligibility.retainedForDiscovery(row.optString("documentary_status",""),
+             row.optBoolean("excluded_from_recommendations",false))){
          active=row;seriesOrdinal=0;referenceWindow=0;seriesCompare=false;showActive();return;
         }
        }else if(value.matches("[0-9]{1,3}")){

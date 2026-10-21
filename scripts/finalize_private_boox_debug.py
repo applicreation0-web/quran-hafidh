@@ -19,7 +19,7 @@ import tempfile
 import zipfile
 
 PINNED_SIGNER_SHA256 = '85cd816f5213ae81f450146789c13ec476df54d7be8cc5f806decc9ed3f7061e'
-CURRENT_PRIVATE_PACK_SHA256 = 'ec21168411f95d66ef336a5091050c86e482ccb62a51cb44436a9f6f6d5bf870'
+CURRENT_PRIVATE_PACK_SHA256 = 'a758061532438576caa7fee6ba454ca2594c08125a426308e55f481804fed7f9'
 EXPECTED_PACKAGE = 'com.quransafeguard.hifz.ayahthemes114private'
 ASSET_FILES = {
     'assets/atlas/atlas_display_catalog_v1.json',
@@ -31,6 +31,7 @@ ASSET_FILES = {
     'assets/ayah_themes_private/titles_114.json',
     'assets/correspondences/approved_v1.json',
     'assets/correspondences/historical_110_v1.json',
+    'assets/correspondences/reviewed_110_v2.json',
 }
 
 def sha(b):
@@ -115,19 +116,30 @@ def assemble(staging, private_pack, out, expected_sha, old_apk, tmp):
         manifest=json.loads(z.read('PRIVATE_ASSET_MANIFEST.json'))
         require(manifest.get('schema')=='HAAFIDH_PRIVATE_BOOX_ASSETS_V1','Unsupported private pack')
         fingerprints=manifest['assets']
-        require(set(fingerprints)==ASSET_FILES,'Nine private asset names must match exact list')
+        require(set(fingerprints)==ASSET_FILES,'Ten private asset names must match exact list')
         private={name:z.read(name) for name in sorted(ASSET_FILES)}
         for name, data in private.items():
             require(sha(data)==fingerprints[name],f'Private asset integrity failure: {name}')
     require(sha(private['assets/atlas/atlas_display_catalog_v1.json'])=='065ec0dd68c488efacbd9e77635bf9d531b4cbb2b1bc82db7853ad4da0c02c9c','Atlas editorial asset pin mismatch')
     require(sha(private['assets/correspondences/approved_v1.json'])=='6fcbe644df3b990760d6b8e886ac60bc66d187dcff09dc0e411cf5a4a47c7ce0','Approved relations changed')
     require(sha(private['assets/correspondences/historical_110_v1.json'])=='b46c0e7d7800cbb1cfe34c72a39328339608d9b4e0ede5397dcd780de32aa8a2','Historical dossier changed')
+    require(sha(private['assets/correspondences/reviewed_110_v2.json'])=='d9867ba3ade9c8902fa98cad76cfe92662a7bfc0a9a30946cdd1707c230c6bb7','Reviewed relations asset changed')
     atlas=json.loads(private['assets/atlas/atlas_display_catalog_v1.json'])
     historical=json.loads(private['assets/correspondences/historical_110_v1.json'])
     approved=json.loads(private['assets/correspondences/approved_v1.json'])
+    reviewed=json.loads(private['assets/correspondences/reviewed_110_v2.json'])
     require(len(atlas['entries'])==1419 and sum(x['level']=='UNIT' for x in atlas['entries'])==366 and sum(x['level']=='PASSAGE' for x in atlas['entries'])==1053,'Atlas completeness')
     require(all(x['user_approved'] is True for x in atlas['entries']),'Editorial approval is missing')
     require(len(historical['entries'])==110 and len(set(x['id'] for x in historical['entries']))==110,'Historical relation catalogue incomplete')
+    require(reviewed.get('schema')=='HAAFIDH_CORRESPONDENCES_REVIEWED_110_V2' and reviewed.get('count')==110 and len(reviewed['entries'])==110,'Reviewed relations catalogue invalid')
+    require(reviewed.get('historical_sha256')=='b46c0e7d7800cbb1cfe34c72a39328339608d9b4e0ede5397dcd780de32aa8a2','Reviewed editorial data not based on original 110')
+    for historic, corrected in zip(historical['entries'],reviewed['entries']):
+        require(historic['id']==corrected['id'] and historic['refs']==corrected['original_refs'],'Original historical IDs or verse ranges changed')
+        for focus in corrected['refs']:
+            require(any(o['surah']==focus['surah'] and o['start']<=focus['start']<=focus['end']<=o['end'] for o in historic['refs']),f'Invented focus outside original bounds: {corrected["id"]}')
+    statuses=[r.get('documentary_status') for r in reviewed['entries']]
+    require(statuses.count('RETENUE_DOCUMENTÉE')==80 and statuses.count('EN_ATTENTE_PREUVE')==24 and statuses.count('ÉCARTÉE_JUSTIFIÉE')==6,
+            'Reviewed private dossier statuses must remain 80/24/6, no automatic promotion')
     require(len(approved['entries'])==4,'Approved relation catalogue must remain the 4 authorized subset')
     pre=tmp/'with-assets-unsigned.apk'
     with zipfile.ZipFile(code_apk) as inp,zipfile.ZipFile(pre,'w',allowZip64=True) as dest:
@@ -191,8 +203,8 @@ def main():
             require(len(pages)==604,'Missing genuine 604-page Quran geometry')
     summary={'result':'PASS (binary and offline integrity only; no physical BOOX testing)',
       'apk_sha256':sha(args.output.read_bytes()),'apk_bytes':args.output.stat().st_size,
-      'code_sha':args.expected_code_sha,'assets':9,'atlas_titles':1419,'historical_relations':110,
-      'approved_relations':4,'qcf_pages':604,'android_package':identity['package'],
+      'code_sha':args.expected_code_sha,'assets':10,'atlas_titles':1419,'historical_relations':110,
+      'approved_relations':4,'reviewed_relations':110,'qcf_pages':604,'android_package':identity['package'],
       'version_code':identity['versionCode'],'signer_cert_sha256':PINNED_SIGNER_SHA256,
       'physical_installation':'NOT TESTED: back up existing app before install; never uninstall current app'}
     report=args.output.with_suffix('.verification.json')

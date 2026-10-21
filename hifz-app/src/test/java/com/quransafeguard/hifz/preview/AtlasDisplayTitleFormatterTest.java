@@ -23,6 +23,13 @@ public final class AtlasDisplayTitleFormatterTest {
   assertEquals("The Creator and His Revelation",
       AtlasDisplayTitleFormatter.display("The Creator and His Revelation"));
  }
+ @Test public void passageSubtitlesDropVersePrefixesAndVisibleArtefactsOnlyInRendering(){
+  assertEquals("Order to change Qiblah",AtlasDisplayTitleFormatter.displayPassage("2:143 — Order to change Qiblah"));
+  assertEquals("Mūsā (موسى) and ʿĪsā (عيسى)",AtlasDisplayTitleFormatter.displayPassage("20:9–98 · Moses and Jesus"));
+  assertEquals("Yūsuf (يوسف) & Maryam (مريم)",AtlasDisplayTitleFormatter.display("Joseph (يوسف) (يوسف) &amp; Mary"));
+  assertEquals("U1: 2:1–20",AtlasDisplayTitleFormatter.display("U1: 2:1–20"));
+  assertEquals("Faith & duty",AtlasDisplayTitleFormatter.display("Faith &amp; duty"));
+ }
  @Test public void handlesPersonalNamesInLongAyahThemeHeadings(){
   assertEquals("Prophet Yūsuf (يوسف) and Yaḥyā (يحيى), Zakariyyā (زكريا)",
     AtlasDisplayTitleFormatter.display("Prophet Yusuf and Yahya (John), Zakariya"));
