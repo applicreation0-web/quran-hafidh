@@ -163,14 +163,17 @@ public final class AtlasFinalizationSourceContractTest {
         assertTrue(reader.substring(start,end).contains("ayahThemesCues.titleForPassage(active.id)"));
     }
 
-    @Test public void correspondenceEntryPointsUseSeparateHostsAndClippedContext() throws Exception {
+    @Test public void atlasOnlyKeepsSelectedBoundariesAndNoDetachedRelationEntryPoint() throws Exception {
         String reader=read(ROOT+"StudyReaderActivity.java"),map=read(ROOT+"MawdudiMapScreen.java");
-        assertTrue(reader.contains("CorrespondenceEntryPoints.populate(this,correspondenceHost,"));
-        assertTrue(map.contains("CorrespondenceEntryPoints.populate(activity,correspondenceHost,"));
-        assertTrue(map.contains("if(overview){correspondenceHost.removeAllViews();"));
-        assertTrue(reader.contains("int first=a,last=a;"));
-        assertTrue(reader.contains("Math.max(active.firstAyah,getIntent().getIntExtra"));
-        assertTrue(reader.contains("Math.min(active.lastAyah,getIntent().getIntExtra"));
+        assertFalse(reader.contains("CorrespondenceEntryPoints"));
+        assertFalse(map.contains("CorrespondenceEntryPoints"));
+        assertFalse(reader.contains("correspondenceHost"));
+        assertFalse(map.contains("correspondenceHost"));
+        assertTrue(reader.contains("map114FocusStart"));
+        assertTrue(reader.contains("map114FocusEnd"));
+        assertTrue(map.contains("AtlasPassageContext.intersectionStart"));
+        assertTrue(map.contains("AtlasPassageContext.intersectionEnd"));
+        assertTrue(reader.contains("applyFreeActiveMask()"));
     }
 
     @Test public void ordinaryLectureRestoresCursorInsteadOfReplayingInitialJump() throws Exception {
