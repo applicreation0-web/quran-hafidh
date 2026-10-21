@@ -133,6 +133,7 @@ while IFS= read -r file; do
     "$prefix/IbnKathirGroupIndex.java" | \
     "$prefix/MawdudiPassageIndex.java" | \
     "$prefix/MawdudiMapModel.java" | \
+    "$prefix/AtlasDisplayTitleFormatter.java" | \
     "$prefix/MawdudiMapData.java" | \
     "$prefix/MawdudiMapScreen.java" | \
     "$prefix/MapJalalaynDialog.java" | \
