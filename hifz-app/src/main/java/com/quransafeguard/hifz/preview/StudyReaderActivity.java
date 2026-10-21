@@ -232,7 +232,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.addView(semanticButton);
         // One discreet access point, using the existing Révision pictogram.
         // The 100% mask only affects the current Lecture surface.
-        freeActiveMaskButton=Ui.iconButton(this,"","Masque Révision active libre",
+        freeActiveMaskButton=Ui.iconButton(this,"","Révision active",
             v -> toggleFreeActiveMask());
         Ui.setButtonIcon(freeActiveMaskButton,R.drawable.ic_ui_revision);
         freeActiveMaskButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
