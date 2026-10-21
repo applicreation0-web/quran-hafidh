@@ -19,7 +19,7 @@ import tempfile
 import zipfile
 
 PINNED_SIGNER_SHA256 = '85cd816f5213ae81f450146789c13ec476df54d7be8cc5f806decc9ed3f7061e'
-CURRENT_PRIVATE_PACK_SHA256 = 'a4d3a96e5a88ecc2f950ec94384c02692564553b41ab881cc5ab2365550fcfbe'
+CURRENT_PRIVATE_PACK_SHA256 = '9af975700ac9ab8a0ff9ba512c2ff4b2e037265b92eba3aada979053e73bd154'
 EXPECTED_PACKAGE = 'com.quransafeguard.hifz.ayahthemes114private'
 ASSET_FILES = {
     'assets/atlas/atlas_display_catalog_v1.json',
@@ -123,7 +123,7 @@ def assemble(staging, private_pack, out, expected_sha, old_apk, tmp):
     require(sha(private['assets/atlas/atlas_display_catalog_v1.json'])=='065ec0dd68c488efacbd9e77635bf9d531b4cbb2b1bc82db7853ad4da0c02c9c','Atlas editorial asset pin mismatch')
     require(sha(private['assets/correspondences/approved_v1.json'])=='6fcbe644df3b990760d6b8e886ac60bc66d187dcff09dc0e411cf5a4a47c7ce0','Approved relations changed')
     require(sha(private['assets/correspondences/historical_110_v1.json'])=='b46c0e7d7800cbb1cfe34c72a39328339608d9b4e0ede5397dcd780de32aa8a2','Historical dossier changed')
-    require(sha(private['assets/correspondences/reviewed_110_v2.json'])=='0bf83fde9022381f951fadd2d3fce55e53c08059ff52b9ec690446c7992e7c89','Reviewed relations asset changed')
+    require(sha(private['assets/correspondences/reviewed_110_v2.json'])=='043a14fd66c04a837fbe275eee21e11f6c984df26213a28d3b47786aa3d91bd1','Reviewed relations asset changed')
     atlas=json.loads(private['assets/atlas/atlas_display_catalog_v1.json'])
     historical=json.loads(private['assets/correspondences/historical_110_v1.json'])
     approved=json.loads(private['assets/correspondences/approved_v1.json'])

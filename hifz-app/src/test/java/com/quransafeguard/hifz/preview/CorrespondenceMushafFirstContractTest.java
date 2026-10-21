@@ -76,7 +76,7 @@ public final class CorrespondenceMushafFirstContractTest {
   assertTrue(screen.contains("HAAFIDH_CORRESPONDENCES_REVIEWED_110_V2"));
   assertTrue(screen.contains("Focus outside immutable Quranic bounds"));
   assertTrue(screen.contains("excluded_from_recommendations"));
-  assertTrue(screen.contains("0bf83fde9022381f951fadd2d3fce55e53c08059ff52b9ec690446c7992e7c89"));
+  assertTrue(screen.contains("043a14fd66c04a837fbe275eee21e11f6c984df26213a28d3b47786aa3d91bd1"));
   assertTrue("Word-only refrains must not gray full verses",screen.contains("R053"));
   assertTrue("No whole-ayah false centre",screen.contains("CorrespondenceModel.Type.CENTRE"));
  }
