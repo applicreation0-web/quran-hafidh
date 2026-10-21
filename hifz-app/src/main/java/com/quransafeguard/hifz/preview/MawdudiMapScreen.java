@@ -23,6 +23,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private int unitWindowStart; // First of the five visible units; total number of units is unchanged.
  private java.util.List<MawdudiPassageIndex.Passage> passages;
  private MushafView mushaf;
+ private Graph graph;
  private OverviewGraph overviewGraph;
  private HorizontalScrollView axis;
  private TextView heading;
@@ -30,6 +31,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private boolean titleExpanded;
  private LinearLayout icons,correspondenceHost;
  private TextView passageTitle;
+ private TextView passageSubtitle;
  private MapQcfThumbnails thumbnails;
  private int sunHeight;
  private MapJalalaynDialog commentary;
@@ -142,8 +144,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
    @Override public boolean onInterceptTouchEvent(MotionEvent event){return false;}
   };axis.setFillViewport(true);
   axis.setHorizontalScrollBarEnabled(false);
-  overviewGraph=new OverviewGraph();
-  axis.addView(overviewGraph,
+  graph=new Graph();overviewGraph=new OverviewGraph();
+  axis.addView(overview?overviewGraph:graph,
       new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,sunHeight));
   root.addView(axis,new LinearLayout.LayoutParams(-1,sunHeight));
   root.addOnLayoutChangeListener((v,left,topEdge,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->{
@@ -161,6 +163,14 @@ final class MawdudiMapScreen implements MushafView.Listener {
   titlePanel.setVerticalScrollBarEnabled(true);
   titlePanel.addView(passageTitle,new ScrollView.LayoutParams(-1,-2));
   root.addView(titlePanel,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?48:56)));
+  // Original 17 October subordinate Ayah Themes caption, same private catalogue.
+  passageSubtitle=Ui.text(activity,"",12.5f,false);
+  passageSubtitle.setTypeface(android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.ITALIC));
+  passageSubtitle.setGravity(Gravity.CENTER);
+  passageSubtitle.setMaxLines(2);
+  passageSubtitle.setPadding(Ui.dp(activity,8),0,Ui.dp(activity,8),Ui.dp(activity,2));
+  passageSubtitle.setContentDescription("Titre Ayah Themes du passage actif");
+  root.addView(passageSubtitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?36:46)));
   thumbnails=new MapQcfThumbnails(activity,new MapQcfThumbnails.Listener(){
    @Override public void onPageChosen(int p){onThumbnailPage(p);}
    @Override public void onOpenReading(int p){onThumbnailPage(p);openReader();}
@@ -248,10 +258,12 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(overview){
    heading.setText(surahLabel+" · "+total+" unités");
    passageTitle.setText("");
+   passageSubtitle.setText("");
   }else{
    heading.setText(surahLabel+" · U"+(activeMacro+1)+"/"+total);
    passageTitle.setText(macros.displayUnitTitle(unit.id));
    passageTitle.setContentDescription("Unité Atlas · "+macros.displayUnitTitle(unit.id));
+   passageSubtitle.setText(graph.selectedTitle());
   }
   heading.setContentDescription("Changer d'unité · "+heading.getText());
   int desiredHeight=sunHeight;
@@ -262,9 +274,27 @@ final class MawdudiMapScreen implements MushafView.Listener {
    ViewGroup.LayoutParams cp=child.getLayoutParams();
    if(cp.height!=desiredHeight){cp.height=desiredHeight;child.setLayoutParams(cp);}
   }
+  graph.requestLayout();graph.invalidate();
   overviewGraph.requestLayout();overviewGraph.invalidate();
   renderPage();
   updateCorrespondences();
+ }
+ private void select(int n,int first,int last,String unusedTitle){
+  MawdudiMapData.Macro unit=macro();
+  if(n<0||n>=passages.size()||first<unit.start||last>unit.end||first>last)return;
+  closeTitle();selected=n;focusStart=first;focusEnd=last;passageOpen=true;
+  page=geometry.pageForVerse(new VerseRef(surah,first));refresh();
+ }
+ private void moveWithinUnit(int direction){
+  java.util.List<Graph.Node> items=graph.nodes();
+  if(items.isEmpty()||direction==0)return;
+  int next=graph.selectedOrdinalZero(items)+direction;
+  if(next<0||next>=items.size())return;
+  Graph.Node node=items.get(next);
+  select(node.index,node.first,node.last,node.title);
+ }
+ static String cleanPassageCaption(String original){
+  return original==null?"":original.replaceFirst("(?i)^\\s*[a-z]\\)\\s+","").trim();
  }
  private void updateCorrespondences(){
   if(correspondenceHost==null)return;
@@ -278,6 +308,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   mushaf.setVisibility(View.GONE);
   titlePanel.setVisibility(overview?View.GONE:View.VISIBLE);
   passageTitle.setVisibility(overview?View.GONE:View.VISIBLE);
+  passageSubtitle.setVisibility(overview?View.GONE:View.VISIBLE);
   // ROOT is a map only: keep the selected unit/page cursor but never render
   // a surah-wide QCF mosaic. This also prevents costly SVG decoding on BOOX.
   thumbnails.setVisibility(overview?View.GONE:View.VISIBLE);
@@ -448,11 +479,11 @@ final class MawdudiMapScreen implements MushafView.Listener {
   int next=Math.max(0,Math.min(maxUnitWindowStart(),unitWindowStart+direction));
   if(next==unitWindowStart)return;
   unitWindowStart=next;
-  overviewGraph.invalidate();
+  graph.invalidate();overviewGraph.invalidate();
  }
  private int atlasHeight(int width,int height){
-  // One unit row only. Passage selection and its separate cursor live in Lecture.
-  return Ui.dp(activity,height<Ui.dp(activity,700)?64:74);
+  // Restore 17 October BOOX upper Unit rail and lower original-passage rail.
+  return Ui.dp(activity,height<Ui.dp(activity,700)?106:118);
  }
  private float atlasX(int visibleOrdinal,int width){
   return width*(visibleOrdinal+.5f)/visibleUnitCount();
@@ -524,5 +555,102 @@ final class MawdudiMapScreen implements MushafView.Listener {
    openMacro(i);performClick();return true;
   }
   @Override public boolean performClick(){super.performClick();return true;}
+ } private final class Graph extends View {
+  final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+  float downX,downY;
+  final class Node {
+   final int index,first,last;
+   final String title;
+   Node(int n,int a,int b,String t){index=n;first=a;last=b;title=t;}
+  }
+  Graph(){super(activity);setFocusable(true);}
+  boolean split(int n){return false;}
+  boolean inMacro(int n){
+   MawdudiPassageIndex.Passage p=passages.get(n);
+   MawdudiMapData.Macro m=macro();
+   return p.firstAyah<=m.end&&p.lastAyah>=m.start;
+  }
+  int units(int n){return !inMacro(n)?0:split(n)?3:1;}
+  int position(int ignored){return 0;}
+  java.util.List<Node> nodes(){
+   java.util.List<Node> result=new ArrayList<>();
+   MawdudiMapData.Macro unit=macro();
+   for(int n=0;n<passages.size();n++){
+    if(!inMacro(n))continue;
+    MawdudiPassageIndex.Passage p=passages.get(n);
+    int first=AtlasPassageContext.intersectionStart(p.firstAyah,unit.start);
+    int last=AtlasPassageContext.intersectionEnd(p.lastAyah,unit.end);
+    String title=macros.displayContextTitle(p.id,unit.id,
+        macros.displayPassageTitle(p.id,titles.titleForPassage(p.id)));
+    result.add(new Node(n,first,last,title));
+   }
+   return result;
+  }
+  int selectedOrdinalZero(java.util.List<Node> nodes){
+   for(int k=0;k<nodes.size();k++)
+    if(nodes.get(k).index==selected&&nodes.get(k).first==focusStart
+        &&nodes.get(k).last==focusEnd)return k;
+   for(int k=0;k<nodes.size();k++)if(nodes.get(k).index==selected)return k;
+   return 0;
+  }
+  int currentNodeOrdinal(){java.util.List<Node> items=nodes();return items.isEmpty()?0:selectedOrdinalZero(items)+1;}
+  String selectedTitle(){
+   for(Node n:nodes())if(n.index==selected)return cleanPassageCaption(n.title);
+   return cleanPassageCaption(selectedPassageTitle());
+  }
+  @Override protected void onMeasure(int w,int h){
+   setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),sunHeight);
+  }
+  private int firstVisible(java.util.List<Node> items){
+  return Math.max(0,Math.min(Math.max(0,items.size()-5),selectedOrdinalZero(items)-2));
+ }
+ private float passageX(int j,int visible,int width){return width*(j+.5f)/visible;}
+ private float passageY(int height){return height-Ui.dp(activity,19);}
+ @Override protected void onDraw(Canvas canvas){
+  int width=getWidth(),height=getHeight();
+  drawAtlas(canvas,paint,width,height);
+  java.util.List<Node> items=nodes();if(items.isEmpty())return;
+  int first=firstVisible(items),visible=Math.min(5,items.size());
+  int selectedIndex=selectedOrdinalZero(items);
+  float y=passageY(height);
+  paint.setColor(Ui.INK);paint.setStrokeWidth(Ui.dp(activity,1));
+  paint.setStyle(Paint.Style.STROKE);
+  if(visible>1)canvas.drawLine(passageX(0,visible,width),y,passageX(visible-1,visible,width),y,paint);
+  for(int j=0;j<visible;j++){
+   int ordinal=first+j;Node n=items.get(ordinal);
+   float x=passageX(j,visible,width);
+   paint.setStyle(Paint.Style.FILL);
+   canvas.drawCircle(x,y,Ui.dp(activity,ordinal==selectedIndex?6:3),paint);
+   paint.setTextAlign(Paint.Align.CENTER);paint.setTextSize(Ui.dp(activity,9));
+   canvas.drawText(n.first==n.last?String.valueOf(n.first):n.first+"–"+n.last,x,y-Ui.dp(activity,12),paint);
+  }
+ }
+ @Override public boolean onTouchEvent(MotionEvent event){
+  if(event.getAction()==MotionEvent.ACTION_DOWN){downX=event.getX();downY=event.getY();return true;}
+  if(event.getAction()!=MotionEvent.ACTION_UP)return true;
+  float dx=event.getX()-downX,dy=event.getY()-downY;
+  if(Math.abs(dx)>Ui.dp(activity,40)&&Math.abs(dx)>Math.abs(dy)*1.2f){
+    if(Math.abs(downY-atlasY())<Ui.dp(activity,30))
+      shiftUnitWindow(dx>0?-1:1);
+    else if(Math.abs(downY-passageY(getHeight()))<Ui.dp(activity,32))
+      moveWithinUnit(dx>0?1:-1);
+    return true;
+   }
+  int width=getWidth(),height=getHeight();
+  int unit=atlasUnitAt(event.getX(),event.getY(),width);
+  if(unit>=0){openMacro(unit);performClick();return true;}
+  java.util.List<Node> items=nodes();if(items.isEmpty())return true;
+  int first=firstVisible(items),visible=Math.min(5,items.size());
+  for(int j=0;j<visible;j++){
+   float x=passageX(j,visible,width),y=passageY(height);
+   if(Math.abs(event.getX()-x)<Ui.dp(activity,27)&&Math.abs(event.getY()-y)<Ui.dp(activity,25)){
+    Node node=items.get(first+j);
+    select(node.index,node.first,node.last,node.title);
+    performClick();return true;
+   }
+  }
+  return true;
+ }
+ @Override public boolean performClick(){super.performClick();return true;}
  }
 }
