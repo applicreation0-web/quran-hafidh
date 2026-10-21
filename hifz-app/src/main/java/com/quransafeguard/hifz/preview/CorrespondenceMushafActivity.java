@@ -473,9 +473,10 @@ public final class CorrespondenceMushafActivity extends Activity {
    // Farrin 2010, five verse-level members of 2:142-152 (proposed).
    int[][] members={{142,143},{144,146},{147,148},{149,150},{151,152}};
    int[] selected=members[Math.max(0,Math.min(members.length-1,centreSegment))];
-   int fp=geometry.pageForVerse(new VerseRef(2,selected[0]));
-   int lp=MawdudiMapModel.lastPageForVerse(new VerseRef(2,selected[1]),geometry);
-   return new CorrespondenceDocument.Focus(2,selected[0],selected[1],0,0,fp,lp,fp,true);
+   int centreFirstPage=geometry.pageForVerse(new VerseRef(2,selected[0]));
+   int centreLastPage=MawdudiMapModel.lastPageForVerse(new VerseRef(2,selected[1]),geometry);
+   return new CorrespondenceDocument.Focus(2,selected[0],selected[1],0,0,
+       centreFirstPage,centreLastPage,centreFirstPage,true);
   }
   if(active!=null&&"CENTRE".equals(active.optString("type"))){
    // A whole-ayah gray polygon is NEVER evidence for an intra-ayah centre.
