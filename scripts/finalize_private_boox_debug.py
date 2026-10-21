@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Finalize a CI-produced private BOOX *debug* completely offline.
 
-No Android code or editorial flags are modified. The script fails closed on an
+Only the explicitly reviewed J3 80/24/6 reconstruction is accepted. The script fails closed on an
 unexpected CI commit, private pack SHA, source files, APK identity or signer.
 Never upload the private pack, password file or PKCS#12 to public CI.
 """
@@ -19,7 +19,7 @@ import tempfile
 import zipfile
 
 PINNED_SIGNER_SHA256 = '85cd816f5213ae81f450146789c13ec476df54d7be8cc5f806decc9ed3f7061e'
-CURRENT_PRIVATE_PACK_SHA256 = 'a758061532438576caa7fee6ba454ca2594c08125a426308e55f481804fed7f9'
+CURRENT_PRIVATE_PACK_SHA256 = 'a4d3a96e5a88ecc2f950ec94384c02692564553b41ab881cc5ab2365550fcfbe'
 EXPECTED_PACKAGE = 'com.quransafeguard.hifz.ayahthemes114private'
 ASSET_FILES = {
     'assets/atlas/atlas_display_catalog_v1.json',
@@ -123,7 +123,7 @@ def assemble(staging, private_pack, out, expected_sha, old_apk, tmp):
     require(sha(private['assets/atlas/atlas_display_catalog_v1.json'])=='065ec0dd68c488efacbd9e77635bf9d531b4cbb2b1bc82db7853ad4da0c02c9c','Atlas editorial asset pin mismatch')
     require(sha(private['assets/correspondences/approved_v1.json'])=='6fcbe644df3b990760d6b8e886ac60bc66d187dcff09dc0e411cf5a4a47c7ce0','Approved relations changed')
     require(sha(private['assets/correspondences/historical_110_v1.json'])=='b46c0e7d7800cbb1cfe34c72a39328339608d9b4e0ede5397dcd780de32aa8a2','Historical dossier changed')
-    require(sha(private['assets/correspondences/reviewed_110_v2.json'])=='d9867ba3ade9c8902fa98cad76cfe92662a7bfc0a9a30946cdd1707c230c6bb7','Reviewed relations asset changed')
+    require(sha(private['assets/correspondences/reviewed_110_v2.json'])=='0bf83fde9022381f951fadd2d3fce55e53c08059ff52b9ec690446c7992e7c89','Reviewed relations asset changed')
     atlas=json.loads(private['assets/atlas/atlas_display_catalog_v1.json'])
     historical=json.loads(private['assets/correspondences/historical_110_v1.json'])
     approved=json.loads(private['assets/correspondences/approved_v1.json'])
@@ -131,6 +131,7 @@ def assemble(staging, private_pack, out, expected_sha, old_apk, tmp):
     require(len(atlas['entries'])==1419 and sum(x['level']=='UNIT' for x in atlas['entries'])==366 and sum(x['level']=='PASSAGE' for x in atlas['entries'])==1053,'Atlas completeness')
     require(all(x['user_approved'] is True for x in atlas['entries']),'Editorial approval is missing')
     require(len(historical['entries'])==110 and len(set(x['id'] for x in historical['entries']))==110,'Historical relation catalogue incomplete')
+    require(reviewed.get('provenance')=='RECONSTRUCTION_EXPLICITE_2026_10_21_CSV_J3_ET_ARCHIVE_HISTORIQUE','Unknown reconstructed J3 catalogue provenance')
     require(reviewed.get('schema')=='HAAFIDH_CORRESPONDENCES_REVIEWED_110_V2' and reviewed.get('count')==110 and len(reviewed['entries'])==110,'Reviewed relations catalogue invalid')
     require(reviewed.get('historical_sha256')=='b46c0e7d7800cbb1cfe34c72a39328339608d9b4e0ede5397dcd780de32aa8a2','Reviewed editorial data not based on original 110')
     for historic, corrected in zip(historical['entries'],reviewed['entries']):
@@ -141,6 +142,9 @@ def assemble(staging, private_pack, out, expected_sha, old_apk, tmp):
     require(statuses.count('RETENUE_DOCUMENTÉE')==80 and statuses.count('EN_ATTENTE_PREUVE')==24 and statuses.count('ÉCARTÉE_JUSTIFIÉE')==6,
             'Reviewed private dossier statuses must remain 80/24/6, no automatic promotion')
     require(len(approved['entries'])==4,'Approved relation catalogue must remain the 4 authorized subset')
+    require(sum(e['documentary_status']=='RETENUE_DOCUMENTÉE' and not e['excluded_from_recommendations'] for e in reviewed['entries'])==80,'Exactly 80 J3 documented dossier entries')
+    require(sum(e['documentary_status']=='EN_ATTENTE_PREUVE' and e['excluded_from_recommendations'] for e in reviewed['entries'])==24,'Pending relations must stay hidden')
+    require(sum(e['documentary_status']=='ÉCARTÉE_JUSTIFIÉE' and e['excluded_from_recommendations'] for e in reviewed['entries'])==6,'Rejected relations must stay hidden')
     pre=tmp/'with-assets-unsigned.apk'
     with zipfile.ZipFile(code_apk) as inp,zipfile.ZipFile(pre,'w',allowZip64=True) as dest:
         require(inp.testzip() is None,'Corrupted CI APK')

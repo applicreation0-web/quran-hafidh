@@ -31,7 +31,8 @@ import org.json.JSONObject;
  * unchanged and no proposed literary classification is granted approval. */
 public final class CorrespondenceMushafActivity extends Activity {
  private static final String ASSET="correspondences/reviewed_110_v2.json";
- private static final String SHA="d9867ba3ade9c8902fa98cad76cfe92662a7bfc0a9a30946cdd1707c230c6bb7";
+ /** Reconstructed J3 80/24/6 catalogue, independently SHA-pinned; original V2 file was unavailable. */
+ private static final String SHA="0bf83fde9022381f951fadd2d3fce55e53c08059ff52b9ec690446c7992e7c89";
  private final List<JSONObject> historic=new ArrayList<>();
  private final Map<Integer,List<JSONObject>> byPage=new HashMap<>();
  private final Map<Integer,CorrespondenceQcfSurface.State> remembered=new HashMap<>();
