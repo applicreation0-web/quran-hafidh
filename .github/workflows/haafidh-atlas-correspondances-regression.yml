@@ -11,6 +11,7 @@ on:
       - 'scripts/verify_contractual_ui_icons.py'
       - '.github/workflows/haafidh-atlas-correspondances-regression.yml'
   workflow_dispatch:
+# Repeat both regression jobs with the updated offline-private source/icon guard.
 permissions:
   contents: read
 concurrency:
