@@ -42,8 +42,9 @@ public final class CorrespondenceMushafActivity extends Activity {
  private LinearLayout folios,relationButtons;
  private HorizontalScrollView strip;
  private CorrespondenceQcfSurface[] visible;
- private int page,seriesOrdinal,referenceWindow,alternanceRole;
- private boolean seriesCompare,privateRegistryVerified;
+ private int[] visiblePositions;
+ private int page,seriesOrdinal,referenceWindow,alternanceRole,comparisonPane,centreSegment=2;
+ private boolean seriesCompare,privateRegistryVerified,comparisonExpanded;
  private JSONObject active;
 
  @Override protected void onCreate(Bundle saved){
@@ -67,6 +68,9 @@ public final class CorrespondenceMushafActivity extends Activity {
   seriesOrdinal=saved==null?0:saved.getInt("occurrence",0);
   referenceWindow=saved==null?0:saved.getInt("referenceWindow",0);
   alternanceRole=saved==null?0:saved.getInt("alternanceRole",0);
+  centreSegment=saved==null?2:saved.getInt("centreSegment",2);
+  comparisonExpanded=saved!=null&&saved.getBoolean("comparisonExpanded",false);
+  comparisonPane=saved==null?0:saved.getInt("comparisonPane",0);
   if(saved==null&&active!=null&&"REPETITION".equals(active.optString("type"))){
    // When launched from Atlas or Lecture, highlight the occurrence actually
    // touched, not always the first occurrence of the source relation.
@@ -265,7 +269,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   cell.setContentDescription(row.optString("id")+" · "+type+
       (approved?" · vérifiée":" · proposition non certifiée"));
   cell.setFocusable(true);cell.setClickable(true);
-  cell.setOnClickListener(v->{active=row;seriesOrdinal=0;referenceWindow=0;alternanceRole=0;seriesCompare=false;remembered.clear();showActive();});
+  cell.setOnClickListener(v->{active=row;seriesOrdinal=0;referenceWindow=0;alternanceRole=0;centreSegment=2;comparisonExpanded=false;comparisonPane=0;seriesCompare=false;remembered.clear();showActive();});
   relationButtons.addView(cell,new LinearLayout.LayoutParams(Ui.dp(this,108),Ui.dp(this,73)));
  }
  private void showActive(){
@@ -288,22 +292,37 @@ public final class CorrespondenceMushafActivity extends Activity {
   // A single folio suffices only when both ranges share its exact page.
   boolean samePage=requested==2&&samePhysicalPage(
       ranges.optJSONObject(begin),ranges.optJSONObject(secondary));
-  int count=samePage?1:requested;
+  boolean canExpand=requested==2&&!samePage;
+  int count=samePage?1:canExpand&&comparisonExpanded?1:requested;
   visible=new CorrespondenceQcfSurface[count];
+  visiblePositions=new int[count];
   for(int i=0;i<count;i++){
-   int position=i==0?begin:secondary;
+   int logicalPane=canExpand&&comparisonExpanded?Math.max(0,Math.min(1,comparisonPane)):i;
+   int position=logicalPane==0?begin:secondary;
+   visiblePositions[i]=position;
    JSONObject a=ranges.optJSONObject(position);
    if(a==null)continue;
    CorrespondenceDocument.Focus focus=samePage
        ?mergedFocus(a,ranges.optJSONObject(secondary)):focus(a);
    if(!samePage){
-    CorrespondenceDocument.Focus certified=approvedFocus(i,position,series);
+    CorrespondenceDocument.Focus certified=approvedFocus(logicalPane,position,series);
     if(certified!=null)focus=certified;
    }
    if(focus==null)continue;
    LinearLayout column=Ui.column(this);
-   TextView where=Ui.text(this,(count>1?(i==0?"A · ":"B · "):"")+ref(a),11,true);
+   String prefix=requested==2?(logicalPane==0?"A · ":"B · "):"";
+   TextView where=Ui.text(this,prefix+ref(a),11,true);
    where.setGravity(Gravity.CENTER);
+   if(canExpand){
+    final int chosen=logicalPane;
+    where.setFocusable(true);where.setClickable(true);
+    where.setContentDescription("Agrandir ou changer le folio "+prefix+ref(a));
+    where.setOnClickListener(v->{
+     if(comparisonExpanded)comparisonPane=1-comparisonPane;
+     else {comparisonPane=chosen;comparisonExpanded=true;}
+     showActive();
+    });
+   }
    column.addView(where,new LinearLayout.LayoutParams(-1,Ui.dp(this,27)));
    CorrespondenceQcfSurface surface=new CorrespondenceQcfSurface(this);
    visible[i]=surface;
@@ -316,11 +335,15 @@ public final class CorrespondenceMushafActivity extends Activity {
   String type=active.optString("type","Non établi");
   boolean approved=runtime!=null&&runtime.find(active.optString("id"))!=null;
   shortLink.setText(active.optString("id")+" · "+type+(approved?" · vérifiée":" · proposé"));
-  caption.setText("CENTRE".equals(active.optString("type"))&&!approved
-      ?"Centre interne : mots non certifiés · aucun faux surlignage"
-      :active.optString("title")+" · "+
-       (series?(seriesOrdinal+1)+"/"+ranges.length():"folio(s) QCF originaux"));
-  if(series)renderOccurrenceRail(ranges);else renderComparisonRail(ranges);
+  caption.setText("R033".equals(active.optString("id"))
+      ?"Āyat al-Kursī : proposition de centre · mots sans géométrie certifiée"
+      :"R032".equals(active.optString("id"))
+       ?"Structure proposée · cinq membres · centre 2:147–148"
+       :active.optString("title")+" · "+
+        (series?(seriesOrdinal+1)+"/"+ranges.length():"folio(s) QCF originaux"));
+  if(isCentreQibla())renderCentreRail();
+  else if(series)renderOccurrenceRail(ranges);
+  else renderComparisonRail(ranges,canExpand);
  }
  /** Four QCF verses (A–B–A′–B′) are independent, never falsely
   * merged into one pair of generic gray blocks. Their type remains proposed. */
@@ -400,6 +423,14 @@ public final class CorrespondenceMushafActivity extends Activity {
   int fp=geometry.pageForVerse(new VerseRef(s,a));
   int lp=MawdudiMapModel.lastPageForVerse(new VerseRef(s,b),geometry);
   int before=a>1?a-1:0,after=b<QuranCanon.INSTANCE.ayahCount(s)?b+1:0;
+  if(isCentreQibla()){
+   // Farrin 2010, five verse-level members of 2:142-152 (proposed).
+   int[][] members={{142,143},{144,146},{147,148},{149,150},{151,152}};
+   int[] selected=members[Math.max(0,Math.min(members.length-1,centreSegment))];
+   int fp=geometry.pageForVerse(new VerseRef(2,selected[0]));
+   int lp=MawdudiMapModel.lastPageForVerse(new VerseRef(2,selected[1]),geometry);
+   return new CorrespondenceDocument.Focus(2,selected[0],selected[1],0,0,fp,lp,fp,true);
+  }
   if(active!=null&&"CENTRE".equals(active.optString("type"))){
    // A whole-ayah gray polygon is NEVER evidence for an intra-ayah centre.
    // Only an independently certified relation with exact QCF word boxes may
@@ -450,16 +481,14 @@ public final class CorrespondenceMushafActivity extends Activity {
  private void release(){
   rememberViews();
   if(visible!=null)for(CorrespondenceQcfSurface view:visible)if(view!=null)view.destroy();
-  visible=null;folios.removeAllViews();
+  visible=null;visiblePositions=null;folios.removeAllViews();
  }
  private void rememberViews(){
   if(active==null||visible==null)return;
   JSONArray r=refs(active);if(r==null)return;
-  int initial="REPETITION".equals(active.optString("type"))&&r.length()>2?seriesOrdinal:referenceWindow;
   for(int i=0;i<visible.length;i++)if(visible[i]!=null){
-   int ordinal="REPETITION".equals(active.optString("type"))&&seriesCompare
-       ?(initial+i)%r.length():initial+i;
-   remembered.put(ordinal,visible[i].state());
+   int position=visiblePositions!=null&&i<visiblePositions.length?visiblePositions[i]:0;
+   remembered.put(position,visible[i].state());
   }
  }
  private void returnToPage(){
@@ -486,7 +515,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   addRailAction("›",()->{seriesOrdinal=Math.min(ranges.length()-1,seriesOrdinal+1);showActive();});
   addRailAction(seriesCompare?"1 QCF":"2 QCF",()->{seriesCompare=!seriesCompare;showActive();});
  }
- private void renderComparisonRail(JSONArray ranges){
+ private void renderComparisonRail(JSONArray ranges,boolean expandable){
   relationButtons.removeAllViews();
   addRailAction("‹",()->{referenceWindow=Math.max(0,referenceWindow-1);showActive();});
   TextView label=Ui.text(this,"Références "+(referenceWindow+1)+"–"+
@@ -494,6 +523,34 @@ public final class CorrespondenceMushafActivity extends Activity {
   label.setGravity(Gravity.CENTER);
   relationButtons.addView(label,new LinearLayout.LayoutParams(Ui.dp(this,195),Ui.dp(this,65)));
   addRailAction("›",()->{referenceWindow=Math.min(Math.max(0,ranges.length()-2),referenceWindow+1);showActive();});
+  if(expandable){
+   addRailAction(comparisonExpanded?"2 folios":"Agrandir",()->{
+    comparisonExpanded=!comparisonExpanded;comparisonPane=0;showActive();
+   });
+   if(comparisonExpanded)addRailAction("A ↔ B",()->{comparisonPane=1-comparisonPane;showActive();});
+  }
+ }
+ private boolean isCentreQibla(){return active!=null&&"R032".equals(active.optString("id"));}
+ private void renderCentreRail(){
+  relationButtons.removeAllViews();
+  String[] stages={"A","B","C","B′","A′"};
+  String[] bounds={"142–143","144–146","147–148","149–150","151–152"};
+  for(int i=0;i<5;i++){
+   final int selected=i;
+   LinearLayout node=Ui.column(this);node.setGravity(Gravity.CENTER);
+   TextView letter=Ui.text(this,stages[i],16,true);letter.setGravity(Gravity.CENTER);
+   TextView verses=Ui.text(this,bounds[i],10,false);verses.setGravity(Gravity.CENTER);
+   node.addView(letter);node.addView(verses);
+   if(i==centreSegment){
+    GradientDrawable border=new GradientDrawable();border.setColor(Ui.PAPER);
+    border.setStroke(Ui.dp(this,2),Ui.INK);border.setCornerRadius(Ui.dp(this,24));
+    node.setBackground(border);
+   }
+   node.setFocusable(true);node.setClickable(true);
+   node.setContentDescription(stages[i]+" · versets "+bounds[i]+(i==2?" · centre proposé":" · membre proposé"));
+   node.setOnClickListener(v->{centreSegment=selected;remembered.clear();showActive();});
+   relationButtons.addView(node,new LinearLayout.LayoutParams(Ui.dp(this,86),Ui.dp(this,68)));
+  }
  }
  private void addRailAction(String label,Runnable action){
   TextView item=Ui.text(this,label,14,true);
@@ -548,6 +605,9 @@ public final class CorrespondenceMushafActivity extends Activity {
   state.putInt("referenceWindow",referenceWindow);
   state.putInt("alternanceRole",alternanceRole);
   state.putBoolean("seriesCompare",seriesCompare);
+  state.putBoolean("comparisonExpanded",comparisonExpanded);
+  state.putInt("comparisonPane",comparisonPane);
+  state.putInt("centreSegment",centreSegment);
   super.onSaveInstanceState(state);
  }
  @Override protected void onDestroy(){release();super.onDestroy();}
