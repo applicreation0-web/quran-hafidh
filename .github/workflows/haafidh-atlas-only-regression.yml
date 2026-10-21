@@ -8,6 +8,8 @@ on:
       - 'hifz-core/**'
       - 'scripts/guard_frozen_hifz_engines.sh'
       - 'scripts/guard_atlas_boox_visual_snapshot.py'
+      - 'scripts/verify_authorized_hifz_session_delta.py'
+      - 'scripts/verify_atlas_only_purity.py'
       - 'scripts/audit_hifz_quiz_against_1171.sh'
       - 'scripts/verify_contractual_ui_icons.py'
       - '.github/workflows/haafidh-atlas-only-regression.yml'
