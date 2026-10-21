@@ -42,7 +42,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  private HorizontalScrollView strip;
  private CorrespondenceQcfSurface[] visible;
  private int page,seriesOrdinal,referenceWindow,alternanceRole;
- private boolean seriesCompare;
+ private boolean seriesCompare,privateRegistryVerified;
  private JSONObject active;
 
  @Override protected void onCreate(Bundle saved){
@@ -53,6 +53,7 @@ public final class CorrespondenceMushafActivity extends Activity {
    geometry=GeometryRepository.get(this);
    runtime=CorrespondenceRuntime.load(this);
    loadIndex();
+   privateRegistryVerified=true;
   }catch(Exception badIndex){
    // A missing or altered PRIVATE directory must not be replaced with inferred links.
    historic.clear();byPage.clear();
@@ -119,15 +120,19 @@ public final class CorrespondenceMushafActivity extends Activity {
    if(!String.format(Locale.ROOT,"R%03d",i+1).equals(e.getString("id")))
     throw new IllegalArgumentException("Non-canonical dossier");
    historic.add(e);
-   JSONArray ranges=refs(e);if(ranges==null)continue;
+   JSONArray ranges=refs(e);if(ranges==null||ranges.length()==0)
+    throw new IllegalArgumentException("Missing original reference bounds");
    for(int j=0;j<ranges.length();j++){
-    JSONObject r=ranges.optJSONObject(j);if(r==null)continue;
+    JSONObject r=ranges.optJSONObject(j);if(r==null)
+     throw new IllegalArgumentException("Malformed original reference");
     int surah=r.optInt("surah"),first=r.optInt("start"),last=r.optInt("end");
     if(surah<1||surah>114||first<1||last<first
-        ||last>QuranCanon.INSTANCE.ayahCount(surah))continue;
+        ||last>QuranCanon.INSTANCE.ayahCount(surah))
+     throw new IllegalArgumentException("Out-of-surah original verse range");
     int fp=geometry.pageForVerse(new VerseRef(surah,first));
     int lp=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,last),geometry);
-    if(fp<1||lp>604||fp>lp)continue;
+    if(fp<1||lp>604||fp>lp)
+     throw new IllegalArgumentException("Invalid QCF folio geometry");
     for(int p=fp;p<=lp;p++){
      List<JSONObject> onPage=byPage.get(p);
      if(onPage==null){onPage=new ArrayList<>();byPage.put(p,onPage);}
@@ -195,6 +200,13 @@ public final class CorrespondenceMushafActivity extends Activity {
  }
  private void renderPageLinks(){
   relationButtons.removeAllViews();
+  if(!privateRegistryVerified){
+   shortLink.setText("Catalogue privé indisponible · lecture QCF uniquement");
+   TextView warning=Ui.text(this,"Correspondances non chargées — intégrité à vérifier",11,true);
+   warning.setPadding(Ui.dp(this,10),0,0,0);
+   relationButtons.addView(warning);
+   return;
+  }
   List<JSONObject> links=byPage.get(page);
   if(links==null||links.isEmpty()){
    TextView empty=Ui.text(this,"Aucune correspondance documentée sur cette page",11,false);
