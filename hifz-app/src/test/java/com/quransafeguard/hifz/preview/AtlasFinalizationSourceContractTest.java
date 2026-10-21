@@ -59,9 +59,13 @@ public final class AtlasFinalizationSourceContractTest {
             map.contains("shiftUnitWindow(dx>0?-1:1)"));
         assertTrue("Active unit remains distinctly circled",
             map.contains("ordinal==activeMacro"));
-        assertFalse("19 October supersedes the old double rail: passages belong to Lecture",
-            map.contains("class Graph extends View"));
-        assertFalse("No passage node is drawn on the unit map",map.contains("passageX("));
+        assertTrue("Original approved 17 October double-rail is restored",
+            map.contains("private final class Graph extends View"));
+        assertTrue("Only authentic passage boundaries are drawn beneath unit rail",
+            map.contains("private float passageX(")
+            && map.contains("AtlasPassageContext.intersectionStart(p.firstAyah,unit.start)"));
+        assertTrue("Selected passage subtitle is visible in Atlas",
+            map.contains("passageSubtitle=Ui.text(activity,\"\",12.5f,false)"));
         assertFalse("No initial miniature mosaic",map.contains("setMosaic(true)"));
         assertTrue("Unit title is larger and bold",map.contains("Ui.text(activity,\"\",16f,true)"));
         assertFalse("Passage titles are shown in Lecture, never as a map rail",
