@@ -110,8 +110,8 @@ final class CorrespondenceDocument {
   return "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
    +"<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:\">"
    +"<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#faf8f2;}"
-   +"body{display:flex;align-items:center;justify-content:center;padding:4px;}"
-   +"svg{display:block;width:100%;height:100%;background:transparent;overflow:visible;}"
+   +"body{display:flex;align-items:center;justify-content:center;padding:4px;overflow:hidden;}"
+   +"svg{display:block;width:100%;height:100%;max-width:100%;max-height:100%;background:transparent;overflow:hidden;}"
    +"</style></head><body>"
    +svg+"</body></html>";
  }
