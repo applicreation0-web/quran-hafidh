@@ -60,7 +60,9 @@ final class AtlasDisplayTitleFormatter {
  }
  static String display(String original){
   if(original==null||original.isEmpty())return original==null?"":original;
-  String text=original;
+  // Some original Ayah Themes titles contain literal "\\t" text separators.
+  // Suppress these visible artefacts only when rendering; preserve source bytes.
+  String text=original.replace("\\t"," ").replace("\\n"," ");
   for(Name n:PERSONAL_NAMES){
    Matcher m=n.match.matcher(text);
    text=m.replaceAll(Matcher.quoteReplacement(n.label));
