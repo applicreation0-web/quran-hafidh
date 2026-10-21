@@ -79,7 +79,15 @@ final class CorrespondenceEntryPoints {
   button.setImageTintList(null);button.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));return button;
  }
  private static void launch(Activity activity,Relation relation,CorrespondenceAccess.Origin origin){
-  Intent intent=new Intent(activity,CorrespondenceActivity.class);intent.putExtra("relationId",relation.id);intent.putExtra("origin",encode(origin));activity.startActivity(intent);
+  // Only already-admitted links reach this point. Open the same QCF-first
+  // reader as the home entry, carrying the exact original reader position.
+  Intent intent=new Intent(activity,CorrespondenceMushafActivity.class);
+  intent.putExtra("relationId",relation.id);
+  intent.putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,origin.snapshot.page);
+  intent.putExtra("contextSurah",origin.snapshot.surah);
+  intent.putExtra("contextAyah",origin.snapshot.ayah);
+  intent.putExtra("origin",encode(origin));
+  activity.startActivity(intent);
  }
  static CorrespondenceAccess.Origin rebind(CorrespondenceAccess.Origin origin,Geometry geometry){
   return new CorrespondenceAccess.Origin(origin.surface,origin.mode,origin.snapshot,new VerseRange(origin.workedRange.surah,origin.workedRange.start,origin.workedRange.end,geometry));
