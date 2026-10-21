@@ -153,6 +153,7 @@ while IFS= read -r file; do
     "$prefix/CorrespondenceRuntime.java" | \
     "$prefix/CorrespondenceEntryPoints.java" | \
     "$prefix/CorrespondenceActivity.java" | \
+    "$prefix/CorrespondenceDirectoryActivity.java" | \
     "$prefix/AyahThemesCueIndex.java" | \
     "$prefix/AyahThemesReviewDisplay.java" | \
     "$prefix/PrivateDisplayIntegrity.java" | \
