@@ -10,6 +10,20 @@ import subprocess
 BASE="7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21"
 PATH="hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java"
 CURRENT_SHA="491aae573afba8bdd5da339a8e15dca8e59661ef"
+# The October 21 Atlas-only branch removes three Correspondances UI hooks.
+# This exact Git blob is accepted after checking the deletion-only source diff.
+ATLAS_ONLY_SHA="4d52f8bc8e5cbd7a5bfa836b4c73c07c52647f55"
+if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==ATLAS_ONLY_SHA:
+    previous=subprocess.check_output(["git","show","41e6af84f2d0d6218686ecbca810a783db11c0c3:"+PATH]).decode("utf-8")
+    expected=previous.replace("    private LinearLayout correspondenceActions;\n","").replace(
+        "        correspondenceActions = Ui.row(this);\n        correspondenceActions.setVisibility(View.GONE);\n        controlBar.addView(correspondenceActions);\n","").replace(
+        "        CorrespondenceEntryPoints.populateSabqi(this, correspondenceActions, mode,\n            currentSelection, currentPage, displayedMask(), currentLineIds);\n","")
+    actual=Path(PATH).read_text()
+    if actual!=expected:
+        raise SystemExit("Atlas-only Hifz source differs beyond three removed UI hooks")
+    print("PASS: exact Hifz engine preserved after deleting three Correspondances UI hooks")
+    raise SystemExit(0)
+
 if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==CURRENT_SHA:
     print("PASS: exact pinned HifzSessionActivity; second Itqan rotation commit removed")
     raise SystemExit(0)
