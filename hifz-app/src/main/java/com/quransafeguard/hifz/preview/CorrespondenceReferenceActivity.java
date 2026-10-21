@@ -29,6 +29,8 @@ public final class CorrespondenceReferenceActivity extends Activity {
     private LinearLayout pages;
     private TextView description;
     private int position,expanded=-1;
+    // Each historical QCF reference keeps its own folio/zoom/pan across carousel moves.
+    private final java.util.Map<Integer,CorrespondenceQcfSurface.State> remembered=new java.util.HashMap<>();
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
         try{
@@ -39,6 +41,7 @@ public final class CorrespondenceReferenceActivity extends Activity {
             if(ranges.length()<1||ranges.length()>40)throw new IllegalArgumentException("Invalid original references");
             geometry=GeometryRepository.get(this);
             position=state==null?0:Math.max(0,Math.min(ranges.length()-1,state.getInt("position")));
+            if(state!=null)restoreFolioStates(state);
             display();
         }catch(Exception unavailable){Ui.showFatal(this,"Références QCF indisponibles pour ce dossier.");}
     }
@@ -87,7 +90,30 @@ public final class CorrespondenceReferenceActivity extends Activity {
         setContentView(root);
         showReferences();
     }
-    private void shift(int delta){if(expanded>=0)expanded=-1;position=Math.max(0,Math.min(ranges.length()-1,position+delta));showReferences();}
+    private void shift(int delta){
+        int next=Math.max(0,Math.min(ranges.length()-1,position+delta));
+        if(next==position)return;
+        rememberVisibleFolios();
+        position=next;expanded=-1;showReferences();
+    }
+    private void rememberVisibleFolios(){
+        if(views==null)return;
+        for(int pane=0;pane<views.length;pane++)
+            if(views[pane]!=null)remembered.put(position+pane,views[pane].state());
+    }
+    private void restoreFolioStates(Bundle saved){
+        Bundle folios=saved.getBundle("folios");
+        if(folios!=null)for(int i=0;i<ranges.length();i++){
+            Bundle b=folios.getBundle(Integer.toString(i));
+            if(b==null)continue;
+            int page=b.getInt("page"),x=b.getInt("x"),y=b.getInt("y");
+            float zoom=b.getFloat("zoom");
+            if(page>=1&&page<=604&&Float.isFinite(zoom)&&zoom>0f&&zoom<=10f&&x>=0&&y>=0)
+                remembered.put(i,new CorrespondenceQcfSurface.State(page,zoom,x,y));
+        }
+        int count=Math.min(2,ranges.length()-position);
+        expanded=Math.max(-1,Math.min(count-1,saved.getInt("expanded",-1)));
+    }
     private void showReferences(){
         if(views!=null)for(CorrespondenceQcfSurface old:views)if(old!=null)old.destroy();
         pages.removeAllViews();
@@ -116,7 +142,7 @@ public final class CorrespondenceReferenceActivity extends Activity {
             if(before>0)first=Math.min(first,geometry.pageForVerse(new VerseRef(surah,before)));
             if(after>0)last=Math.max(last,MawdudiMapModel.lastPageForVerse(new VerseRef(surah,after),geometry));
             CorrespondenceDocument.Focus focus=new CorrespondenceDocument.Focus(surah,start,end,after,before,first,last,geometry.pageForVerse(new VerseRef(surah,start)),true);
-            surface.show(focus,null);
+            surface.show(focus,remembered.get(position+i));
         }
         layoutViews();
         String type=record.optString("type","");
@@ -138,6 +164,19 @@ public final class CorrespondenceReferenceActivity extends Activity {
                 "\n\nComparaison documentaire des versets originaux. Aucune structure non démontrée n'est affirmée par le rendu.")
             .setPositiveButton("Fermer",null).show();
     }
-    @Override protected void onSaveInstanceState(Bundle state){state.putInt("position",position);super.onSaveInstanceState(state);}
+    @Override protected void onSaveInstanceState(Bundle state){
+        rememberVisibleFolios();
+        state.putInt("position",position);
+        state.putInt("expanded",expanded);
+        Bundle folios=new Bundle();
+        for(java.util.Map.Entry<Integer,CorrespondenceQcfSurface.State> e:remembered.entrySet()){
+            CorrespondenceQcfSurface.State p=e.getValue();
+            Bundle b=new Bundle();b.putInt("page",p.page);b.putFloat("zoom",p.zoom);
+            b.putInt("x",p.x);b.putInt("y",p.y);
+            folios.putBundle(Integer.toString(e.getKey()),b);
+        }
+        state.putBundle("folios",folios);
+        super.onSaveInstanceState(state);
+    }
     @Override protected void onDestroy(){if(views!=null)for(CorrespondenceQcfSurface x:views)if(x!=null)x.destroy();super.onDestroy();}
 }
