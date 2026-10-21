@@ -106,6 +106,7 @@ while IFS= read -r file; do
     "$APP_ROOT/SemanticTitlePopup.java" | \
     "$APP_ROOT/MawdudiPassageIndex.java" | \
     "$APP_ROOT/MawdudiMapModel.java" | \
+    "$APP_ROOT/AtlasDisplayTitleFormatter.java" | \
     "$APP_ROOT/MawdudiMapData.java" | \
     "$APP_ROOT/MawdudiMapScreen.java" | \
     "$APP_ROOT/MapJalalaynDialog.java" | \
