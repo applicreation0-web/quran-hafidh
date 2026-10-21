@@ -209,7 +209,7 @@ public final class CorrespondenceDirectoryActivity extends Activity {
             "\n\nDossier historique : relation non activée dans le lecteur.";
         new AlertDialog.Builder(this).setTitle(entry.optString("id")+" · "+entry.optString("title"))
             .setMessage(message)
-            .setPositiveButton("Lire les versets",(dialog,which)->chooseReference(refs))
+            .setPositiveButton("Comparer les pages QCF",(dialog,which)->startActivity(new Intent(this,CorrespondenceReferenceActivity.class).putExtra("relationId",entry.optString("id"))))
             .setNegativeButton("Fermer",null).show();
     }
     private void chooseReference(JSONArray refs){
