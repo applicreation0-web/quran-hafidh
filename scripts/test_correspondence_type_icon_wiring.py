@@ -42,7 +42,10 @@ class CorrespondenceTypeIconWiringTest(unittest.TestCase):
         directory = (JAVA / "CorrespondenceDirectoryActivity.java").read_text(encoding="utf-8")
         # A proposed classification is not a certified relation or icon.
         self.assertIn("CorrespondenceModel.Type iconType=approved==null?null:approved.type;", directory)
-        self.assertIn("icon.setImageResource(type==null?R.drawable.ic_ui_info:CorrespondenceScreen.icon(type))", directory)
+        self.assertIn("if(type!=null)", directory)
+        self.assertIn("icon.setImageResource(CorrespondenceScreen.icon(type));", directory)
+        self.assertIn("TextView dot=Ui.text(this,id.substring(1),12,false);", directory)
+        self.assertIn("icon.setImageTintList(null)", directory)
         # A dossier with no valid original references must not offer a dead QCF action.
         self.assertIn("if(refs!=null&&refs.length()>0&&refs.length()<=40)", directory)
 
