@@ -88,7 +88,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout semanticMap = homeNavLine(root, "Atlas", v ->
             startActivity(new Intent(this, AtlasMapActivity.class)));
         LinearLayout correspondances = homeNavLine(root, "Correspondances", v ->
-            startActivity(new Intent(this, CorrespondenceDirectoryActivity.class)));
+            startActivity(new Intent(this, CorrespondenceMushafActivity.class)));
         LinearLayout free = homeNavLine(root, "Mémorisation libre", v -> startActivity(new Intent(this, FreeMemActivity.class)));
         LinearLayout parcours = homeNavLine(root, "Parcours Hifz", v -> showParcours());
         LinearLayout progress = homeNavLine(root, "Progression", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
