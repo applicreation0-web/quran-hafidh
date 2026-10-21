@@ -71,6 +71,7 @@ public final class UiIconMappingTest {
             {"Consolidation", R.drawable.ic_hifz_consolidation},
             {"Renforcement", R.drawable.ic_hifz_consolidation},
             {"Révision", R.drawable.ic_ui_revision},
+            {"Révision active", R.drawable.ic_ui_revision},
             {"Passage suivant du corpus", R.drawable.ic_ui_jump_next},
             {"Passage précédent du corpus", R.drawable.ic_ui_jump_prev},
             {"Leçon neuve", R.drawable.ic_hifz_new_lesson},
