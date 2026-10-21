@@ -571,7 +571,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         MawdudiPassageIndex.Passage active=atlasPassages.get(atlasPassagePosition);
         String label=ayahThemesCues==null?null:ayahThemesCues.titleForPassage(active.id);
         if(label==null)return;
-        semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
+        semanticTitleDialog=SemanticTitlePopup.showEnglish(this,MawdudiMapScreen.cleanPassageCaption(label),semanticTitleDialog);
         SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions);
     }
 
@@ -604,7 +604,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             caption.append("\n");
         }
         int passageStart=caption.length();
-        caption.append(active.surah+":"+active.firstAyah+"–"+active.lastAyah+" · "+title);
+        caption.append(active.surah+":"+active.firstAyah+"–"+active.lastAyah+" · "+MawdudiMapScreen.cleanPassageCaption(title));
         caption.setSpan(new StyleSpan(Typeface.ITALIC),passageStart,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         atlasCueFooter.setText(caption);
     }
