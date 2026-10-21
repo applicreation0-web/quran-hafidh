@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "hifz-app/src/main/java/com/quransafeguard/hifz/preview"
 PINNED = {
     "MawdudiMapScreen.java": "a925f2be39b0ea0755bb3a552b16ff7bd987aa9d",
-    "StudyReaderActivity.java": "99864e8f7b0632fd6e81a212f78ca7e4e012a4bd",
+    "StudyReaderActivity.java": "28263db496865a63e0e4424c2e6ddb4bb20e21f5",
     "MapJalalaynDialog.java": "e2f82338c1feb0673b51e9a6f9375e4be37861b9",
     "MapQcfThumbnails.java": "750013d368854082d6dc6d1094d9c472ed962cc7",
     "MapUnitMarkers.java": "deaf4f97a08a771c88ba21048a60419323b613ab",
