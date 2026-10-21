@@ -7,6 +7,7 @@ on:
       - 'hifz-app/**'
       - 'hifz-core/**'
       - 'scripts/guard_frozen_hifz_engines.sh'
+      - 'scripts/guard_atlas_boox_visual_snapshot.py'
       - 'scripts/audit_hifz_quiz_against_1171.sh'
       - 'scripts/verify_contractual_ui_icons.py'
       - '.github/workflows/haafidh-atlas-correspondances-regression.yml'
@@ -30,6 +31,7 @@ jobs:
           set -euo pipefail
           bash scripts/guard_frozen_hifz_engines.sh
           bash scripts/audit_hifz_quiz_against_1171.sh
+          python3 scripts/guard_atlas_boox_visual_snapshot.py
       - name: Verify original and correspondence icon contracts
         run: |
           set -euo pipefail
