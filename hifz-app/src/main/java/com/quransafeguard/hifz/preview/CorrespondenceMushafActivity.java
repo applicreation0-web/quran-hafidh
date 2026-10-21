@@ -252,8 +252,10 @@ public final class CorrespondenceMushafActivity extends Activity {
   String type=active.optString("type","Non établi");
   boolean approved=runtime!=null&&runtime.find(active.optString("id"))!=null;
   shortLink.setText(active.optString("id")+" · "+type+(approved?" · vérifiée":" · proposé"));
-  caption.setText(active.optString("title")+" · "+
-      (series?(seriesOrdinal+1)+"/"+ranges.length():"deux emplacements si nécessaires"));
+  caption.setText("CENTRE".equals(active.optString("type"))&&!approved
+      ?"Centre interne : mots non certifiés · aucun faux surlignage"
+      :active.optString("title")+" · "+
+       (series?(seriesOrdinal+1)+"/"+ranges.length():"folio(s) QCF originaux"));
   if(series)renderOccurrenceRail(ranges);else renderComparisonRail(ranges);
  }
  private boolean samePhysicalPage(JSONObject a,JSONObject b){
@@ -273,6 +275,16 @@ public final class CorrespondenceMushafActivity extends Activity {
   int fp=geometry.pageForVerse(new VerseRef(s,a));
   int lp=MawdudiMapModel.lastPageForVerse(new VerseRef(s,b),geometry);
   int before=a>1?a-1:0,after=b<QuranCanon.INSTANCE.ayahCount(s)?b+1:0;
+  if(active!=null&&"CENTRE".equals(active.optString("type"))){
+   // A whole-ayah gray polygon is NEVER evidence for an intra-ayah centre.
+   // Only an independently certified relation with exact QCF word boxes may
+   // request segment-specific highlighting, otherwise preserve the real folio.
+   CorrespondenceModel.Relation approved=runtime==null?null:runtime.find(active.optString("id"));
+   if(approved!=null&&approved.type==CorrespondenceModel.Type.CENTRE
+       &&runtime.geometry!=null&&CorrespondenceDocument.displayable(approved,runtime.geometry))
+    return CorrespondenceDocument.focus(approved,0,0,runtime.geometry);
+   return new CorrespondenceDocument.Focus(s,a,b,after,before,fp,lp,fp,false);
+  }
   return new CorrespondenceDocument.Focus(s,a,b,after,before,fp,lp,fp,true);
  }
  private CorrespondenceDocument.Focus mergedFocus(JSONObject a,JSONObject b){
