@@ -2,28 +2,21 @@ name: Quran Haafidh — BOOX debug build for OFFLINE private assembly
 on:
   push:
     branches:
-      - work/haafidh-1171-atlas-correspondances
+      - work/haafidh-1171-atlas-only-pre20-mask
     paths:
       - '.github/workflows/haafidh-boox-private-debug-staging.yml'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
-      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceDirectoryActivity.java'
-      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceReferenceActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapScreen.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapJalalaynDialog.java'
-      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceQcfSurface.java'
-      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceDocument.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasHistoricalDualRailAndTafsirTest.java'
       - 'hifz-app/src/main/AndroidManifest.xml'
       - 'scripts/guard_frozen_hifz_engines.sh'
       - 'scripts/guard_atlas_boox_visual_snapshot.py'
-      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceMushafActivity.java'
       - 'scripts/audit_hifz_quiz_against_1171.sh'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasFinalizationSourceContractTest.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/UiIconMappingTest.java'
-      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceRuntime.java'
-      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/CorrespondenceAuthenticRefrainQcfTest.java'
   workflow_dispatch:
 permissions:
   contents: read
@@ -50,7 +43,6 @@ jobs:
           python3 scripts/guard_atlas_boox_visual_snapshot.py
           python3 scripts/verify_contractual_ui_icons.py
           python3 scripts/verify_j6_icon_roles.py
-          python3 scripts/test_correspondence_icon_contract.py
       - name: Supply only non-private build label and provenance
         shell: bash
         run: |
@@ -61,7 +53,6 @@ jobs:
           EOF
           test ! -e hifz-app/src/private114/assets/atlas
           test ! -e hifz-app/src/private114/assets/atlas_private
-          test ! -e hifz-app/src/private114/assets/correspondences
           test ! -e hifz-app/src/private114/assets/ayah_themes_private
           git check-ignore -q hifz-app/src/private114/AndroidManifest.xml
       - uses: actions/setup-java@v4
@@ -96,7 +87,7 @@ jobs:
           import sys, zipfile
           with zipfile.ZipFile(sys.argv[1]) as package:
               names=set(package.namelist())
-          for prefix in ("assets/atlas_private/","assets/ayah_themes_private/","assets/correspondences/"):
+          for prefix in ("assets/atlas_private/","assets/ayah_themes_private/"):
               assert not any(x.startswith(prefix) for x in names), "Private data unexpectedly in public staging"
           print("PASS: public staging contains no private corpus; must be assembled and signed offline")
           PY
@@ -106,7 +97,7 @@ jobs:
           cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
           cp "$sdk/zipalign" "$out/zipalign"
           cp "$sdk/lib64/libc++.so" "$out/libc++.so"
-          printf 'OFFLINE ASSEMBLY ONLY. No private atlas/correspondence assets, no historical signing. This is NOT an installable final debug.\nSource: %s\n' "$(git rev-parse HEAD)" > "$out/README.txt"
+          printf 'OFFLINE ASSEMBLY ONLY. No private Atlas assets, no historical signing. This is NOT an installable final debug.\nSource: %s\n' "$(git rev-parse HEAD)" > "$out/README.txt"
           (cd "$out" && sha256sum * > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:

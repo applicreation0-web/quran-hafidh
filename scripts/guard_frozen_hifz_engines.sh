@@ -112,24 +112,6 @@ while IFS= read -r file; do
     "$APP_ROOT/MapJalalaynDialog.java" | \
     "$APP_ROOT/MapUnitMarkers.java" | \
     "$APP_ROOT/MapQcfThumbnails.java" | \
-    "$APP_ROOT/CorrespondenceSvgFocus.java" | \
-    "$APP_ROOT/CorrespondenceModel.java" | \
-    "$APP_ROOT/CorrespondenceGeometry.java" | \
-    "$APP_ROOT/CorrespondenceDocument.java" | \
-    "$APP_ROOT/CorrespondenceQcfSurface.java" | \
-    "$APP_ROOT/CorrespondenceRefrainCue.java" | \
-    "$APP_ROOT/CorrespondenceScreen.java" | \
-    "$APP_ROOT/CorrespondenceSwipe.java" | \
-    "$APP_ROOT/CorrespondenceAccess.java" | \
-    "$APP_ROOT/CorrespondenceState.java" | \
-    "$APP_ROOT/CorrespondenceStateViewport.java" | \
-    "$APP_ROOT/CorrespondenceCatalog.java" | \
-    "$APP_ROOT/CorrespondenceRuntime.java" | \
-    "$APP_ROOT/CorrespondenceEntryPoints.java" | \
-    "$APP_ROOT/CorrespondenceActivity.java" | \
-    "$APP_ROOT/CorrespondenceDirectoryActivity.java" | \
-    "$APP_ROOT/CorrespondenceMushafActivity.java" | \
-    "$APP_ROOT/CorrespondenceReferenceActivity.java" | \
     "$APP_ROOT/AyahThemesCueIndex.java" | \
     "$APP_ROOT/AyahThemesReviewDisplay.java" | \
     "$APP_ROOT/PrivateDisplayIntegrity.java" | \

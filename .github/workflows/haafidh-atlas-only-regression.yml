@@ -1,8 +1,8 @@
-name: Quran Haafidh — Hifz, Atlas and Correspondances integrity
+name: Quran Haafidh — Hifz and Atlas only integrity
 on:
   push:
     branches:
-      - work/haafidh-1171-atlas-correspondances
+      - work/haafidh-1171-atlas-only-pre20-mask
     paths:
       - 'hifz-app/**'
       - 'hifz-core/**'
@@ -10,7 +10,7 @@ on:
       - 'scripts/guard_atlas_boox_visual_snapshot.py'
       - 'scripts/audit_hifz_quiz_against_1171.sh'
       - 'scripts/verify_contractual_ui_icons.py'
-      - '.github/workflows/haafidh-atlas-correspondances-regression.yml'
+      - '.github/workflows/haafidh-atlas-only-regression.yml'
   workflow_dispatch:
 # Repeat both regression jobs with the updated offline-private source/icon guard.
 permissions:
@@ -32,12 +32,11 @@ jobs:
           bash scripts/guard_frozen_hifz_engines.sh
           bash scripts/audit_hifz_quiz_against_1171.sh
           python3 scripts/guard_atlas_boox_visual_snapshot.py
-      - name: Verify original and correspondence icon contracts
+      - name: Verify original icon contracts and feature removal
         run: |
           set -euo pipefail
           python3 scripts/verify_contractual_ui_icons.py
-          python3 scripts/test_correspondence_icon_contract.py
-          python3 scripts/test_correspondence_type_icon_wiring.py
+          python3 scripts/verify_atlas_only_no_correspondences.py
       - name: Ensure superseded headings cannot be bundled
         run: python3 scripts/verify_no_legacy_title_packaging.py
   jvm:

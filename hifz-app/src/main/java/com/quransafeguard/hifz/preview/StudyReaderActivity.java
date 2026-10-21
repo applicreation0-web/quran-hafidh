@@ -71,7 +71,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private android.app.Dialog semanticTitleDialog;
     /** Phone Tafsir: a non-modal bottom panel inside the reader (Mushaf stays tappable above it). */
     private FrameLayout bottomTafsir;
-    private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir, correspondenceHost;
+    private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
     private FrameLayout readerPane;
     private TextView surahPicker;
     private TextView rubPicker;
@@ -263,13 +263,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.addView(annotationClearButton);
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        correspondenceHost=Ui.row(this);
-        correspondenceHost.setGravity(Gravity.CENTER);
-        correspondenceHost.setVisibility(View.GONE);
-        readerStack.addView(correspondenceHost,new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
-
         pageRail = Ui.row(this);
         pageRail.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), Ui.dp(this, 1));
         // Must stay the exact same size as rubPicker below: pageRail centers each child by its
@@ -444,7 +437,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         selected = verse;
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
         if(!mapUnitPreview&&!freeActiveMask)mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
-        updateCorrespondences();
         refreshOpenTafsir(verse);
         if (tafsirWasOpen && !largeScreen) hideControls(); else showControls();
     }
@@ -655,7 +647,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             updateAtlasCueFooter();
         }
         updateAtlasPassageButtons();
-        updateCorrespondences();
     }
 
     private void showFullAtlasCue(){
@@ -700,42 +691,17 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         caption.setSpan(new StyleSpan(Typeface.ITALIC),passageStart,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         atlasCueFooter.setText(caption);
     }
-
-    private void updateCorrespondences(){
-        if(correspondenceHost==null)return;
-        if(!controlsVisible){correspondenceHost.setVisibility(View.GONE);return;}
-        int s=selected==null?0:selected.getSurah(),a=selected==null?0:selected.getAyah();
-        String unitId=null,passageId=null;
-        int first=a,last=a;
-        if(mapUnitPreview&&atlasPassagePosition>=0&&atlasPassagePosition<atlasPassages.size()){
-            MawdudiPassageIndex.Passage active=atlasPassages.get(atlasPassagePosition);
-            s=active.surah;
-            first=Math.max(active.firstAyah,getIntent().getIntExtra("map114FocusStart",active.firstAyah));
-            last=Math.min(active.lastAyah,getIntent().getIntExtra("map114FocusEnd",active.lastAyah));
-            if(a<first||a>last)a=first;
-            passageId=active.id;
-            if(mapPreviewUnits!=null)unitId=mapPreviewUnits.at(s,first).id;
-        }
-        if(s==0||a==0){correspondenceHost.removeAllViews();correspondenceHost.setVisibility(View.GONE);return;}
-        CorrespondenceEntryPoints.populate(this,correspondenceHost,
-            CorrespondenceEntryPoints.origin(this,CorrespondenceAccess.Surface.LECTURE,
-                mapUnitPreview?"atlas-unit":"lecture",s,a,page,unitId,passageId,
-                "cues:"+semanticCuesEnabled+";focus:"+first+"-"+last,s+":"+a,first,last));
-    }
-
     private void showControls() {
         controlsVisible = true;
         topControls.setVisibility(View.VISIBLE);
         readerActions.setVisibility(View.VISIBLE);
         pageRail.setVisibility(View.VISIBLE);
-        updateCorrespondences();
         scheduleAutoHide();
     }
 
     private void hideControls() {
         if (topControls == null || readerActions == null || pageRail == null) return;
         controlsVisible = false;
-        if(correspondenceHost!=null)correspondenceHost.setVisibility(View.GONE);
         topControls.setVisibility(View.GONE);
         readerActions.setVisibility(View.GONE);
         pageRail.setVisibility(View.GONE);
@@ -1239,7 +1205,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         applySemanticCues();
         updateAtlasCueFooter();
         updateAtlasPassageButtons();
-        updateCorrespondences();
         boolean keepControlsHidden=!controlsVisible;
         if(restoreAtlasTafsir){restoreAtlasTafsir=false;if(selected!=null)openTafsir();}
         if(keepControlsHidden)hideControls();

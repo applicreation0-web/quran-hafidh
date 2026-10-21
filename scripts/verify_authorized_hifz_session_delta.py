@@ -13,11 +13,6 @@ CURRENT_SHA="491aae573afba8bdd5da339a8e15dca8e59661ef"
 if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==CURRENT_SHA:
     print("PASS: exact pinned HifzSessionActivity; second Itqan rotation commit removed")
     raise SystemExit(0)
-# CP06 contextual access: three exact UI insertions only, no engine/timer/persistence delta.
-context_check=subprocess.run(["python3","scripts/verify_correspondence_session_ui_delta.py"],capture_output=True,text=True)
-if context_check.returncode==0:
-    print(context_check.stdout.strip())
-    raise SystemExit(0)
 # CP02-C adds only an independently verified display layer, not new recall holes.
 ui_check=subprocess.run(["python3","scripts/verify_ayah_themes_review_display_delta.py"],capture_output=True,text=True)
 if ui_check.returncode==0:

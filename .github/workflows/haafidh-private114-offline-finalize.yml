@@ -3,7 +3,7 @@ name: Quran Haafidh 114 — private-flag compilation ONLY — no APK
 on:
   push:
     branches:
-      - work/haafidh-1171-atlas-correspondances
+      - work/haafidh-1171-atlas-only-pre20-mask
     paths:
       - .github/workflows/haafidh-private114-offline-finalize.yml
       - scripts/guard_frozen_hifz_engines.sh
@@ -12,11 +12,8 @@ on:
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasSourcePdfActivity.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapData.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapScreen.java
-      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/Correspondence*.java
-      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/Correspondence*Test.java
       # Synthetic parser/pin test changes must re-run the private-flag variant.
       - hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasDisplayCatalogTest.java
-      - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/Correspondence*Test.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java

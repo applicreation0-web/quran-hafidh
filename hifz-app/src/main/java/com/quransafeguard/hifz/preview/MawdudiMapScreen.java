@@ -29,7 +29,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private TextView heading;
  private ScrollView titlePanel;
  private boolean titleExpanded;
- private LinearLayout icons,correspondenceHost;
+ private LinearLayout icons;
  private TextView passageTitle;
  private TextView passageSubtitle;
  private MapQcfThumbnails thumbnails;
@@ -188,9 +188,6 @@ final class MawdudiMapScreen implements MushafView.Listener {
   readerPos.leftMargin=Ui.dp(activity,36);
   icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),readerPos);
   root.addView(icons);
-  correspondenceHost=Ui.row(activity);correspondenceHost.setGravity(Gravity.CENTER);
-  correspondenceHost.setVisibility(View.GONE);
-  root.addView(correspondenceHost);
   activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
   activity.setContentView(root);refresh();
  }
@@ -277,7 +274,6 @@ final class MawdudiMapScreen implements MushafView.Listener {
   graph.requestLayout();graph.invalidate();
   overviewGraph.requestLayout();overviewGraph.invalidate();
   renderPage();
-  updateCorrespondences();
  }
  private void select(int n,int first,int last,String unusedTitle){
   MawdudiMapData.Macro unit=macro();
@@ -295,14 +291,6 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  static String cleanPassageCaption(String original){
   return original==null?"":original.replaceFirst("(?i)^\\s*[a-z]\\)\\s+","").trim();
- }
- private void updateCorrespondences(){
-  if(correspondenceHost==null)return;
-  if(overview){correspondenceHost.removeAllViews();correspondenceHost.setVisibility(View.GONE);return;}
-  CorrespondenceEntryPoints.populate(activity,correspondenceHost,
-      CorrespondenceEntryPoints.origin(activity,CorrespondenceAccess.Surface.ATLAS,"atlas-unit",
-          surah,focusStart,page,macro().id,current().id,
-          "focus:"+focusStart+"-"+focusEnd,""+surah+":"+focusStart,focusStart,focusEnd));
  }
  private void renderPage(){
   mushaf.setVisibility(View.GONE);
