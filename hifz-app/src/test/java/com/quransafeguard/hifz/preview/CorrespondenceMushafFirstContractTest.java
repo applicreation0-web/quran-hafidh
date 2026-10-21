@@ -58,6 +58,16 @@ public final class CorrespondenceMushafFirstContractTest {
   assertTrue(screen.contains("series=\"REPETITION\".equals(active.optString(\"type\"))"));
   assertTrue(screen.contains("renderOccurrenceRail(ranges)"));
  }
+ @Test public void reviewedSuyutiCatalogPreservesHistoricVerseLimits()throws Exception{
+  String screen=code(ROOT+"CorrespondenceMushafActivity.java");
+  assertTrue(screen.contains("correspondences/reviewed_110_v2.json"));
+  assertTrue(screen.contains("HAAFIDH_CORRESPONDENCES_REVIEWED_110_V2"));
+  assertTrue(screen.contains("Focus outside immutable Quranic bounds"));
+  assertTrue(screen.contains("excluded_from_recommendations"));
+  assertTrue(screen.contains("d9867ba3ade9c8902fa98cad76cfe92662a7bfc0a9a30946cdd1707c230c6bb7"));
+  assertTrue("Word-only refrains must not gray full verses",screen.contains("R053"));
+  assertTrue("No whole-ayah false centre",screen.contains("CorrespondenceModel.Type.CENTRE"));
+ }
  @Test public void relationGlyphNeverDisappearsWhenEnteringTwoQcfFolios()throws Exception{
   String screen=code(ROOT+"CorrespondenceMushafActivity.java");
   String entry=code(ROOT+"CorrespondenceEntryPoints.java");
