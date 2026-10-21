@@ -41,7 +41,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  private LinearLayout folios,relationButtons;
  private HorizontalScrollView strip;
  private CorrespondenceQcfSurface[] visible;
- private int page,seriesOrdinal,referenceWindow;
+ private int page,seriesOrdinal,referenceWindow,alternanceRole;
  private boolean seriesCompare;
  private JSONObject active;
 
@@ -64,6 +64,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   if(id!=null)for(JSONObject entry:historic)if(id.equals(entry.optString("id"))){active=entry;break;}
   seriesOrdinal=saved==null?0:saved.getInt("occurrence",0);
   referenceWindow=saved==null?0:saved.getInt("referenceWindow",0);
+  alternanceRole=saved==null?0:saved.getInt("alternanceRole",0);
   seriesCompare=saved!=null&&saved.getBoolean("seriesCompare",false);
   build();
  }
@@ -192,6 +193,8 @@ public final class CorrespondenceMushafActivity extends Activity {
  }
  private void addRelationNode(JSONObject row){
   String type=row.optString("type","");
+  // R033 depicts a non-certified CENTRE study without modifying its source type.
+  if("R033".equals(row.optString("id")))type="CENTRE";
   boolean approved=runtime!=null&&runtime.find(row.optString("id"))!=null;
   LinearLayout cell=Ui.column(this);cell.setGravity(Gravity.CENTER);
   cell.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);
@@ -204,13 +207,13 @@ public final class CorrespondenceMushafActivity extends Activity {
    TextView unknown=Ui.text(this,"?",19,true);unknown.setGravity(Gravity.CENTER);
    cell.addView(unknown,new LinearLayout.LayoutParams(Ui.dp(this,40),Ui.dp(this,39)));
   }
-  TextView id=Ui.text(this,row.optString("id")+(approved?" ✓":" · proposé"),10,false);
+  TextView id=Ui.text(this,row.optString("id")+(approved?" ✓":("R033".equals(row.optString("id"))?" · étude":" · proposé")),10,false);
   id.setGravity(Gravity.CENTER);id.setSingleLine(true);
   cell.addView(id,new LinearLayout.LayoutParams(-1,Ui.dp(this,26)));
   cell.setContentDescription(row.optString("id")+" · "+type+
       (approved?" · vérifiée":" · proposition non certifiée"));
   cell.setFocusable(true);cell.setClickable(true);
-  cell.setOnClickListener(v->{active=row;seriesOrdinal=0;referenceWindow=0;seriesCompare=false;showActive();});
+  cell.setOnClickListener(v->{active=row;seriesOrdinal=0;referenceWindow=0;alternanceRole=0;seriesCompare=false;remembered.clear();showActive();});
   relationButtons.addView(cell,new LinearLayout.LayoutParams(Ui.dp(this,108),Ui.dp(this,73)));
  }
  private void showActive(){
@@ -219,6 +222,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   if(ranges==null||ranges.length()==0){returnToPage();return;}
   seriesOrdinal=Math.max(0,Math.min(ranges.length()-1,seriesOrdinal));
   referenceWindow=Math.max(0,Math.min(ranges.length()-1,referenceWindow));
+  if(isFourRoleAlternance(ranges)){showFourRoleAlternance(ranges);return;}
   release();
   boolean series="REPETITION".equals(active.optString("type"))
       &&ranges.length()>2;
@@ -257,6 +261,55 @@ public final class CorrespondenceMushafActivity extends Activity {
       :active.optString("title")+" · "+
        (series?(seriesOrdinal+1)+"/"+ranges.length():"folio(s) QCF originaux"));
   if(series)renderOccurrenceRail(ranges);else renderComparisonRail(ranges);
+ }
+ /** Four QCF verses (A–B–A′–B′) are independent, never falsely
+  * merged into one pair of generic gray blocks. Their type remains proposed. */
+ private boolean isFourRoleAlternance(JSONArray ranges){
+  if(active==null||!"ALTERNANCE".equals(active.optString("type"))
+      ||ranges==null||ranges.length()!=2)return false;
+  JSONObject a=ranges.optJSONObject(0),b=ranges.optJSONObject(1);
+  return a!=null&&b!=null&&a.optInt("end")==a.optInt("start")+1
+     &&b.optInt("end")==b.optInt("start")+1
+     &&b.optInt("start")==a.optInt("end")+1&&samePhysicalPage(a,b);
+ }
+ private void showFourRoleAlternance(JSONArray ranges){
+  alternanceRole=Math.max(0,Math.min(3,alternanceRole));
+  release();
+  JSONObject a=ranges.optJSONObject(0),b=ranges.optJSONObject(1);
+  JSONObject current=alternanceRole<2?a:b;
+  if(current==null){returnToPage();return;}
+  int surah=current.optInt("surah"),verse=current.optInt("start")+alternanceRole%2;
+  if(surah<1||surah>114||verse<1||verse>QuranCanon.INSTANCE.ayahCount(surah)){
+   returnToPage();return;
+  }
+  int p=geometry.pageForVerse(new VerseRef(surah,verse));
+  int before=verse>1?verse-1:0,after=verse<QuranCanon.INSTANCE.ayahCount(surah)?verse+1:0;
+  CorrespondenceDocument.Focus focus=new CorrespondenceDocument.Focus(surah,verse,verse,
+      after,before,p,p,p,true);
+  CorrespondenceQcfSurface view=new CorrespondenceQcfSurface(this);
+  visible=new CorrespondenceQcfSurface[]{view};
+  folios.addView(view,new LinearLayout.LayoutParams(0,-1,1));
+  view.show(focus,null);
+  location.setText(active.optString("id")+" · "+ref(current));
+  shortLink.setText("Alternance · "+ref(a)+" ↔ "+ref(b)+" · proposé");
+  caption.setText("Lecture hypothétique A–B–A′–B′ · "+surah+":"+verse);
+  relationButtons.removeAllViews();
+  String[] labels={"A","B","A′","B′"};
+  for(int i=0;i<4;i++){
+   final int next=i;
+   LinearLayout cell=Ui.column(this);cell.setGravity(Gravity.CENTER);
+   TextView letter=Ui.text(this,labels[i],14,i==alternanceRole);letter.setGravity(Gravity.CENTER);
+   TextView number=Ui.text(this,surah+":"+(a.optInt("start")+i),10,false);number.setGravity(Gravity.CENTER);
+   cell.addView(letter);cell.addView(number);
+   if(i==alternanceRole){
+    GradientDrawable ring=new GradientDrawable();ring.setColor(Ui.PAPER);
+    ring.setStroke(Ui.dp(this,2),Ui.INK);ring.setCornerRadius(Ui.dp(this,22));
+    cell.setBackground(ring);
+   }
+   cell.setFocusable(true);cell.setClickable(true);
+   cell.setOnClickListener(v->{alternanceRole=next;showFourRoleAlternance(ranges);});
+   relationButtons.addView(cell,new LinearLayout.LayoutParams(0,Ui.dp(this,72),1));
+  }
  }
  private boolean samePhysicalPage(JSONObject a,JSONObject b){
   if(a==null||b==null||a.optInt("surah")!=b.optInt("surah"))return false;
@@ -391,6 +444,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   if(active!=null)state.putString("relation",active.optString("id"));
   state.putInt("occurrence",seriesOrdinal);
   state.putInt("referenceWindow",referenceWindow);
+  state.putInt("alternanceRole",alternanceRole);
   state.putBoolean("seriesCompare",seriesCompare);
   super.onSaveInstanceState(state);
  }
