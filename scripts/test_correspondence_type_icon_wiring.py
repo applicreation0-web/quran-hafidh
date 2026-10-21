@@ -38,6 +38,14 @@ class CorrespondenceTypeIconWiringTest(unittest.TestCase):
         for suffix, _ in CONTRACT.values():
             self.assertTrue((DRAWABLE / ("ic_corr_relation_" + suffix + ".xml")).is_file())
 
+    def test_unapproved_historical_rows_never_borrow_certified_icons(self):
+        directory = (JAVA / "CorrespondenceDirectoryActivity.java").read_text(encoding="utf-8")
+        # A proposed classification is not a certified relation or icon.
+        self.assertIn("CorrespondenceModel.Type iconType=approved==null?null:approved.type;", directory)
+        self.assertIn("icon.setImageResource(type==null?R.drawable.ic_ui_info:CorrespondenceScreen.icon(type))", directory)
+        # A dossier with no valid original references must not offer a dead QCF action.
+        self.assertIn("if(refs!=null&&refs.length()>0&&refs.length()<=40)", directory)
+
     def test_original_eight_svgs_have_unchanged_manifest_hash(self):
         hashes = dict(re.findall(r"(\S+\.svg)\s+SHA256\s+([a-f0-9]{64})",
                                  (SVG / "MANIFEST_SHA256.txt").read_text(encoding="utf-8")))
