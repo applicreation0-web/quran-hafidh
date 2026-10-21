@@ -158,8 +158,9 @@ public final class CorrespondenceDirectoryActivity extends Activity {
     }
     private void addEntry(JSONObject entry,String id,String title,String type,String refs){
         CorrespondenceModel.Relation approved=runtime.find(id);
-        CorrespondenceModel.Type iconType=null;
-        try{iconType=CorrespondenceModel.Type.valueOf(type);}catch(Exception ignored){}
+        // Only a verified, runtime-admitted relation earns its contractual icon.
+        // A historical proposal keeps the neutral information pictogram.
+        CorrespondenceModel.Type iconType=approved==null?null:approved.type;
         String status=approved!=null?"CONSULTABLE":entry.optString("status").equals("NON_RÉSOLU")?"TYPE NON ÉTABLI":"TYPE PROPOSÉ";
         appendRow(id+" · "+title,refs+" · "+status,iconType,()->{
             if(approved!=null)openApproved(approved);else details(entry);
@@ -207,10 +208,16 @@ public final class CorrespondenceDirectoryActivity extends Activity {
             "\n\n"+entry.optString("reason","")+
             "\n\nSource : "+entry.optString("source","Registre documentaire")+
             "\n\nDossier historique : relation non activée dans le lecteur.";
-        new AlertDialog.Builder(this).setTitle(entry.optString("id")+" · "+entry.optString("title"))
+        AlertDialog.Builder dialog=new AlertDialog.Builder(this)
+            .setTitle(entry.optString("id")+" · "+entry.optString("title"))
             .setMessage(message)
-            .setPositiveButton("Comparer les pages QCF",(dialog,which)->startActivity(new Intent(this,CorrespondenceReferenceActivity.class).putExtra("relationId",entry.optString("id"))))
-            .setNegativeButton("Fermer",null).show();
+            .setNegativeButton("Fermer",null);
+        // Some historical dossiers have no displayable original range.
+        // Never present an action that would lead to an empty/fatal QCF reader.
+        if(refs!=null&&refs.length()>0&&refs.length()<=40)
+            dialog.setPositiveButton("Comparer les pages QCF",(ignored,which)->startActivity(
+                new Intent(this,CorrespondenceReferenceActivity.class).putExtra("relationId",entry.optString("id"))));
+        dialog.show();
     }
     private void chooseReference(JSONArray refs){
         if(refs==null||refs.length()==0)return;
