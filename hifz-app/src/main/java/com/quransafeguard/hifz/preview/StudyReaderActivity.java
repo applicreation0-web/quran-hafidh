@@ -62,6 +62,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private VerseRef pendingJumpVerse;
     private Button tafsirButton;
     private Button semanticButton;
+    /** Lecture-only, opt-in Révision active gomme: no timer, validation or Hifz writes. */
+    private Button freeActiveMaskButton;
+    private boolean freeActiveMask;
+    private boolean freeActiveMaskPageReady;
     private AyahThemesCueIndex ayahThemesCues;
     private boolean semanticCuesEnabled;
     private android.app.Dialog semanticTitleDialog;
@@ -157,6 +161,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 .getBoolean("ayah_themes_start_markers_visible",true));
 
         if(state!=null){
+            freeActiveMask=ayahThemesCues!=null&&state.getBoolean("readerFreeActiveMask",false);
             semanticCuesEnabled=ayahThemesCues!=null&&state.getBoolean("map114SemanticCues",semanticCuesEnabled);
             controlsVisible=state.getBoolean("map114ControlsVisible",true);
             restoreAtlasTafsir=state.getBoolean("map114TafsirOpen",false);
@@ -225,6 +230,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticButton = Ui.iconButton(this, "", "Afficher les ancres", v -> toggleSemanticCues());
         semanticButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
+        // One discreet access point, using the existing Révision pictogram.
+        // The 100% mask only affects the current Lecture surface.
+        freeActiveMaskButton=Ui.iconButton(this,"","Masque Révision active libre",
+            v -> toggleFreeActiveMask());
+        Ui.setButtonIcon(freeActiveMaskButton,R.drawable.ic_ui_revision);
+        freeActiveMaskButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
+        readerActions.addView(freeActiveMaskButton);
+        updateFreeActiveMaskButton();
         if(mapUnitPreview){
             atlasPassageUp=Ui.iconButton(this,"","Passage vers le haut",v->moveAtlasPassage(-1));
             atlasPassageDown=Ui.iconButton(this,"","Passage vers le bas",v->moveAtlasPassage(1));
@@ -397,6 +410,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (!mapPreview) getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         updateSurahPickerLabel();
         updateRubPickerLabel();
+        if(freeActiveMask){
+            // Never carry old-page anchor geometry into the next QCF folio.
+            mushaf.clearPageLandmarkBoxes();
+            mushaf.clearSemanticCues();
+        }
         if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         showControls();
     }
@@ -418,14 +436,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             for(int k=0;k<atlasPassages.size();k++){
                 MawdudiPassageIndex.Passage candidate=atlasPassages.get(k);
                 if(candidate.surah==verse.getSurah()&&candidate.contains(verse.getAyah())){
-                    atlasPassagePosition=k;showMap114Focus();updateAtlasCueFooter();
+                    atlasPassagePosition=k;if(!freeActiveMask)showMap114Focus();updateAtlasCueFooter();
                     updateAtlasPassageButtons();break;
                 }
             }
         }
         selected = verse;
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
-        if(!mapUnitPreview)mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
+        if(!mapUnitPreview&&!freeActiveMask)mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
         updateCorrespondences();
         refreshOpenTafsir(verse);
         if (tafsirWasOpen && !largeScreen) hideControls(); else showControls();
@@ -437,7 +455,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (controlsVisible) hideControls(); else showControls();
     }
     @Override public void onSemanticCueTap(String passageId) {
-        if(!semanticCuesEnabled||ayahThemesCues==null){closeSemanticTitle();return;}
+        if((!semanticCuesEnabled&&!freeActiveMask)||ayahThemesCues==null){closeSemanticTitle();return;}
         // A title is shown only for a real first-word anchor on this QCF page.
         String label=ayahThemesCues.titleForVisibleStart(page,passageId);
         if(label==null){closeSemanticTitle();return;}
@@ -494,6 +512,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void applySemanticCues() {
         if (mushaf == null) return;
+        if(freeActiveMask){applyFreeActiveMask();return;}
         if(!semanticCuesEnabled||ayahThemesCues==null){
             mushaf.clearSemanticCues();
             return;
@@ -514,6 +533,79 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             mushaf.setSemanticCues(active,false,true);
         }
         else mushaf.setSemanticCues(ayahThemesCues.forPage(page),false,true);
+    }
+
+    /** Read-only reproduction of the *existing* Révision active word-hole mask.
+     * No session is created, no counters/cursors are advanced and no prefs are changed.
+     * All masking is disabled if any authentic word anchor is unverifiable.
+     */
+    private void applyFreeActiveMask() {
+        freeActiveMaskPageReady=false;
+        org.json.JSONArray landmarks=new org.json.JSONArray();
+        org.json.JSONArray anchors=new org.json.JSONArray();
+        try {
+            if(ayahThemesCues!=null) {
+                landmarks=WordGeometryRepository.shared(this).pageLandmarkBoxes(page);
+                anchors=ayahThemesCues.forPage(page);
+                if(landmarks.length()==6) {
+                    freeActiveMaskPageReady=true;
+                    for(int i=0;i<anchors.length();i++) {
+                        org.json.JSONObject cue=anchors.getJSONObject(i);
+                        if(cue.getInt("anchorWordCount")!=1
+                           ||cue.getJSONArray("boxes").length()!=1
+                           ||cue.getString("id").isEmpty()) {
+                            freeActiveMaskPageReady=false;break;
+                        }
+                    }
+                }
+            }
+        } catch(Exception unavailable) {
+            freeActiveMaskPageReady=false;
+        }
+        mushaf.setMaskFollowsSelection(false);
+        mushaf.setLandmarkLines(null,null);
+        if(freeActiveMaskPageReady) {
+            mushaf.setPageLandmarkBoxes(landmarks);
+            mushaf.setSemanticCues(anchors,true,false);
+            mushaf.setMask(100);
+        } else {
+            // Identical fail-open rule to scheduled Révision active: do not cover
+            // the Quran when source-first-word geometry is incomplete.
+            mushaf.setMask(0);
+            mushaf.clearPageLandmarkBoxes();
+            mushaf.clearSemanticCues();
+        }
+        updateFreeActiveMaskButton();
+    }
+
+    private void toggleFreeActiveMask() {
+        if(ayahThemesCues==null)return;
+        freeActiveMask=!freeActiveMask;
+        freeActiveMaskPageReady=false;
+        closeSemanticTitle();
+        mushaf.clearReveal();
+        mushaf.setMask(0);
+        mushaf.clearPageLandmarkBoxes();
+        mushaf.clearSemanticCues();
+        mushaf.setMaskFollowsSelection(!freeActiveMask);
+        mushaf.setMaskEntropy(hifzPrefs.maskEntropyFor(freeActiveMask
+            ?HifzSessionActivity.MURAJAAH_ACTIVE:"reader_default"));
+        updateFreeActiveMaskButton();
+        // Repaint the same original QCF folio without Atlas focus overlays.
+        // On-page-shown installs exact holes *before* enabling the 100% mask.
+        if(freeActiveMask||!showMap114Focus())
+            mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
+        showControls();
+    }
+
+    private void updateFreeActiveMaskButton() {
+        if(freeActiveMaskButton==null)return;
+        freeActiveMaskButton.setSelected(freeActiveMask);
+        Ui.setIconDescription(freeActiveMaskButton,freeActiveMask
+            ?(freeActiveMaskPageReady
+                ?"Désactiver le masque libre · gommer sauf amorces et repères"
+                :"Désactiver le masque libre · repères indisponibles sur cette page")
+            :"Masque libre · Révision active, gommer sauf amorces");
     }
 
     private void selectAtlasPassageOnPage(int nextPage){
@@ -1053,6 +1145,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     /** Atlas uses the existing Sabqi/Itqan context veil, scoped to the active genuine passage. */
     private boolean showMap114Focus() {
+        if(freeActiveMask)return false; // no Atlas fade-away behind the free recall mask
         if(mapUnitPreview) {
             int surah=getIntent().getIntExtra("map114Surah",0);
             int unitFirst=getIntent().getIntExtra("map114FocusStart",0);
@@ -1110,6 +1203,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         out.putInt("map114ReaderPage",page);
         out.putString("map114SelectedVerse",selected==null?null:selected.getSurah()+":"+selected.getAyah());
         out.putBoolean("map114SemanticCues",semanticCuesEnabled);
+        out.putBoolean("readerFreeActiveMask",freeActiveMask);
         out.putBoolean("map114ControlsVisible",controlsVisible);
         out.putBoolean("map114TafsirOpen",isTafsirOpen());
         if(atlasPassagePosition>=0&&atlasPassagePosition<atlasPassages.size())
@@ -1119,10 +1213,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     @Override public void onReady() {
+        if(freeActiveMask){
+            mushaf.setMaskFollowsSelection(false);
+            mushaf.setMaskEntropy(hifzPrefs.maskEntropyFor(HifzSessionActivity.MURAJAAH_ACTIVE));
+        }
         if (pendingJumpVerse != null) {
             selected = pendingJumpVerse;
             tafsirButton.setContentDescription("Tafsir " + pendingJumpVerse.getSurah() + ":" + pendingJumpVerse.getAyah());
-            if(!showMap114Focus())mushaf.show(page, Collections.singletonList(pendingJumpVerse), Collections.emptyList(), 0);
+            if(!showMap114Focus())mushaf.show(page, freeActiveMask?Collections.emptyList():Collections.singletonList(pendingJumpVerse), Collections.emptyList(), 0);
             pendingJumpVerse = null;
         } else {
             if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
