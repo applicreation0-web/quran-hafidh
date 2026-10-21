@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/haafidh-boox-private-debug-staging.yml'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceDirectoryActivity.java'
+      - 'hifz-app/src/main/AndroidManifest.xml'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasFinalizationSourceContractTest.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/UiIconMappingTest.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceRuntime.java'
