@@ -9,6 +9,7 @@ on:
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceDirectoryActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceReferenceActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapScreen.java'
       - 'hifz-app/src/main/AndroidManifest.xml'
       - 'scripts/guard_frozen_hifz_engines.sh'
       - 'scripts/audit_hifz_quiz_against_1171.sh'
