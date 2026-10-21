@@ -64,7 +64,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   page=clamp(saved==null?getIntent().getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,previous)
       :saved.getInt("folio",previous));
   String id=saved==null?getIntent().getStringExtra("relationId"):saved.getString("relation");
-  if(id!=null)for(JSONObject entry:historic)if(id.equals(entry.optString("id"))&&CorrespondenceEligibility.retainedForDiscovery(
+  if(id!=null)for(JSONObject entry:historic)if(id.equals(entry.optString("id"))&&retainedForDiscovery(
       entry.optString("documentary_status",""),entry.optBoolean("excluded_from_recommendations",false))){active=entry;break;}
   seriesOrdinal=saved==null?0:saved.getInt("occurrence",0);
   referenceWindow=saved==null?0:saved.getInt("referenceWindow",0);
@@ -97,6 +97,11 @@ public final class CorrespondenceMushafActivity extends Activity {
   return range.optInt("surah")+":"+first+(first==last?"":"–"+last);
  }
  private JSONArray refs(JSONObject row){return row.optJSONArray("refs");}
+ private static boolean retainedForDiscovery(String status,boolean excluded){
+  // Only the original 80 historically retained dossiers belong to the UI.
+  // The 24 pending and six rejected remain immutable inside the private archive.
+  return "RETENUE_DOCUMENTÉE".equals(status)&&!excluded;
+ }
  private static boolean classified(String value){
   if(value==null)return false;
   try{CorrespondenceModel.Type.valueOf(value);return true;}
@@ -149,7 +154,7 @@ public final class CorrespondenceMushafActivity extends Activity {
    }
    // Rejected and unclassified hypotheses remain accessible only by exact ID;
    // never offer an unsupported pictogram on an unrelated page.
-   if(!CorrespondenceEligibility.retainedForDiscovery(historicStatus,
+   if(!retainedForDiscovery(historicStatus,
        e.optBoolean("excluded_from_recommendations",false)))continue;
    JSONArray ranges=refs(e);if(ranges==null||ranges.length()==0)
     throw new IllegalArgumentException("Missing original reference bounds");
@@ -646,7 +651,7 @@ public final class CorrespondenceMushafActivity extends Activity {
        String value=field.getText().toString().trim().toUpperCase(Locale.ROOT);
        if(value.matches("R[0-9]{3}")){
         for(JSONObject row:historic)if(value.equals(row.optString("id"))
-         &&CorrespondenceEligibility.retainedForDiscovery(row.optString("documentary_status",""),
+         &&retainedForDiscovery(row.optString("documentary_status",""),
              row.optBoolean("excluded_from_recommendations",false))){
          active=row;seriesOrdinal=0;referenceWindow=0;seriesCompare=false;showActive();return;
         }

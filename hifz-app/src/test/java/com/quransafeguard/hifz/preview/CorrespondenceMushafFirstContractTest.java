@@ -66,9 +66,9 @@ public final class CorrespondenceMushafFirstContractTest {
  @Test public void onlyOriginalEightyAppearInVisualExplorerOrDirectSearch()throws Exception{
   String screen=code(ROOT+"CorrespondenceMushafActivity.java");
   assertTrue(screen.contains("retainedCount!=80||pendingCount!=24||rejectedCount!=6"));
-  assertTrue(screen.contains("CorrespondenceEligibility.retainedForDiscovery(historicStatus,"));
-  assertTrue(screen.contains("CorrespondenceEligibility.retainedForDiscovery(row.optString("));
-  assertTrue(screen.contains("CorrespondenceEligibility.retainedForDiscovery("));
+  assertTrue(screen.contains("retainedForDiscovery(historicStatus,"));
+  assertTrue(screen.contains("retainedForDiscovery(row.optString("));
+  assertTrue(screen.contains("retainedForDiscovery("));
  }
  @Test public void reviewedSuyutiCatalogPreservesHistoricVerseLimits()throws Exception{
   String screen=code(ROOT+"CorrespondenceMushafActivity.java");
