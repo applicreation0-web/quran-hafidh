@@ -109,12 +109,14 @@ expected = {
     "Retirer le repère":"ic_ui_annotation_erase",
 }
 expected.update({
+    "Ancre":"ic_ui_semantic_anchor",
     "Masquer les ancres":"ic_ui_semantic_anchor",
-    "Afficher les amorces":"ic_ui_semantic_anchor",
-    "Masquer les amorces":"ic_ui_semantic_anchor",
+    "Afficher les amorces":"ic_ui_recall_key",
+    "Masquer les amorces":"ic_ui_recall_key",
 })
-check('if (s.contains("ancre") || s.contains("amorce")) return R.drawable.ic_ui_semantic_anchor;' in UI,
-      "Ancres and legacy Amorces aliases must use the same anchor icon")
+check('if (s.contains("ancre")) return R.drawable.ic_ui_semantic_anchor;' in UI
+      and 'if (s.contains("amorce")) return R.drawable.ic_ui_recall_key;' in UI,
+      "Only Ancre uses the anchor glyph; frozen Amorces must keep their key-round icon")
 check(all(roles.get(role)==image for role,image in expected.items()),
       "contract icon role drift in C22 fixture")
 for line in ('if (s.contains("supprimer")) return R.drawable.ic_ui_annotation_erase;',
