@@ -17,6 +17,7 @@
         <!-- Canonical user-facing Atlas; legacy activity remains internal for regression migration. -->
         <activity android:name=".AtlasMapActivity" android:exported="false" />
         <activity android:name=".CorrespondenceActivity" android:exported="false" />
+        <activity android:name=".CorrespondenceDirectoryActivity" android:exported="false" />
         <activity android:name=".AtlasSourcePdfActivity" android:exported="false" />
         <activity
             android:name=".HifzSessionActivity"
