@@ -44,7 +44,12 @@ public final class CorrespondenceMushafFirstContractTest {
  @Test public void twoFoliosOnlyWhenPhysicalLocationsDiffer()throws Exception{
   String screen=code(ROOT+"CorrespondenceMushafActivity.java");
   assertTrue(screen.contains("int secondary=series?(begin+1)%ranges.length():begin+1;"));
-  assertTrue(screen.contains("int count=samePage?1:requested;"));
+  assertTrue(screen.contains("int count=samePage?1:canExpand&&comparisonExpanded?1:requested;"));
+  assertTrue(screen.contains("comparisonPane=1-comparisonPane"));
+  assertTrue(screen.contains("visiblePositions[i]=position"));
+  assertTrue(screen.contains("renderCentreRail()"));
+  assertTrue(screen.contains("showTypeExplorer()"));
+  assertTrue(screen.contains("addNearestPage("));
   assertTrue(screen.contains("focus=samePage"));
   assertTrue(screen.contains("combined.focalRanges=discrete"));
   assertTrue(screen.contains("remembered.get(position)"));
