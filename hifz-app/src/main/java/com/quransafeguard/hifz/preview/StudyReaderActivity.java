@@ -1220,7 +1220,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (pendingJumpVerse != null) {
             selected = pendingJumpVerse;
             tafsirButton.setContentDescription("Tafsir " + pendingJumpVerse.getSurah() + ":" + pendingJumpVerse.getAyah());
-            if(!showMap114Focus())mushaf.show(page, freeActiveMask?Collections.emptyList():Collections.singletonList(pendingJumpVerse), Collections.emptyList(), 0);
+            if(!showMap114Focus()) {
+                if(freeActiveMask)mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
+                else mushaf.show(page, Collections.singletonList(pendingJumpVerse), Collections.emptyList(), 0);
+            }
             pendingJumpVerse = null;
         } else {
             if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
