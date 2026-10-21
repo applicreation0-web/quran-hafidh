@@ -201,6 +201,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   root.addView(folios,new LinearLayout.LayoutParams(-1,0,1));
   caption=Ui.text(this,"",11,false);caption.setGravity(Gravity.CENTER);
   caption.setPadding(Ui.dp(this,8),Ui.dp(this,3),Ui.dp(this,8),Ui.dp(this,5));
+  caption.setMaxLines(2);
   root.addView(caption,new LinearLayout.LayoutParams(-1,Ui.dp(this,39)));
   setContentView(root);
   if(active==null)showPlainPage(page);else showActive();
@@ -227,6 +228,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  }
  private void renderPageLinks(){
   relationButtons.removeAllViews();
+  strip.setVisibility(View.VISIBLE);
   if(!privateRegistryVerified){
    shortLink.setText("Catalogue privé indisponible · lecture QCF uniquement");
    TextView warning=Ui.text(this,"Correspondances non chargées — intégrité à vérifier",11,true);
@@ -236,8 +238,7 @@ public final class CorrespondenceMushafActivity extends Activity {
   }
   List<JSONObject> links=byPage.get(page);
   if(links==null||links.isEmpty()){
-   TextView empty=Ui.text(this,"Aucune correspondance documentée sur cette page",11,false);
-   empty.setPadding(Ui.dp(this,12),0,0,0);relationButtons.addView(empty);
+   strip.setVisibility(View.GONE);
    shortLink.setText("Page "+page+" · aucune relation répertoriée");
    return;
   }
@@ -270,6 +271,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  private void showActive(){
   if(active==null){showPlainPage(page);return;}
   setActiveGlyph(active);
+  strip.setVisibility(View.VISIBLE);
   JSONArray ranges=refs(active);
   if(ranges==null||ranges.length()==0){returnToPage();return;}
   seriesOrdinal=Math.max(0,Math.min(ranges.length()-1,seriesOrdinal));
