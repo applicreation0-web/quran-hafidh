@@ -54,7 +54,8 @@ final class CorrespondenceQcfSurface extends LinearLayout {
   settings.setBlockNetworkLoads(true);settings.setBlockNetworkImage(true);settings.setDomStorageEnabled(false);
   settings.setSupportMultipleWindows(false);settings.setSaveFormData(false);
   settings.setSupportZoom(true);settings.setBuiltInZoomControls(true);settings.setDisplayZoomControls(false);
-  settings.setUseWideViewPort(false);settings.setLoadWithOverviewMode(false);
+  // Match the actual narrow split pane rather than a 980px virtual desktop viewport.
+   settings.setUseWideViewPort(true);settings.setLoadWithOverviewMode(true);
   web.setOverScrollMode(View.OVER_SCROLL_NEVER);
   web.setWebViewClient(new WebViewClient(){
    @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){return true;}
@@ -118,7 +119,9 @@ final class CorrespondenceQcfSurface extends LinearLayout {
   if(Math.abs(factor-1f)>0.01f)web.zoomBy(factor);
   web.scrollTo(target.x,target.y);viewportIntent.complete(token);
  }
- private float zoom(){return Math.max(0.1f,web.getScale()/getResources().getDisplayMetrics().density);}
+ // WebView.getScale already includes the current page scale. Dividing by screen
+  // density multiplied restored zoom on BOOX, clipping both edges of QCF folios.
+  private float zoom(){return Math.max(0.1f,web.getScale());}
  private void step(int delta){
   if(disposed||focus==null||loading)return;
   int target=page+delta;if(target<focus.firstPage||target>focus.lastPage)return;
@@ -141,7 +144,9 @@ final class CorrespondenceQcfSurface extends LinearLayout {
     String html=CorrespondenceDocument.html(rendered.svg);
     web.post(()->{
      if(disposed||generation!=request)return;
-     restore=state;web.setInitialScale(Math.max(1,Math.round(state.zoom*100)));
+     // A new QCF folio is always fit-to-pane; explicit user zoom is restored
+      // only after its document has finished loading.
+      restore=state;web.setInitialScale(0);
      // Synthetic document identity only: no request is made to this reserved host.
      // It lets onPageFinished reject an older page after a fast occurrence change.
      expectedDocument="https://qcf.invalid/document/"+request;
