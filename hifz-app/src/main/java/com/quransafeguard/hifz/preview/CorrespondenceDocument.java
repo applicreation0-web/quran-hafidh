@@ -36,6 +36,7 @@ final class CorrespondenceDocument {
  static final class Focus {
   final int surah,first,last,normalNeighbor,previousNeighbor,firstPage,lastPage,initialPage;
   final boolean supported;
+  boolean plainPage; // original folio with no editorial focus
   java.util.List<CorrespondenceModel.SegmentBox> segmentBoxes=java.util.Collections.emptyList();
   /** Disjoint source-attested verse ranges: never manufacture gray focus over the gaps. */
   java.util.List<CorrespondenceModel.VerseRange> focalRanges=java.util.Collections.emptyList();
@@ -43,6 +44,11 @@ final class CorrespondenceDocument {
    surah=s;first=a;last=b;normalNeighbor=n;previousNeighbor=previous;
    firstPage=fp;lastPage=lp;initialPage=ip;this.supported=supported;
   }
+ }
+ static Focus plainPage(int page){
+  if(page<1||page>604)throw new IllegalArgumentException("Invalid QCF page");
+  Focus f=new Focus(0,0,0,0,0,1,604,page,true);
+  f.plainPage=true;return f;
  }
  static Focus focus(CorrespondenceModel.Relation relation,int pane,int occurrence,CorrespondenceModel.Geometry geometry){
   if(relation.type==CorrespondenceModel.Type.CENTRE){
@@ -94,6 +100,7 @@ final class CorrespondenceDocument {
   Render(String svg,boolean verified){this.svg=svg;focusVerified=verified;}
  }
  static Render render(String svg,Focus focus,int page){
+  if(focus.plainPage)return new Render(CorrespondenceSvgFocus.untouched(svg),true);
   if(!focus.supported)return new Render(CorrespondenceSvgFocus.untouched(svg),false);
   String rendered;
   if(!focus.segmentBoxes.isEmpty()){
