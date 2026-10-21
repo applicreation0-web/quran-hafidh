@@ -9,6 +9,8 @@ on:
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceDirectoryActivity.java'
       - 'hifz-app/src/main/AndroidManifest.xml'
+      - 'scripts/guard_frozen_hifz_engines.sh'
+      - 'scripts/audit_hifz_quiz_against_1171.sh'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasFinalizationSourceContractTest.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/UiIconMappingTest.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceRuntime.java'
