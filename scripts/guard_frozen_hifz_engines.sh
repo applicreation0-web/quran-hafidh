@@ -126,6 +126,7 @@ while IFS= read -r file; do
     "$APP_ROOT/CorrespondenceRuntime.java" | \
     "$APP_ROOT/CorrespondenceEntryPoints.java" | \
     "$APP_ROOT/CorrespondenceActivity.java" | \
+    "$APP_ROOT/CorrespondenceDirectoryActivity.java" | \
     "$APP_ROOT/AyahThemesCueIndex.java" | \
     "$APP_ROOT/AyahThemesReviewDisplay.java" | \
     "$APP_ROOT/PrivateDisplayIntegrity.java" | \
