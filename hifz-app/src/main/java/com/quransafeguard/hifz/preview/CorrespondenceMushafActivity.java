@@ -38,6 +38,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  private GeometryRepository geometry;
  private CorrespondenceRuntime runtime;
  private TextView location,caption,shortLink;
+ private ImageView selectedGlyph;
  private LinearLayout folios,relationButtons;
  private HorizontalScrollView strip;
  private CorrespondenceQcfSurface[] visible;
@@ -162,9 +163,16 @@ public final class CorrespondenceMushafActivity extends Activity {
   root.addView(toolbar,new LinearLayout.LayoutParams(-1,Ui.dp(this,56)));
   root.addView(Ui.divider(this));
 
+  LinearLayout relationHeading=Ui.row(this);relationHeading.setGravity(Gravity.CENTER_VERTICAL);
+  selectedGlyph=new ImageView(this);
+  selectedGlyph.setImageTintList(null);
+  selectedGlyph.setPadding(Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4));
+  selectedGlyph.setVisibility(View.GONE);
+  relationHeading.addView(selectedGlyph,new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,42)));
   shortLink=Ui.text(this,"",12,false);shortLink.setGravity(Gravity.CENTER);
   shortLink.setPadding(Ui.dp(this,5),Ui.dp(this,6),Ui.dp(this,5),Ui.dp(this,6));
-  root.addView(shortLink,new LinearLayout.LayoutParams(-1,Ui.dp(this,42)));
+  relationHeading.addView(shortLink,new LinearLayout.LayoutParams(0,Ui.dp(this,42),1));
+  root.addView(relationHeading,new LinearLayout.LayoutParams(-1,Ui.dp(this,42)));
   strip=new HorizontalScrollView(this);strip.setHorizontalScrollBarEnabled(false);
   strip.setFillViewport(false);
   relationButtons=Ui.row(this);relationButtons.setGravity(Gravity.CENTER_VERTICAL);
@@ -182,6 +190,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  private void showPlainPage(int wanted){
   page=clamp(wanted);
   active=null;seriesCompare=false;
+  setActiveGlyph(null);
   release();
   location.setText("Page courante · p. "+page);
   shortLink.setText("Relations de la page · "+byPage.getOrDefault(page,new ArrayList<>()).size());
@@ -244,6 +253,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  }
  private void showActive(){
   if(active==null){showPlainPage(page);return;}
+  setActiveGlyph(active);
   JSONArray ranges=refs(active);
   if(ranges==null||ranges.length()==0){returnToPage();return;}
   seriesOrdinal=Math.max(0,Math.min(ranges.length()-1,seriesOrdinal));
@@ -305,6 +315,7 @@ public final class CorrespondenceMushafActivity extends Activity {
      &&b.optInt("start")==a.optInt("end")+1&&samePhysicalPage(a,b);
  }
  private void showFourRoleAlternance(JSONArray ranges){
+  setActiveGlyph(active);
   alternanceRole=Math.max(0,Math.min(3,alternanceRole));
   release();
   JSONObject a=ranges.optJSONObject(0),b=ranges.optJSONObject(1);
@@ -342,6 +353,18 @@ public final class CorrespondenceMushafActivity extends Activity {
    cell.setOnClickListener(v->{alternanceRole=next;showFourRoleAlternance(ranges);});
    relationButtons.addView(cell,new LinearLayout.LayoutParams(0,Ui.dp(this,72),1));
   }
+ }
+ private void setActiveGlyph(JSONObject item){
+  if(selectedGlyph==null)return;
+  if(item==null){selectedGlyph.setVisibility(View.GONE);return;}
+  String type=item.optString("type","");
+  if("R033".equals(item.optString("id")))type="CENTRE";
+  if(!classified(type)){selectedGlyph.setVisibility(View.GONE);return;}
+  selectedGlyph.setImageResource(CorrespondenceScreen.icon(CorrespondenceModel.Type.valueOf(type)));
+  selectedGlyph.setImageTintList(null);
+  selectedGlyph.setContentDescription(type+" · "+item.optString("id")
+      +" · "+(runtime!=null&&runtime.find(item.optString("id"))!=null?"vérifiée":"proposée"));
+  selectedGlyph.setVisibility(View.VISIBLE);
  }
  private boolean samePhysicalPage(JSONObject a,JSONObject b){
   if(a==null||b==null||a.optInt("surah")!=b.optInt("surah"))return false;
