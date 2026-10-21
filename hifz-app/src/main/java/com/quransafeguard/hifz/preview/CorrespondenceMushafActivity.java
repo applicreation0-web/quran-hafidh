@@ -44,7 +44,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  private CorrespondenceQcfSurface[] visible;
  private int[] visiblePositions;
  private int page,seriesOrdinal,referenceWindow,alternanceRole,comparisonPane,centreSegment=2;
- private boolean seriesCompare,privateRegistryVerified,comparisonExpanded;
+ private boolean seriesCompare,privateRegistryVerified,comparisonExpanded,exploringTypes;
  private JSONObject active;
 
  @Override protected void onCreate(Bundle saved){
@@ -193,6 +193,13 @@ public final class CorrespondenceMushafActivity extends Activity {
   relationHeading.addView(selectedGlyph,new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,42)));
   shortLink=Ui.text(this,"",12,false);shortLink.setGravity(Gravity.CENTER);
   shortLink.setPadding(Ui.dp(this,5),Ui.dp(this,6),Ui.dp(this,5),Ui.dp(this,6));
+  shortLink.setFocusable(true);shortLink.setClickable(true);
+  shortLink.setContentDescription("Explorer les correspondances par type ou revenir à la page");
+  shortLink.setOnClickListener(v->{
+   if(active!=null||!privateRegistryVerified)return;
+   exploringTypes=!exploringTypes;
+   if(exploringTypes)showTypeExplorer();else renderPageLinks();
+  });
   relationHeading.addView(shortLink,new LinearLayout.LayoutParams(0,Ui.dp(this,42),1));
   root.addView(relationHeading,new LinearLayout.LayoutParams(-1,Ui.dp(this,42)));
   strip=new HorizontalScrollView(this);strip.setHorizontalScrollBarEnabled(false);
@@ -212,7 +219,7 @@ public final class CorrespondenceMushafActivity extends Activity {
  }
  private void showPlainPage(int wanted){
   page=clamp(wanted);
-  active=null;seriesCompare=false;
+  active=null;seriesCompare=false;exploringTypes=false;comparisonExpanded=false;
   setActiveGlyph(null);
   release();
   location.setText("Page courante · p. "+page);
@@ -242,12 +249,51 @@ public final class CorrespondenceMushafActivity extends Activity {
   }
   List<JSONObject> links=byPage.get(page);
   if(links==null||links.isEmpty()){
-   strip.setVisibility(View.GONE);
-   shortLink.setText("Page "+page+" · aucune relation répertoriée");
+   shortLink.setText("Page "+page+" · aucun lien ici · toucher pour explorer les 8 types");
+   int before=0,after=0;
+   for(int p:byPage.keySet())if(p<page&&p>before)before=p;
+     else if(p>page&&(after==0||p<after))after=p;
+   if(before>0)addNearestPage(before,"‹");
+   if(after>0)addNearestPage(after,"›");
+   if(before==0&&after==0)strip.setVisibility(View.GONE);
    return;
   }
-  shortLink.setText("Page "+page+" · "+links.size()+" relation"+(links.size()>1?"s":""));
+  shortLink.setText("Page "+page+" · "+links.size()+" relation"+(links.size()>1?"s":"")+" · toucher pour filtrer");
   for(JSONObject row:links)addRelationNode(row);
+ }
+ private void addNearestPage(int target,String arrow){
+  TextView item=Ui.text(this,arrow+" p. "+target+" · "+byPage.get(target).size()+" lien(s)",13,true);
+  item.setGravity(Gravity.CENTER);
+  item.setFocusable(true);item.setClickable(true);
+  item.setContentDescription("Feuilleter directement la page "+target+" contenant des correspondances");
+  item.setOnClickListener(v->showPlainPage(target));
+  relationButtons.addView(item,new LinearLayout.LayoutParams(Ui.dp(this,165),Ui.dp(this,72)));
+ }
+ private void showTypeExplorer(){
+  relationButtons.removeAllViews();strip.setVisibility(View.VISIBLE);
+  shortLink.setText("Types de correspondances · toucher pour revenir à la page");
+  for(CorrespondenceModel.Type type:CorrespondenceModel.Type.values()){
+   int target=0,wrapped=0;
+   for(int p=1;p<=604;p++){
+    List<JSONObject> links=byPage.get(p);
+    if(links==null)continue;
+    boolean found=false;
+    for(JSONObject row:links)if(type.name().equals(row.optString("type"))){found=true;break;}
+    if(found){if(wrapped==0)wrapped=p;if(p>=page&&target==0)target=p;}
+   }
+   final int destination=target==0?wrapped:target;
+   LinearLayout cell=Ui.column(this);cell.setGravity(Gravity.CENTER);
+   ImageView symbol=new ImageView(this);
+   symbol.setImageResource(CorrespondenceScreen.icon(type));symbol.setImageTintList(null);
+   symbol.setScaleType(ImageView.ScaleType.FIT_CENTER);
+   cell.addView(symbol,new LinearLayout.LayoutParams(Ui.dp(this,38),Ui.dp(this,37)));
+   TextView label=Ui.text(this,CorrespondenceScreen.label(type),9,false);
+   label.setGravity(Gravity.CENTER);label.setSingleLine(true);cell.addView(label);
+   cell.setFocusable(destination>0);cell.setClickable(destination>0);
+   cell.setContentDescription(type.name()+(destination>0?" · page "+destination:" · aucun dossier catégorisé"));
+   if(destination>0)cell.setOnClickListener(v->showPlainPage(destination));
+   relationButtons.addView(cell,new LinearLayout.LayoutParams(Ui.dp(this,113),Ui.dp(this,72)));
+  }
  }
  private void addRelationNode(JSONObject row){
   String type=row.optString("type","");
