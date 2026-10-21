@@ -604,7 +604,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             caption.append("\n");
         }
         int passageStart=caption.length();
-        caption.append(active.surah+":"+active.firstAyah+"–"+active.lastAyah+" · "+MawdudiMapScreen.cleanPassageCaption(title));
+        caption.append(MawdudiMapScreen.cleanPassageCaption(title));
         caption.setSpan(new StyleSpan(Typeface.ITALIC),passageStart,caption.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         atlasCueFooter.setText(caption);
     }
