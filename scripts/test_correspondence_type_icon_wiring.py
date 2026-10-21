@@ -46,6 +46,16 @@ class CorrespondenceTypeIconWiringTest(unittest.TestCase):
         # A dossier with no valid original references must not offer a dead QCF action.
         self.assertIn("if(refs!=null&&refs.length()>0&&refs.length()<=40)", directory)
 
+    def test_historical_qcf_carousel_keeps_per_reference_viewport(self):
+        activity = (JAVA / "CorrespondenceReferenceActivity.java").read_text(encoding="utf-8")
+        self.assertIn("rememberVisibleFolios();", activity)
+        self.assertIn("position=next;expanded=-1;showReferences();", activity)
+        self.assertIn("surface.show(focus,remembered.get(position+i));", activity)
+        self.assertIn("if(state!=null)restoreFolioStates(state);", activity)
+        self.assertIn('state.putBundle("folios",folios);', activity)
+        self.assertIn('state.putInt("expanded",expanded);', activity)
+        self.assertIn("Float.isFinite(zoom)&&zoom>0f&&zoom<=10f&&x>=0&&y>=0", activity)
+
     def test_original_eight_svgs_have_unchanged_manifest_hash(self):
         hashes = dict(re.findall(r"(\S+\.svg)\s+SHA256\s+([a-f0-9]{64})",
                                  (SVG / "MANIFEST_SHA256.txt").read_text(encoding="utf-8")))
