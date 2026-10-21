@@ -57,6 +57,8 @@ public final class UiIconMappingTest {
             {"Vérifier", R.drawable.ic_ui_validate},
             {"Afficher les amorces", R.drawable.ic_ui_recall_key},
             {"Ancre", R.drawable.ic_ui_semantic_anchor},
+            {"Afficher l’ancre", R.drawable.ic_ui_semantic_anchor},
+            {"Masquer l’ancre", R.drawable.ic_ui_semantic_anchor},
             {"Afficher les ancres", R.drawable.ic_ui_semantic_anchor},
             {"Passage vers le haut", R.drawable.ic_ui_previous},
             {"Passage vers le bas", R.drawable.ic_ui_previous},
