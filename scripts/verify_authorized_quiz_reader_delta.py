@@ -25,8 +25,18 @@ AMORCE_BEFORE="function semanticCueRect(rect,cue){\n  const el=document.createEl
 AMORCE_AFTER="function semanticCueRect(rect,cue){\n  const el=document.createElementNS(NS,'rect');\n  el.setAttribute('x',rect.x);el.setAttribute('y',rect.y);\n  el.setAttribute('width',rect.width);el.setAttribute('height',rect.height);\n  el.setAttribute('rx','1.35');el.setAttribute('ry','1.35');\n  // User decision: a light grey highlight behind the amorce words — never over the glyphs as a\n  // pattern. Lighter than any reading-mask tile, and only ever drawn in Lecture (Révision\n  // active and post-An-Nās Itqān use the amorces as mask holes with highlighting disabled).\n  el.setAttribute('fill','var(--sel)');\n  el.setAttribute('fill-opacity',eink?'0.16':'0.10');\n  el.setAttribute('stroke','none');el.setAttribute('pointer-events','all');\n  el.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};\n  return el;\n}\n\n"
 assert original.count(AMORCE_BEFORE)==1, "Official amorce decoration changed"
 expected=expected.replace(AMORCE_BEFORE,AMORCE_AFTER)
+# The official 1.17.2 fix does not touch Quranic SVG, masking geometry,
+# Hifz selection, or randomized erasure: only the 2 native bridge callbacks
+# gain a load-generation parameter. The substitutions are independently
+# counted and the resulting blob is pinned; all other changes fail closed.
+GENERATION_BLOB="7961f9a8601cd456275d9acad86ccf46a05d2806"
+ready_before="N?.ready();"
+shown_before="N?.pageShown(currentPage);"
+assert expected.count(ready_before)==1 and expected.count(shown_before)==1
+expected=expected.replace(ready_before,"N?.ready(Number(boot.renderGeneration||0));")
+expected=expected.replace(shown_before,"N?.pageShown(currentPage,Number(boot.renderGeneration||0));")
 actual=(ROOT/FILE).read_text(encoding="utf-8")
-assert actual==expected, "Mushaf renderer drift outside exact off-unit fog and original exact-word low-opacity amorce highlight"
+assert actual==expected, "Mushaf renderer drift outside locked low-opacity amorce/off-unit + 1.17.2 generation bridge"
 assert "quizMaskElement" not in actual and "quiz-prompt" not in actual
-assert subprocess.check_output(["git","hash-object",str(ROOT/FILE)],cwd=ROOT,text=True).strip()==CURRENT_BLOB
-print("PASS: official Hifz renderer, QCF and masks intact; exact off-unit veil + Lecture-only original low-opacity highlight")
+assert subprocess.check_output(["git","hash-object",str(ROOT/FILE)],cwd=ROOT,text=True).strip()==GENERATION_BLOB
+print("PASS: official Hifz renderer byte-reconstructed; only exact approved focus + amorce + bridge generations")
