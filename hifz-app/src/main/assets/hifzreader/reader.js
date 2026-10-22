@@ -469,6 +469,11 @@ function fullEraseWordSegments(segments,lines,svg){
   // its line band, so the word's own exact box is covered whatever the stage.
   const full=segments.slice();
   if(!full.length||!pageWordBoxes.length)return [];
+  // The 100% eraser must cover the REAL exact-word ink of every due line.
+  // Earlier cell-centre filtering missed overhanging harakat/letters, producing
+  // residual straight streaks on physical folios 6/11. Partial masks remain
+  // randomized by cell as before; this is strictly a 100% correction.
+  const completelyMasked=full.every(s=>s.fullErase);
   const out=[];
   pageWordBoxes.forEach((raw,i)=>{
     const b=(raw||[]).map(Number);if(!validWordBox(b))return;
@@ -476,8 +481,12 @@ function fullEraseWordSegments(segments,lines,svg){
     const cx=(box[0]+box[2])/2,cy=(box[1]+box[3])/2;
     const line=(lines||[]).find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));if(!line)return;
     const lineId=String(line.id);
-    if(!full.some(s=>s.lineId===lineId&&cx>=s.x&&cx<=s.x+s.width))return;
-    out.push({key:'w'+i,lineId,x:box[0],y:box[1],width:box[2]-box[0],height:box[3]-box[1],fullErase:true});
+    if(!completelyMasked&&!full.some(s=>s.lineId===lineId&&cx>=s.x&&cx<=s.x+s.width))return;
+    // The exact-hole mask is applied after the eraser, so all protected words
+    // remain visible and rosettes are redrawn in their unchanged QCF positions.
+    const pad=completelyMasked?1.15:0;
+    out.push({key:'w'+i,lineId,x:box[0]-pad,y:box[1]-pad,
+      width:(box[2]-box[0])+2*pad,height:(box[3]-box[1])+2*pad,fullErase:true});
   });
   return out;
 }
