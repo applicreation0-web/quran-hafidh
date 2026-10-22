@@ -12,7 +12,6 @@ protected=(
   hifz-core
   app/src/main/assets/reader109/geometry.json
   app/src/main/assets/reader109/waqf.json
-  hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java
   hifz-app/src/main/java/com/quransafeguard/hifz/preview/AnchoringQueue.java
 )
 changed="$(git diff --name-status "${BASE}" HEAD -- "${protected[@]}")"
@@ -21,6 +20,8 @@ if [[ -n "$changed" ]]; then
   printf '%s\n' "$changed"
   exit 1
 fi
+# The only accepted MushafView exception is byte-pinned by the checker below.
+python3 scripts/verify_authorized_mushaf_reader_delta.py
 # Every QCF asset remains byte-identical except the exact approved Quiz-only JS
 # mask cut-out. Prevent silently changing fonts, geometry or a different reader asset.
 unexpected_assets="$(git diff --name-only --no-renames "${BASE}" HEAD -- hifz-app/src/main/assets/hifzreader | grep -v '^hifz-app/src/main/assets/hifzreader/reader[.]js$' || true)"
@@ -58,6 +59,10 @@ while IFS= read -r file; do
       else
         echo "EXACT P0 RECOVERY APPLICATION: $file"
       fi
+      ;;
+    "$prefix/MushafView.java")
+      # Never allow an unreviewed Hifz renderer drift: exact bytes pinned.
+      python3 scripts/verify_authorized_mushaf_reader_delta.py || bad=1
       ;;
     "$prefix/HifzBackup.java")
       if [[ "$(git hash-object "$file")" == "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]]; then
