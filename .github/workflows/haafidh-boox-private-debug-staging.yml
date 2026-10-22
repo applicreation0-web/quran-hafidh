@@ -21,6 +21,7 @@ on:
       - 'scripts/verify_atlas_only_purity.py'
       - 'scripts/audit_hifz_quiz_against_1171.sh'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasFinalizationSourceContractTest.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/OfficialReleaseContractTest.java' # candidate version gate
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/UiIconMappingTest.java'
   workflow_dispatch:
 permissions:
