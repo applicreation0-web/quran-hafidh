@@ -19,7 +19,7 @@ Date : 2026-10-22. Branche : `work/haafidh-1171-atlas-only-pre20-mask`.
 ## Vérifications documentées
 - Régression JVM / source contract : **PASS** https://github.com/applicreation0-web/quran-hafidh/actions/runs/39844315263
 - Staging privé SANS corpus ni signature : **PASS** https://github.com/applicreation0-web/quran-hafidh/actions/runs/39844315253
-- Audit Android instrumenté candidat : https://github.com/applicreation0-web/quran-hafidh/actions/runs/39844315344 — consulter la conclusion réelle, **ne pas présumer PASS**.
+- Audit Android instrumenté candidat : **PASS**, JVM + source contracts et **4/4 tests émulateur API 35**, https://github.com/applicreation0-web/quran-hafidh/actions/runs/39844315344. Ces quatre tests natifs portent sur WebView masquage premier rendu et persistance/sauvegarde, pas sur un appareil BOOX.
 - Tests Itqān spécifiques : découpage d'un hizb, absence de franchissement Sabqi, alternance [0,0,100], validation sous masque, après An-Nās, force-stop et reprise des plans ×3, non-troncature d'une unité ×4 ouverte, absence de double crédit/Sabqi, préservation consolidation.
 - Audit exact de code `scripts/verify_post_nas_three_pass_delta.py`, `verify_itqan_rotation_atomicity.py`, `verify_authorized_hifz_session_delta.py`.
 
@@ -30,4 +30,4 @@ Date : 2026-10-22. Branche : `work/haafidh-1171-atlas-only-pre20-mask`.
 - SHA-256 du candidat privé : `aa57ae46c0bc3b206ce95eb34861595e1d4a0488c946c2180e227cdc0a37d565`.
 - Tests statiques APK PASS ; pas d'installation, pas de validation physique BOOX.
 
-**Décision : NO-GO release publique tant que tous les tests natifs et la recette BOOX de l'application privée ne sont pas confirmés. Ne pas désinstaller la 1.17.1, ne pas supprimer les acquis.**
+**Décision : AUDIT CI PASS, NO-GO release publique tant que la recette BOOX physique de l'application privée et l'accord utilisateur ne sont pas confirmés. Ne pas désinstaller la 1.17.1, ne pas supprimer les acquis.**
