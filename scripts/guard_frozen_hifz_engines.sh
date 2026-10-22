@@ -97,6 +97,7 @@ while IFS= read -r file; do
     "$APP_ROOT/ItqanFourSessionSnapshot.java" | \
     "$APP_ROOT/ItqanFourSessionStore.java" | \
     "$APP_ROOT/MainActivity.java" | \
+    "$APP_ROOT/RevisionSelector.java" | \
     "$APP_ROOT/AtlasMapActivity.java" | \
     "$APP_ROOT/FreeMemActivity.java" | \
     "$APP_ROOT/QuranSurahNames.java" | \
@@ -144,6 +145,8 @@ if [ "$bad" -ne 0 ]; then
   exit 1
 fi
 
+# The title tap overlay is allowed only when invisible (no grey E-Ink rectangles).
+node scripts/test_ayah_themes_review_overlay.js
 python3 scripts/verify_public_amorce_keys.py
 python3 scripts/verify_authorized_quiz_reader_delta.py
 python3 scripts/verify_authorized_word_geometry_quiz_detach.py

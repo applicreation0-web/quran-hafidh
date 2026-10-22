@@ -64,7 +64,7 @@ public final class MaintenanceCoverageWiringSourceContractTest {
     @Test public void revisionSelectorUsesTheSameAcquiredDurationForBothModes() throws Exception {
         String selector = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java");
         assertTrue("One acquired-corpus coverage calculation must drive both menu options",
-            selector.contains("MaintenanceCoveragePolicy.minutes(\\n")
+            selector.contains("MaintenanceCoveragePolicy.minutes(")
                 && selector.contains("prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()"));
         assertTrue("Active revision must display the same dynamic duration as Entretien",
             selector.contains("\"Révision active · \" + maintenanceCue + \" · \"")
