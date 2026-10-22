@@ -43,6 +43,24 @@ for a,b in (
     n=expected_three.count(a)
     assert n==(4 if a.startswith("ItqanMaintenancePolicy.anchoredRecallRep") else 1),a
     expected_three=expected_three.replace(a,b)
+# Release 1.17.4: ONLY the reviewed atomic active-page reader change is
+# allowed beyond the fully tested post-Nās ×3 Hifz source. Both are exact blobs.
+ATOMIC_ACTIVE_BEFORE="a61eb1dd913f1d7568b93f707413254200906f07"
+ATOMIC_ACTIVE_AFTER="bf2234d5bbb47086c5e81a6e667b6751605a212f"
+before_sha=subprocess.check_output(
+    ["git","rev-parse","1f69dc58abbcd58ce2c44a78e2cd4ff0aca302ab:"+PATH],
+    text=True).strip()
+if before_sha!=ATOMIC_ACTIVE_BEFORE:
+    raise SystemExit("FAIL: active-review first-paint baseline drift")
+if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==ATOMIC_ACTIVE_AFTER:
+    source=Path(PATH).read_text(encoding="utf-8")
+    assert "mushaf.showFreeActivePreparedPage(currentPage,currentLineIds," in source
+    assert "activePageLandmarks,activePageAmorces,activeAyahThemesReady" in source
+    assert "mushaf.setPageLandmarkBoxes(firstLast);" not in source
+    assert "mushaf.setSemanticCues(newStarts, true, false);" not in source
+    print("PASS: exact source pin for atomic active-mask 1.17.4; persistence and cursors unchanged")
+    raise SystemExit(0)
+
 if Path(PATH).read_text(encoding="utf-8")==expected_three:
     print("PASS: exact Itqan ×3 source-only delta; 1.17.2 Hifz persistence unchanged")
     raise SystemExit(0)

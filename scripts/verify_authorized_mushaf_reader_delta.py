@@ -14,6 +14,7 @@ PATH_JS="hifz-app/src/main/assets/hifzreader/reader.js"
 ORIGINAL_JAVA="4473cf97fcfd080af08b0bd9790883bedb6901c4"
 APPROVED_JAVA="e151e2b0b0220883ea0ec9380fac1abc3a743d91"
 APPROVED_JS="7961f9a8601cd456275d9acad86ccf46a05d2806"
+APPROVED_JS_1174="3c76e9d7e2133bf3a68f0ff466fbc0fdb2dfb5f2"
 
 def git(*args):
     return subprocess.check_output(["git",*args],cwd=REPO,text=True).strip()
@@ -24,8 +25,10 @@ if git("rev-parse","6a923350384348332bd59de2ec985bcfa4ff0ba2:"+PATH_JAVA)!=APPRO
     raise SystemExit("FAIL: approved atomic first-paint source is not pinned")
 if git("hash-object",PATH_JAVA)!=APPROVED_JAVA:
     raise SystemExit("FAIL: MushafView differs from reviewed pending-FIFO/generation patch")
-if git("hash-object",PATH_JS)!=APPROVED_JS:
-    raise SystemExit("FAIL: reader.js differs from reviewed JS-generation signalling patch")
+if git("rev-parse","6831e1c670a431c5deff09642434521b644bcebb:"+PATH_JS)!=APPROVED_JS:
+    raise SystemExit("FAIL: pre-1.17.4 renderer baseline drift")
+if git("hash-object",PATH_JS)!=APPROVED_JS_1174:
+    raise SystemExit("FAIL: reader.js differs from exact approved 1.17.4 eraser patch")
 src=(REPO/PATH_JAVA).read_text(encoding="utf-8")
 js=(REPO/PATH_JS).read_text(encoding="utf-8")
 for symbol in (
@@ -41,6 +44,8 @@ for symbol in (
 ):
     if symbol not in src: raise SystemExit("FAIL: renderer guard missing "+symbol)
 for symbol in ("N?.pageShown(currentPage,Number(boot.renderGeneration||0));",
-               "N?.ready(Number(boot.renderGeneration||0));"):
+               "N?.ready(Number(boot.renderGeneration||0));",
+               "const completelyMasked=full.every(s=>s.fullErase);",
+               "if(!completelyMasked&&!full.some("):
     if symbol not in js: raise SystemExit("FAIL: JS bridge guard missing "+symbol)
-print("PASS: only exact pre-reviewed WebView FIFO/generation renderer bytes authorized")
+print("PASS: pinned renderer FIFO/generation plus exact 1.17.4 full-word coverage only")
