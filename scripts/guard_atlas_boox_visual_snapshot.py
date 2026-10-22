@@ -11,8 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "hifz-app/src/main/java/com/quransafeguard/hifz/preview"
 PINNED = {
-    "MawdudiMapScreen.java": "0801b264adab35284d235fd6dc89cdc178fcc577",
-    "StudyReaderActivity.java": "923a4ed3984ddb13d09547cc9d990cfe7b027944",
+    "MawdudiMapScreen.java": "95d74a4df66374d258f10c47e01996e89d37f392",
+    "StudyReaderActivity.java": "3f65587257c0380a385218ec406251960e10d6fc",
     "MapJalalaynDialog.java": "e2f82338c1feb0673b51e9a6f9375e4be37861b9",
     "MapQcfThumbnails.java": "750013d368854082d6dc6d1094d9c472ed962cc7",
     "MapUnitMarkers.java": "deaf4f97a08a771c88ba21048a60419323b613ab",
