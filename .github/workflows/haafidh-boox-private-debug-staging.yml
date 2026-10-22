@@ -11,6 +11,7 @@ on:
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapJalalaynDialog.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasHistoricalDualRailAndTafsirTest.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/ReaderFreeActiveMaskSourceContractTest.java'
       - 'hifz-app/src/main/AndroidManifest.xml'
       - 'scripts/guard_frozen_hifz_engines.sh'
       - 'scripts/guard_atlas_boox_visual_snapshot.py'
