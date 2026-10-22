@@ -90,7 +90,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(commentary!=null){commentary.close();commentary=null;}
   if(axis!=null){
    axis.removeAllViews();
-   axis.addView(overviewGraph,
+   axis.addView(overview?overviewGraph:graph,
        new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,sunHeight));
   }
   refresh();
