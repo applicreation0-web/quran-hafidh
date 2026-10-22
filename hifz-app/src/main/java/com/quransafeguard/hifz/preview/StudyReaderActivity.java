@@ -403,11 +403,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (!mapPreview) getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         updateSurahPickerLabel();
         updateRubPickerLabel();
-        if(freeActiveMask){
-            // Never carry old-page anchor geometry into the next QCF folio.
-            mushaf.clearPageLandmarkBoxes();
-            mushaf.clearSemanticCues();
-        }
+        // Masked folios must never be cleared and then repainted in the open:
+        // the next page is bootstrapped atomically with its own QCF word holes.
         if(freeActiveMask)showFreeActiveMaskPage();
         else if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         showControls();
@@ -539,7 +536,43 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         } catch(RuntimeException geometryUnavailable) {
             // Keep a readable page when precise line geometry is unavailable.
         }
-        mushaf.show(page,java.util.Collections.emptyList(),pageLines,0);
+        // Prepare the mask BEFORE loading the folio; the first WebView paint
+        // must already contain the exact white eraser and protected word holes.
+        // Loading with mask=0 then calling setMask(100) showed the full Quran
+        // briefly on BOOX, leaving permanent E-Ink ghosting until GC.
+        freeActiveMaskPageReady=false;
+        org.json.JSONArray landmarks=new org.json.JSONArray();
+        org.json.JSONArray anchors=new org.json.JSONArray();
+        try {
+            if(ayahThemesCues!=null && !pageLines.isEmpty()) {
+                landmarks=WordGeometryRepository.shared(this).pageLandmarkBoxes(page);
+                anchors=ayahThemesCues.forPage(page);
+                if(landmarks.length()==6) {
+                    freeActiveMaskPageReady=true;
+                    for(int i=0;i<anchors.length();i++) {
+                        org.json.JSONObject cue=anchors.getJSONObject(i);
+                        if(cue.getInt("anchorWordCount")!=1
+                            || cue.getJSONArray("boxes").length()!=1
+                            || cue.getString("id").isEmpty()){
+                            freeActiveMaskPageReady=false;break;
+                        }
+                    }
+                }
+            }
+        } catch(Exception missingExactGeometry) { freeActiveMaskPageReady=false; }
+        mushaf.setMaskFollowsSelection(false);
+        mushaf.setLandmarkLines(null,null);
+        if(freeActiveMaskPageReady) {
+            mushaf.setPageLandmarkBoxes(landmarks);
+            mushaf.setSemanticCues(anchors,true,false);
+        } else {
+            // Never construct an approximate word hole.
+            mushaf.clearPageLandmarkBoxes();
+            mushaf.clearSemanticCues();
+        }
+        mushaf.show(page,java.util.Collections.emptyList(),pageLines,
+            freeActiveMaskPageReady ? 100 : 0);
+        updateFreeActiveMaskButton();
     }
 
     /** Read-only reproduction of the *existing* Révision active word-hole mask.
@@ -547,6 +580,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
      * All masking is disabled if any authentic word anchor is unverifiable.
      */
     private void applyFreeActiveMask() {
+        // The initial WebView document is already masked. Do not mutate it in
+        // three successive JS redraws (which each trigger a BOOX refresh).
+        if(freeActiveMaskPageReady) { updateFreeActiveMaskButton(); return; }
         freeActiveMaskPageReady=false;
         org.json.JSONArray landmarks=new org.json.JSONArray();
         org.json.JSONArray anchors=new org.json.JSONArray();
@@ -592,9 +628,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         freeActiveMaskPageReady=false;
         closeSemanticTitle();
         mushaf.clearReveal();
-        mushaf.setMask(0);
-        mushaf.clearPageLandmarkBoxes();
-        mushaf.clearSemanticCues();
+        // Never send an unmask command when ACTIVATING the free mask.
+        // It used to expose the page before the asynchronous mask callback.
+        if(!freeActiveMask) {
+            mushaf.setMask(0);
+            mushaf.clearPageLandmarkBoxes();
+            mushaf.clearSemanticCues();
+        }
         mushaf.setMaskFollowsSelection(!freeActiveMask);
         mushaf.setMaskEntropy(hifzPrefs.maskEntropyFor(freeActiveMask
             ?HifzSessionActivity.MURAJAAH_ACTIVE:"reader_default"));
