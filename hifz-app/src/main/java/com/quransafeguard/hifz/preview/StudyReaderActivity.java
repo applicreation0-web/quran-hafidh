@@ -408,7 +408,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             mushaf.clearPageLandmarkBoxes();
             mushaf.clearSemanticCues();
         }
-        if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
+        if(freeActiveMask)showFreeActiveMaskPage();
+        else if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         showControls();
     }
 
@@ -527,6 +528,20 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         else mushaf.setSemanticCues(ayahThemesCues.forPage(page),false,true);
     }
 
+    /** The eraser operates on actual QCF lines, not on empty Lecture selections.
+     * Booting with all physical lines also supplies page word boxes for full-glyph coverage.
+     * Neither a study session nor Hifz persistence is touched.
+     */
+    private void showFreeActiveMaskPage() {
+        java.util.List<String> pageLines=java.util.Collections.emptyList();
+        try {
+            pageLines=GeometryRepository.get(this).lineIdsOnPage(page);
+        } catch(RuntimeException geometryUnavailable) {
+            // Keep a readable page when precise line geometry is unavailable.
+        }
+        mushaf.show(page,java.util.Collections.emptyList(),pageLines,0);
+    }
+
     /** Read-only reproduction of the *existing* Révision active word-hole mask.
      * No session is created, no counters/cursors are advanced and no prefs are changed.
      * All masking is disabled if any authentic word anchor is unverifiable.
@@ -585,7 +600,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         updateFreeActiveMaskButton();
         // Repaint the same original QCF folio without Atlas focus overlays.
         // On-page-shown installs exact holes *before* enabling the 100% mask.
-        if(freeActiveMask||!showMap114Focus())
+        if(freeActiveMask)showFreeActiveMaskPage();
+        else if(!showMap114Focus())
             mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
         showControls();
     }
@@ -1187,12 +1203,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             selected = pendingJumpVerse;
             tafsirButton.setContentDescription("Tafsir " + pendingJumpVerse.getSurah() + ":" + pendingJumpVerse.getAyah());
             if(!showMap114Focus()) {
-                if(freeActiveMask)mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
+                if(freeActiveMask)showFreeActiveMaskPage();
                 else mushaf.show(page, Collections.singletonList(pendingJumpVerse), Collections.emptyList(), 0);
             }
             pendingJumpVerse = null;
         } else {
-            if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
+            if(freeActiveMask)showFreeActiveMaskPage();
+            else if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         }
     }
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
