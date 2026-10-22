@@ -69,6 +69,45 @@ public final class MushafPendingCommandsInstrumentedTest {
    activity.onActivity(a->view[0].destroySafely());
   }
  }
+ /** Real WebView: pageShown may never be emitted for a raw, unmasked SVG. */
+ @Test public void initialFreeMaskPaintIsProtectedBeforePageShown() throws Exception {
+  final MushafView[] reader=new MushafView[1];
+  final CountDownLatch painted=new CountDownLatch(1);
+  try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){
+   scenario.onActivity(a->{
+    try{
+     reader[0]=new MushafView(a);a.setContentView(reader[0]);
+     reader[0].setListener(new MushafView.Listener(){
+      @Override public void onReady(){}
+      @Override public void onVerseTap(com.quransafeguard.hifz.core.VerseRef verse){}
+      @Override public void onError(String error){throw new AssertionError(error);}
+      @Override public void onPageShown(int page){if(page==14)painted.countDown();}
+     });
+     List<String> lines=GeometryRepository.get(a).lineIdsOnPage(14);
+     assertFalse(lines.isEmpty());
+     org.json.JSONArray marks=WordGeometryRepository.shared(a).pageLandmarkBoxes(14);
+     assertEquals(6,marks.length());
+     org.json.JSONArray cues=new org.json.JSONArray().put(
+       new org.json.JSONObject().put("id","exact-first-frame")
+         .put("anchorWordCount",1).put("boxes",
+           new org.json.JSONArray().put(marks.getJSONArray(0))));
+     reader[0].showFreeActivePreparedPage(14,lines,marks,cues,true);
+    }catch(Exception ex){throw new AssertionError(ex);}
+   });
+   assertTrue("Unmasked/hidden folio may not emit pageShown",painted.await(30,TimeUnit.SECONDS));
+   assertTrue("First visible render requires the exact SVG word-hole mask",
+     awaitMaskState(scenario,reader[0],true));
+   CountDownLatch done=new CountDownLatch(1);
+   java.util.concurrent.atomic.AtomicReference<String> state=new java.util.concurrent.atomic.AtomicReference<>();
+   scenario.onActivity(a->reader[0].evaluateJavascript(
+     "(function(){var v=document.getElementById('mushaf');"
+      +"return !!(v&&v.style.visibility==='visible'&&v.querySelector('svg g.masklayer'));})()",
+     x->{state.set(x);done.countDown();}));
+   assertTrue(done.await(5,TimeUnit.SECONDS));
+   assertEquals("true",state.get());
+   scenario.onActivity(a->reader[0].destroySafely());
+  }
+ }
  private static boolean awaitMaskState(ActivityScenario<MainActivity> activity,
                                        MushafView view, boolean expected) throws Exception {
   String probe="(function(){var svg=document.querySelector('#mushaf svg');"
