@@ -1,7 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
 /**
- * P4's J-15 dynamic Entretien (passive Murajaah) session length. Below the equivalent of 15 juz
+ * Shared J-15 duration for active recall and passive Entretien. Below the equivalent of 15 juz
  * memorized, the existing flat 30-minute session already covers everything in reasonable time, so
  * it stays untouched. Past that point, the session must grow with the real amount of material —
  * sized so the whole ACQUIRED corpus can still be cycled through roughly every 15 minutes of

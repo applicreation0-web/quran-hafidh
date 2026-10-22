@@ -57,6 +57,8 @@ final class WeeklyDashboardPlanner {
         int sabqiCursor=currentSabqiCursor();
         VerseRef murajaahCursor=prefs.murajaahCursor();
         EligibleCorpus murajaahCorpus=prefs.murajaahCorpus(geometry);
+        // One shared dynamic duration for active and passive; independent corpora/cursors.
+        final int revisionMinutes=maintenanceMinutes();
 
         // Forecast from the SAME cursor and physical units as the live Itqān engine.
         // The legacy anchoringQueue is not the perpetual rotation, and sorting it from
@@ -97,8 +99,8 @@ final class WeeklyDashboardPlanner {
                         &&activeActual!=null&&entretienActual!=null;
                     if(eveningDone)evening="✓ Renforcement + Révision active + Entretien";
                     else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
-                        evening="Renforcement + Révision active ("+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min) + Entretien · "+projected.label;
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
+                        evening="Renforcement + Révision active ("+revisionMinutes+" min) + Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
                     boolean m=morningActual!=null;
@@ -178,8 +180,8 @@ final class WeeklyDashboardPlanner {
                         &&activeActual!=null&&entretienActual!=null;
                     if(eveningDone)evening="✓ Consolidation + Révision active + Entretien";
                     else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
-                        evening="Consolidation + Révision active ("+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min) + Entretien · "+projected.label;
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
+                        evening="Consolidation + Révision active ("+revisionMinutes+" min) + Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
                     state=morningDone&&eveningDone?"Validé":morningDone?"Soir à faire":"À faire";
@@ -202,10 +204,10 @@ final class WeeklyDashboardPlanner {
                     && prefs.weeklyProgramFor(date)!=HifzPrefs.WeeklyProgram.CLASSIC) {
                 boolean activeDone=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE)!=null;
                 morning=(activeDone?"✓ Révision active ":"Révision active ")
-                    +HifzSchedule.ACTIVE_REVIEW_MINUTES+" min + "+morning;
+                    +revisionMinutes+" min + "+morning;
                 // Active is proposed in the morning, NOT repeated as an evening quota.
                 evening=evening.replace(" + Révision active ("
-                    +HifzSchedule.ACTIVE_REVIEW_MINUTES+" min)","")
+                    +revisionMinutes+" min)","")
                     .replace(" + Révision active + Entretien"," + Entretien");
             }
             out.add(new Row(date,day(date,today),morning,evening,state));
