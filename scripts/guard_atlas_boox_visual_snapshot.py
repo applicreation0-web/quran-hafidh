@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed visual freeze of Atlas/Mushaf/Jalalayn BOOX screenshot-approved sources.
 
-The only 1.17.2 departures from the 22 October BOOX visual snapshot are\nthe exact QCF fail-open and first-frame-mask fix in Lecture, and the\nbyte-pinned MushafView JavaScript load-generation fix. All other Atlas/Jalalayn sources\nremain frozen. Never bundle private material here.
+The only 1.17.2 departures from the 22 October BOOX visual snapshot are\nthe exact QCF fail-open and atomic first-paint mask fix in Lecture, and the\nbyte-pinned MushafView JavaScript load-generation fix. All other Atlas/Jalalayn sources\nremain frozen. Never bundle private material here.
 """
 import hashlib
 import subprocess
@@ -11,11 +11,11 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "hifz-app/src/main/java/com/quransafeguard/hifz/preview"
 PINNED = {
     "MawdudiMapScreen.java": "95d74a4df66374d258f10c47e01996e89d37f392",
-    "StudyReaderActivity.java": "8804f8ccf7d2570c3801a350066782826aea917f",
+    "StudyReaderActivity.java": "9afaacf5e1bf68fb8060517a96ad6396ee213bd5",
     "MapJalalaynDialog.java": "e2f82338c1feb0673b51e9a6f9375e4be37861b9",
     "MapQcfThumbnails.java": "750013d368854082d6dc6d1094d9c472ed962cc7",
     "MapUnitMarkers.java": "deaf4f97a08a771c88ba21048a60419323b613ab",
-    "MushafView.java": "8ac1afcb199ef7539dd34b320156e4e64741f644"
+    "MushafView.java": "e151e2b0b0220883ea0ec9380fac1abc3a743d91"
 }
 
 def git_blob(raw: bytes) -> str:
@@ -48,8 +48,12 @@ def verify_deltas() -> None:
         "308735f3febf077b45fa5f4eb2949247753e33b9:"+source],cwd=ROOT)
     if git_blob(corrected)!=PINNED["StudyReaderActivity.java"]:
         raise SystemExit("ATLAS FREEZE FAIL: approved anti-ghosting source hash mismatch")
-    if (ROOT/source).read_bytes()!=corrected:
-        raise SystemExit("ATLAS FREEZE FAIL: Lecture changed outside exact anti-ghosting patch")
+    previous=subprocess.check_output(["git","show","308735f3febf077b45fa5f4eb2949247753e33b9:"+source],cwd=ROOT)
+    if previous!=corrected:
+        raise SystemExit("ATLAS FREEZE FAIL: earlier patch bytes changed")
+    atomic=subprocess.check_output(["git","show","6a923350384348332bd59de2ec985bcfa4ff0ba2:"+source],cwd=ROOT)
+    if git_blob(atomic)!=PINNED["StudyReaderActivity.java"] or (ROOT/source).read_bytes()!=atomic:
+        raise SystemExit("ATLAS FREEZE FAIL: unapproved change beyond the atomic BOOX mask fix")
     subprocess.run(["python3","scripts/verify_authorized_mushaf_reader_delta.py"],
                    cwd=ROOT,check=True)
 

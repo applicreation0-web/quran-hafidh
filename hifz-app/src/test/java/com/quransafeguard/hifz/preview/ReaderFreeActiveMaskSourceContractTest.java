@@ -30,18 +30,24 @@ public final class ReaderFreeActiveMaskSourceContractTest {
   assertTrue(reading.contains("mushaf.setMaskFollowsSelection(false)"));
   assertTrue("Free mask must boot with the real physical QCF lines, never an empty selection",
       reading.contains("pageLines=GeometryRepository.get(this).lineIdsOnPage(page)"));
-  assertTrue("Boot must be masked on the very first SVG render, not after onPageShown",
-      reading.contains("mushaf.show(page,java.util.Collections.emptyList(),pageLines,")
-      && reading.contains("freeActiveMaskPageReady ? 100 : 0"));
-  assertFalse("No unmasked first-frame page may be loaded during active mask",
-      reading.contains("mushaf.show(page,java.util.Collections.emptyList(),pageLines,0)"));
+  assertTrue("Physical QCF word holes and mask must enter the WebView as one boot",
+      reading.contains("mushaf.showFreeActivePreparedPage(page,pageLines,landmarks,anchors,"));
+  assertFalse("Never start the free mask using an unmasked SVG",
+      reading.contains("mushaf.show(page,java.util.Collections.emptyList(),pageLines,0"));
+  String nativeReader=file(ROOT+"MushafView.java");
+  assertTrue("Hide naked Arabic glyphs until exact protected holes are committed",
+      nativeReader.contains("atomicFreeMaskBoot = exactGeometryReady;")
+      && nativeReader.contains("#mushaf{visibility:hidden}")
+      && nativeReader.contains("prepared.querySelector('#hifz-exact-word-holes')")
+      && nativeReader.contains("exactGeometryReady ? 100 : 0"));
   int maskLoad=reading.indexOf("private void showFreeActiveMaskPage()");
   int refresh=reading.indexOf("private void applyFreeActiveMask()",maskLoad);
   String boot=reading.substring(maskLoad,refresh);
-  assertTrue("Validate physical Quran lines/anchors before showing page",
-      boot.indexOf("pageLandmarkBoxes(page)") < boot.indexOf("mushaf.show(page,"));
-  assertTrue("First load must already have the hole geometry",
-      boot.indexOf("mushaf.setSemanticCues(anchors,true,false)") < boot.indexOf("mushaf.show(page,"));
+  assertTrue("The first boot must validate real anchors before rendering",
+      boot.indexOf("pageLandmarkBoxes(page)") < boot.indexOf("mushaf.showFreeActivePreparedPage("));
+  assertFalse("No transitional re-rendering of the old unmasked folio",
+      boot.contains("mushaf.setPageLandmarkBoxes(")
+      || boot.contains("mushaf.setSemanticCues("));
   int toggle=reading.indexOf("private void toggleFreeActiveMask()");
   int endToggle=reading.indexOf("private void updateFreeActiveMaskButton()",toggle);
   assertTrue("Switching ON must not first call setMask(0)",
