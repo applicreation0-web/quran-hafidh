@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/haafidh-1172-audit-native.yml'
       - 'hifz-app/src/**'
+      - 'hifz-app/build.gradle.kts' # native regression must re-run for a candidate version change
       - 'scripts/verify_backup_schema_import_delta.py'
 permissions:
   contents: read

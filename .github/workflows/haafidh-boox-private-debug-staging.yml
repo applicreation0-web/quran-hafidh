@@ -14,6 +14,7 @@ on:
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/ReaderFreeActiveMaskSourceContractTest.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/MawdudiMapDataTest.java'
       - 'hifz-app/src/main/AndroidManifest.xml'
+      - 'hifz-app/build.gradle.kts' # candidate versionCode/name must rebuild source-matched staging
       - 'scripts/guard_frozen_hifz_engines.sh'
       - 'scripts/guard_atlas_boox_visual_snapshot.py'
       - 'scripts/verify_authorized_hifz_session_delta.py'
