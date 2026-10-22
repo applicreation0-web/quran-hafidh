@@ -51,7 +51,7 @@ public final class MawdudiMapDataTest {
     if(passage.firstAyah>m.end||passage.lastAyah<m.start)continue;
     String display=AtlasPassageContext.displayTitle(passage.surah,passage.firstAyah,
       passage.lastAyah,m.start,m.end,title);
-    if(display.contains("partie du passage"))display="Extrait · "+title;
+    if(display.contains("partie du passage"))display=title; // no invented Extrait label
     assertEquals(display,data.displayContextTitle(passage.id,m.id,title));
    }
   }
