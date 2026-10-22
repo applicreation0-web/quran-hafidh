@@ -55,6 +55,21 @@ public final class WeeklyProgramPolicyTest {
             HifzPrefs.WeeklyProgram.MANUAL_SEVEN));
     }
 
+    @Test public void weeklyScreenActuallyDisplaysLearningProgressNotOnlyPlannerRawText() throws Exception {
+        java.lang.reflect.Method compact=MainActivity.class.getDeclaredMethod("compactScheduleLine",String.class);
+        compact.setAccessible(true);
+        assertEquals("Révision active + Apprentissage · 1/3",
+            compact.invoke(null,"Révision active 30 min + Apprentissage · séance 1/3 · 5 lignes"));
+        assertEquals("Révision active + Apprentissage · 2/3",
+            compact.invoke(null,"Révision active 30 min + Apprentissage · séance 2/3 · 5 lignes"));
+        assertEquals("Révision active + Apprentissage · 3/3",
+            compact.invoke(null,"Révision active 30 min + Apprentissage · séance 3/3 · 5 lignes"));
+        assertEquals("Révision active + Stabilisation · 2/4",
+            compact.invoke(null,"Révision active 30 min + Stabilisation · séance 2/4 · 7 lignes"));
+        assertEquals("✓ Révision active + Apprentissage · 3/3",
+            compact.invoke(null,"✓ Révision active 30 min + ✓ Apprentissage · séance 3/3"));
+    }
+
     @Test public void classicDelegatesOriginalCanonicalCadenceWithoutChange() {
         for(int ratio=0;ratio<=6;ratio++)
             for(DayOfWeek day:DayOfWeek.values())

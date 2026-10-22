@@ -839,7 +839,13 @@ public final class MainActivity extends android.app.Activity {
         else if(clean.contains("Renforcement") && clean.contains("Entretien"))
             kind="Renforcement + Entretien";
         if(clean.contains("Finale")||clean.contains("finale"))kind+=" · finale";
-        if(clean.contains("séance 1/4"))kind+=" · 1/4";
+        // Preserve learning's three-session weekly progression before Itqān's four blocks.
+        // The short calendar line previously discarded a valid 1/3, 2/3 or 3/3
+        // computed by WeeklyDashboardPlanner, making the BOOX screen misleading.
+        if(clean.contains("séance 1/3"))kind+=" · 1/3";
+        else if(clean.contains("séance 2/3"))kind+=" · 2/3";
+        else if(clean.contains("séance 3/3"))kind+=" · 3/3";
+        else if(clean.contains("séance 1/4"))kind+=" · 1/4";
         else if(clean.contains("séance 2/4"))kind+=" · 2/4";
         else if(clean.contains("séance 3/4"))kind+=" · 3/4";
         else if(clean.contains("séance 4/4"))kind+=" · 4/4";
