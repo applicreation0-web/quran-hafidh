@@ -272,7 +272,7 @@ public final class SettingsActivity extends android.app.Activity {
         renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") :"
             +"\\n1. Renforcement Sabqi : protocole conservé. Consolidation Itqān : ×7 sur le nouveau bloc, puis passage continu des blocs précédents (sans refaire chacun ×7)."
             +"\\n2. Dimanche matin : finale Renforcement Sabqi, distincte de l’Itqān recommandé. Dimanche soir : finale Consolidation Itqān. Seules ces finales permettent les promotions Acquis."
-            +"\\n3. Révision active 15 min et Entretien passif "+maintenanceMinutes()+" min les jours de semaine. Aucune Révision le dimanche.");
+            +"\\n3. Révision active "+maintenanceMinutes()+" min et Entretien passif "+maintenanceMinutes()+" min les jours de semaine. Aucune Révision le dimanche.");
     }
 
     private String suggestedTimeLabel(boolean morning) {
@@ -570,7 +570,7 @@ public final class SettingsActivity extends android.app.Activity {
         Toast.makeText(this,"Début de rotation enregistré. Les positions actuelles restent inchangées.",Toast.LENGTH_LONG).show();
     }
 
-    /** P4 J-15: the passive Entretien grows with the real ACQUIRED corpus instead of staying a
+    /** P4 J-15: both revisions grow with the real ACQUIRED corpus instead of staying a
      *  flat constant — see MaintenanceCoveragePolicy. */
     private int maintenanceMinutes(){
         return MaintenanceCoveragePolicy.minutes(
@@ -578,7 +578,7 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Révision active "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min puis Entretien "
+        murajaahStatus.setText("Révision active "+maintenanceMinutes()+" min puis Entretien 
             +maintenanceMinutes()+" min · chaque soir · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
         int weakCount=prefs.murajaahWeakVerses().size();

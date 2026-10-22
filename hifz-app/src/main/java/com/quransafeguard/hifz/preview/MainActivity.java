@@ -566,6 +566,9 @@ public final class MainActivity extends android.app.Activity {
     private List<TodaySession> todaySessions(LocalDate today,String nextMode,LocalDate nextScheduled){
         ArrayList<TodaySession> out=new ArrayList<>();
         String todayStr=today.toString();
+        // Both review modes share the dynamic duration; only corpora/masks remain distinct.
+        final int revisionMinutes=MaintenanceCoveragePolicy.minutes(
+            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
         String morningDetail=todayRow!=null?stripDone(compactSession(todayRow.morning)):null;
         if(nextScheduled!=null&&nextScheduled.isBefore(today)&&!isTodayAnchoredMode(nextMode)){
             out.add(new TodaySession("Report "+nextScheduled+" · "+modeTitle(nextMode),nextMode,nextScheduled,false,true));
@@ -573,7 +576,7 @@ public final class MainActivity extends android.app.Activity {
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         if(today.getDayOfWeek()!=DayOfWeek.SUNDAY
                 && prefs.weeklyProgramFor(today)!=HifzPrefs.WeeklyProgram.CLASSIC)
-            addToday(out,"Révision active · matin · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",
+            addToday(out,"Révision active · matin · "+revisionMinutes+" min",
                 HifzSessionActivity.MURAJAAH_ACTIVE,today,
                 todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
         if(recommendedSunday(today)){
@@ -608,7 +611,7 @@ public final class MainActivity extends android.app.Activity {
         }
         if(today.getDayOfWeek()!=DayOfWeek.SUNDAY){
             if(prefs.weeklyProgramFor(today)==HifzPrefs.WeeklyProgram.CLASSIC)
-                addToday(out,"Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
+                addToday(out,"Révision active · "+revisionMinutes+" min",HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
             addToday(out,"Entretien"+entretienDetail(),HifzSessionActivity.MURAJAAH,today,todayStr.equals(prefs.lastMurajaahDate()),nextMode);
         }
         return out;
