@@ -19,11 +19,11 @@ Date : 22 octobre 2026. Dépôt public `applicreation0-web/quran-hafidh`, branch
 - Audit Hifz/Atlas/QCF initial du correctif UI : **PASS** https://github.com/applicreation0-web/quran-hafidh/actions/runs/39850981391
 - Suite Android originale, avec masquage et journal de sauvegarde : **PASS** https://github.com/applicreation0-web/quran-hafidh/actions/runs/39850980911
 - Compilation de contrôle (non publiée) : **PASS** https://github.com/applicreation0-web/quran-hafidh/actions/runs/39850979830
-- Audit Android élargi (écran réel, SVG invisible, migrations V6, reprise après mort du processus) : https://github.com/applicreation0-web/quran-hafidh/actions/runs/39851925203 — résultat à relever explicitement à clôture.
-- Contrôle Hifz/Atlas pour l'audit élargi : https://github.com/applicreation0-web/quran-hafidh/actions/runs/39851925354 — résultat à relever explicitement à clôture.
+- Audit Android élargi (WebView réel, SVG invisible, migrations V6, reprise après mort du processus) : **PASS, 24/24 tests exécutés (0 skipped, 0 failed), émulateur API 35**, https://github.com/applicreation0-web/quran-hafidh/actions/runs/39851925203.
+- Contrôle Hifz/Atlas pour l'audit élargi : **PASS, les deux jobs (moteurs gelés et régressions JVM/source)**, https://github.com/applicreation0-web/quran-hafidh/actions/runs/39851925354.
 
 ## Limitations et décision
 - Les captures utilisateur prouvent les anomalies de la version installée, mais **pas** leur disparition physique après correction : aucun nouvel APK n'est envoyé ni installé en respect de la pause.
 - La suppression du trait SVG est testable numériquement ; l'absence de ghosting et l'ergonomie tactile sur la BOOX réelle restent à vérifier avec un futur candidat accepté.
 - Pas de release publique dans le dépôt GitHub public contenant les sept ressources privées sans vérification des droits de redistribution ; la clé historique ne doit jamais être téléversée.
-- **NO-GO pour l'APK/release tant que l'audit natif élargi n'est pas clos et que l'utilisateur n'a pas levé la pause sur les APK.**
+- **Audit automatique de la régression : PASS. NO-GO APK/release tant que l'utilisateur n'a pas levé la pause et que les validations physiques BOOX de rendu E-Ink, installation sans perte d'acquis et droits de diffusion ne sont pas résolues.**
