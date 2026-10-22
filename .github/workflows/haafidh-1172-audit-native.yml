@@ -1,4 +1,4 @@
-name: Haafidh 1.17.3 expanded audit - no publication
+name: Haafidh 1.17.4 exhaustive audit - no publication
 on:
   workflow_dispatch:
   push:
@@ -8,6 +8,7 @@ on:
       - 'hifz-app/src/**'
       - 'hifz-app/build.gradle.kts' # native regression must re-run for a candidate version change
       - 'scripts/verify_backup_schema_import_delta.py'
+      - 'scripts/verify_authorized_quiz_reader_delta.py'
 permissions:
   contents: read
 concurrency:
@@ -54,7 +55,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: audit-1172-test-evidence
+          name: audit-1174-test-evidence
           path: |
             hifz-core/build/test-results/
             hifz-app/build/test-results/
