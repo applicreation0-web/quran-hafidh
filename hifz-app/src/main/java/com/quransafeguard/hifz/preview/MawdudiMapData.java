@@ -180,7 +180,7 @@ final class MawdudiMapData {
   // must never expose a numeric "partie du passage" string. The canonical
   // Ayah Themes heading is still named explicitly as a partial excerpt.
   if(selected!=null&&selected.matches("^\\d+:\\d+.*\\bpartie du passage\\b.*"))
-    selected="Extrait · "+displayPassageTitle(passageId,admissibleSource);
+    selected=displayPassageTitle(passageId,admissibleSource);
   return AtlasDisplayTitleFormatter.displayPassage(selected);
  }
  List<Macro> forSurah(int s){List<Macro> r=new ArrayList<>();for(Macro m:all)if(m.surah==s)r.add(m);return r;}
