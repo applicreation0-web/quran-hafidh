@@ -30,7 +30,24 @@ public final class ReaderFreeActiveMaskSourceContractTest {
   assertTrue(reading.contains("mushaf.setMaskFollowsSelection(false)"));
   assertTrue("Free mask must boot with the real physical QCF lines, never an empty selection",
       reading.contains("pageLines=GeometryRepository.get(this).lineIdsOnPage(page)"));
-  assertTrue(reading.contains("mushaf.show(page,java.util.Collections.emptyList(),pageLines,0)"));
+  assertTrue("Boot must be masked on the very first SVG render, not after onPageShown",
+      reading.contains("mushaf.show(page,java.util.Collections.emptyList(),pageLines,")
+      && reading.contains("freeActiveMaskPageReady ? 100 : 0"));
+  assertFalse("No unmasked first-frame page may be loaded during active mask",
+      reading.contains("mushaf.show(page,java.util.Collections.emptyList(),pageLines,0)"));
+  int maskLoad=reading.indexOf("private void showFreeActiveMaskPage()");
+  int refresh=reading.indexOf("private void applyFreeActiveMask()",maskLoad);
+  String boot=reading.substring(maskLoad,refresh);
+  assertTrue("Validate physical Quran lines/anchors before showing page",
+      boot.indexOf("pageLandmarkBoxes(page)") < boot.indexOf("mushaf.show(page,"));
+  assertTrue("First load must already have the hole geometry",
+      boot.indexOf("mushaf.setSemanticCues(anchors,true,false)") < boot.indexOf("mushaf.show(page,"));
+  int toggle=reading.indexOf("private void toggleFreeActiveMask()");
+  int endToggle=reading.indexOf("private void updateFreeActiveMaskButton()",toggle);
+  assertTrue("Switching ON must not first call setMask(0)",
+      reading.substring(toggle,endToggle).contains("if(!freeActiveMask) {\n            mushaf.setMask(0);"));
+  assertTrue("After masked boot, no second multi-pass 100% render is required",
+      reading.contains("if(freeActiveMaskPageReady) { updateFreeActiveMaskButton(); return; }"));
   assertTrue(reading.contains("if(freeActiveMask)showFreeActiveMaskPage();"));
   String readerJs=file("hifz-app/src/main/assets/hifzreader/reader.js");
   assertTrue("The JS eraser is blocked unless lineIds are provided",
