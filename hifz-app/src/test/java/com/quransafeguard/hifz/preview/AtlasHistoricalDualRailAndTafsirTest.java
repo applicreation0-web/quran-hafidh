@@ -17,6 +17,14 @@ public final class AtlasHistoricalDualRailAndTafsirTest {
     @Test public void originalDualRailAndSourcedPassageSubtitlesStayVisible()throws Exception {
         String map=code("MawdudiMapScreen.java");
         assertTrue(map.contains("axis.addView(overview?overviewGraph:graph,"));
+        String transition=map.substring(map.indexOf("private void setLevel("),map.indexOf("private void openMacro("));
+        assertTrue("Opening a unit must actually switch the displayed view to the passage rail",
+            transition.contains("axis.addView(overview?overviewGraph:graph,"));
+        assertFalse("Never force the overview-only graph after opening a unit",
+            transition.contains("axis.addView(overviewGraph,"));
+        String data=code("MawdudiMapData.java");
+        assertFalse("Do not add an invented Extrait label",data.contains("Extrait · "));
+
         assertTrue(map.contains("private final class Graph extends View"));
         assertTrue(map.contains("private float passageX("));
         assertTrue(map.contains("passageSubtitle.setText(graph.selectedTitle())"));
