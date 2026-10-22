@@ -28,6 +28,14 @@ public final class ReaderFreeActiveMaskSourceContractTest {
   assertTrue(reading.contains("mushaf.setMask(100)"));
   assertTrue(reading.contains("mushaf.setMask(0)"));
   assertTrue(reading.contains("mushaf.setMaskFollowsSelection(false)"));
+  assertTrue("Free mask must boot with the real physical QCF lines, never an empty selection",
+      reading.contains("pageLines=GeometryRepository.get(this).lineIdsOnPage(page)"));
+  assertTrue(reading.contains("mushaf.show(page,java.util.Collections.emptyList(),pageLines,0)"));
+  assertTrue(reading.contains("if(freeActiveMask)showFreeActiveMaskPage();"));
+  String readerJs=file("hifz-app/src/main/assets/hifzreader/reader.js");
+  assertTrue("The JS eraser is blocked unless lineIds are provided",
+      readerJs.contains("if(clamped&&pageGeo&&lineIds.length&&lines.length)"));
+
   assertTrue(active.contains("mushaf.setSemanticCues(newStarts, true, false)"));
   assertTrue(active.contains("firstLast.length() == 6"));
  }
