@@ -1,6 +1,6 @@
 # Quran Haafidh — version officielle 1.17.3, édition BOOX privée
 
-Publication : 22 octobre 2026. Variante : **Atlas + Hifz**, hors Correspondances.
+Version privée signée : 22 octobre 2026. GitHub Release publique **NON publiée (HTTP 403)**. Variante : **Atlas + Hifz**, hors Correspondances.
 Dépôt public source : `applicreation0-web/quran-hafidh`, branche `work/haafidh-1171-atlas-only-pre20-mask`.
 
 ## Vérifications avant publication
@@ -19,7 +19,7 @@ Dépôt public source : `applicreation0-web/quran-hafidh`, branche `work/haafidh
 - Conservation des curseurs distincts, acquis et sauvegardes V6 ; Atlas limité aux Unités et Lecture.
 
 ## Distribution du binaire BOOX
-Le binaire privé officiel et signé est délivré séparément au propriétaire, **pas dans les ressources publiques de cette release GitHub**.
+Le binaire privé signé est délivré séparément au propriétaire. **La création de la page GitHub Release est actuellement bloquée par l'autorisation du jeton GitHub Actions (HTTP 403).** Même après déblocage, l'APK intégrant les sept ressources privées ne doit pas être joint à une release publique sans validation des droits de diffusion.
 
 | Propriété | Valeur |
 | --- | --- |
@@ -40,3 +40,7 @@ Le PDF et les corpus privés intégrés sont **exclus du dépôt public et des a
 **Instructions d'installation** : sauvegarder ses acquis, installer l'APK signé directement par-dessus la version BOOX privée déjà installée, sans désinstaller ni vider les données ; vérifier immédiatement les acquis, Sabqi, Itqān, Révision active/passive, masquage et absence de ghosting sur BOOX.
 
 **Attention :** cette édition privée est une lignée Android distincte des anciennes releases publiques `quran-hifz-1.17.1-release.apk` : ne pas supposer que le binaire BOOX privé met à jour leur identifiant ou certificat.
+
+## État de la publication GitHub
+Le workflow a tenté de créer la release **source-only** `quran-haafidh-v1.17.3-boox-private-source` le 22 octobre 2026 ; GitHub a répondu `HTTP 403: Resource not accessible by integration`, après validation des gates CI. Aucune release GitHub 1.17.3 n'a donc été créée et aucun APK ni secret n'a été transmis au dépôt.
+Preuve : https://github.com/applicreation0-web/quran-hafidh/actions/runs/39854948639.
