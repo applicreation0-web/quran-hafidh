@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.List;
 
@@ -48,7 +49,9 @@ public final class MushafView extends WebView {
     private Listener listener;
     private boolean listenerNotified;
     private boolean ready;
-    private Runnable pending;
+    /** FIFO of commands that belong to the current WebView page load only. */
+    private final ArrayDeque<Runnable> pendingActions = new ArrayDeque<>();
+    private long renderGeneration;
     private final HifzPrefs prefs;
     private final EinkController eink = new EinkController();
     private String maskEntropy;
@@ -179,7 +182,8 @@ public final class MushafView extends WebView {
         loadStartedAtMs = SystemClock.elapsedRealtime();
         pageShown = false;
         ready = false;
-        pending = null;
+        pendingActions.clear();
+        long currentGeneration = ++renderGeneration;
         lastSelection = selection;
         lastLineIds = lineIds;
         lastMask = maskPercent;
@@ -200,6 +204,7 @@ public final class MushafView extends WebView {
             for (VerseRef ref : currentHighlights) highlights.put(ref.toString());
             JSONObject boot = new JSONObject()
                 .put("page", page)
+                .put("renderGeneration", currentGeneration)
                 .put("selection", verses)
                 .put("lines", lines)
                 .put("mask", Math.max(0, Math.min(100, maskPercent)))
@@ -380,7 +385,8 @@ public final class MushafView extends WebView {
 
     public void destroySafely() {
         removeCallbacks(watchdog);
-        pending = null;
+        pendingActions.clear();
+        renderGeneration++;
         listener = null;
         removeJavascriptInterface("HifzNative");
         stopLoading();
@@ -388,7 +394,10 @@ public final class MushafView extends WebView {
         destroy();
     }
 
-    private void runWhenReady(Runnable action) { if (ready) action.run(); else pending = action; }
+    private void runWhenReady(Runnable action) {
+        if (ready) action.run();
+        else pendingActions.addLast(action);
+    }
 
     /** Canonical Hizb/Rubʿ boundary on this page for the gutter écusson, or NULL (fail-closed). */
     private Object rubMarkFor(int page) {
@@ -445,7 +454,8 @@ public final class MushafView extends WebView {
             removeCallbacks(watchdog);
             ready = false;
             pageShown = false;
-            pending = null;
+            pendingActions.clear();
+            renderGeneration++;
             setContentDescription("Erreur Mushaf : " + message);
             String html = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
                 "<style>html,body{margin:0;width:100%;height:100%;background:#faf8f2;color:#121211;font-family:sans-serif}" +
@@ -460,10 +470,14 @@ public final class MushafView extends WebView {
     private void report(String message) { post(() -> { if (listener != null) listener.onError(message); }); }
 
     private final class Bridge {
-        @JavascriptInterface public void ready() {
+        @JavascriptInterface public void ready(long generation) {
             post(() -> {
+                // An earlier page load must never unlock commands for its successor.
+                if (generation != renderGeneration) return;
                 ready = true;
-                if (pending != null) { Runnable r = pending; pending = null; r.run(); }
+                while (generation == renderGeneration && ready && !pendingActions.isEmpty()) {
+                    pendingActions.removeFirst().run();
+                }
             });
         }
 
@@ -480,9 +494,9 @@ public final class MushafView extends WebView {
         }
         @JavascriptInterface public void surfaceTap() { post(() -> { if (listener != null) listener.onSurfaceTap(); }); }
         @JavascriptInterface public void error(String message) { showFailure("Erreur d’affichage Mushaf : " + message); }
-        @JavascriptInterface public void pageShown(int page) {
+        @JavascriptInterface public void pageShown(int page, long generation) {
             post(() -> {
-                if (page != requestedPage) return;
+                if (generation != renderGeneration || page != requestedPage) return;
                 pageShown = true;
                 long renderMs = Math.max(1L, SystemClock.elapsedRealtime() - loadStartedAtMs);
                 observedRenderMs = updateObservedRender(observedRenderMs, renderMs);

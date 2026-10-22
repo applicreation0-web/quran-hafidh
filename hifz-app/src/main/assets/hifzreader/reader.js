@@ -262,7 +262,7 @@ function prepare(){
   requestAnimationFrame(updateSideMarks);
   requestAnimationFrame(updateCenterMark);
   requestAnimationFrame(updatePageBadge);
-  N?.pageShown(currentPage);
+  N?.pageShown(currentPage,Number(boot.renderGeneration||0));
 }
 document.addEventListener('click',()=>N?.surfaceTap?.());
 
@@ -928,4 +928,4 @@ window.HifzReader={
 
 if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys,validWordBox,protectedWordBoxes};
 prepare();
-N?.ready();
+N?.ready(Number(boot.renderGeneration||0));

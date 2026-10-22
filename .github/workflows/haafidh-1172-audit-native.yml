@@ -46,6 +46,7 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
+          target: google_apis # avoid corrupted default x86_64 system-image mirror observed in audit run
           profile: pixel_2
           disable-animations: true
           script: gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest

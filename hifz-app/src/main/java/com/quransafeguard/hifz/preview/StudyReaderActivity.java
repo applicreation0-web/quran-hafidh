@@ -554,7 +554,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             if(ayahThemesCues!=null) {
                 landmarks=WordGeometryRepository.shared(this).pageLandmarkBoxes(page);
                 anchors=ayahThemesCues.forPage(page);
-                if(landmarks.length()==6) {
+                // Do not report a ready mask if WebView cannot mask any physical QCF line.
+                if(!GeometryRepository.get(this).lineIdsOnPage(page).isEmpty() && landmarks.length()==6) {
                     freeActiveMaskPageReady=true;
                     for(int i=0;i<anchors.length();i++) {
                         org.json.JSONObject cue=anchors.getJSONObject(i);
