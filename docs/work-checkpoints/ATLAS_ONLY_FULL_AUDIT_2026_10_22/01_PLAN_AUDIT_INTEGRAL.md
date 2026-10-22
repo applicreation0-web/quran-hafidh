@@ -107,3 +107,26 @@ Un PASS de compilation ou de test source n'est jamais assimilé à un PASS d'int
 - Contrat : 23/23 icônes, 0 résidu Correspondances, aucune anomalie P0/P1 ouverte, chaque correction retestée.
 - Intégrité : signature/migration in-place démontrées sur données de test, et aucune altération des acquis réels.
 - Preuves : liens CI, captures, versions, SHA et résumé PASS/FAIL ; « non testé » explicite quand l'appareil physique est indisponible.
+
+
+## Objectif de livraison définitif — RELEASE OFFICIELLE 1.17.2 (clarification utilisateur du 22 octobre)
+
+**Le debug Atlas seul daté du 22 octobre 2026 est uniquement la BASE DE DÉPART de l'audit, et NON son livrable final.** La mission complète est : reprendre ce dernier debug, auditer exhaustivement toutes les fonctionnalités réellement intégrées, leurs comportements, l'intégralité des titres et icônes, corriger chaque anomalie identifiée, prouver la non-régression, puis préparer la **release officielle Quran Haafidh v1.17.2** pour validation explicite de l'utilisateur. **Ne pas publier automatiquement** cette release.
+
+### Séquence obligatoire
+1. Vérifier et figer la provenance du debug du 22/10 (SHA, certificat, variante Atlas seule, branche/commit, actifs) et l'utiliser comme baseline.
+2. Exécuter les audits CP00 à CP12 sur toute l'application ; contrôler Atlas, Hifz, Lecture, réglages, autres écrans, 1 419 titres, 23 icônes, 604 folios QCF, navigation, données, sécurité et performance. Correspondances demeure volontairement absente : ne pas la réintégrer au périmètre v1.17.2.
+3. Corriger par commits ciblés toutes les anomalies prouvées ; retester chaque correction, ses interactions et toute l'application après les dernières modifications. Aucun passage en release avec P0/P1 ouvert ou différence non justifiée avec le contrat.
+4. Préparer un APK/AAB **candidat officiel v1.17.2** avec numéro de version cohérent, versionCode strictement supérieur à l'installation existante, même applicationId et certificat compatible, ressources privées autorisées hors dépôt public, build reproductible, manifeste et hashes. Inspecter **les octets du binaire final** et la conformité au HEAD final, pas seulement les sources.
+5. Exécuter les essais de migration **sans désinstallation** sur données de test, tests Android/JVM/instrumentés, vérifications sécurité, restauration, longitudinal Hifz, lecture hors ligne et véritable recette sur appareil BOOX. Si les essais physiques ne peuvent être réalisés, le résultat reste candidat non validé ; ne pas déclarer la release prête.
+6. Exiger une **contre-expertise indépendante finale** et remettre un dossier de décision GO/NO-GO par domaine, le journal des corrections et preuves, le candidat privé v1.17.2, et les réserves résiduelles. **GO technique ≠ autorisation de publication**.
+7. **Publication officielle 1.17.2 seulement après accord explicite de l'utilisateur**, après réussite de tous les contrôles bloquants. Aucun déploiement public, release/tag de publication, ni substitution à la version installée sans cet accord.
+
+### Livrables révisés
+- Dossier d'audit exhaustif et anomalies corrigées, avec liens des commits, captures et résultats reproductibles.
+- Rapport contradictoire final sur le **build officiel candidat v1.17.2** (et non sur un ancien debug).
+- Manifeste du binaire candidat : applicationId, versionName=1.17.2, versionCode, empreinte APK, certificat, commit exact, inventaire d'actifs, PASS/FAIL/NON TESTABLE.
+- Procédure de migration 1.17.1 → 1.17.2 et plan de retour arrière **sans perte d'acquis**.
+- **Statut final attendu** : « CANDIDAT OFFICIEL 1.17.2 — PRÊT POUR AUTORISATION » si l'audit complet et les tests BOOX sont tous concluants ; sinon « NO-GO RELEASE », avec corrections poursuivies.
+
+**À aucun moment le succès du debug seul ne clôture la mission.**
