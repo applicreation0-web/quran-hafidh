@@ -35,8 +35,36 @@ shown_before="N?.pageShown(currentPage);"
 assert expected.count(ready_before)==1 and expected.count(shown_before)==1
 expected=expected.replace(ready_before,"N?.ready(Number(boot.renderGeneration||0));")
 expected=expected.replace(shown_before,"N?.pageShown(currentPage,Number(boot.renderGeneration||0));")
+# The 1.17.4 full-mask fix is reconstructed from the exact 1.17.3
+# bridge-approved JS. Partial 25/50/75% coverage must be byte-identical.
+previous=subprocess.check_output(
+    ["git","show","6831e1c670a431c5deff09642434521b644bcebb:"+FILE],
+    cwd=ROOT).decode("utf-8")
+assert previous==expected, "Reader generation-approved JS baseline unexpectedly changed"
+ERASER_BEFORE="""  const full=segments.slice();
+  if(!full.length||!pageWordBoxes.length)return [];
+  const out=[];"""
+ERASER_AFTER="""  const full=segments.slice();
+  if(!full.length||!pageWordBoxes.length)return [];
+  // The 100% eraser must cover the REAL exact-word ink of every due line.
+  // Earlier cell-centre filtering missed overhanging harakat/letters, producing
+  // residual straight streaks on physical folios 6/11. Partial masks remain
+  // randomized by cell as before; this is strictly a 100% correction.
+  const completelyMasked=full.every(s=>s.fullErase);
+  const out=[];"""
+WORDS_BEFORE="""    if(!full.some(s=>s.lineId===lineId&&cx>=s.x&&cx<=s.x+s.width))return;
+    out.push({key:'w'+i,lineId,x:box[0],y:box[1],width:box[2]-box[0],height:box[3]-box[1],fullErase:true});"""
+WORDS_AFTER="""    if(!completelyMasked&&!full.some(s=>s.lineId===lineId&&cx>=s.x&&cx<=s.x+s.width))return;
+    // The exact-hole mask is applied after the eraser, so all protected words
+    // remain visible and rosettes are redrawn in their unchanged QCF positions.
+    const pad=completelyMasked?1.15:0;
+    out.push({key:'w'+i,lineId,x:box[0]-pad,y:box[1]-pad,
+      width:(box[2]-box[0])+2*pad,height:(box[3]-box[1])+2*pad,fullErase:true});"""
+for a,b in ((ERASER_BEFORE,ERASER_AFTER),(WORDS_BEFORE,WORDS_AFTER)):
+    assert expected.count(a)==1, "Approved 1.17.4 mask source patch no longer unique"
+    expected=expected.replace(a,b)
 actual=(ROOT/FILE).read_text(encoding="utf-8")
-assert actual==expected, "Mushaf renderer drift outside locked low-opacity amorce/off-unit + 1.17.2 generation bridge"
+assert actual==expected, "UNAUTHORIZED JS change beyond exact 100% full-word erase"
 assert "quizMaskElement" not in actual and "quiz-prompt" not in actual
-assert subprocess.check_output(["git","hash-object",str(ROOT/FILE)],cwd=ROOT,text=True).strip()==GENERATION_BLOB
-print("PASS: official Hifz renderer byte-reconstructed; only exact approved focus + amorce + bridge generations")
+assert subprocess.check_output(["git","hash-object",str(ROOT/FILE)],cwd=ROOT,text=True).strip()=="3c76e9d7e2133bf3a68f0ff466fbc0fdb2dfb5f2"
+print("PASS: byte-reconstructed reader JS, 1.17.4 100% exact-word eraser only; 25/50/75% frozen")
