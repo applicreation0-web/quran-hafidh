@@ -37,3 +37,11 @@ Commit `05d69d25` :
 **NO-GO 1.17.2** tant que tests Android instrumentés non exécutés, stabilité masquage/ancres non démontrée, audit des 1 419 titres privés, contrôle rendu 23 icônes, tests longitudinal Hifz et recette BOOX/migration/signature non clos. Correspondances volontairement exclue. Ne pas publier sur GitHub public le binaire final privé, le corpus privé ou les secrets.
 
 Compte rendu établi à partir du GitHub HEAD et logs du 22/10 ; aucun test BOOX physique prétendu.
+
+## 6. Deuxième contre-audit sur le correctif — garde-fous et contrats sources
+Sur le commit `05d69d25`, les trois jobs de contrôle Hifz/Atlas et de compilation privée ont relevé une violation de la règle gelant `MushafView.java` : les modifications du moteur de rendu doivent être **autorisées précisément**, jamais rendues globalement libres. La JVM a aussi signalé trois tests source liés aux chaînes `N?.pageShown(currentPage);` et `N?.ready();`, maintenant remplacées par des callbacks qui portent la génération.
+- Preuves : https://github.com/applicreation0-web/quran-hafidh/actions/runs/39792640940 et https://github.com/applicreation0-web/quran-hafidh/actions/runs/39792641050 .
+- Résolution au commit `5b42c4830b0a2996d7b3091d9ae3936eae2e682d` : exception **strictement épinglée aux empreintes exactes** du rendu Java et JS dans `scripts/verify_authorized_mushaf_reader_delta.py`, tout le reste du gel Hifz inchangé ; trois tests de contrats vérifient désormais que les callbacks natifs ont un identifiant de génération.
+- Nouvelles exécutions de référence : https://github.com/applicreation0-web/quran-hafidh/actions/runs/39793493879 (Hifz/Atlas), https://github.com/applicreation0-web/quran-hafidh/actions/runs/39793494188 (audit natif), https://github.com/applicreation0-web/quran-hafidh/actions/runs/39793493905 (compilation privée sans APK). États **non conclus au moment de cette mise à jour** : aucun PASS inventé.
+
+**Les deux correctifs visent la 1.17.2, mais il reste impératif d'obtenir un test WebView réel PASS et une vérification de non-régression Hifz sur leur HEAD final avant GO.**
