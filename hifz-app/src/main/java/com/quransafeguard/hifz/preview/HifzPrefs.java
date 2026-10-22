@@ -1912,7 +1912,7 @@ public final class HifzPrefs {
     }
 
     /**
-     * Post-An-Nās Itqān maintenance validation (one hizb, ×4 = 2 visible + 2 anchored passes). Only lines never credited anywhere become Stabilisé, and only they join the
+     * Post-An-Nās Itqān maintenance validation (new ×3: 2 visible + 1 anchored; OPEN ×4 retained). Only lines never credited anywhere become Stabilisé, and only they join the
      * Stabilisation snowball — as StabilizationHalfPagePolicy half-page blocks Consolidation can
      * re-verify. Stabilisé/Acquis lines are reinforcement only (no V6 change, no snowball entry),
      * Appris lines stay in their Apprentissage chain, and no Sabqi key is ever written here.

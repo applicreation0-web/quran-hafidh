@@ -831,9 +831,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             currentPage=unitFirstPage;
         }
 
-        // Latest user decision: FULL only for every new unit; deep ×40 + progressive eraser until
-        // the first An-Nās arrival, then one hizb per session ×4 (2 visible + 2 anchored). A unit
-        // already mid-repetition keeps the plan it was started with (see ItqanRegimeStore).
+        // FULL first pass ×40; after the first An-Nās arrival, one hizb ×3
+        // (2 visible + 1 anchored). A previously opened ×4 unit finishes
+        // its persisted plan without dropping the fourth repetition.
         ItqanRegimeStore.UnitPlan plan = prefs.itqanUnitPlan(anchoringEntry);
         if (!prefs.stampItqanUnitPlan(anchoringEntry, plan)) {
             onError("Impossible d’enregistrer le protocole de Stabilisation.");
@@ -842,7 +842,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         itqanRegime = plan.regime;
         itqanSessionProtocol = plan.protocol;
         itqanUnitPlan = plan;
-        itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanRegime, itqanSessionProtocol);
+        itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanUnitPlan);
         boolean maintenance = itqanRegime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
         List<GeometryRepository.LineMeta> unitLines = geometry.linesForExactIds(itqanUnit.lineIds);
         List<StabilizationHalfPagePolicy.Unit> plannedUnits = maintenance
@@ -1102,7 +1102,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void updateItqanProgress(int rep,int reveals){
-        String stage=ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep)
+        String stage=ItqanMaintenancePolicy.anchoredRecallRep(itqanUnitPlan, rep)
             ? "rappel avec ancrages" : "masque "+currentMask+"%";
         progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · "+stage+" · révélations "+reveals);
         eink.local(progress, prefs);
@@ -1133,7 +1133,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int rep=prefs.itqanRep();if(rep>=itqanTargetReps)return;
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
         int finalReveals = prefs.itqanFinalReveals()
-            + (revealed && ItqanMaintenancePolicy.isValidationRep(itqanRegime, itqanSessionProtocol, rep - 1) ? 1 : 0);
+            + (revealed && ItqanMaintenancePolicy.isValidationRep(itqanUnitPlan, rep - 1) ? 1 : 0);
         if(!prefs.setItqanProgress(rep,reveals,finalReveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition de la Stabilisation.");return;}
         if(rep>=itqanTargetReps){
             currentMask=0;mushaf.setMask(0);
@@ -1141,7 +1141,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             awaitingValidation=true;sessionCompleted=true;renderMode();return;
         }
         currentMask=ItqanBalancedMaskSchedule.maskForNextRep(itqanUnitPlan, rep);
-        if(ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep)!=ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep-1))
+        if(ItqanMaintenancePolicy.anchoredRecallRep(itqanUnitPlan, rep)!=ItqanMaintenancePolicy.anchoredRecallRep(itqanUnitPlan, rep-1))
             applyItqanAnchors();
         if(currentMask!=oldMask)mushaf.setMask(displayedMask());
         updateRevealButton();if(currentPage!=itqanBlockPage){currentPage=itqanBlockPage;showCurrent();}
@@ -1802,8 +1802,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean itqanAnchorFailOpen;
 
     /**
-     * Post-An-Nās maintenance recall (passes 3-4): the hizb disappears into the paper at
-     * 100% except the project's existing validated anchors — the Al-Munīr amorces (audited V2.1
+     * Post-An-Nās maintenance recall (pass 3; legacy OPEN sessions also pass 4):
+     * the hizb disappears at 100% except validated anchors — Al-Munīr amorces (audited V2.1
      * start words, SemanticPassageRepository) of every unit beginning inside this Itqān unit on
      * the shown page, cut as exact quran-ws word holes — plus the reader's permanent page cues.
      * The page's first/last three words (a Révision active aid) are deliberately not added.
@@ -1814,7 +1814,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         itqanAnchorFailOpen = false;
         mushaf.setLandmarkLines(null, null);
         boolean anchored = !sessionCompleted && currentMask == 100 && itqanUnit != null
-            && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, prefs.itqanRep())
+            && ItqanMaintenancePolicy.anchoredRecallRep(itqanUnitPlan, prefs.itqanRep())
             && currentLineIds != null && !currentLineIds.isEmpty();
         if (!anchored || semanticPassages == null || !semanticPassages.isAvailable()) {
             mushaf.clearSemanticCues();
