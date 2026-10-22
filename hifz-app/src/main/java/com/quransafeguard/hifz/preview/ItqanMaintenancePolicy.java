@@ -29,8 +29,10 @@ final class ItqanMaintenancePolicy {
     enum Regime { DEEP_FIRST_PASS, POST_NAS_MAINTENANCE }
 
     static final int VISIBLE_REPS = 2;
-    static final int ANCHOR_REPS = 2;
-    static final int TOTAL_REPS = 4;
+    static final int ANCHOR_REPS = 1;
+    static final int TOTAL_REPS = VISIBLE_REPS + ANCHOR_REPS;
+    // A previously OPEN ×4 unit must still finish all recorded repetitions.
+    static final int LEGACY_OPEN_TOTAL_REPS = 4;
     /** Sanity bound for one maintenance unit (the longest hizb is ~11 pages ≈ 165 lines). */
     static final int MAX_UNIT_LINES = 260;
 
@@ -50,6 +52,15 @@ final class ItqanMaintenancePolicy {
         return PreviewConfig.itqanTotalReps(protocol);
     }
 
+    /** Only the old saved maintenance stamp retains ×4 after the upgrade. */
+    static int totalReps(ItqanRegimeStore.UnitPlan plan) {
+        if (plan == null) throw new IllegalArgumentException("Itqan plan required");
+        if (plan.regime == Regime.POST_NAS_MAINTENANCE
+                && plan.maskProfile != ItqanRegimeStore.MaskProfile.POST_NAS_THREE)
+            return LEGACY_OPEN_TOTAL_REPS;
+        return totalReps(plan.regime, plan.protocol);
+    }
+
     /** Mask for the next repetition: maintenance is 0% (visible) then 100% with anchors kept. */
     static int maskForNextRep(Regime regime, AnchoringQueue.ItqanProtocol protocol, int completed) {
         if (regime != Regime.POST_NAS_MAINTENANCE) return PreviewConfig.itqanMaskForNextRep(completed, protocol);
@@ -57,15 +68,41 @@ final class ItqanMaintenancePolicy {
         return completed < VISIBLE_REPS ? 0 : 100;
     }
 
-    /** True while the next repetition is one of the ten anchored recall repetitions. */
+    /** A legacy OPEN ×4 retains its fourth masked repetition. */
+    static int maskForNextRep(ItqanRegimeStore.UnitPlan plan, int completed) {
+        if (plan == null) throw new IllegalArgumentException("Itqan plan required");
+        if (plan.regime != Regime.POST_NAS_MAINTENANCE)
+            return maskForNextRep(plan.regime, plan.protocol, completed);
+        int total = totalReps(plan);
+        return completed < 0 || completed >= total ? 0
+            : completed < VISIBLE_REPS ? 0 : 100;
+    }
+
+    /** True while the next repetition is an anchored recall repetition. */
     static boolean anchoredRecallRep(Regime regime, int completed) {
         return regime == Regime.POST_NAS_MAINTENANCE && completed >= VISIBLE_REPS && completed < TOTAL_REPS;
+    }
+
+    static boolean anchoredRecallRep(ItqanRegimeStore.UnitPlan plan, int completed) {
+        return plan != null && plan.regime == Regime.POST_NAS_MAINTENANCE
+            && completed >= VISIBLE_REPS && completed < totalReps(plan);
+    }
+
+    /** The new ×3 validates its only masked pass; old OPEN ×4 preserves its final two. */
+    static boolean isValidationRep(ItqanRegimeStore.UnitPlan plan, int completedBefore) {
+        if (plan == null) throw new IllegalArgumentException("Itqan plan required");
+        if (plan.regime != Regime.POST_NAS_MAINTENANCE)
+            return isValidationRep(plan.regime, plan.protocol, completedBefore);
+        int next = completedBefore + 1, total = totalReps(plan);
+        int first = plan.maskProfile == ItqanRegimeStore.MaskProfile.POST_NAS_THREE
+            ? total : total - 1;
+        return next >= first && next <= total;
     }
 
     static boolean isValidationRep(Regime regime, AnchoringQueue.ItqanProtocol protocol, int completedBefore) {
         if (regime != Regime.POST_NAS_MAINTENANCE) return PreviewConfig.isItqanValidationRep(completedBefore, protocol);
         int next = completedBefore + 1;
-        return next >= TOTAL_REPS - 1 && next <= TOTAL_REPS;
+        return next == TOTAL_REPS;
     }
 
     /**
