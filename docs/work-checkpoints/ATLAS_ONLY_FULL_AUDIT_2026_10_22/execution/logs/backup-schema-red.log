@@ -1,0 +1,28 @@
+JUnit version 4.13.2
+..E.E.E.E
+Time: 0.06
+There were 4 failures:
+1) rejectsFutureSchemaBeforeReplacingAcquisitions(com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest)
+java.lang.AssertionError: expected org.json.JSONException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest.rejectsFutureSchemaBeforeReplacingAcquisitions(HifzBackupSchemaValidationTest.java:22)
+2) rejectsCoercedAndFractionalSchemaNumbers(com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest)
+java.lang.AssertionError: expected org.json.JSONException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest.rejectsCoercedAndFractionalSchemaNumbers(HifzBackupSchemaValidationTest.java:28)
+3) rejectsStringSchemaInsteadOfCommittingAnUnreadablePreference(com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest)
+java.lang.AssertionError: expected org.json.JSONException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest.rejectsStringSchemaInsteadOfCommittingAnUnreadablePreference(HifzBackupSchemaValidationTest.java:19)
+4) rejectsZeroSchemaWhichWouldInitializeOverRestoredProgress(com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest)
+java.lang.AssertionError: expected org.json.JSONException to be thrown, but nothing was thrown
+	at org.junit.Assert.assertThrows(Assert.java:1028)
+	at org.junit.Assert.assertThrows(Assert.java:981)
+	at com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest.rejectsZeroSchemaWhichWouldInitializeOverRestoredProgress(HifzBackupSchemaValidationTest.java:25)
+
+FAILURES!!!
+Tests run: 5,  Failures: 4
+

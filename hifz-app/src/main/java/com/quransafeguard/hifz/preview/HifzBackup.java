@@ -125,6 +125,9 @@ final class HifzBackup {
             if(version!=1 && version!=VERSION)
                 throw new JSONException("Version de sauvegarde non prise en charge.");
             JSONObject values=root.getJSONObject("values");
+            // A missing schema would initialize defaults over the imported acquisitions.
+            if(!values.has("schema"))
+                throw new JSONException("Schéma de progression absent de la sauvegarde.");
             JSONObject dashboard=version==VERSION
                 ?withCoverage(root.getJSONObject("dashboard")):legacyDashboard();
             JSONObject j10=version==VERSION?root.getJSONObject("j10"):new JSONObject();
@@ -199,6 +202,14 @@ final class HifzBackup {
     }
 
     private static void checkValues(JSONObject values) throws JSONException {
+        if(values.has("schema")) {
+            JSONObject schema=values.getJSONObject("schema");
+            Object number=schema.get("v");
+            // JSONObject.getInt coerces strings and fractions; SharedPreferences does not.
+            if(!"i".equals(schema.getString("t")) || !(number instanceof Integer)
+                    || (Integer)number<1 || (Integer)number>PreviewConfig.SCHEMA_VERSION)
+                throw new JSONException("Schéma de progression invalide ou non pris en charge.");
+        }
         Iterator<String> keys=values.keys();
         while(keys.hasNext()){
             String key=keys.next();

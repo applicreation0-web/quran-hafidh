@@ -33,8 +33,7 @@ while IFS= read -r file; do
       ;;
     "$APP_ROOT/HifzBackup.java")
       if [ "$(git hash-object "$file")" != "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]; then
-        echo "::error file=$file::Pre-release backup V2 is not the audited byte-pinned adapter."
-        bad=1
+        python3 scripts/verify_backup_schema_import_delta.py || bad=1
       else
         echo "EXACT PRE-RELEASE P0 BACKUP: $file"
       fi

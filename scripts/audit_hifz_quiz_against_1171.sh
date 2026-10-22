@@ -63,8 +63,7 @@ while IFS= read -r file; do
       if [[ "$(git hash-object "$file")" == "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]]; then
         echo "EXACT PRE-RELEASE P0 BACKUP: $file"
       else
-        echo "::error file=$file::Backup V2 byte hash differs from approved adapter"
-        bad=1
+        python3 scripts/verify_backup_schema_import_delta.py || bad=1
       fi
       ;;
     "$prefix/DashboardLedger.java")
