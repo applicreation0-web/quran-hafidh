@@ -56,6 +56,18 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    assertEquals("Display cannot change a single mask/hole byte",before,after);
    assertTrue("New independent exact-word targets must be visible",
      Integer.parseInt(js(scenario,"String(document.querySelectorAll('.ayah-themes-title-targets rect').length)"))>0);
+   assertEquals("Title touch zones must remain invisible on the actual rendered SVG",
+     "true", js(scenario,
+       "String(Array.from(document.querySelectorAll('.ayah-themes-title-targets rect'))"
+        +".every(x=>x.getAttribute('stroke')==='none'"
+        +"&&x.getAttribute('stroke-width')==='0'"
+        +"&&x.getAttribute('stroke-opacity')==='0'"
+        +"&&x.getAttribute('fill')==='transparent'"
+        +"&&x.getAttribute('pointer-events')==='all'))"));
+   String maskAfter=js(scenario,
+     "JSON.stringify({mask:mask,holes:protectedWordBoxes(),layers:Array.from(document.querySelectorAll('.masklayer')).map(n=>n.outerHTML)})");
+   assertEquals("Making tap targets invisible must not redraw or remove recall mask holes",
+     before,maskAfter);
   }
  }
  @Test public void graphical114MapUsesRealQcfAndReturnsToExactUnit() throws Exception {
