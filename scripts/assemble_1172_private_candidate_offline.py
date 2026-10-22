@@ -22,6 +22,8 @@ import zipfile
 EXPECTED_CERT = "85cd816f5213ae81f450146789c13ec476df54d7be8cc5f806decc9ed3f7061e"
 APP_ID = "com.quransafeguard.hifz.ayahthemes114private"
 VERSION_CODE = "40"
+PREVIOUS_VERSION_CODE = 39
+PREVIOUS_VERSION_NAME = "1.17.1-AyahThemes114-PRIVATE"
 VERSION_NAME = "1.17.2-AyahThemes114-PRIVATE"
 EXPECTED_ASSETS = {
     "atlas_private/atlas_366_comments_offline_reference_v1.json":
@@ -97,6 +99,49 @@ def check_staging(p: Path) -> None:
         if z.testzip() is not None:
             die("staging APK ZIP CRC check failed")
 
+def parse_apk_package(apk: Path, aapt: Path) -> tuple[str, int, str]:
+    """Read the signed/unsigned Android manifest, not a guessed APK filename."""
+    out = run([str(aapt), "dump", "badging", str(apk)])
+    m = re.search(r"^package: name='([^']+)' versionCode='([0-9]+)' versionName='([^']+)'",
+                  out, re.MULTILINE)
+    if not m:
+        die("cannot read Android package identity: " + apk.name)
+    return m.group(1), int(m.group(2)), m.group(3)
+
+
+def signed_certificate(apk: Path, apksigner: Path) -> str:
+    out = run([str(apksigner), "verify", "--verbose", "--print-certs", str(apk)])
+    m = re.search(r"Signer #1 certificate SHA-256 digest:\\s*([0-9a-fA-F:]+)", out)
+    if not m:
+        die("cannot verify the existing APK signing certificate")
+    return m.group(1).lower().replace(":", "")
+
+
+def verify_upgrade_path(previous: Path, staging: Path,
+                        aapt: Path, apksigner: Path) -> str:
+    """Fail before signing unless a real v1.17.1 APK can be upgraded in place.
+
+    A reference APK's signature proves the expected Android identity; the BOOX
+    device must still be checked before its actual in-place installation.
+    """
+    if not previous.is_file() or not zipfile.is_zipfile(previous):
+        die("real signed 1.17.1 reference APK required for an in-place update")
+    old_id, old_code, old_name = parse_apk_package(previous, aapt)
+    if (old_id, old_code, old_name) != (
+        APP_ID, PREVIOUS_VERSION_CODE, PREVIOUS_VERSION_NAME
+    ):
+        die("reference APK is not the expected installed private 1.17.1 app")
+    if signed_certificate(previous, apksigner) != EXPECTED_CERT:
+        die("old APK signing certificate differs; refusing a destructive reinstall")
+
+    new_id, new_code, new_name = parse_apk_package(staging, aapt)
+    if (new_id, new_code, new_name) != (APP_ID, int(VERSION_CODE), VERSION_NAME):
+        die("staging APK package/version differs from approved 1.17.2 update")
+    if new_code <= old_code:
+        die("APK downgrade or same-version update: versionCode must increase")
+    return sha(previous.read_bytes())
+
+
 def build_unsigned(staging: Path, unsigned: Path, assets: dict[str, bytes]) -> None:
     # Rewrite rather than append: old APK signing blocks and JAR signature entries
     # must not survive an asset-level modification.
@@ -137,6 +182,8 @@ def main() -> None:
                         help="root containing atlas/, atlas_private/, ayah_themes_private/")
     parser.add_argument("--build-tools", type=Path, required=True,
                         help="Android SDK build-tools/36.0.0 directory")
+    parser.add_argument("--reference-1171-apk", type=Path, required=True,
+                        help="actual signed private 1.17.1 APK matching the BOOX installation")
     parser.add_argument("--keystore", type=Path, required=True)
     parser.add_argument("--alias", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -158,8 +205,11 @@ def main() -> None:
             die("Android build-tool missing: " + tool)
     if args.output.exists() or args.output.name.endswith(".zip"):
         die("output must be a fresh APK path")
-    assets = check_assets(args.private_assets)
     check_staging(args.staging_apk)
+    reference_sha = verify_upgrade_path(args.reference_1171_apk, args.staging_apk,
+                                        args.build_tools / "aapt",
+                                        args.build_tools / "apksigner")
+    assets = check_assets(args.private_assets)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="haafidh1172_offline_") as tmp:
@@ -185,10 +235,14 @@ def main() -> None:
         "versionName": VERSION_NAME,
         "signer_sha256": EXPECTED_CERT,
         "apk_sha256": final_sha,
+        "reference_1171_apk_sha256": reference_sha,
+        "reference_1171_versionCode": PREVIOUS_VERSION_CODE,
+        "upgrade_package_and_signer_match_reference": True,
         "apk_size_bytes": args.output.stat().st_size,
         "private_asset_sha256": EXPECTED_ASSETS,
         "boox_recette": "NON_TESTEE",
-        "in_place_update_and_data_preservation": "NON_TESTEES",
+        "in_place_update_and_data_preservation": "NON_TESTEES_SUR_BOOX",
+        "installation_instruction": "Sauvegarder; installer avec adb install -r (sans desinstaller); controler acquis",
         "publication_authorized": False,
     }
     report_path = args.output.with_suffix(".verification.json")
