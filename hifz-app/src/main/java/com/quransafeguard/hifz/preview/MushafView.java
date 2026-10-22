@@ -67,6 +67,8 @@ public final class MushafView extends WebView {
     private String landmarkStartLineId;
     private String landmarkEndLineId;
     private boolean maskFollowsSelection = true;
+    /** Lecture free-mask only: block unmasked SVG paint until exact word holes exist. */
+    private boolean atomicFreeMaskBoot;
     private JSONArray pageLandmarkBoxes = new JSONArray();
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
@@ -171,9 +173,30 @@ public final class MushafView extends WebView {
      * crossing outside the due block cannot widen the focus beyond the lines actually due.
      */
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus) {
+        atomicFreeMaskBoot = false;
         lastContextFocus = contextFocus;
         retried = false;
         load(page, selection, lineIds, maskPercent);
+    }
+
+    /**
+     * Lecture-only fail-closed first-frame masking. Stage all geometry in the
+     * native boot payload WITHOUT issuing JS setters against the visible folio.
+     * The existing Sabqi/Itqan/Murajaah show() path remains unchanged.
+     */
+    public void showFreeActivePreparedPage(int page, List<String> lineIds,
+            JSONArray landmarks, JSONArray cues, boolean exactGeometryReady) {
+        atomicFreeMaskBoot = exactGeometryReady;
+        lastContextFocus = false;
+        maskFollowsSelection = false;
+        landmarkStartLineId = null;
+        landmarkEndLineId = null;
+        pageLandmarkBoxes = exactGeometryReady ? landmarks : new JSONArray();
+        semanticCues = exactGeometryReady ? cues : new JSONArray();
+        semanticAnchorMaskMode = exactGeometryReady;
+        semanticHighlightEnabled = false;
+        retried = false;
+        load(page, Collections.emptyList(), lineIds, exactGeometryReady ? 100 : 0);
     }
 
     private void load(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
@@ -196,6 +219,20 @@ public final class MushafView extends WebView {
             String geometry = needsGeometry ? GeometryRepository.get(getContext()).pageGeometryJson(page) : null;
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             if (!html.contains("'nonce-" + INLINE_NONCE + "'")) throw new IllegalStateException("reader CSP nonce missing");
+            if (atomicFreeMaskBoot) {
+                // Hide raw Mushaf SVG BEFORE HTML parsing paints any Arabic glyph.
+                // The verified 100% mask alone may reveal this same folio later.
+                if (!html.contains("</style>")) throw new IllegalStateException("reader CSS missing");
+                html = html.replace("</style>", "#mushaf{visibility:hidden}\n</style>");
+                final String callback = "N?.pageShown(currentPage,Number(boot.renderGeneration||0));";
+                if (!javascript.contains(callback)) throw new IllegalStateException("reader page callback missing");
+                javascript = javascript.replace(callback,
+                    "var prepared=window.document.querySelector('#mushaf svg g.masklayer');"
+                    +"if(!prepared||!prepared.querySelector('#hifz-exact-word-holes')){"
+                    +"N?.error('Masque précis indisponible : page laissée masquée');return;}"
+                    +"document.getElementById('mushaf').style.visibility='visible';"
+                    +callback);
+            }
             JSONArray verses = new JSONArray();
             for (VerseRef ref : selection) verses.put(ref.toString());
             JSONArray lines = new JSONArray();

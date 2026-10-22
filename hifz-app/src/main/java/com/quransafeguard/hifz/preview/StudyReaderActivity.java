@@ -560,18 +560,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 }
             }
         } catch(Exception missingExactGeometry) { freeActiveMaskPageReady=false; }
-        mushaf.setMaskFollowsSelection(false);
-        mushaf.setLandmarkLines(null,null);
-        if(freeActiveMaskPageReady) {
-            mushaf.setPageLandmarkBoxes(landmarks);
-            mushaf.setSemanticCues(anchors,true,false);
-        } else {
-            // Never construct an approximate word hole.
-            mushaf.clearPageLandmarkBoxes();
-            mushaf.clearSemanticCues();
-        }
-        mushaf.show(page,java.util.Collections.emptyList(),pageLines,
-            freeActiveMaskPageReady ? 100 : 0);
+        // One atomic native boot: never redraw the old page with successive
+        // geometry, anchor and mask setters before the masked folio is ready.
+        mushaf.showFreeActivePreparedPage(page,pageLines,landmarks,anchors,
+            freeActiveMaskPageReady);
         updateFreeActiveMaskButton();
     }
 
@@ -635,7 +627,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             mushaf.clearPageLandmarkBoxes();
             mushaf.clearSemanticCues();
         }
-        mushaf.setMaskFollowsSelection(!freeActiveMask);
+        if(!freeActiveMask)mushaf.setMaskFollowsSelection(true);
         mushaf.setMaskEntropy(hifzPrefs.maskEntropyFor(freeActiveMask
             ?HifzSessionActivity.MURAJAAH_ACTIVE:"reader_default"));
         updateFreeActiveMaskButton();
