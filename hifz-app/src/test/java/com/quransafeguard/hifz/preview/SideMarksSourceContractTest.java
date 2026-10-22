@@ -78,7 +78,7 @@ public final class SideMarksSourceContractTest {
         assertTrue("a screen rotation can change which gutter (if any) exists",
             reader.contains("window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));"));
         assertTrue("the very first render must position the bars before anything is visible",
-            reader.contains("render();\n  requestAnimationFrame(updateSideMarks);\n  requestAnimationFrame(updateCenterMark);\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage);"));
+            reader.contains("render();\n  requestAnimationFrame(updateSideMarks);\n  requestAnimationFrame(updateCenterMark);\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage,Number(boot.renderGeneration||0));"));
         assertTrue("a Tafsir reveal shifts #mushaf vertically (translateY) without changing its "
                 + "gutter width, but the bars' vertical position is measured from the same rect and "
                 + "must be refreshed afterwards or it visibly drifts from the shifted page",
