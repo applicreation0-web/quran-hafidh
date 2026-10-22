@@ -24,7 +24,7 @@ public final class OfficialReleaseContractTest {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
         String index = read("hifz-app/src/main/assets/hifzreader/index.html");
 
-        assertTrue("prepare must complete before native ready", reader.indexOf("prepare();") < reader.indexOf("N?.ready();"));
+        assertTrue("prepare must complete before native ready", reader.indexOf("prepare();") < reader.indexOf("N?.ready(Number(boot.renderGeneration||0));"));
         assertTrue("runtime E-Ink setter required", reader.contains("setEink(value)"));
         assertTrue("line ids must be normalized", reader.contains("new Set") && reader.contains("String("));
         assertTrue("mask must randomize existing source-ink cells", reader.contains("randomOrderKeys") && reader.contains("randomSegmentsForCells"));

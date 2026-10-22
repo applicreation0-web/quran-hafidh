@@ -89,7 +89,7 @@ public final class PageBadgeSourceContractTest {
         assertTrue("a screen rotation can change which gutter (if any) exists",
             reader.contains("window.addEventListener('resize',()=>requestAnimationFrame(updatePageBadge));"));
         assertTrue("the very first render must position the badge before anything is visible",
-            reader.contains("requestAnimationFrame(updateCenterMark);\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage);"));
+            reader.contains("requestAnimationFrame(updateCenterMark);\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage,Number(boot.renderGeneration||0));"));
         assertTrue("a Tafsir reveal shifts #mushaf vertically, and the badge sits at its bottom edge, "
                 + "so it must be refreshed afterwards or it visibly drifts from the shifted page",
             reader.contains("updateCenterMark();\n    updatePageBadge();\n  });\n}\nfunction clearReveal()"));

@@ -77,7 +77,7 @@ public final class CenterMarkSourceContractTest {
             reader.contains("window.addEventListener('resize',()=>requestAnimationFrame(updateCenterMark));"));
         assertTrue("the very first render must position the thread before anything is visible",
             reader.contains("requestAnimationFrame(updateSideMarks);\n  requestAnimationFrame(updateCenterMark);"
-                + "\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage);"));
+                + "\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage,Number(boot.renderGeneration||0));"));
         assertTrue("a Tafsir reveal shifts #mushaf vertically without changing its gutters, but the "
                 + "thread's own position is measured from the same rect and must be refreshed too",
             reader.contains("updateSideMarks();\n    updateCenterMark();\n    updatePageBadge();\n  });\n}\nfunction clearReveal()"));
