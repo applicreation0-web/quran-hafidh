@@ -42,10 +42,12 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
 
     @Test public void sessionUsesTheRegimeForRepsMasksValidationAndCompletion() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanRegime, itqanSessionProtocol);"));
+        assertTrue(session.contains("itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanUnitPlan);"));
+        assertTrue("Real persisted post-Nas stamp decides ×3 or legacy ×4",
+            session.contains("ItqanRegimeStore.UnitPlan plan = prefs.itqanUnitPlan(anchoringEntry);"));
         assertFalse(session.contains("PreviewConfig.itqanMaskForNextRep("));
         assertFalse(session.contains("PreviewConfig.isItqanValidationRep("));
-        assertTrue(session.contains("ItqanMaintenancePolicy.isValidationRep(itqanRegime, itqanSessionProtocol, rep - 1)"));
+        assertTrue(session.contains("ItqanMaintenancePolicy.isValidationRep(itqanUnitPlan, rep - 1)"));
         assertTrue("maintenance is one whole hizb unit, never 8/7/7 sub-blocks",
             session.contains("? Collections.singletonList(new StabilizationHalfPagePolicy.Unit("));
         assertTrue(session.contains("? prefs.completeItqanMaintenanceUnitV6(currentLineIds, itqanUnit.start, itqanUnit.end, next,"));
@@ -57,7 +59,7 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
         assertTrue(start >= 0);
         String method = session.substring(start, session.indexOf("\n    }\n", start));
         assertTrue("only during the maintained post-An-Nās anchored repetitions at 100%",
-            method.contains("currentMask == 100") && method.contains("ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, prefs.itqanRep())"));
+            method.contains("currentMask == 100") && method.contains("ItqanMaintenancePolicy.anchoredRecallRep(itqanUnitPlan, prefs.itqanRep())"));
         assertTrue("Ibn Kathīr cues of the unit, as exact QCF holes in the paper mask",
             method.contains("semanticPassages.readerCuesForPage(currentPage)")
                 && method.contains("ItqanMaintenancePolicy.amorceInsideUnit(")
