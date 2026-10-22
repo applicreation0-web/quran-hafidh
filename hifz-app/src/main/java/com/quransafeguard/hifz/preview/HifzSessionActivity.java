@@ -1357,7 +1357,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = applyActiveLandmarks(currentPage);
         program.setText("Révision active · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
-        mushaf.setMaskFollowsSelection(false);
         mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
@@ -1376,10 +1375,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      * Quran text with an incomplete set of landmarks).
      */
     private boolean activeAyahThemesReady;
+    // Stage the new QCF page's exact holes without redrawing the old visible SVG.
+    private org.json.JSONArray activePageLandmarks = new org.json.JSONArray();
+    private org.json.JSONArray activePageAmorces = new org.json.JSONArray();
     private List<String> applyActiveLandmarks(int page) {
         List<String> lines = geometry.lineIdsOnPage(page);
-        mushaf.setLandmarkLines(null, null);
         activeAyahThemesReady = false;
+        activePageLandmarks = new org.json.JSONArray();
+        activePageAmorces = new org.json.JSONArray();
         org.json.JSONArray firstLast = new org.json.JSONArray();
         org.json.JSONArray newStarts = new org.json.JSONArray();
         try {
@@ -1404,12 +1407,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         } catch (Exception incomplete) {
             activeAyahThemesReady = false;
         }
-        if (activeAyahThemesReady) {
-            mushaf.setPageLandmarkBoxes(firstLast);
-            mushaf.setSemanticCues(newStarts, true, false);
+        // Atomic mask boot alone publishes geometry and prevents a transient
+        // unmasked frame. Invalid sidecar geometry keeps this page readable.
+        if (activeAyahThemesReady && !lines.isEmpty()) {
+            activePageLandmarks = firstLast;
+            activePageAmorces = newStarts;
         } else {
-            mushaf.clearPageLandmarkBoxes();
-            mushaf.clearSemanticCues();
+            activeAyahThemesReady = false;
         }
         return lines;
     }
@@ -1792,6 +1796,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void showCurrent(){
         hasShown=true;
+        if(MURAJAAH_ACTIVE.equals(mode)) {
+            // No old-page geometry redraw and no unmasked first frame on BOOX:
+            // exact 100% SVG mask plus Quran-word holes precede the reveal.
+            mushaf.showFreeActivePreparedPage(currentPage,currentLineIds,
+                activePageLandmarks,activePageAmorces,activeAyahThemesReady);
+            return;
+        }
         if(ITQAN.equals(mode))applyItqanAnchors();
         boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();
         mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);
