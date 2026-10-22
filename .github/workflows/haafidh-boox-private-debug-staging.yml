@@ -101,8 +101,10 @@ jobs:
           sdk="$ANDROID_HOME/build-tools/36.0.0"
           test -s "$sdk/lib/apksigner.jar"
           test -x "$sdk/zipalign"
+          test -x "$sdk/aapt"
           cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
           cp "$sdk/zipalign" "$out/zipalign"
+          cp "$sdk/aapt" "$out/aapt"
           cp "$sdk/lib64/libc++.so" "$out/libc++.so"
           printf 'OFFLINE ASSEMBLY ONLY. No private Atlas assets, no historical signing. This is NOT an installable final debug.\nSource: %s\n' "$(git rev-parse HEAD)" > "$out/README.txt"
           (cd "$out" && sha256sum * > SHA256SUMS.txt)
