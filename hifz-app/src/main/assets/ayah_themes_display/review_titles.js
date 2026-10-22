@@ -15,8 +15,11 @@
     const r=doc.createElementNS(ns,'rect');
     r.setAttribute('x',b[0]+dx);r.setAttribute('y',b[1]+dy);
     r.setAttribute('width',b[2]-b[0]);r.setAttribute('height',b[3]-b[1]);
-    r.setAttribute('fill','transparent');r.setAttribute('stroke','currentColor');
-    r.setAttribute('stroke-width','0.6');r.setAttribute('stroke-opacity','0.45');
+    // An amorce is a literal word-hole in the existing mask, NEVER a drawn box.
+    // Preserve its invisible exact-geometry tap target and the original verse gesture.
+    // A stroked rectangle around each word left grey frames/ghosting on E-Ink.
+    r.setAttribute('fill','transparent');r.setAttribute('stroke','none');
+    r.setAttribute('stroke-width','0');r.setAttribute('stroke-opacity','0');
     r.setAttribute('pointer-events','all');r.setAttribute('role','button');
     r.setAttribute('aria-label','Show passage title');
     r.onclick=e=>{e.stopPropagation();

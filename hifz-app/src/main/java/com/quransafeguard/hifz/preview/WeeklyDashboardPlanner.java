@@ -52,6 +52,18 @@ final class WeeklyDashboardPlanner {
         return Collections.unmodifiableList(out);
     }
 
+    /** Display-only: the three canonical recommended Apprentissage days of each week.
+     * Never advances a cursor or infers that a missed day was completed. */
+    static String learningSessionCue(java.time.DayOfWeek day,HifzPrefs.WeeklyProgram program){
+        if(program!=HifzPrefs.WeeklyProgram.RECOMMENDED || day==null)return "";
+        switch(day){
+            case MONDAY:return " · séance 1/3";
+            case WEDNESDAY:return " · séance 2/3";
+            case FRIDAY:return " · séance 3/3";
+            default:return "";
+        }
+    }
+
     List<Row> week(LocalDate today){
         ArrayList<Row> out=new ArrayList<>();
         int sabqiCursor=currentSabqiCursor();
@@ -88,10 +100,11 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
-                    if(morningActual!=null)morning="✓ "+compact(morningActual.label);
-                    else if(block==null)morning="Apprentissage · plage à vérifier";
+                    String learningCue=learningSessionCue(date.getDayOfWeek(),prefs.weeklyProgramFor(date));
+                    if(morningActual!=null)morning="✓ "+compact(morningActual.label)+learningCue;
+                    else if(block==null)morning="Apprentissage"+learningCue+" · plage à vérifier";
                     else{
-                        morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
+                        morning="Apprentissage"+learningCue+" · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
                     boolean eveningDone=(snowballActual!=null || (date.equals(today)

@@ -33,6 +33,28 @@ public final class WeeklyProgramPolicyTest {
         assertEquals(8,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.SUNDAY));
     }
 
+    @Test public void recommendedLearningThreeOfThreeIsCalendarOnlyAndRestartsOnMonday(){
+        LocalDate monday=LocalDate.of(2026,10,19);
+        for(int week=0;week<4;week++){
+            LocalDate start=monday.plusWeeks(week);
+            assertEquals(" · séance 1/3",WeeklyDashboardPlanner.learningSessionCue(
+                start.getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
+            assertEquals(" · séance 2/3",WeeklyDashboardPlanner.learningSessionCue(
+                start.plusDays(2).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
+            assertEquals(" · séance 3/3",WeeklyDashboardPlanner.learningSessionCue(
+                start.plusDays(4).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
+            assertEquals("",WeeklyDashboardPlanner.learningSessionCue(
+                start.plusDays(1).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
+            assertEquals("",WeeklyDashboardPlanner.learningSessionCue(
+                start.plusDays(6).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
+        }
+        // Historic/other programme semantics remain unchanged.
+        assertEquals("",WeeklyDashboardPlanner.learningSessionCue(DayOfWeek.MONDAY,
+            HifzPrefs.WeeklyProgram.CLASSIC));
+        assertEquals("",WeeklyDashboardPlanner.learningSessionCue(DayOfWeek.MONDAY,
+            HifzPrefs.WeeklyProgram.MANUAL_SEVEN));
+    }
+
     @Test public void classicDelegatesOriginalCanonicalCadenceWithoutChange() {
         for(int ratio=0;ratio<=6;ratio++)
             for(DayOfWeek day:DayOfWeek.values())

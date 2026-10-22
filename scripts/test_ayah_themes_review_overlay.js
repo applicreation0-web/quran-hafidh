@@ -16,6 +16,12 @@ assert.equal(svg.children[0],mask);assert.equal(JSON.stringify(mask),before);
 assert.equal(layer.children.length,1);const target=layer.children[0];
 assert.equal(target.attrs.x,'12');assert.equal(target.attrs.y,'22');
 assert.equal(target.attrs.width,'20');assert.equal(target.attrs.height,'20');
+// Invisible hit area: real words are unframed; mask holes and semantic taps stay intact.
+assert.equal(target.attrs.fill,'transparent');
+assert.equal(target.attrs.stroke,'none');
+assert.equal(target.attrs['stroke-width'],'0');
+assert.equal(target.attrs['stroke-opacity'],'0');
+assert.equal(target.attrs['pointer-events'],'all');
 target.onclick({stopPropagation(){}});assert.deepEqual(taps,['AT:s002a006b007']);assert.deepEqual(verseTaps,[[2,6]]);
 // Invalid/fabricated rectangles are ignored without changing the existing mask.
 const rejected=mountTitleTargets(svg,[{id:'bad',boxes:[[32,22,12,42]]}],()=>assert.fail());
