@@ -578,7 +578,7 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Révision active "+maintenanceMinutes()+" min puis Entretien 
+        murajaahStatus.setText("Révision active "+maintenanceMinutes()+" min puis Entretien "
             +maintenanceMinutes()+" min · chaque soir · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
         int weakCount=prefs.murajaahWeakVerses().size();
