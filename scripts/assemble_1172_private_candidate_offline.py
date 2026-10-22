@@ -111,7 +111,7 @@ def parse_apk_package(apk: Path, aapt: Path) -> tuple[str, int, str]:
 
 def signed_certificate(apk: Path, apksigner: Path) -> str:
     out = run([str(apksigner), "verify", "--verbose", "--print-certs", str(apk)])
-    m = re.search(r"Signer #1 certificate SHA-256 digest:\\s*([0-9a-fA-F:]+)", out)
+    m = re.search(r"Signer #1 certificate SHA-256 digest:\s*([0-9a-fA-F:]+)", out)
     if not m:
         die("cannot verify the existing APK signing certificate")
     return m.group(1).lower().replace(":", "")
@@ -162,7 +162,7 @@ def build_unsigned(staging: Path, unsigned: Path, assets: dict[str, bytes]) -> N
 
 def verify_signed(apk: Path, aapt: Path, apksigner: Path, expected_cert: str) -> None:
     out = run([str(apksigner), "verify", "--verbose", "--print-certs", str(apk)])
-    match = re.search(r"Signer #1 certificate SHA-256 digest:\\s*([0-9a-fA-F:]+)", out)
+    match = re.search(r"Signer #1 certificate SHA-256 digest:\s*([0-9a-fA-F:]+)", out)
     if not match or match.group(1).lower().replace(":", "") != expected_cert:
         die("signer certificate is NOT the installed BOOX identity")
     meta = run([str(aapt), "dump", "badging", str(apk)])
