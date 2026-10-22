@@ -59,12 +59,19 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
         // Approved replacement: retain first/last THREE physical page words,
         // switch only active-review cue starts from the historical source to
         // exact Ayah Themes first-word geometry. The renderer is unchanged.
-        assertTrue("no old half-line heuristic",helper.contains("mushaf.setLandmarkLines(null, null);"));
+        assertTrue("no old half-line heuristic; new page does not redraw old visible frame",
+            !helper.contains("mushaf.setLandmarkLines(null, null);"));
         assertTrue("six first/last page words stay visible",helper.contains("pageLandmarkBoxes(page)"));
         assertTrue("new approved passage starts only",helper.contains("ayahThemesTitles.forPage(page)"));
         assertTrue("one exact start word per passage",helper.contains("cue.getInt(\"anchorWordCount\") != 1"));
         assertTrue("no mask with incomplete source data",helper.contains("activeAyahThemesReady = false;"));
-        assertTrue("new starts drawn through unchanged renderer",helper.contains("mushaf.setSemanticCues(newStarts, true, false);"));
+        assertTrue("six landmarks and cue words staged atomically before the new SVG first paint",
+            helper.contains("activePageLandmarks = firstLast;")
+            && helper.contains("activePageAmorces = newStarts;")
+            && !helper.contains("mushaf.setSemanticCues(newStarts, true, false);"));
+        assertTrue("the actual page load must be masked with the staged exact word holes",
+            session.contains("mushaf.showFreeActivePreparedPage(currentPage,currentLineIds,")
+            && session.contains("activePageLandmarks,activePageAmorces,activeAyahThemesReady"));
         assertTrue("no historic cue holes in active helper",!helper.contains("semanticPassages.readerCuesForPage"));
         assertTrue("every page-entry/page-swipe path in active mode must route through this one helper",
             countOccurrences(session, "applyActiveLandmarks(") >= 5);

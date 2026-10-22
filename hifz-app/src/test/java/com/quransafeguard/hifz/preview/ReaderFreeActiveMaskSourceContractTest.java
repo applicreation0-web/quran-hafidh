@@ -59,7 +59,10 @@ public final class ReaderFreeActiveMaskSourceContractTest {
   assertTrue("The JS eraser is blocked unless lineIds are provided",
       readerJs.contains("if(clamped&&pageGeo&&lineIds.length&&lines.length)"));
 
-  assertTrue(active.contains("mushaf.setSemanticCues(newStarts, true, false)"));
+  assertTrue("Active page stages its new real word-holes without repainting the prior page",
+      active.contains("activePageAmorces = newStarts;")
+      && active.contains("mushaf.showFreeActivePreparedPage(currentPage,currentLineIds,")
+      && !active.contains("mushaf.setSemanticCues(newStarts, true, false)"));
   assertTrue(active.contains("firstLast.length() == 6"));
  }
  @Test public void freeMaskIsNotASecondScheduledRevision()throws Exception {

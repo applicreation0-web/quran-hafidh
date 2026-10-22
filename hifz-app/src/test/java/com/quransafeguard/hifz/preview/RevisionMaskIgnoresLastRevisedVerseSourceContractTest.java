@@ -75,12 +75,14 @@ public final class RevisionMaskIgnoresLastRevisedVerseSourceContractTest {
             session.contains("program.setText(\"Révision · objectif \" + murajaahObjectiveLabel());\n"
                 + "        updateMurajaahProgress();\n"
                 + "        mushaf.setMaskFollowsSelection(false);"));
-        assertTrue("active Révision must turn it off before the page is first shown",
-            session.contains("program.setText(\"Révision active · objectif \" + murajaahObjectiveLabel());\n"
-                + "        updateMurajaahProgress();\n"
-                + "        mushaf.setMaskFollowsSelection(false);"));
-        assertTrue("exactly the two Murajaah render entry points may disable it — Sabqi/Itqan must "
-                + "keep the default so their own selection-clipped masking is unaffected",
-            countOccurrences(session, "mushaf.setMaskFollowsSelection(false);") == 2);
+        assertTrue("active Révision must set selection-independent masking during its atomic boot",
+            session.contains("mushaf.showFreeActivePreparedPage(currentPage,currentLineIds,")
+            && session.contains("activePageLandmarks,activePageAmorces,activeAyahThemesReady"));
+        String mushaf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
+        assertTrue("The single atomic boot disables selection filtering before the first SVG",
+            mushaf.contains("public void showFreeActivePreparedPage(")
+                && mushaf.contains("maskFollowsSelection = false;"));
+        assertTrue("passive keeps its legacy live setter; no premature active redraw",
+            countOccurrences(session, "mushaf.setMaskFollowsSelection(false);") == 1);
     }
 }

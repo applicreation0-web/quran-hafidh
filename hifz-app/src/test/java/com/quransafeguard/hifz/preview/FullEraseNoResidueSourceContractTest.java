@@ -24,7 +24,9 @@ public final class FullEraseNoResidueSourceContractTest {
         assertTrue("only 100% segments are sealed", reader.contains("if(!seg.fullErase)return;"));
         assertTrue("erased words also covered by their own exact quran-ws box",
             reader.contains("segments.push(...fullEraseWordSegments(segments,lines,svg));")
-                && reader.contains("if(!full.some(s=>s.lineId===lineId&&cx>=s.x&&cx<=s.x+s.width))return;"));
+                && reader.contains("const completelyMasked=full.every(s=>s.fullErase);")
+                && reader.contains("if(!completelyMasked&&!full.some(")
+                && reader.contains("const pad=completelyMasked?1.15:0;"));
         assertTrue("anchor holes keep the word's whole line band so its harakat are never shaved",
             reader.contains("const band=bands.find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));"));
         String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
