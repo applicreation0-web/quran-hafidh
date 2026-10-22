@@ -61,6 +61,18 @@ public final class MaintenanceCoverageWiringSourceContractTest {
         assertFalse(main.contains("HifzSchedule.ACTIVE_REVIEW_MINUTES"));
     }
 
+    @Test public void revisionSelectorUsesTheSameAcquiredDurationForBothModes() throws Exception {
+        String selector = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java");
+        assertTrue("One acquired-corpus coverage calculation must drive both menu options",
+            selector.contains("MaintenanceCoveragePolicy.minutes(\\n")
+                && selector.contains("prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()"));
+        assertTrue("Active revision must display the same dynamic duration as Entretien",
+            selector.contains("\"Révision active · \" + maintenanceCue + \" · \"")
+                && selector.contains("\"Entretien · \" + maintenanceCue + \" · \""));
+        assertFalse("The historical 15-minute label must never return to the menu",
+            selector.contains("Révision active · 15 min"));
+    }
+
     @Test public void settingsActivityDisplayStringsBothUseTheDynamicDuration() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertFalse(settings.contains("HifzSchedule.MAINTENANCE_MINUTES"));

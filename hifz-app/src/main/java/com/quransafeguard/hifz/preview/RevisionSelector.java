@@ -26,7 +26,7 @@ final class RevisionSelector {
                 prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()) + " min"
             : "durée variable";
         String[] items = {
-            "Révision active · 15 min · " + (activeDone ? "fait" : "à faire"),
+            "Révision active · " + maintenanceCue + " · " + (activeDone ? "fait" : "à faire"),
             "Entretien · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
         };
         new AlertDialog.Builder(activity)
