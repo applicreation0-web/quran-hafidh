@@ -7,6 +7,8 @@ on:
       - 'hifz-app/**'
       - 'hifz-core/**'
       - 'scripts/guard_frozen_hifz_engines.sh'
+      - 'scripts/assemble_1172_private_candidate_offline.py'
+      - 'scripts/test_1172_private_upgrade.py'
       - 'scripts/guard_atlas_boox_visual_snapshot.py'
       - 'scripts/verify_authorized_hifz_session_delta.py'
       - 'scripts/verify_atlas_only_purity.py'
@@ -34,6 +36,8 @@ jobs:
           bash scripts/guard_frozen_hifz_engines.sh
           bash scripts/audit_hifz_quiz_against_1171.sh
           python3 scripts/guard_atlas_boox_visual_snapshot.py
+      - name: Verify install-over-1.17.1 signed identity requirements
+        run: python3 -m unittest discover -s scripts -p 'test_1172_private_upgrade.py' -v
       - name: Verify original icon contracts and feature removal
         run: |
           set -euo pipefail
