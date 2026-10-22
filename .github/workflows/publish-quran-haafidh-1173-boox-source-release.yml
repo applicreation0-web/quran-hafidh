@@ -1,0 +1,65 @@
+name: Publish Quran Haafidh 1.17.3 BOOX — public source notes only
+on:
+  push:
+    branches:
+      - work/haafidh-1171-atlas-only-pre20-mask
+    paths:
+      - '.github/workflows/publish-quran-haafidh-1173-boox-source-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: quran-haafidh-1173-boox-source-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require all approved 1.17.3 code-only and instrumented audits
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source_sha=3db1f577d060f5cb543baf81323161d0c46a0cc0
+          git cat-file -e "$source_sha^{commit}"
+          test -f docs/releases/QURAN_HAAFIDH_1.17.3_BOOX_OFFICIAL_2026-10-22.md
+          for run_id in 39850979986 39851925203 39851925354; do
+            result="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq .conclusion)"
+            test "$result" = success || { echo "NO GO: audit $run_id = $result"; exit 1; }
+          done
+          # The tag is locked to the exact sources used by the verified signed private APK.
+          echo "Audit PASS: code SHA ${source_sha}, 24/24 Android tests"
+      - name: Refuse to distribute private signing secrets or copyrighted document assets
+        run: |
+          set -euo pipefail
+          test ! -e hifz-app/src/private114/assets/atlas_private
+          test ! -e hifz-app/src/private114/assets/ayah_themes_private
+          test ! -e hifz-app/src/private114/assets/atlas
+          if git ls-files | grep -E '(^|/)([^/]+[.]p12|[^/]+[.]jks|PRIVATE_SIGNING_KEY_PASSWORD[.]txt)$'; then
+            echo 'NO GO: a signing secret file is tracked'
+            exit 1
+          fi
+      - name: Publish official SOURCE-ONLY GitHub Release (signed APK delivered privately)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="quran-haafidh-v1.17.3-boox-private-source"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; never overwrite immutable v1.17.3 metadata"
+            exit 1
+          fi
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "3db1f577d060f5cb543baf81323161d0c46a0cc0" \
+            --title "Quran Haafidh 1.17.3 — BOOX Atlas + Hifz (private APK)" \
+            --notes-file docs/releases/QURAN_HAAFIDH_1.17.3_BOOX_OFFICIAL_2026-10-22.md \
+            --latest
+          # Absolutely no APK, copyrighted PDF, keystore, or private pack attached to public release.
+          assets="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
+          test "$assets" = 0
+          echo "Official public release metadata created WITHOUT private assets"
