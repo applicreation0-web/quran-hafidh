@@ -351,20 +351,68 @@ public final class ItqanPostNasMaintenanceTest {
         assertEquals("1 hizb · entretien", Ui.stabilizationCue(true));
     }
 
-    // ---- 6. post-Nas target: 1 hizb × 4 passes = 2 visible + 2 with anchors (user decision) ----
+    // ---- 6. post-Nas target: 1 hizb × 3 passes = 2 visible + 1 with anchors ----
 
-    @Test public void postNasTargetIsFourPassesTwoVisibleThenTwoAnchored() {
+    @Test public void postNasTargetIsThreePassesTwoVisibleThenOneAnchored() {
         ItqanMaintenancePolicy.Regime m = ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
-        assertEquals(4, ItqanMaintenancePolicy.totalReps(m, AnchoringQueue.ItqanProtocol.FULL));
+        assertEquals(3, ItqanMaintenancePolicy.totalReps(m, AnchoringQueue.ItqanProtocol.FULL));
         assertEquals(2, ItqanMaintenancePolicy.VISIBLE_REPS);
-        assertEquals(2, ItqanMaintenancePolicy.ANCHOR_REPS);
-        for (int completed = 0; completed < 4; completed++) {
-            int mask = ItqanMaintenancePolicy.maskForNextRep(m, AnchoringQueue.ItqanProtocol.FULL, completed);
-            boolean anchor = ItqanMaintenancePolicy.anchoredRecallRep(m, completed);
-            if (completed < 2) { assertEquals(0, mask); assertFalse(anchor); }
-            else { assertEquals(100, mask); assertTrue(anchor); }
+        assertEquals(1, ItqanMaintenancePolicy.ANCHOR_REPS);
+        for (int completed=0; completed<3; completed++) {
+            int mask=ItqanMaintenancePolicy.maskForNextRep(m,AnchoringQueue.ItqanProtocol.FULL,completed);
+            boolean anchored=ItqanMaintenancePolicy.anchoredRecallRep(m,completed);
+            if (completed<2) {assertEquals(0,mask);assertFalse(anchored);}
+            else {assertEquals(100,mask);assertTrue(anchored);}
         }
-        assertFalse(ItqanMaintenancePolicy.anchoredRecallRep(m, 4));
+        assertFalse(ItqanMaintenancePolicy.anchoredRecallRep(m,3));
+        assertFalse(ItqanMaintenancePolicy.isValidationRep(m,AnchoringQueue.ItqanProtocol.FULL,0));
+        assertFalse(ItqanMaintenancePolicy.isValidationRep(m,AnchoringQueue.ItqanProtocol.FULL,1));
+        assertTrue(ItqanMaintenancePolicy.isValidationRep(m,AnchoringQueue.ItqanProtocol.FULL,2));
+    }
+
+    @Test public void newStampSurvivesForceStopAndPreviouslyOpenFourPassPreservesCounter() {
+        InMemoryPrefs store=new InMemoryPrefs();
+        store.disk.put(ItqanRegimeStore.INITIAL_TAIL_COMPLETED,true);
+        AnchoringQueue.Entry entry=new AnchoringQueue.Entry("49:1","49:13",
+            AnchoringQueue.Origin.PROMOTED,AnchoringQueue.ItqanProtocol.FULL,0);
+        HifzPrefs prefs=new HifzPrefs(store);
+        ItqanRegimeStore.UnitPlan fresh=prefs.itqanUnitPlan(entry);
+        assertEquals(ItqanRegimeStore.MaskProfile.POST_NAS_THREE,fresh.maskProfile);
+        assertEquals(3,ItqanMaintenancePolicy.totalReps(fresh));
+        assertTrue(prefs.stampItqanUnitPlan(entry,fresh));
+        store.disk.put("itqanRep",2);
+        store.disk.put("itqanUnitStart","49:1");
+        store.disk.put("itqanUnitEnd","49:13");
+        ItqanRegimeStore.UnitPlan resumed=new HifzPrefs(store).itqanUnitPlan(entry);
+        assertEquals(ItqanRegimeStore.MaskProfile.POST_NAS_THREE,resumed.maskProfile);
+        assertEquals(3,ItqanMaintenancePolicy.totalReps(resumed));
+        assertEquals(100,ItqanBalancedMaskSchedule.maskForNextRep(resumed,2));
+        assertTrue(ItqanMaintenancePolicy.anchoredRecallRep(resumed,2));
+        assertFalse(ItqanMaintenancePolicy.isValidationRep(resumed,1));
+        assertTrue(ItqanMaintenancePolicy.isValidationRep(resumed,2));
+
+        // An older ×4 session already counted three passes; never truncate it at three.
+        store.disk.put(ItqanRegimeStore.UNIT_PLAN,
+            "49:1|49:13|POST_NAS_MAINTENANCE|FULL|BALANCED_20_5_5_5_5");
+        store.disk.put("itqanRep",3);
+        store.disk.put("itqanAssisted",1);
+        ItqanRegimeStore.UnitPlan old=new HifzPrefs(store).itqanUnitPlan(entry);
+        assertEquals(ItqanRegimeStore.MaskProfile.BALANCED_20_5_5_5_5,old.maskProfile);
+        assertEquals(4,ItqanMaintenancePolicy.totalReps(old));
+        assertEquals(100,ItqanBalancedMaskSchedule.maskForNextRep(old,3));
+        assertTrue(ItqanMaintenancePolicy.anchoredRecallRep(old,3));
+        assertTrue(ItqanMaintenancePolicy.isValidationRep(old,2));
+        assertTrue(ItqanMaintenancePolicy.isValidationRep(old,3));
+        assertTrue(prefs.stampItqanUnitPlan(entry,old));
+        assertEquals(4,ItqanMaintenancePolicy.totalReps(new HifzPrefs(store).itqanUnitPlan(entry)));
+        assertEquals(3,store.disk.get("itqanRep"));
+        assertEquals(1,store.disk.get("itqanAssisted"));
+
+        // Future fresh session uses ×3, never inherits obsolete mask profile.
+        store.disk.put("itqanRep",0);
+        store.disk.put("itqanUnitStart","");
+        store.disk.put("itqanUnitEnd","");
+        assertEquals(3,ItqanMaintenancePolicy.totalReps(prefs.itqanUnitPlan(entry)));
     }
 
     @Test public void noEarlyReviewPolicyRevealsNeverBlockAMaintenanceValidation() {
