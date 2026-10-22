@@ -39,6 +39,7 @@ python3 scripts/verify_authorized_quiz_reader_delta.py
 python3 scripts/verify_authorized_word_geometry_quiz_detach.py
 python3 scripts/verify_itqan_four_session_plan_contract.py
 python3 scripts/verify_itqan_rotation_atomicity.py
+python3 scripts/verify_post_nas_three_pass_delta.py
 python3 scripts/verify_authorized_hifz_session_delta.py
 python3 scripts/verify_authorized_program_preferences_delta.py
 python3 scripts/verify_authorized_consolidation_delta.py
@@ -63,6 +64,9 @@ while IFS= read -r file; do
     "$prefix/MushafView.java")
       # Never allow an unreviewed Hifz renderer drift: exact bytes pinned.
       python3 scripts/verify_authorized_mushaf_reader_delta.py || bad=1
+      ;;
+    "$prefix/ItqanMaintenancePolicy.java")
+      python3 scripts/verify_post_nas_three_pass_delta.py || bad=1
       ;;
     "$prefix/HifzBackup.java")
       if [[ "$(git hash-object "$file")" == "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]]; then

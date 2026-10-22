@@ -16,6 +16,37 @@ ATLAS_ONLY_SHA="4d52f8bc8e5cbd7a5bfa836b4c73c07c52647f55"
 # The 22 October user-requested duration parity is the ONLY new Hifz runtime
 # departure: active gets the same time policy as passive, no mask/cursor/credits
 # changes. Verify it against the pinned Atlas-only session source byte for byte.
+# The Itqān ×3 amendment is reconstructed exactly from the last audited
+# 1.17.2 active/passive duration commit, preserving all other Hifz bytes.
+before_three=subprocess.check_output(
+    ["git","show","ecbe005a79e5d89e77b9e9ac6968e6916cc8bdb8:"+PATH]).decode("utf-8")
+old_header='''        // Latest user decision: FULL only for every new unit; deep ×40 + progressive eraser until
+        // the first An-Nās arrival, then one hizb per session ×4 (2 visible + 2 anchored). A unit
+        // already mid-repetition keeps the plan it was started with (see ItqanRegimeStore).'''
+new_header='''        // FULL first pass ×40; after the first An-Nās arrival, one hizb ×3
+        // (2 visible + 1 anchored). A previously opened ×4 unit finishes
+        // its persisted plan without dropping the fourth repetition.'''
+old_doc1='''     * Post-An-Nās maintenance recall (passes 3-4): the hizb disappears into the paper at'''
+new_doc1='''     * Post-An-Nās maintenance recall (pass 3; legacy OPEN sessions also pass 4):'''
+old_doc2='''     * 100% except the project's existing validated anchors — the Al-Munīr amorces (audited V2.1'''
+new_doc2='''     * the hizb disappears at 100% except validated anchors — Al-Munīr amorces (audited V2.1'''
+expected_three=before_three
+for a,b in (
+    (old_header,new_header),
+    ("        itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanRegime, itqanSessionProtocol);",
+     "        itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanUnitPlan);"),
+    ("ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, ",
+     "ItqanMaintenancePolicy.anchoredRecallRep(itqanUnitPlan, "),
+    ("ItqanMaintenancePolicy.isValidationRep(itqanRegime, itqanSessionProtocol, rep - 1)",
+     "ItqanMaintenancePolicy.isValidationRep(itqanUnitPlan, rep - 1)"),
+    (old_doc1,new_doc1),(old_doc2,new_doc2)):
+    n=expected_three.count(a)
+    assert n==(4 if a.startswith("ItqanMaintenancePolicy.anchoredRecallRep") else 1),a
+    expected_three=expected_three.replace(a,b)
+if Path(PATH).read_text(encoding="utf-8")==expected_three:
+    print("PASS: exact Itqan ×3 source-only delta; 1.17.2 Hifz persistence unchanged")
+    raise SystemExit(0)
+
 pre_duration=subprocess.check_output(
     ["git","show","51768b830c357a62d8aed17605e6061bb3a87a46:"+PATH]).decode("utf-8")
 approved_old="""    if (kind == SessionKind.OLD_ITQAN_MURAJAAH) {

@@ -50,6 +50,9 @@ while IFS= read -r file; do
       # Exact SHA of reviewed queue + load-generation changes; any further delta fails.
       python3 scripts/verify_authorized_mushaf_reader_delta.py || bad=1
       ;;
+    "$APP_ROOT/ItqanMaintenancePolicy.java")
+      python3 scripts/verify_post_nas_three_pass_delta.py || bad=1
+      ;;
     "$APP_ROOT/WordLookupAccessPolicy.java")
       if [ "$(git hash-object "$file")" != "314cb9ae2c4f592b0ad7cf5822c0868939da3772" ]; then
         echo "::error file=$file::M10 word lookup display-only source differs from the PINNED file 314cb9ae2c4f592b0ad7cf5822c0868939da3772"
@@ -146,6 +149,7 @@ python3 scripts/verify_authorized_quiz_reader_delta.py
 python3 scripts/verify_authorized_word_geometry_quiz_detach.py
 python3 scripts/verify_itqan_four_session_plan_contract.py
 python3 scripts/verify_itqan_rotation_atomicity.py
+python3 scripts/verify_post_nas_three_pass_delta.py
 python3 scripts/verify_authorized_hifz_session_delta.py
 python3 scripts/verify_authorized_program_preferences_delta.py
 python3 scripts/verify_authorized_consolidation_delta.py
