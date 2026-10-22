@@ -108,6 +108,50 @@ public final class MushafPendingCommandsInstrumentedTest {
    scenario.onActivity(a->reader[0].destroySafely());
   }
  }
+ /** Regression on real screenshot folios 6 and 11, never first-paint unmasked Arabic. */
+ @Test public void activeMaskPageSixAndElevenStartsMaskedWithExactHoles() throws Exception {
+  for(final int page:new int[]{6,11}){
+   final MushafView[] view=new MushafView[1];final CountDownLatch shown=new CountDownLatch(1);
+   try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)){
+    activity.onActivity(a->{
+     try{
+      view[0]=new MushafView(a);a.setContentView(view[0]);
+      view[0].setListener(new MushafView.Listener(){
+       @Override public void onReady(){}
+       @Override public void onVerseTap(com.quransafeguard.hifz.core.VerseRef verse){}
+       @Override public void onError(String msg){throw new AssertionError(msg);}
+       @Override public void onPageShown(int p){if(page==p)shown.countDown();}
+      });
+      List<String> lines=GeometryRepository.get(a).lineIdsOnPage(page);
+      assertFalse(lines.isEmpty());
+      org.json.JSONArray landmarks=WordGeometryRepository.shared(a).pageLandmarkBoxes(page);
+      assertEquals(6,landmarks.length());
+      org.json.JSONArray cues=new org.json.JSONArray().put(
+       new org.json.JSONObject().put("id","active-regression")
+         .put("anchorWordCount",1).put("boxes",
+           new org.json.JSONArray().put(landmarks.getJSONArray(0))));
+      view[0].showFreeActivePreparedPage(page,lines,landmarks,cues,true);
+     }catch(Exception e){throw new AssertionError(e);}
+    });
+    assertTrue("First masked page "+page+" not shown",shown.await(30,TimeUnit.SECONDS));
+    assertTrue("No exact Quran word holes on page "+page,
+      awaitMaskState(activity,view[0],true));
+    final CountDownLatch checked=new CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<String> state=new java.util.concurrent.atomic.AtomicReference<>();
+    activity.onActivity(a->view[0].evaluateJavascript(
+       "(function(){var s=document.querySelector('#mushaf svg g.masklayer');"
+       +"var p=document.getElementById('mushaf'),b=window.HIFZ_BOOT;"
+       +"return !!(s&&p&&p.style.visibility==='visible'&&b&&b.mask===100"
+       +"&&b.pageWordBoxes&&b.pageWordBoxes.length>10"
+       +"&&s.querySelectorAll('.maskcell').length>b.pageWordBoxes.length/3"
+       +"&&s.querySelector('#hifz-exact-word-holes'));})()",
+       value->{state.set(value);checked.countDown();}));
+    assertTrue(checked.await(8,TimeUnit.SECONDS));
+    assertEquals("Not fully masked on folio "+page,"true",state.get());
+    activity.onActivity(a->view[0].destroySafely());
+   }
+  }
+ }
  private static boolean awaitMaskState(ActivityScenario<MainActivity> activity,
                                        MushafView view, boolean expected) throws Exception {
   String probe="(function(){var svg=document.querySelector('#mushaf svg');"
