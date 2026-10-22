@@ -130,3 +130,11 @@ Un PASS de compilation ou de test source n'est jamais assimilé à un PASS d'int
 - **Statut final attendu** : « CANDIDAT OFFICIEL 1.17.2 — PRÊT POUR AUTORISATION » si l'audit complet et les tests BOOX sont tous concluants ; sinon « NO-GO RELEASE », avec corrections poursuivies.
 
 **À aucun moment le succès du debug seul ne clôture la mission.**
+
+
+## Addendum bloquant — Lecture libre et reprise Work (22 octobre, après interruption)
+Lire et **exécuter** \`02_PROMPT_REPRISE_WORK_HIGH_1172_APRES_INTERRUPTION.md\` dans ce même répertoire. Ce prompt consolide la reprise de la correction de schéma non encore retrouvée sur GitHub, l'exécution du test Android et de Gradle, et la contre-épreuve P1 prioritaire du masquage/ancres de Lecture libre.
+
+Constats source à reproduire : \`MushafView.runWhenReady()\` n'a qu'un \`pending\` écrasable, les signaux JS \`pageShown\` et \`ready\` ne garantissent pas le séquencement de tous les réglages de masque, et \`StudyReaderActivity.applyFreeActiveMask()\` peut déclarer la page prête alors que la liste de lignes QCF est vide. Corriger l'ordre/génération des commandes et la validation des géométries ; ajouter tests instrumentés, page turnover, sélections rapides, pause/reprise, 604 pages QCF et non-régression Hifz. **La réussite des tests de présence de chaînes Java n'est pas une preuve de fonctionnement réel.**
+
+Le pourcentage d'avancement Work doit venir d'une matrice dénombrée PASS/FAIL/NON TESTABLE et distinguer couverture, clôture validée et résultat de cinq tests ciblés. Aucun pourcentage global estimé sans dénominateur vérifiable. Le candidat 1.17.2 ne peut être déclaré prêt tant que ce contrôle P1 n'est pas clos.
