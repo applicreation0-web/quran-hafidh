@@ -22,7 +22,7 @@ final class ItqanRegimeStore {
     static final String LEGACY_LEG = "p4AncrageLeg";
     static final String LEGACY_INITIAL_TAIL_COMPLETED = "p4AncrageInitialTailCompleted";
     static final String UNIT_PLAN = "itqanUnitPlanV1";
-    enum MaskProfile { LEGACY_15_5_5_5_10, BALANCED_20_5_5_5_5 }
+    enum MaskProfile { LEGACY_15_5_5_5_10, BALANCED_20_5_5_5_5, POST_NAS_THREE }
 
     private ItqanRegimeStore() {}
 
@@ -133,8 +133,10 @@ final class ItqanRegimeStore {
             return new UnitPlan(ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS,
                 ItqanMaintenancePolicy.protocolFor(true, legacyProtocol));
         }
-        return new UnitPlan(ItqanMaintenancePolicy.regimeFor(postNasMaintenance(p)),
-            ItqanMaintenancePolicy.protocolForNewSession(),MaskProfile.BALANCED_20_5_5_5_5);
+        ItqanMaintenancePolicy.Regime regime=ItqanMaintenancePolicy.regimeFor(postNasMaintenance(p));
+        return new UnitPlan(regime,ItqanMaintenancePolicy.protocolForNewSession(),
+            regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+                ?MaskProfile.POST_NAS_THREE:MaskProfile.BALANCED_20_5_5_5_5);
     }
 
     /** Regime a new selection should be sized with, honouring a unit already mid-repetition. */
@@ -161,8 +163,8 @@ final class ItqanRegimeStore {
         if ((parts.length != 4 && parts.length != 5)
                 || !start.equals(parts[0]) || !end.equals(parts[1])) return null;
         try {
-            // The existing four-field plans are already-started sessions:
-            // they remain on the exact legacy 15/5/5/5/10 schedule.
+            // Old 4/5-field stamps remain valid, including OPEN post-Nās ×4.
+            // Only the newly stamped POST_NAS_THREE profile uses ×3.
             MaskProfile profile=parts.length==4
                 ?MaskProfile.LEGACY_15_5_5_5_10:MaskProfile.valueOf(parts[4]);
             return new UnitPlan(ItqanMaintenancePolicy.Regime.valueOf(parts[2]),
