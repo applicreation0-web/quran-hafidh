@@ -13,6 +13,35 @@ CURRENT_SHA="491aae573afba8bdd5da339a8e15dca8e59661ef"
 # The October 21 Atlas-only branch removes three Correspondances UI hooks.
 # This exact Git blob is accepted after checking the deletion-only source diff.
 ATLAS_ONLY_SHA="4d52f8bc8e5cbd7a5bfa836b4c73c07c52647f55"
+# The 22 October user-requested duration parity is the ONLY new Hifz runtime
+# departure: active gets the same time policy as passive, no mask/cursor/credits
+# changes. Verify it against the pinned Atlas-only session source byte for byte.
+pre_duration=subprocess.check_output(
+    ["git","show","51768b830c357a62d8aed17605e6061bb3a87a46:"+PATH]).decode("utf-8")
+approved_old="""    if (kind == SessionKind.OLD_ITQAN_MURAJAAH) {
+        // P4 J-15: the passive Entretien grows with the real ACQUIRED corpus instead of staying
+        // a flat constant — see MaintenanceCoveragePolicy.
+        return MaintenanceCoveragePolicy.minutes(
+            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
+    }"""
+approved_new="""    if (kind == SessionKind.OLD_ITQAN_MURAJAAH || kind == SessionKind.ACTIVE_MURAJAAH) {
+        // User decision 22 October 2026: both revisions use the identical 30/45+
+        // minute coverage policy, starting now. The active mode still has its own
+        // acquired-only corpus, masked reader, clock, independent cursor, and never
+        // feeds masked-recall elapsed time into passive speed calibration.
+        return MaintenanceCoveragePolicy.minutes(
+            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
+    }"""
+if pre_duration.count(approved_old)!=1:
+    raise SystemExit("FAIL: approved 1.17.2 review duration source drifted")
+expected_parity=pre_duration.replace(approved_old,approved_new)
+if Path(PATH).read_text(encoding="utf-8")==expected_parity:
+    if subprocess.check_output(["git","hash-object", "--stdin"],
+         input=pre_duration.encode()).decode().strip()!=ATLAS_ONLY_SHA:
+        raise SystemExit("FAIL: source 1.17.2 baseline hash drifted")
+    print("PASS: exact 30/45+ active duration parity ONLY; frozen Hifz persistence/cursors/masks")
+    raise SystemExit(0)
+
 if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==ATLAS_ONLY_SHA:
     previous=subprocess.check_output(["git","show","41e6af84f2d0d6218686ecbca810a783db11c0c3:"+PATH]).decode("utf-8")
     expected=previous.replace("    private LinearLayout correspondenceActions;\n","").replace(
