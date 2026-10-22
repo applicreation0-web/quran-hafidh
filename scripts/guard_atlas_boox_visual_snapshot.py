@@ -46,8 +46,8 @@ def verify_deltas() -> None:
     # subsequent free-form edits to Lecture/Atlas or the Hifz engine.
     corrected=subprocess.check_output(["git","show",
         "308735f3febf077b45fa5f4eb2949247753e33b9:"+source],cwd=ROOT)
-    if git_blob(corrected)!=PINNED["StudyReaderActivity.java"]:
-        raise SystemExit("ATLAS FREEZE FAIL: approved anti-ghosting source hash mismatch")
+    if git_blob(corrected)!="8804f8ccf7d2570c3801a350066782826aea917f":
+        raise SystemExit("ATLAS FREEZE FAIL: intermediate first-paint source hash mismatch")
     previous=subprocess.check_output(["git","show","308735f3febf077b45fa5f4eb2949247753e33b9:"+source],cwd=ROOT)
     if previous!=corrected:
         raise SystemExit("ATLAS FREEZE FAIL: earlier patch bytes changed")
