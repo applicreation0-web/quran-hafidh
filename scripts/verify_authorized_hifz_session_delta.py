@@ -45,7 +45,7 @@ for a,b in (
     expected_three=expected_three.replace(a,b)
 # Release 1.17.4: ONLY the reviewed atomic active-page reader change is
 # allowed beyond the fully tested post-Nās ×3 Hifz source. Both are exact blobs.
-ATOMIC_ACTIVE_BEFORE="a61eb1dd913f1d7568b93f707413254200906f07"
+ATOMIC_ACTIVE_BEFORE="7aae5a444e87801b1e342cea6ecc080dcf81c64f"
 ATOMIC_ACTIVE_AFTER="bf2234d5bbb47086c5e81a6e667b6751605a212f"
 before_sha=subprocess.check_output(
     ["git","rev-parse","1f69dc58abbcd58ce2c44a78e2cd4ff0aca302ab:"+PATH],
