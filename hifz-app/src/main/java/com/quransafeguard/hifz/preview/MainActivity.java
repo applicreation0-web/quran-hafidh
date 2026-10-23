@@ -34,6 +34,7 @@ public final class MainActivity extends android.app.Activity {
     private boolean consolidationNeedsAttention;
     private boolean learningConsolidationNeedsAttention;
     private TextView today;
+    private TextView todayObjective;
     private TextView recentSabqiAdvisory;
     private LinearLayout todayAction;
     private LinearLayout dashboard;
@@ -93,6 +94,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout semanticMap = primaryTile(destinations, "Atlas", "Atlas",
             v -> startActivity(new Intent(this, AtlasMapActivity.class)));
         root.addView(destinations);
+        root.addView(new BooxFlowStroke(this));
 
         LinearLayout secondary = Ui.row(this);
         secondary.setPadding(0, Ui.dp(this, 12), 0, 0);
@@ -130,6 +132,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout murajaah = pathTile(coreModes, "Révision", "Au choix",
             v -> showRevisionSelector());
         path.addView(coreModes);
+        path.addView(new BooxFlowStroke(this));
 
         LinearLayout otherModes = Ui.row(this);
         LinearLayout renforcement = secondaryTile(otherModes, "Renforcement", "Renforcement",
@@ -221,13 +224,18 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout todayLine() {
         LinearLayout line = Ui.column(this);
         line.setPadding(Ui.dp(this, 18), Ui.dp(this, 16), Ui.dp(this, 18), Ui.dp(this, 16));
-        Ui.panel(line);
+        // Typographic reading surface, not a bordered card.
         TextView label = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
         line.addView(label);
         TextView value = Ui.bookText(this, "…", 23f, true);
         value.setPadding(0, Ui.dp(this, 9), 0, Ui.dp(this, 9));
         value.setMaxLines(3);
         line.addView(value);
+        todayObjective = Ui.text(this, "", 16f, false);
+        todayObjective.setTextColor(Ui.MUTED);
+        todayObjective.setMaxLines(5);
+        todayObjective.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 10));
+        line.addView(todayObjective);
         TextView action = Ui.bookText(this, "CONTINUER  ›", 20f, true);
         action.setGravity(Gravity.END);
         line.addView(action);
@@ -246,7 +254,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout tile = Ui.column(this);
         tile.setPadding(Ui.dp(this, 4), Ui.dp(this, 16), Ui.dp(this, 4), Ui.dp(this, 14));
         tile.setGravity(Gravity.CENTER);
-        Ui.panel(tile);
+        // BOOX navigation is a borderless icon rail, not three independent cards.
         tile.setMinimumHeight(Ui.dp(this, 112));
         int drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
@@ -258,6 +266,7 @@ public final class MainActivity extends android.app.Activity {
         }
         TextView title = Ui.bookText(this, display, 18f, true);
         title.setGravity(Gravity.CENTER);
+        title.setMaxLines(1);
         tile.addView(title);
         tile.setContentDescription(role);
         tile.setClickable(true);
@@ -298,30 +307,36 @@ public final class MainActivity extends android.app.Activity {
         return tile;
     }
 
-    /** Compact Hifz tile with state at index 1, preserving Ui.settingValue. */
+    /** Borderless Hifz ribbon with frozen pictograms; child 1 remains live cue state. */
     private LinearLayout pathTile(LinearLayout parent, String label, String state,
                                  View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
-        tile.setPadding(Ui.dp(this, 3), Ui.dp(this, 11), Ui.dp(this, 3), Ui.dp(this, 12));
+        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 12), Ui.dp(this, 2), Ui.dp(this, 10));
         tile.setGravity(Gravity.CENTER);
-        tile.setMinimumHeight(Ui.dp(this, 130));
-        Ui.panel(tile);
-        TextView name = Ui.bookText(this, label, 17f, true);
+        tile.setMinimumHeight(Ui.dp(this, 108));
+        String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
+            : "Stabilisation".equals(label) ? "Stabiliser"
+            : "Révision".equals(label) ? "Réviser" : label;
+        TextView name = Ui.bookText(this, shortLabel, 17f, true);
         name.setGravity(Gravity.CENTER);
-        name.setMaxLines(2);
+        name.setMaxLines(1);
+        int icon = Ui.iconFor(label, label);
+        if (icon == 0) throw new IllegalArgumentException("Unmapped Hifz mode: "+label);
+        name.setCompoundDrawablesWithIntrinsicBounds(0, icon, 0, 0);
+        name.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Ui.INK));
+        name.setCompoundDrawablePadding(Ui.dp(this, 9));
         tile.addView(name);
+        // The real target/verse range is on the selected day, not crammed into a 1/3-width cell.
         TextView cue = Ui.text(this, state, 15f, false);
-        cue.setGravity(Gravity.CENTER);
-        cue.setMaxLines(3);
-        cue.setPadding(0, Ui.dp(this, 9), 0, 0);
+        cue.setVisibility(View.GONE);
         tile.addView(cue);
-        tile.setContentDescription(label);
+        tile.setContentDescription(label+" · "+state);
         tile.setClickable(true);
         tile.setFocusable(true);
         tile.setOnClickListener(listener);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(Ui.dp(this, 3), 0, Ui.dp(this, 3), 0);
+        lp.setMargins(Ui.dp(this, 2), 0, Ui.dp(this, 2), 0);
         parent.addView(tile, lp);
         return tile;
     }
@@ -330,9 +345,14 @@ public final class MainActivity extends android.app.Activity {
     private void setToday(String text, boolean enabled) {
         today.setText(text);
         // The single hero CTA always describes its actual destination.
-        if (todayAction != null && todayAction.getChildCount() >= 3
-                && todayAction.getChildAt(2) instanceof TextView) {
-            TextView action = (TextView) todayAction.getChildAt(2);
+        if (todayObjective != null) {
+            // One read-only preview of actual schedule objectives, never a credit or cursor advance.
+            todayObjective.setText(todayRow == null ? "Programme détaillé dans Parcours"
+                : "MATIN · "+scheduleDetail(todayRow.morning).replace("\\n", " · "));
+        }
+        if (todayAction != null && todayAction.getChildCount() >= 4
+                && todayAction.getChildAt(3) instanceof TextView) {
+            TextView action = (TextView) todayAction.getChildAt(3);
             action.setText(text.startsWith("Programme à jour") ? "VOIR LES SÉANCES  ›"
                 : text.startsWith("Consolidation · état") ? "VÉRIFIER  ›" : "CONTINUER  ›");
         }
@@ -819,10 +839,7 @@ public final class MainActivity extends android.app.Activity {
     private void refreshDashboard() {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
-        if (dashboardTitle != null) dashboardTitle.setText("Cette semaine · "+
-            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-                ? "Standard · 3/4" : prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
-                ? "Manuel" : "Historique")+"  ▾");
+        if (dashboardTitle != null) dashboardTitle.setText("Cette semaine  ⌄");
         List<WeeklyDashboardPlanner.Row> rows;
         try {
             rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today());
@@ -845,6 +862,7 @@ public final class MainActivity extends android.app.Activity {
         hours.setTextColor(Ui.MUTED);
         dashboard.addView(hours);
         dashboard.addView(weekStrip);
+        dashboard.addView(new BooxFlowStroke(this));
         dashboard.addView(weekDayPanel);
         renderSelectedWeekDay();
     }
@@ -860,14 +878,14 @@ public final class MainActivity extends android.app.Activity {
             boolean active = row.date.equals(selectedWeekDate);
             if (active) chosen = row;
             TextView day = Ui.bookText(this,
-                initials[row.date.getDayOfWeek().getValue()-1], 19f, active);
+                (active ? "● " : "")+initials[row.date.getDayOfWeek().getValue()-1]
+                    +"\\n"+row.date.getDayOfMonth(), 18f, active);
             day.setGravity(Gravity.CENTER);
             day.setMinimumHeight(Ui.dp(this, 56));
             day.setContentDescription(row.day+" · "+row.date);
             day.setClickable(true);
             day.setFocusable(true);
-            if (active) Ui.panel(day);
-            else day.setBackgroundColor(Ui.PAPER);
+            day.setBackgroundColor(Ui.PAPER);
             day.setOnClickListener(v -> {
                 selectedWeekDate = row.date;
                 renderSelectedWeekDay();
@@ -880,11 +898,11 @@ public final class MainActivity extends android.app.Activity {
         TextView morning = Ui.text(this, "MATIN", 16f, true);
         morning.setPadding(0, Ui.dp(this, 14), 0, 0);
         weekDayPanel.addView(morning);
-        weekDayPanel.addView(Ui.text(this, compactScheduleLine(chosen.morning), 18f, false));
+        weekDayPanel.addView(Ui.text(this, scheduleDetail(chosen.morning), 18f, false));
         TextView evening = Ui.text(this, "SOIR", 16f, true);
         evening.setPadding(0, Ui.dp(this, 14), 0, 0);
         weekDayPanel.addView(evening);
-        weekDayPanel.addView(Ui.text(this, compactScheduleLine(chosen.evening), 18f, false));
+        weekDayPanel.addView(Ui.text(this, scheduleDetail(chosen.evening), 18f, false));
     }
 
     private void addCell(LinearLayout row, String value, float weight, boolean bold, boolean singleLine) {
@@ -907,42 +925,12 @@ public final class MainActivity extends android.app.Activity {
         return value.replace("Sourate ", "S.").replace("v.", "");
     }
 
-    /** Weekly list is an agenda, not a long technical protocol transcript.
-     * Keep meaningful statuses and full geometry in the session itself. */
-    private static String compactScheduleLine(String raw) {
-        String value=compactSession(raw);
-        if(value.equals("—"))return value;
-        boolean done=value.trim().startsWith("✓");
-        String clean=value.replaceFirst("^\\s*✓\\s*","");
-        String kind;
-        if(clean.contains("Révision active"))kind="Révision active";
-        else if(clean.contains("Apprentissage"))kind="Apprentissage";
-        else if(clean.contains("Stabilisation"))kind="Stabilisation";
-        else if(clean.contains("Renforcement"))kind="Renforcement";
-        else if(clean.contains("Consolidation"))kind="Consolidation";
-        else if(clean.contains("Entretien"))kind="Entretien";
-        else if(clean.contains("Révision"))kind="Révision";
-        else kind=clean.split(" · ")[0];
-        if(clean.contains("Révision active") && clean.contains("Apprentissage"))
-            kind="Révision active + Apprentissage";
-        else if(clean.contains("Révision active") && clean.contains("Stabilisation"))
-            kind="Révision active + Stabilisation";
-        else if(clean.contains("Consolidation") && clean.contains("Entretien"))
-            kind="Consolidation + Entretien";
-        else if(clean.contains("Renforcement") && clean.contains("Entretien"))
-            kind="Renforcement + Entretien";
-        if(clean.contains("Finale")||clean.contains("finale"))kind+=" · finale";
-        // Preserve learning's three-session weekly progression before Itqān's four blocks.
-        // The short calendar line previously discarded a valid 1/3, 2/3 or 3/3
-        // computed by WeeklyDashboardPlanner, making the BOOX screen misleading.
-        if(clean.contains("séance 1/3"))kind+=" · 1/3";
-        else if(clean.contains("séance 2/3"))kind+=" · 2/3";
-        else if(clean.contains("séance 3/3"))kind+=" · 3/3";
-        else if(clean.contains("séance 1/4"))kind+=" · 1/4";
-        else if(clean.contains("séance 2/4"))kind+=" · 2/4";
-        else if(clean.contains("séance 3/4"))kind+=" · 3/4";
-        else if(clean.contains("séance 4/4"))kind+=" · 4/4";
-        return done ? "✓ "+kind : kind;
+    /** Show *real* verse boundaries from WeeklyDashboardPlanner instead of discarding
+     * them into a generic label. Projections remain read-only and may change on validation.
+     * The delimiter becomes a line break to avoid dense walls of text on E-Ink. */
+    private static String scheduleDetail(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return "—";
+        return raw.replace(" · ", "\\n");
     }
 
     private static String shortRange(VerseRef a, VerseRef b) {
