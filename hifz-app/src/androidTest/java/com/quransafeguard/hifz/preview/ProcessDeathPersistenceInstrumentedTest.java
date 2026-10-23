@@ -31,6 +31,7 @@ public final class ProcessDeathPersistenceInstrumentedTest {
     private static final long ACTIVE_REVIEW_ELAPSED_MS = 7L * 60_000L + 321L;
     private static final String LEDGER_PREFS = "quran_hifz_dashboard_ledger_v1";
     private static final String LEGACY_GATES = "hifz_preview_session_gates";
+    private static final String FREE_MEM = "free_mem_preview";
     private static final String GATE_SENTINEL = "backup-gate-marker";
     private static final String J10_SENTINEL = "line:m9-backup-fixture";
     private static final long J10_SENTINEL_DATE = 20540L;
@@ -41,6 +42,7 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         Context context = ApplicationProvider.getApplicationContext();
         SharedPreferences raw = context.getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE);
         raw.edit().clear().commit();
+        context.getSharedPreferences(FREE_MEM, Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE).edit().clear().commit();
@@ -72,9 +74,13 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         assertTrue(legacy.edit().clear().putLong(J10_SENTINEL,J10_SENTINEL_DATE).commit());
         assertTrue(context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).edit()
             .putString(GATE_SENTINEL,"persist-me").commit());
+        assertTrue(context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).edit()
+            .putInt("page",17).putInt("count",4).putInt("mask",75)
+            .putString("start","2:1").putString("end","2:2").commit());
         try {
             org.json.JSONObject backup=HifzBackup.export(context);
-            assertEquals(2,backup.getInt("version"));
+            assertEquals(3,backup.getInt("version"));
+            assertEquals(4,backup.getJSONObject("free_mem").getJSONObject("count").getInt("v"));
             // Kill after each individually committed store: a fresh process must
             // recover the exact old snapshot, never a partially imported state.
             java.util.Map<String,?> mainBefore=new java.util.HashMap<>(raw.getAll());
@@ -82,12 +88,15 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             java.util.Map<String,?> j10Before=new java.util.HashMap<>(legacy.getAll());
             java.util.Map<String,?> gatesBefore=new java.util.HashMap<>(
                 context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).getAll());
-            for(String store:new String[]{"MAIN","LEDGER","J10","GATES"}){
+            java.util.Map<String,?> freeBefore=new java.util.HashMap<>(
+                context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getAll());
+            for(String store:new String[]{"MAIN","LEDGER","J10","GATES","FREE_MEM"}){
                 org.json.JSONObject changed=new org.json.JSONObject(backup.toString());
                 for(String section:new String[]{"values","dashboard","j10","legacy_gates"}){
                     changed.getJSONObject(section).put("transaction-probe",
                         new org.json.JSONObject().put("t","s").put("v",store));
                 }
+                changed.getJSONObject("free_mem").getJSONObject("count").put("v",99);
                 HifzBackup.failAfterStoreForTest=store;
                 try {
                     HifzBackup.restore(context,changed);
@@ -103,18 +112,23 @@ public final class ProcessDeathPersistenceInstrumentedTest {
                 assertEquals(j10Before,legacy.getAll());
                 assertEquals(gatesBefore,context.getSharedPreferences(
                     LEGACY_GATES,Context.MODE_PRIVATE).getAll());
+                assertEquals(freeBefore,context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getAll());
                 HifzBackup.recoverIfNecessary(context); // idempotent
                 assertEquals(mainBefore,raw.getAll());
             }
             assertTrue(backup.getJSONObject("dashboard").has("completed_session_keys_v1"));
             assertTrue(backup.getJSONObject("j10").has(J10_SENTINEL));
             assertTrue(backup.getJSONObject("legacy_gates").has(GATE_SENTINEL));
+            assertTrue(context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).edit()
+                .putInt("page",1).putInt("count",0).putInt("mask",0).commit());
             assertTrue(ledger.edit().clear().commit());
             assertTrue(legacy.edit().clear().commit());
             assertTrue(context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).edit().clear().commit());
             assertTrue(HifzBackup.restore(context,backup)>0);
             assertPersistedFixture(context);
             assertBackupLedgerAndJ10(context);
+            assertEquals("Free-memory counter lost after v3 restore",4,
+                context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getInt("count",-1));
             // A legacy V1 backup still imports, but cannot invent missing receipts.
             org.json.JSONObject oldV1=new org.json.JSONObject(backup.toString());
             oldV1.put("version",1);
@@ -151,13 +165,23 @@ public final class ProcessDeathPersistenceInstrumentedTest {
                     }
                 });
             }
+            assertEquals("V1 must preserve current free memory",4,
+                context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getInt("count",-1));
+            org.json.JSONObject oldV2=new org.json.JSONObject(backup.toString());
+            oldV2.put("version",2);oldV2.remove("free_mem");
+            assertTrue(context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).edit()
+                .putInt("count",13).commit());
+            assertTrue(HifzBackup.restore(context,oldV2)>0);
+            assertEquals("V2 must not destroy free memory absent from archive",13,
+                context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getInt("count",-1));
             assertTrue("V1 import must clear unrelated target J10 history",
                 !legacy.contains(J10_SENTINEL));
             assertTrue("V1 import must not retain stale gates from the target install",
                 context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).getAll().isEmpty());
-            // Restoring the real V2 snapshot recovers exact receipts and dates.
+            // Restoring the real V3 snapshot recovers exact receipts and free-memory state.
             assertTrue(HifzBackup.restore(context,backup)>0);
             assertBackupLedgerAndJ10(context);
+            assertEquals(4,context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getInt("count",-1));
             // A malformed receipt must be rejected BEFORE replacing good data.
             org.json.JSONObject corrupt=new org.json.JSONObject(backup.toString());
             corrupt.getJSONObject("dashboard").put("completed_session_keys_v1",
@@ -221,6 +245,7 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
             context.getSharedPreferences(LEDGER_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
             context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE).edit().clear().commit();
+            context.getSharedPreferences(FREE_MEM, Context.MODE_PRIVATE).edit().clear().commit();
         }
     }
 
