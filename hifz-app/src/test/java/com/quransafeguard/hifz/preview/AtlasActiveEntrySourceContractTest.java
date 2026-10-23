@@ -19,7 +19,8 @@ public final class AtlasActiveEntrySourceContractTest {
  @Test public void homeOpensTheNewAtlasActivityNotTheLegacyIbnKathirMap()throws Exception {
   String home=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
   String manifest=source("hifz-app/src/main/AndroidManifest.xml");
-  assertTrue(home.contains("homeNavLine(root, \"Atlas\""));
+  assertTrue("The approved Atlas tile must remain visible on Home",
+            home.contains("primaryTile(destinations, \"Atlas\", \"Atlas\""));
   assertTrue(home.contains("new Intent(this, AtlasMapActivity.class)"));
   assertFalse(home.contains("new Intent(this, IbnKathirMapActivity.class)"));
   assertTrue(manifest.contains("<activity android:name=\".AtlasMapActivity\" android:exported=\"false\""));
