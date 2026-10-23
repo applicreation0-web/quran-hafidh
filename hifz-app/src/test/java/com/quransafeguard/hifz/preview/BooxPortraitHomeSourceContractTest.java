@@ -38,42 +38,49 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse(home.contains("Ui.dp(this, 720)"));
         assertFalse(home.contains("contentWidth"));
         assertTrue(home.contains("Ui.respectSystemBars(this, scroll, 0, 0, 0, 0)"));
-        assertFalse("Home destinations must no longer be viewport-weighted cards",
-            home.contains("ViewGroup.LayoutParams.WRAP_CONTENT, 1f"));
-        assertFalse("Never restore large bordered home cards",home.contains("Ui.panel(line)"));
+        assertFalse("The former navigation list must be removed", home.contains("homeNavLine("));
+        assertFalse("No seven stacked day cards", home.contains("dashboard.addView(day)"));
     }
 
-    @Test public void homeUsesReadableOneLine18spWithoutScalingTheMushaf() throws Exception {
+    @Test public void homeShowsDominantSessionAndThreeLargeDestinations() throws Exception {
         String home=read(MAIN);
-        assertTrue(home.contains("Ui.bookText(this, label, 18f, true)"));
-        assertTrue(home.contains("name.setSingleLine(true)"));
-        assertTrue(home.contains("name.setEllipsize(android.text.TextUtils.TruncateAt.END)"));
-        assertFalse(home.contains("Ui.bookText(this, label, 15f, false)"));
+        assertTrue(home.contains("todayAction = todayLine()"));
+        assertTrue(home.contains("Ui.bookText(this, \"AUJOURD’HUI\", 17f, true)"));
+        assertTrue(home.contains("Ui.bookText(this, \"…\", 23f, true)"));
+        assertTrue(home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)"));
+        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, 112))"));
+        for(String name: new String[]{"Parcours Hifz","Lecture","Atlas"})
+            assertTrue("Missing direct destination "+name,home.contains("primaryTile(destinations, \""+name+"\""));
+        assertTrue(home.contains("secondaryTile(secondary, \"Mémorisation libre\""));
+        assertTrue(home.contains("secondaryTile(secondary, \"Progression\""));
+        assertTrue("No dimmed E-Ink labels", home.contains("line.setAlpha(1f)"));
+        assertFalse("Never fade a control to 42%", home.contains("0.42f"));
     }
 
-    @Test public void routingAndComputedTodayStayIntact() throws Exception {
+    @Test public void sevenDayRailShowsOneSelectedDayAndRealPlannerData() throws Exception {
         String home=read(MAIN);
-        assertTrue(home.contains("Ui.settingRow(this, \"Aujourd’hui\", \"…\", v -> openToday())"));
-        for (String label : new String[]{"Lecture","Atlas","Parcours Hifz","Mémorisation libre","Progression"}) {
-            assertTrue("Missing "+label,home.contains("homeNavLine(root, \""+label+"\""));
-        }
+        assertTrue(home.contains("weekRows = rows"));
+        assertTrue(home.contains("new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today())"));
+        assertTrue(home.contains("selectedWeekDate = row.date"));
+        assertTrue(home.contains("renderSelectedWeekDay()"));
+        assertTrue(home.contains("weekStrip.addView(day,new LinearLayout.LayoutParams(0,Ui.dp(this, 56),1f))"));
+        assertTrue(home.contains("compactScheduleLine(chosen.morning)"));
+        assertTrue(home.contains("compactScheduleLine(chosen.evening)"));
+        assertTrue(home.contains("showRevisionSelector()"));
+    }
+
+    @Test public void todayAndHifzNavigationKeepCanonicalRouting() throws Exception {
+        String home=read(MAIN);
+        assertTrue(home.contains("line.setOnClickListener(v -> openToday())"));
+        assertTrue(home.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));
+        assertTrue(home.contains("setLineEnabled(sabqiQuickAccess, action == CadenceAction.LEARNING)"));
+        assertTrue(home.contains("setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION)"));
         assertTrue(home.contains("new Intent(this, StudyReaderActivity.class)"));
         assertTrue(home.contains("new Intent(this, AtlasMapActivity.class)"));
-        assertFalse("Legacy Ibn Kathir map must no longer be Home Atlas",
-            home.contains("new Intent(this, IbnKathirMapActivity.class)"));
         assertTrue(home.contains("new Intent(this, FreeMemActivity.class)"));
-        assertFalse(home.contains("new Intent(this, QuizActivity.class)"));
-        assertFalse(home.contains("homeNavLine(root, \"Quiz\""));
         assertTrue(home.contains("new Intent(this, ProgressMapActivity.class)"));
-        assertTrue(home.contains("showParcours()"));
-        assertTrue(home.contains("refreshToday()"));
-        assertTrue(home.contains("WeeklyDashboardPlanner"));
-        assertTrue("Home rows have identical compact touch targets",
-            home.contains("line.setMinimumHeight(Ui.dp(this, 56))"));
-        assertTrue("Atlas navigation should replace the legacy Carte label",
-            home.contains("homeNavLine(root, \"Atlas\""));
-        assertFalse("Legacy Carte label must not be shown on home",
-            home.contains("homeNavLine(root, \"Carte\""));
+        assertFalse(home.contains("new Intent(this, IbnKathirMapActivity.class)"));
+        assertFalse(home.contains("new Intent(this, QuizActivity.class)"));
     }
 
     @Test public void fixedLucideSilhouettesAreActuallyPresentNotOnlyNames() throws Exception {
