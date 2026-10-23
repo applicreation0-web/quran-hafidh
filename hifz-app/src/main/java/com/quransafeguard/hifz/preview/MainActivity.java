@@ -49,8 +49,6 @@ public final class MainActivity extends android.app.Activity {
     private ScrollView homeScroll;
     private ScrollView parcoursScroll;
     private boolean showingParcours;
-    private LinearLayout parcoursTodayAction;
-    private TextView parcoursToday;
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle state) {
@@ -328,74 +326,14 @@ public final class MainActivity extends android.app.Activity {
         return tile;
     }
 
-    /**
-     * Full-viewport home destination, with the exact existing drawable as an inline icon.
-     * No speculative symbol for Parcours Hifz: reserve its grid alignment instead.
-     * The whole row is one click target; disabled geometry actions remain truly disabled.
-     */
-    private LinearLayout homeNavLine(LinearLayout parent, String label, View.OnClickListener listener) {
-        LinearLayout line = Ui.row(this);
-        // Flat, consistent navigation rows: never allocate a viewport-sized card.
-        line.setBackgroundColor(Ui.PAPER);
-        line.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
-        line.setMinimumHeight(Ui.dp(this, 56));
-        line.setClickable(true);
-        line.setFocusable(true);
-        line.setContentDescription(label);
-        line.setOnClickListener(listener);
-
-        int drawable = Ui.iconFor(label, label);
-        if (drawable != 0) {
-            ImageView picture = new ImageView(this);
-            picture.setImageResource(drawable);
-            picture.setColorFilter(Ui.INK);
-            picture.setPadding(Ui.dp(this, 12), Ui.dp(this, 12),
-                Ui.dp(this, 12), Ui.dp(this, 12));
-            picture.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            line.addView(picture, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-        } else {
-            // Existing Parcours line has no frozen standalone pictogram.
-            line.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-        }
-        TextView name = Ui.bookText(this, label, 18f, true);
-        name.setGravity(Gravity.CENTER_VERTICAL);
-        name.setSingleLine(true);
-        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        name.setPadding(Ui.dp(this, 7), 0, 0, 0);
-        line.addView(name, new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.MATCH_PARENT, 1f));
-        ImageView arrow=new ImageView(this);
-        arrow.setImageResource(R.drawable.ic_ui_next);
-        arrow.setColorFilter(Ui.INK);
-        arrow.setPadding(Ui.dp(this, 3), Ui.dp(this, 11), Ui.dp(this, 3), Ui.dp(this, 11));
-        arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        line.addView(arrow, new LinearLayout.LayoutParams(Ui.dp(this, 30),
-            ViewGroup.LayoutParams.MATCH_PARENT));
-        // WRAP_CONTENT without weight: the four destinations must not stretch
-        // to fill the screen or leave enormous unused blank surfaces.
-        parent.addView(line, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        parent.addView(Ui.divider(this));
-        return line;
-    }
-
-    private LinearLayout navLine(LinearLayout parent, String label, String state, View.OnClickListener listener) {
-        LinearLayout line = Ui.settingRow(this, label, state, listener);
-        parent.addView(line);
-        parent.addView(Ui.divider(this));
-        return line;
-    }
-
-    /** "Aujourd’hui" is shown on the home and atop Parcours Hifz: both lines stay identical. */
+    /** Today's dominant action displays the canonical next due session. */
     private void setToday(String text, boolean enabled) {
         today.setText(text);
-        if (parcoursToday != null) parcoursToday.setText(text);
         setTodayEnabled(enabled);
     }
 
     private void setTodayEnabled(boolean enabled) {
         setLineEnabled(todayAction, enabled);
-        setLineEnabled(parcoursTodayAction, enabled);
     }
 
     private void showHome() {
