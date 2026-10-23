@@ -124,7 +124,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(pathHeader);
         path.addView(Ui.divider(this));
         LinearLayout coreModes = Ui.row(this);
-        LinearLayout sabqi = pathTile(coreModes, "Apprentissage", "5 lignes",
+        LinearLayout sabqi = pathTile(coreModes, "Apprentissage", "1 page/semaine",
             v -> openMode(HifzSessionActivity.SABQI));
         itqanCard = pathTile(coreModes, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
