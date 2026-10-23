@@ -39,8 +39,9 @@ def signature(apk, apksigner_jar):
         raise ValueError("No verified APK certificate: " + apk)
     if "Verified using v2 scheme (APK Signature Scheme v2): true" not in out:
         raise ValueError("APK v2 signature missing")
-    if "Verified using v3 scheme (APK Signature Scheme v3): true" not in out:
-        raise ValueError("APK v3 signature missing")
+    # The genuine official 1.17.1 APK uses verified v2 but not v3.
+    # V2 is sufficient for minSdk 26; require identical signer instead.
+    # Requiring v3 here falsely rejects BOTH the official baseline and its update.
     return m.group(1)
 
 def main():
