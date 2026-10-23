@@ -41,9 +41,14 @@ public final class PreDebugVisualRestorationSourceContractTest {
         assertTrue(ui.contains("new int[]{MUTED,PAPER,INK,INK}"));
         assertTrue("Selected icon must be dark on light background",ui.contains(
             "shape(SURFACE, LINE, dp(context, 6), Math.max(1, dp(context, 1)))"));
-        assertTrue("Home chevron cannot be made 8dp tall with excess vertical padding",
-            home.contains("arrow.setPadding(Ui.dp(this, 3), Ui.dp(this, 11), Ui.dp(this, 3), Ui.dp(this, 11))"));
-        assertFalse(home.contains("arrow.setPadding(Ui.dp(this, 4), Ui.dp(this, 20)"));
+        assertTrue("The new dominant Today action must keep a readable text CTA",
+            home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)")
+            && home.contains("line.setMinimumHeight(Ui.dp(this, 136))"));
+        assertTrue("The three primary destinations must retain their visible frozen pictograms",
+            home.contains("ImageView icon = new ImageView(this);")
+            && home.contains("icon.setImageResource(drawable);")
+            && home.contains("icon.setColorFilter(Ui.INK);")
+            && home.contains("tile.setMinimumHeight(Ui.dp(this, 112))"));
     }
 
     @Test public void weeklyDialogIsCompactAndManualIsTruthfullyNamed() throws Exception {
