@@ -52,7 +52,9 @@ public final class MaintenanceCoverageWiringSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertFalse(main.contains("HifzSchedule.MAINTENANCE_MINUTES"));
         assertTrue("Home must show a simple label instead of a technical duration",
-            main.contains("setToday(prefix+todaySummary(mode),true);"));
+            main.contains("setToday(prefix+todaySummary(mode)+learningFraction,true);")
+            && main.contains("WeeklyDashboardPlanner.learningSessionCue(scheduledForCue.getDayOfWeek()")
+            && main.contains("HifzSessionActivity.SABQI.equals(mode)"));
         assertTrue("The actual dynamic Révision duration is still implemented by the session",
             read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java")
                 .contains("MaintenanceCoveragePolicy.minutes("));
