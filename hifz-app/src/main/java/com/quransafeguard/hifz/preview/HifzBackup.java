@@ -23,7 +23,9 @@ final class HifzBackup {
     private static final String DASHBOARD_NAME = "quran_hifz_dashboard_ledger_v1";
     private static final String LEGACY_GATES = "hifz_preview_session_gates";
     private static final String MAGIC = "quran-hifz-backup";
-    private static final int VERSION = 2;
+    private static final int VERSION = 3;
+    private static final int PREVIOUS_VERSION = 2;
+    private static final String FREE_MEM_NAME = "free_mem_preview";
     private static final String JOURNAL_NAME = "quran_hifz_restore_journal_v1";
     private static final String JOURNAL_KEY = "pending_restore";
     private static final String COVERAGE_KEY = "coverage_start_date_v1";
@@ -43,6 +45,7 @@ final class HifzBackup {
         root.put("dashboard", encoded(context.getSharedPreferences(DASHBOARD_NAME, Context.MODE_PRIVATE).getAll()));
         root.put("j10", encoded(context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).getAll()));
         root.put("legacy_gates", encoded(context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE).getAll()));
+        root.put("free_mem", encoded(context.getSharedPreferences(FREE_MEM_NAME, Context.MODE_PRIVATE).getAll()));
         return root;
     }
 
@@ -99,12 +102,16 @@ final class HifzBackup {
                     JSONObject dashboard=before.getJSONObject("dashboard");
                     JSONObject oldJ10=before.getJSONObject("j10");
                     JSONObject gates=before.getJSONObject("legacy_gates");
+                    // Pre-v3 pending journals do not contain a free-memory snapshot.
+                    JSONObject freeMem=before.optJSONObject("free_mem");
                     checkValues(values);checkValues(dashboard);
                     checkValues(oldJ10);checkValues(gates);
+                    if(freeMem!=null)checkValues(freeMem);
                     replace(context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE),values);
                     replace(context.getSharedPreferences(DASHBOARD_NAME,Context.MODE_PRIVATE),dashboard);
                     replace(context.getSharedPreferences(J10ReviewStore.NAME,Context.MODE_PRIVATE),oldJ10);
                     replace(context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE),gates);
+                    if(freeMem!=null)replace(context.getSharedPreferences(FREE_MEM_NAME,Context.MODE_PRIVATE),freeMem);
                     if(!journal.edit().remove(JOURNAL_KEY).commit())
                         throw new JSONException("Unable to finalize restore recovery.");
                 }catch(JSONException invalid) {
@@ -122,18 +129,21 @@ final class HifzBackup {
             if(!MAGIC.equals(root.optString("magic")))
                 throw new JSONException("Fichier de sauvegarde non reconnu.");
             int version=root.optInt("version",-1);
-            if(version!=1 && version!=VERSION)
+            if(version!=1 && version!=PREVIOUS_VERSION && version!=VERSION)
                 throw new JSONException("Version de sauvegarde non prise en charge.");
             JSONObject values=root.getJSONObject("values");
             // A missing schema would initialize defaults over the imported acquisitions.
             if(!values.has("schema"))
                 throw new JSONException("Schéma de progression absent de la sauvegarde.");
-            JSONObject dashboard=version==VERSION
+            JSONObject dashboard=version>=PREVIOUS_VERSION
                 ?withCoverage(root.getJSONObject("dashboard")):legacyDashboard();
-            JSONObject j10=version==VERSION?root.getJSONObject("j10"):new JSONObject();
-            JSONObject gates=version==VERSION?root.getJSONObject("legacy_gates"):new JSONObject();
+            JSONObject j10=version>=PREVIOUS_VERSION?root.getJSONObject("j10"):new JSONObject();
+            JSONObject gates=version>=PREVIOUS_VERSION?root.getJSONObject("legacy_gates"):new JSONObject();
+            // V1/V2 never contained free-memory progress: preserve the current local state.
+            JSONObject freeMem=version==VERSION?root.getJSONObject("free_mem"):null;
             checkValues(values);checkValues(dashboard);
             checkValues(j10);checkValues(gates);
+            if(freeMem!=null){checkValues(freeMem);validateFreeMemory(freeMem);}
             validateReceipts(dashboard);
             synchronized(J10ReviewStore.LEGACY_STORE_LOCK) {
                 SharedPreferences main=context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
@@ -145,7 +155,8 @@ final class HifzBackup {
                     .put("values",encoded(main.getAll()))
                     .put("dashboard",encoded(ledger.getAll()))
                     .put("j10",encoded(legacy.getAll()))
-                    .put("legacy_gates",encoded(gate.getAll()));
+                    .put("legacy_gates",encoded(gate.getAll()))
+                    .put("free_mem",encoded(context.getSharedPreferences(FREE_MEM_NAME,Context.MODE_PRIVATE).getAll()));
                 String beforeJson=before.toString();
                 JSONObject entry=new JSONObject().put("before",beforeJson)
                     .put("sha256",sha256(beforeJson));
@@ -156,6 +167,10 @@ final class HifzBackup {
                     replace(ledger,dashboard);injectedProcessDeath("LEDGER");
                     replace(legacy,j10);injectedProcessDeath("J10");
                     replace(gate,gates);injectedProcessDeath("GATES");
+                    if(freeMem!=null){
+                        replace(context.getSharedPreferences(FREE_MEM_NAME,Context.MODE_PRIVATE),freeMem);
+                        injectedProcessDeath("FREE_MEM");
+                    }
                     if(!journal.edit().remove(JOURNAL_KEY).commit())
                         throw new JSONException("Unable to complete restore.");
                 }catch(JSONException | RuntimeException failure) {
@@ -192,6 +207,27 @@ final class HifzBackup {
                 throw new JSONException("Invalid completion receipt.");
             try{java.time.LocalDate.parse(key.substring(0,separator));}
             catch(RuntimeException invalid){throw new JSONException("Invalid receipt date.");}
+        }
+    }
+
+    /** Refuse malformed or impossible free-reading state before writing any store. */
+    private static void validateFreeMemory(JSONObject state) throws JSONException {
+        for(Iterator<String> keys=state.keys();keys.hasNext();){
+            String key=keys.next();
+            if(!("page".equals(key)||"count".equals(key)||"mask".equals(key)
+                    ||"start".equals(key)||"end".equals(key)))
+                throw new JSONException("Clé de mémorisation libre inconnue : "+key);
+            JSONObject entry=state.getJSONObject(key);
+            if("page".equals(key)||"count".equals(key)||"mask".equals(key)){
+                if(!"i".equals(entry.getString("t")) || !(entry.get("v") instanceof Integer))
+                    throw new JSONException("Type numérique invalide : "+key);
+                int value=entry.getInt("v");
+                if(("page".equals(key)&&(value<1||value>604))
+                    ||("count".equals(key)&&(value<0||value>1000000))
+                    ||("mask".equals(key)&&value!=0&&value!=25&&value!=50&&value!=75&&value!=100))
+                    throw new JSONException("Valeur de mémorisation libre invalide : "+key);
+            }else if(!"s".equals(entry.getString("t")))
+                throw new JSONException("Type de passage invalide : "+key);
         }
     }
 
