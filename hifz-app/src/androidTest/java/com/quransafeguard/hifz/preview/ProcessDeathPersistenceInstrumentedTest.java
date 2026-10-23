@@ -167,6 +167,10 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             }
             assertEquals("V1 must preserve current free memory",4,
                 context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getInt("count",-1));
+            assertTrue("V1 import must clear unrelated target J10 history",
+                !legacy.contains(J10_SENTINEL));
+            assertTrue("V1 import must not retain stale gates from the target install",
+                context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).getAll().isEmpty());
             org.json.JSONObject oldV2=new org.json.JSONObject(backup.toString());
             oldV2.put("version",2);oldV2.remove("free_mem");
             assertTrue(context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).edit()
@@ -174,10 +178,6 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             assertTrue(HifzBackup.restore(context,oldV2)>0);
             assertEquals("V2 must not destroy free memory absent from archive",13,
                 context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getInt("count",-1));
-            assertTrue("V1 import must clear unrelated target J10 history",
-                !legacy.contains(J10_SENTINEL));
-            assertTrue("V1 import must not retain stale gates from the target install",
-                context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).getAll().isEmpty());
             // Restoring the real V3 snapshot recovers exact receipts and free-memory state.
             assertTrue(HifzBackup.restore(context,backup)>0);
             assertBackupLedgerAndJ10(context);
