@@ -81,9 +81,14 @@ public final class OfficialReleaseContractTest {
             backup.contains("root.put(\"j10\", encoded("));
         assertTrue("Legacy gates must be explicit and cleared on V1 import",
             backup.contains("root.put(\"legacy_gates\", encoded(") &&
-            backup.contains("version==VERSION?root.getJSONObject(\"legacy_gates\"):new JSONObject()"));
-        assertTrue("both backup versions must remain importable",
-            backup.contains("version!=1 && version!=VERSION"));
+            backup.contains("version>=PREVIOUS_VERSION?root.getJSONObject(\"legacy_gates\"):new JSONObject()"));
+        assertTrue("V1, V2 and V3 archives must remain importable",
+            backup.contains("version!=1 && version!=PREVIOUS_VERSION && version!=VERSION"));
+        assertTrue("Free memorisation must be saved and restored transactionally",
+            backup.contains("root.put(\"free_mem\", encoded(") &&
+            backup.contains("before.optJSONObject(\"free_mem\")") &&
+            backup.contains("validateFreeMemory(freeMem)") &&
+            backup.contains("replace(context.getSharedPreferences(FREE_MEM_NAME,Context.MODE_PRIVATE),freeMem)"));
         assertTrue("all data must be validated before writing",
             backup.contains("checkValues(values)") && backup.contains("checkValues(dashboard)") &&
             backup.contains("checkValues(j10)"));
