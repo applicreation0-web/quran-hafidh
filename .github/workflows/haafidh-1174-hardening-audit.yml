@@ -1,0 +1,95 @@
+name: Quran Haafidh 1.17.4 hardening — private candidate audit only
+on:
+  push:
+    branches:
+      - work/audit-1174-hardening-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: audit-1174-hardening-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  freeze-and-jvm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Android SDK and audited QCF pages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Approved Hifz, Atlas, UI and security freezes
+        run: |
+          bash scripts/guard_frozen_hifz_engines.sh
+          python3 scripts/verify_atlas_only_purity.py
+          python3 scripts/guard_atlas_boox_visual_snapshot.py
+          python3 scripts/verify_contractual_ui_icons.py
+      - name: All core, Android unit and source contract tests
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hardening-1174-jvm-evidence
+          path: |
+            hifz-core/build/test-results/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/
+          retention-days: 14
+  instrumentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: SDK and genuine QCF resources
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Real Android persistence, mask and migration regressions
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hardening-1174-android-evidence
+          path: |
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/
+          retention-days: 14
