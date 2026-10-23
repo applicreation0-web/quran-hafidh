@@ -664,19 +664,50 @@ public final class SettingsActivity extends android.app.Activity {
             }).show();
     }
 
-    private void readBackupFrom(Uri uri){
-        try(java.io.InputStream in=getContentResolver().openInputStream(uri)){
-            if(in==null)throw new java.io.IOException("Impossible d’ouvrir le fichier.");
-            java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
-            byte[] chunk=new byte[8192];int n;
-            while((n=in.read(chunk))>=0)buffer.write(chunk,0,n);
-            org.json.JSONObject root=new org.json.JSONObject(buffer.toString(java.nio.charset.StandardCharsets.UTF_8.name()));
-            int count=HifzBackup.restore(this,root);
-            Toast.makeText(this,"Sauvegarde restaurée ("+count+" entrées). Relancez l’appli.",Toast.LENGTH_LONG).show();
-            recreate();
-        }catch(Exception error){
-            Toast.makeText(this,"Échec de l’import : "+error.getMessage(),Toast.LENGTH_LONG).show();
+    /** Stream upper bound: never allocate an untrusted JSON document of arbitrary size. */
+    private static final int MAX_BACKUP_IMPORT_BYTES = 16 * 1024 * 1024;
+    static byte[] readBoundedBackup(java.io.InputStream in) throws java.io.IOException {
+        if(in==null)throw new java.io.IOException("Impossible d’ouvrir le fichier.");
+        java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+        byte[] chunk=new byte[8192];int n;
+        while((n=in.read(chunk))!=-1){
+            if(n==0)continue;
+            if(n>MAX_BACKUP_IMPORT_BYTES-buffer.size())
+                throw new java.io.IOException("Sauvegarde trop volumineuse (limite 16 Mo).");
+            buffer.write(chunk,0,n);
         }
+        return buffer.toByteArray();
+    }
+
+    private void readBackupFrom(Uri uri){
+        // Modal guard prevents user changes while the independent restore worker
+        // transactionally rewrites the Hifz and free-memory stores.
+        final AlertDialog pending=new AlertDialog.Builder(this)
+            .setTitle("Restauration")
+            .setMessage("Vérification et restauration de la sauvegarde…")
+            .setCancelable(false).create();
+        pending.show();
+        new Thread(()->{
+            int restored=-1;String error=null;
+            try(java.io.InputStream in=getContentResolver().openInputStream(uri)){
+                byte[] bytes=readBoundedBackup(in);
+                org.json.JSONObject root=new org.json.JSONObject(
+                    new String(bytes,java.nio.charset.StandardCharsets.UTF_8));
+                restored=HifzBackup.restore(getApplicationContext(),root);
+            }catch(Exception failed){
+                error=failed.getMessage()==null?failed.getClass().getSimpleName():failed.getMessage();
+            }
+            final int count=restored;final String failure=error;
+            runOnUiThread(()->{
+                pending.dismiss();
+                if(failure==null){
+                    Toast.makeText(this,"Sauvegarde restaurée ("+count+" entrées).",Toast.LENGTH_LONG).show();
+                    recreate();
+                }else{
+                    Toast.makeText(this,"Échec de l’import : "+failure,Toast.LENGTH_LONG).show();
+                }
+            });
+        },"hifz-backup-import").start();
     }
 
     private void chooseVerse(String title,VerseRef current,VerseChosen chosen){
