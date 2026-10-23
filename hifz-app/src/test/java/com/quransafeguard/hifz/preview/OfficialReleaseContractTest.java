@@ -159,6 +159,32 @@ public final class OfficialReleaseContractTest {
         assertTrue("Tafsir rights metadata must be enforced", multi.contains("personal_use_only") && multi.contains("redistribution_approved") && multi.contains("rights_note"));
     }
 
+    @Test public void privateAtlasOfficialReleaseKeepsInstalledPackageIdentityAndAssets() throws Exception {
+        String gradle = read("hifz-app/build.gradle.kts");
+        String manifest = read("hifz-app/src/main/AndroidManifest.xml");
+        assertTrue("Must retain the original Android package used by official 1.17.1",
+            gradle.contains("applicationId = \"com.quransafeguard.hifz\""));
+        assertTrue("Private official upgrade requires explicit opt-in",
+            gradle.contains("HIFZ_PRIVATE_RELEASE_UPGRADE") &&
+            gradle.contains("privateReleaseUpgrade = private114 &&"));
+        assertTrue("Release variant must include approved offline Atlas assets",
+            gradle.contains("sourceSets.getByName(\"release\").assets.srcDir(\"src/private114/assets\")"));
+        assertTrue("Release private Atlas flag must follow opt-in",
+            gradle.contains("buildConfigField(\"boolean\", \"AYAH_THEMES_FINAL_PRIVATE\", privateReleaseUpgrade.toString())") &&
+            gradle.contains("buildConfigField(\"boolean\", \"ATLAS_PRIVATE_EDITORIAL_PREVIEW\", privateReleaseUpgrade.toString())"));
+        assertTrue("The debug-only private suffix stays isolated from release",
+            gradle.contains("applicationIdSuffix = if (private114) \".ayahthemes114private\""));
+        assertTrue("Official launcher label must not become Private 114",
+            manifest.contains("android:label=\"Quran Haafidh\"") &&
+            !manifest.contains("Privé 114"));
+        assertTrue("Packaging must reject missing or changed private Atlas resources",
+            gradle.contains("dependsOn(verifyPrivateReleaseInputs)") &&
+            gradle.contains("privateReleaseAssets.forEach") &&
+            gradle.contains("check(digest == expected)"));
+        assertTrue("Packaging requires a release keystore, not the isolated private debug key",
+            gradle.contains("check(hasReleaseSigning)"));
+    }
+
     @Test public void officialVersionIsIncremented() throws Exception {
         String gradle = read("hifz-app/build.gradle.kts");
         assertTrue("1.17.4 must increment versionCode beyond the BOOX 1.17.4 (40)", gradle.contains("versionCode = 42"));
