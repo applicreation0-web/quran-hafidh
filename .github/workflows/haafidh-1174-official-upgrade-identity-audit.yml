@@ -39,7 +39,7 @@ jobs:
           python3 scripts/verify_contractual_ui_icons.py
       - name: JVM / source contracts and private official RELEASE compile
         run: |
-          gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:compileReleaseJavaWithJavac
+          gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:compileReleaseJavaWithJavac :hifz-app:processReleaseMainManifest
       - name: Prove unsuffixed merged Release identity and private Atlas flags
         run: |
           set -euo pipefail
