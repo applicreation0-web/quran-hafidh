@@ -86,8 +86,11 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
 
     @Test public void homeCardCueIsRefreshedOnEveryReturnToHome() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertEquals(1, count(main, "navLine(path, \"Stabilisation\", stabilizationProgramCue(),"));
+        assertEquals(1, count(main, "pathTile(coreModes, \"Stabilisation\", stabilizationProgramCue(),"));
         assertEquals(1, count(main, "if (itqanCue != null) itqanCue.setText(stabilizationProgramCue());"));
+        assertTrue("The refreshed Stabilisation tile must expose its live cue in child index 1",
+            main.contains("TextView cue = Ui.text(this, state, 15f, false);")
+            && main.contains("TextView itqanCue = Ui.settingValue(itqanCard);"));
         assertTrue("Post-Nas summary stays a concise hizb cue",
             main.contains("prefs.itqanPostNasMaintenance() ? \"1 hizb · entretien\""));
         assertTrue("Both weekly menu goals are expressed in pages, without session counts",
