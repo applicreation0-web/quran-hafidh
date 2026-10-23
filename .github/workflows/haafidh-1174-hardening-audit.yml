@@ -84,7 +84,7 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest
+          script: gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AudioImportConcurrencyInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest
       - uses: actions/upload-artifact@v4
         if: always()
         with:
