@@ -28,11 +28,11 @@ public final class AtlasFinalizationSourceContractTest {
 
     @Test public void weeklyGoalLabelsUsePagesOnlyWithoutChangingSchedules() throws Exception {
         String home=read(ROOT+"MainActivity.java");
-        assertTrue(home.contains("navLine(path, \"Apprentissage\", \"1 page/semaine\""));
+        assertTrue(home.contains("pathTile(coreModes, \"Apprentissage\", \"1 page/semaine\""));
         assertTrue(home.contains(": \"2 pages/semaine\";"));
         assertTrue("Post-Nas maintenance remains distinct",
             home.contains("prefs.itqanPostNasMaintenance() ? \"1 hizb · entretien\""));
-        assertFalse(home.contains("navLine(path, \"Apprentissage\", \"5 lignes\""));
+        assertFalse(home.contains("pathTile(coreModes, \"Apprentissage\", \"5 lignes\""));
         assertFalse(home.contains("2 pages / 4 séances"));
     }
 
@@ -123,7 +123,7 @@ public final class AtlasFinalizationSourceContractTest {
         String map=read(ROOT+"MawdudiMapScreen.java");
         String reader=read(ROOT+"StudyReaderActivity.java");
         String ui=read(ROOT+"Ui.java");
-        assertTrue(home.contains("homeNavLine(root, \"Atlas\""));
+        assertTrue(home.contains("primaryTile(destinations, \"Atlas\", \"Atlas\""));
         assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Atlas\""));
         assertTrue(map.contains("Unité Atlas · "));
         assertFalse("Passage captions belong to Lecture, not the unit-only Atlas",
