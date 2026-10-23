@@ -348,7 +348,7 @@ public final class MainActivity extends android.app.Activity {
         if (todayObjective != null) {
             // One read-only preview of actual schedule objectives, never a credit or cursor advance.
             todayObjective.setText(todayRow == null ? "Programme détaillé dans Parcours"
-                : "MATIN · "+scheduleDetail(todayRow.morning).replace("\\n", " · "));
+                : "MATIN · "+scheduleDetail(todayRow.morning));
         }
         if (todayAction != null && todayAction.getChildCount() >= 4
                 && todayAction.getChildAt(3) instanceof TextView) {
@@ -879,7 +879,7 @@ public final class MainActivity extends android.app.Activity {
             if (active) chosen = row;
             TextView day = Ui.bookText(this,
                 (active ? "● " : "")+initials[row.date.getDayOfWeek().getValue()-1]
-                    +"\\n"+row.date.getDayOfMonth(), 18f, active);
+                    +"\n"+row.date.getDayOfMonth(), 18f, active);
             day.setGravity(Gravity.CENTER);
             day.setMinimumHeight(Ui.dp(this, 56));
             day.setContentDescription(row.day+" · "+row.date);
@@ -930,7 +930,7 @@ public final class MainActivity extends android.app.Activity {
      * The delimiter becomes a line break to avoid dense walls of text on E-Ink. */
     private static String scheduleDetail(String raw) {
         if (raw == null || raw.trim().isEmpty()) return "—";
-        return raw.replace(" · ", "\\n");
+        return raw.replace(" · ", "\n");
     }
 
     private static String shortRange(VerseRef a, VerseRef b) {
