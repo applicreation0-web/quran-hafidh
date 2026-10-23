@@ -49,6 +49,8 @@ final class HifzAudioPack {
     private static final String EMBEDDED_MANIFEST = EMBEDDED_ROOT + "/source.json";
     private static final String BACKUP_DIR = "husary-muallim.previous";
     private static final String IMPORT_PREFIX = "husary-muallim.importing-";
+    /** All instances share the same active/staged folders; prevent concurrent imports or recovery. */
+    private static final Object IMPORT_LOCK = new Object();
 
     private static final long MIN_IMPORT_FREE_BYTES = 3_200_000_000L;
     private static final long MAX_VERSE_BYTES = 15L * 1024L * 1024L;
@@ -81,7 +83,7 @@ final class HifzAudioPack {
     HifzAudioPack(Context context) {
         this.context = context.getApplicationContext();
         this.dir = new File(this.context.getFilesDir(), "audio/husary-muallim");
-        recoverInterruptedActivation();
+        synchronized(IMPORT_LOCK){ recoverInterruptedActivation(); }
     }
 
     boolean installed() { return localInstalled() || embeddedInstalled(); }
@@ -125,6 +127,7 @@ final class HifzAudioPack {
     }
 
     ImportResult importZip(Uri uri) {
+      synchronized(IMPORT_LOCK) {
         File parent = dir.getParentFile();
         if (parent == null) return new ImportResult(false, 0, "Dossier audio interne indisponible.");
         if (!parent.exists() && !parent.mkdirs()) return new ImportResult(false, 0, "Impossible de créer le dossier audio interne.");
@@ -203,6 +206,7 @@ final class HifzAudioPack {
             return new ImportResult(false, copiedNames.size(),
                 "Import audio impossible : " + (message == null ? error.getClass().getSimpleName() : message));
         }
+      }
     }
 
     private void activateVerifiedPack(File staging) throws Exception {
