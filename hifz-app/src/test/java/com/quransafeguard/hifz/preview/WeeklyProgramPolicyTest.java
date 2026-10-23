@@ -56,18 +56,25 @@ public final class WeeklyProgramPolicyTest {
     }
 
     @Test public void weeklyScreenActuallyDisplaysLearningProgressNotOnlyPlannerRawText() throws Exception {
-        java.lang.reflect.Method compact=MainActivity.class.getDeclaredMethod("compactScheduleLine",String.class);
-        compact.setAccessible(true);
-        assertEquals("Révision active + Apprentissage · 1/3",
-            compact.invoke(null,"Révision active 30 min + Apprentissage · séance 1/3 · 5 lignes"));
-        assertEquals("Révision active + Apprentissage · 2/3",
-            compact.invoke(null,"Révision active 30 min + Apprentissage · séance 2/3 · 5 lignes"));
-        assertEquals("Révision active + Apprentissage · 3/3",
-            compact.invoke(null,"Révision active 30 min + Apprentissage · séance 3/3 · 5 lignes"));
-        assertEquals("Révision active + Stabilisation · 2/4",
-            compact.invoke(null,"Révision active 30 min + Stabilisation · séance 2/4 · 7 lignes"));
-        assertEquals("✓ Révision active + Apprentissage · 3/3",
-            compact.invoke(null,"✓ Révision active 30 min + ✓ Apprentissage · séance 3/3"));
+        java.lang.reflect.Method detail=MainActivity.class.getDeclaredMethod("scheduleDetail",String.class);
+        detail.setAccessible(true);
+        for (String fraction : new String[]{"1/3","2/3","3/3"}) {
+            String verseRange="p. 18 l. 4–8 · 2:94–95";
+            String source="Révision active 30 min + Apprentissage · séance "+fraction
+                +" · "+verseRange+" · 5 lignes";
+            String actual=(String)detail.invoke(null,source);
+            assertTrue("The weekly learning fraction must remain visible",actual.contains("séance "+fraction));
+            assertTrue("The exact QCF page must remain visible",actual.contains("p. 18 l. 4–8"));
+            assertTrue("The exact verse limits must never be discarded",actual.contains("2:94–95"));
+            assertTrue("No compact replacement can discard the material",actual.contains("5 lignes"));
+        }
+        String itqan=(String)detail.invoke(null,
+            "Révision active 30 min + Stabilisation · séance 2/4 · p. 515 l. 9–15 · 50:1–5");
+        assertTrue(itqan.contains("séance 2/4"));
+        assertTrue(itqan.contains("p. 515 l. 9–15"));
+        assertTrue(itqan.contains("50:1–5"));
+        assertTrue(((String)detail.invoke(null,"✓ Apprentissage · séance 3/3"))
+            .startsWith("✓ Apprentissage"));
     }
 
     @Test public void classicDelegatesOriginalCanonicalCadenceWithoutChange() {
