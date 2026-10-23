@@ -6,6 +6,8 @@ plugins {
 
 // Separate intermediates prevent private/public incremental asset contamination.
 val private114 = System.getenv("AYAH_THEMES_PRIVATE_114") == "1"
+// Only the user-approved 1.17.5 isolated BOOX test build uses this opt-in.
+val boox1175Preview = private114 && System.getenv("HAAFIDH_1175_PRIVATE_DEBUG") == "1"
 // Explicit opt-in: private corpus belongs in an official in-place RELEASE only on a
 // trusted offline assembler; ordinary debug previews always keep their suffix.
 val privateReleaseUpgrade = private114 && System.getenv("HIFZ_PRIVATE_RELEASE_UPGRADE") == "1"
@@ -322,7 +324,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 42
-        versionName = "1.17.4"
+        versionName = if (boox1175Preview) "1.17.5" else "1.17.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -357,7 +359,7 @@ android {
             isDebuggable = false
             // Isolated personal test install; never overwrites the official 1.17.1 package.
             applicationIdSuffix = if (private114) ".ayahthemes114private" else if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
-            versionNameSuffix = if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
+            versionNameSuffix = if (boox1175Preview) "-BOOX-HOME-PRIVATE-DEBUG" else if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
             // Private Atlas content is enabled only by an explicit local build flag.
