@@ -329,6 +329,13 @@ public final class MainActivity extends android.app.Activity {
     /** Today's dominant action displays the canonical next due session. */
     private void setToday(String text, boolean enabled) {
         today.setText(text);
+        // The single hero CTA always describes its actual destination.
+        if (todayAction != null && todayAction.getChildCount() >= 3
+                && todayAction.getChildAt(2) instanceof TextView) {
+            TextView action = (TextView) todayAction.getChildAt(2);
+            action.setText(text.startsWith("Programme à jour") ? "VOIR LES SÉANCES  ›"
+                : text.startsWith("Consolidation · état") ? "VÉRIFIER  ›" : "CONTINUER  ›");
+        }
         setTodayEnabled(enabled);
     }
 
@@ -728,7 +735,12 @@ public final class MainActivity extends android.app.Activity {
         String prefix=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
         // Never query a live Itqan block or mutate its cursor merely
         // to render a home navigation summary.
-        setToday(prefix+todaySummary(mode),true);
+        LocalDate scheduledForCue = !isTodayAnchoredMode(mode) && due != null
+            ? due.getScheduledDate() : current;
+        String learningFraction = HifzSessionActivity.SABQI.equals(mode)
+            ? WeeklyDashboardPlanner.learningSessionCue(scheduledForCue.getDayOfWeek(),
+                prefs.weeklyProgramFor(scheduledForCue)) : "";
+        setToday(prefix+todaySummary(mode)+learningFraction,true);
     }
 
     private static String todaySummary(String mode) {
