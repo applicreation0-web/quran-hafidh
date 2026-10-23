@@ -64,9 +64,30 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("selectedWeekDate = row.date"));
         assertTrue(home.contains("renderSelectedWeekDay()"));
         assertTrue(home.contains("weekStrip.addView(day,new LinearLayout.LayoutParams(0,Ui.dp(this, 56),1f))"));
-        assertTrue(home.contains("compactScheduleLine(chosen.morning)"));
-        assertTrue(home.contains("compactScheduleLine(chosen.evening)"));
+        assertTrue(home.contains("scheduleDetail(chosen.morning)"));
+        assertTrue(home.contains("scheduleDetail(chosen.evening)"));
         assertTrue(home.contains("showRevisionSelector()"));
+    }
+
+    @Test public void booxNavigationHasNoCardsAndRetainsApprovedHifzIcons() throws Exception {
+        String home=read(MAIN);
+        String curve=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/BooxFlowStroke.java");
+        assertFalse("The previous bordered-card UI is rejected by the BOOX owner",
+            home.contains("Ui.panel(line)") || home.contains("Ui.panel(tile)")
+            || home.contains("Ui.panel(day)"));
+        assertTrue("Home, Parcours and the day rail share a curved Atlas-inspired line",
+            home.contains("new BooxFlowStroke(this)") && curve.contains("path.cubicTo"));
+        assertTrue("Every Hifz mode uses an existing frozen semantic pictogram",
+            home.contains("int icon = Ui.iconFor(label, label)")
+                && home.contains("name.setCompoundDrawablesWithIntrinsicBounds(0, icon, 0, 0)"));
+        assertTrue("Compact mode names must fit in one BOOX column",
+            home.contains("\"Apprentissage\".equals(label) ? \"Apprendre\"")
+                && home.contains("\"Stabilisation\".equals(label) ? \"Stabiliser\""));
+        assertTrue("Real verse boundaries must be shown rather than discarded into only modes",
+            home.contains("scheduleDetail(chosen.morning)")
+                && home.contains("scheduleDetail(chosen.evening)")
+                && home.contains("return raw.replace(\" · \", "));
+        assertFalse(home.contains("compactScheduleLine("));
     }
 
     @Test public void todayAndHifzNavigationKeepCanonicalRouting() throws Exception {
