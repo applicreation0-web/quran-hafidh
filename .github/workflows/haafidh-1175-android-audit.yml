@@ -1,0 +1,63 @@
+name: Haafidh 1.17.5 Android emulator audit — no publication
+on:
+  push:
+    branches:
+      - work/haafidh-1175-boox-ux-hifz-atlas
+    paths:
+      - '.github/workflows/haafidh-1175-android-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-1175-android-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  instrumentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: SDK and 604 original QCF pages
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Frozen Hifz, Atlas and icon contracts
+        run: |
+          bash scripts/guard_frozen_hifz_engines.sh
+          python3 scripts/verify_atlas_only_purity.py
+          python3 scripts/verify_contractual_ui_icons.py
+      - name: KVM for emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Real Android mask, QCF, migration, persistence
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-1175-android-instrumented-audit
+          path: |
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            hifz-app/build/reports/
+          retention-days: 14
