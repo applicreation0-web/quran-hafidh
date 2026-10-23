@@ -61,6 +61,11 @@ jobs:
             sleep 3
             adb exec-out screencap -p > hifz-app/build/boox-audit/home-portrait-android-emulator.png
             test -s hifz-app/build/boox-audit/home-portrait-android-emulator.png
+            # Tap approved borderless Parcours icon destination on the fixed Pixel 2 AVD.
+            adb shell input tap 210 1120
+            sleep 2
+            adb exec-out screencap -p > hifz-app/build/boox-audit/parcours-portrait-android-emulator.png
+            test -s hifz-app/build/boox-audit/parcours-portrait-android-emulator.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
