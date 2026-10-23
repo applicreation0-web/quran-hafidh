@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - work/haafidh-1171-atlas-only-pre20-mask
+      - work/haafidh-1175-boox-ux-hifz-atlas
     paths:
       - '.github/workflows/haafidh-boox-private-debug-staging.yml'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java'
@@ -53,6 +54,7 @@ jobs:
     timeout-minutes: 70
     env:
       AYAH_THEMES_PRIVATE_114: '1'
+      HAAFIDH_1175_PRIVATE_DEBUG: ${{ github.ref_name == 'work/haafidh-1175-boox-ux-hifz-atlas' && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,7 +75,7 @@ jobs:
           set -euo pipefail
           mkdir -p hifz-app/src/private114/assets
           cat > hifz-app/src/private114/AndroidManifest.xml <<EOF
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"><application android:label="Quran Haafidh Privé 114" tools:replace="android:label"><meta-data android:name="quran.haafidh.source_sha" android:value="$(git rev-parse HEAD)" /></application></manifest>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"><application android:label="Quran Haafidh BOOX Test" tools:replace="android:label"><meta-data android:name="quran.haafidh.source_sha" android:value="$(git rev-parse HEAD)" /></application></manifest>
           EOF
           test ! -e hifz-app/src/private114/assets/atlas
           test ! -e hifz-app/src/private114/assets/atlas_private
