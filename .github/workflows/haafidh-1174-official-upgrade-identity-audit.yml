@@ -1,0 +1,74 @@
+name: Haafidh 1.17.4 official upgrade identity audit (no APK)
+on:
+  push:
+    branches:
+      - work/haafidh-1174-release-identity-fix-20261023
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prove-official-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Android SDK and exact QCF pages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Verify unchanged Hifz/Atlas boundary
+        run: |
+          bash scripts/guard_frozen_hifz_engines.sh
+          python3 scripts/verify_atlas_only_purity.py
+          python3 scripts/verify_contractual_ui_icons.py
+      - name: JVM / source contracts and private official RELEASE compile
+        run: |
+          gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:compileReleaseJavaWithJavac
+      - name: Prove unsuffixed merged Release identity and private Atlas flags
+        run: |
+          set -euo pipefail
+          manifest="$(find hifz-app/build-private114/intermediates/merged_manifest/release -name AndroidManifest.xml | head -n 1)"
+          test -n "$manifest"
+          grep -q 'package="com.quransafeguard.hifz"' "$manifest"
+          grep -q 'android:versionCode="42"' "$manifest"
+          ! grep -q 'ayahthemes114private' "$manifest"
+          buildconfig="$(find hifz-app/build-private114/generated/source/buildConfig/release -name BuildConfig.java | head -n 1)"
+          test -n "$buildconfig"
+          grep -q 'AYAH_THEMES_FINAL_PRIVATE = true' "$buildconfig"
+          grep -q 'ATLAS_PRIVATE_EDITORIAL_PREVIEW = true' "$buildconfig"
+          echo 'PASS: release package=com.quransafeguard.hifz versionCode=42 Atlas private=true'
+      - name: Refuse incomplete or incorrectly signed private release
+        run: |
+          set -euo pipefail
+          if gradle --no-daemon :hifz-app:verifyPrivateReleaseInputs > "$RUNNER_TEMP/negative-gate.log" 2>&1; then
+            echo 'NO-GO: untrusted unsigned/no-asset build was wrongly accepted'
+            exit 1
+          fi
+          grep -q 'NO-GO: official upgrade requires the official release signing keystore' "$RUNNER_TEMP/negative-gate.log"
+          echo 'PASS: incomplete private release is rejected before APK packaging'
+          test -z "$(find hifz-app -type f -name '*.apk' -print -quit)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 1174-release-identity-and-tests-no-apk
+          path: |
+            hifz-app/build-private114/test-results/
+            hifz-app/build-private114/reports/
+            hifz-core/build/test-results/
+          retention-days: 14
