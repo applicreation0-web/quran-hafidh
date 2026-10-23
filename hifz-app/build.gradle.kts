@@ -382,6 +382,16 @@ val privateReleaseAssets = mapOf(
 val verifyPrivateReleaseInputs by tasks.registering {
     doLast {
         if (!privateReleaseUpgrade) return@doLast
+        // Offline transport only: NEVER signed, and contains NO private Atlas assets.
+        // The local assembler adds 7 approved resources before external signing.
+        if (System.getenv("HIFZ_OFFLINE_UNSIGNED_STAGE") == "1") {
+            check(!hasReleaseSigning) { "NO-GO: offline empty Atlas staging must NEVER be signed" }
+            check(!file("src/private114/assets/atlas_private/maududi_original.pdf").exists()) {
+                "NO-GO: no private resources may be present in public CI staging"
+            }
+            println("PASS: unsigned empty-resource staging allowed only for local Atlas injection")
+            return@doLast
+        }
         check(hasReleaseSigning) { "NO-GO: official upgrade requires the official release signing keystore (never the private debug key)." }
         val storePath = file(System.getenv("HIFZ_KEYSTORE_PATH"))
         val storePassword = System.getenv("HIFZ_KEYSTORE_PASSWORD") ?: error("NO-GO: missing release keystore password")
