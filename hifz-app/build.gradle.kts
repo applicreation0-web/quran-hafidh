@@ -1,3 +1,4 @@
+import java.security.MessageDigest
 plugins {
     id("com.android.application")
 }
@@ -384,7 +385,7 @@ val verifyPrivateReleaseInputs by tasks.registering {
         privateReleaseAssets.forEach { (relative, expected) ->
             val asset = file("src/private114/assets/$relative")
             check(asset.isFile) { "NO-GO: missing private Atlas asset: $relative" }
-            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = MessageDigest.getInstance("SHA-256")
                 .digest(asset.readBytes()).joinToString("") { "%02x".format(it) }
             check(digest == expected) { "NO-GO: private Atlas asset checksum mismatch: $relative" }
         }
