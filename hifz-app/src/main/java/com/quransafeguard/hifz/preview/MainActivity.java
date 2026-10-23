@@ -233,7 +233,7 @@ public final class MainActivity extends android.app.Activity {
         line.addView(value);
         todayObjective = Ui.text(this, "", 16f, false);
         todayObjective.setTextColor(Ui.MUTED);
-        todayObjective.setMaxLines(5);
+        // Never truncate the authentic page/verse range on the BOOX screen.
         todayObjective.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 10));
         line.addView(todayObjective);
         TextView action = Ui.bookText(this, "CONTINUER  ›", 20f, true);
@@ -893,7 +893,7 @@ public final class MainActivity extends android.app.Activity {
             weekStrip.addView(day,new LinearLayout.LayoutParams(0,Ui.dp(this, 56),1f));
         }
         TextView heading = Ui.bookText(this,
-            chosen.day+" · "+compactState(chosen.state), 20f, true);
+            chosen.day+" "+chosen.date.getDayOfMonth()+" · "+compactState(chosen.state), 20f, true);
         weekDayPanel.addView(heading);
         TextView morning = Ui.text(this, "MATIN", 16f, true);
         morning.setPadding(0, Ui.dp(this, 14), 0, 0);
