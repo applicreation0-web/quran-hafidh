@@ -4,7 +4,7 @@ plugins {
 
 // Separate intermediates prevent private/public incremental asset contamination.
 val private114 = System.getenv("AYAH_THEMES_PRIVATE_114") == "1"
-// Explicit opt-in: private corpus belongs in an official in-place RELEASЕ only on a
+// Explicit opt-in: private corpus belongs in an official in-place RELEASE only on a
 // trusted offline assembler; ordinary debug previews always keep their suffix.
 val privateReleaseUpgrade = private114 && System.getenv("HIFZ_PRIVATE_RELEASE_UPGRADE") == "1"
 if (private114) layout.buildDirectory.set(file("build-private114"))
@@ -364,6 +364,35 @@ android {
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
         }
     }
+}
+
+// A private official upgrade must contain the exact rights-scoped offline corpus.
+// Refuse packaging when using the public CI checkout or the wrong signing setup.
+val privateReleaseAssets = mapOf(
+    "atlas/atlas_display_catalog_v1.json" to "065ec0dd68c488efacbd9e77635bf9d531b4cbb2b1bc82db7853ad4da0c02c9c",
+    "atlas_private/atlas_366_comments_offline_reference_v1.json" to "8f514ffa367d67a49198799be279691ba0555363fac0b030f09fbf39fe3c3484",
+    "atlas_private/atlas_approved_unit_titles_366_v1.json" to "421277c59519f2b904de23bbc1e0eee6faeb569e33ed6b425b4b9235cf82ff79",
+    "atlas_private/maududi_original.pdf" to "1d207bb3dd58d45e7a77b0b5942f88a5c216b3a4273ea5a4474fc9e140b0d62e",
+    "ayah_themes_private/macros_114.json" to "3589af556f82e55e1619fc0f3ae16b7f21b4609f156a8ad808a3a0bbe6d3c09a",
+    "ayah_themes_private/special_27.json" to "d3fb2a7cc23f84851f83caa14ab23a549b8f410529930131dd2c2560d7450404",
+    "ayah_themes_private/titles_114.json" to "a42914ae968c77bc7224f5126a41cc3e92099fbc797a91b01d74405d242eb209"
+)
+val verifyPrivateReleaseInputs by tasks.registering {
+    doLast {
+        if (!privateReleaseUpgrade) return@doLast
+        check(hasReleaseSigning) { "NO-GO: official upgrade requires the official release signing keystore (never the private debug key)." }
+        privateReleaseAssets.forEach { (relative, expected) ->
+            val asset = file("src/private114/assets/$relative")
+            check(asset.isFile) { "NO-GO: missing private Atlas asset: $relative" }
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(asset.readBytes()).joinToString("") { "%02x".format(it) }
+            check(digest == expected) { "NO-GO: private Atlas asset checksum mismatch: $relative" }
+        }
+        println("PASS: 7/7 private Atlas resources match audited SHA-256; official release keystore path configured")
+    }
+}
+tasks.matching { it.name == "packageRelease" }.configureEach {
+    dependsOn(verifyPrivateReleaseInputs)
 }
 
 tasks.named("preBuild").configure {
