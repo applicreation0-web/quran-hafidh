@@ -1,0 +1,61 @@
+name: Quran Haafidh 1.17.4 offline unsigned release staging — NO PRIVATE ASSETS
+on:
+  push:
+    branches:
+      - work/haafidh-1174-local-stage-and-digest-sign-20261023
+    paths:
+      - hifz-app/build.gradle.kts
+      - .github/workflows/haafidh-1174-offline-unsigned-release-stage.yml
+permissions:
+  contents: read
+jobs:
+  unsigned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+      HIFZ_OFFLINE_UNSIGNED_STAGE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Android SDK and authentic QCF
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Check Hifz, Atlas and QCF invariants
+        run: |
+          bash scripts/guard_frozen_hifz_engines.sh
+          python3 scripts/verify_atlas_only_purity.py
+      - name: Compile unsigned official appId Release with private Atlas runtime flags
+        run: gradle --no-daemon :hifz-app:assembleRelease
+      - name: Assert unsigned app, canonical ID, private flags and absence of 7 private files
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build-private114/outputs/apk/release -name '*.apk' | head -1)"
+          test -n "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | grep -q "package: name='com.quransafeguard.hifz' versionCode='42'"
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk" > /dev/null 2>&1; then
+            echo 'NO-GO: staging APK was signed'; exit 1
+          fi
+          ! unzip -Z1 "$apk" | grep -q '^assets/atlas_private/'
+          ! unzip -Z1 "$apk" | grep -q '^assets/ayah_themes_private/'
+          echo "PASS: official ID, unsigned, flags enabled, no private assets uploaded"
+          mkdir -p artifacts
+          cp "$apk" artifacts/QURAN_HAAFIDH_1174_OFFLINE_UNSIGNED_RELEASE_STAGE.apk
+          sha256sum artifacts/*.apk > artifacts/STAGING_SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-1174-unsigned-release-stage-no-private-content
+          path: artifacts/
+          retention-days: 2
