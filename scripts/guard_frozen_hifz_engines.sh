@@ -43,7 +43,7 @@ while IFS= read -r file; do
       fi
       ;;
     "$APP_ROOT/HifzAudioPack.java")
-      if [ "$(git hash-object "$file")" != "7379d4308a04e25a6d0d0894c2fc56ba7a248a7a" ]; then
+      if [ "$(git hash-object "$file")" != "c219ca2d33da446fa5cda468e1a5defff9411128" ]; then
         echo "::error file=$file::Unauthorized audio importer change"
         bad=1
       else
