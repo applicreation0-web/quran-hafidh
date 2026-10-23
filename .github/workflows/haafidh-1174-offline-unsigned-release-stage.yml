@@ -18,6 +18,8 @@ jobs:
       HIFZ_OFFLINE_UNSIGNED_STAGE: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
