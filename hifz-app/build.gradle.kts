@@ -324,7 +324,8 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 42
-        versionName = if (boox1175Preview) "1.17.5" else "1.17.4"
+        versionName = "1.17.4"
+        if (boox1175Preview) versionName = "1.17.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -358,7 +359,8 @@ android {
             buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", private114.toString())
             isDebuggable = false
             // Isolated personal test install; never overwrites the official 1.17.1 package.
-            applicationIdSuffix = if (boox1175Preview) ".boox1175debug" else if (private114) ".ayahthemes114private" else if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
+            applicationIdSuffix = if (private114) ".ayahthemes114private" else if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
+            if (boox1175Preview) applicationIdSuffix = ".boox1175debug"
             versionNameSuffix = if (boox1175Preview) "-BOOX-HOME-PRIVATE-DEBUG" else if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
