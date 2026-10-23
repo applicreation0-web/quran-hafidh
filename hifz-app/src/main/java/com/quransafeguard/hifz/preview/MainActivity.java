@@ -38,6 +38,10 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout todayAction;
     private LinearLayout dashboard;
     private TextView dashboardTitle;
+    private LinearLayout weekStrip;
+    private LinearLayout weekDayPanel;
+    private List<WeeklyDashboardPlanner.Row> weekRows = new ArrayList<>();
+    private LocalDate selectedWeekDate;
     private LinearLayout sabqiQuickAccess;
     private LinearLayout itqanQuickAccess;
     private final List<View> geometryActions = new ArrayList<>();
@@ -56,16 +60,15 @@ public final class MainActivity extends android.app.Activity {
         speedStore = new HifzSpeedStore(this);
         ledger = new DashboardLedger(this);
 
-        // Spec UI pass 2 (§4/§5): a short home — header with the Settings icon, "Aujourd’hui",
-        // then five plain lines. The five Hifz paths and the week live one level down, in
-        // "Parcours Hifz" (same activity, so every cadence/routing rule below stays untouched).
+        // 1.17.5 CP1: BOOX-first home, one dominant session and three primary destinations.
+        // Navigation-only refactor: all cadence, Hifz credits and geometry guards are unchanged.
         LinearLayout root = page();
         // BOOX portrait home: fill the viewport without a centered 720dp tablet inset.
         homeScroll = scrollOf(root);
         LinearLayout header = Ui.row(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-        TextView title = Ui.bookText(this, "Quran Haafidh", 18, true);
+        TextView title = Ui.bookText(this, "Quran Haafidh", 24, true);
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
         header.addView(title);
@@ -76,24 +79,34 @@ public final class MainActivity extends android.app.Activity {
         todayAction = todayLine();
         today = Ui.settingValue(todayAction);
         root.addView(todayAction);
-        root.addView(Ui.divider(this));
 
-        recentSabqiAdvisory = Ui.text(this, "", 10.8f, false);
+        recentSabqiAdvisory = Ui.text(this, "", 17f, false);
         recentSabqiAdvisory.setTextColor(Ui.MUTED);
-        recentSabqiAdvisory.setPadding(Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4));
         recentSabqiAdvisory.setVisibility(View.GONE);
         root.addView(recentSabqiAdvisory);
 
-        LinearLayout study = homeNavLine(root, "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
-        LinearLayout semanticMap = homeNavLine(root, "Atlas", v ->
-            startActivity(new Intent(this, AtlasMapActivity.class)));
+        TextView destinationsLabel = Ui.bookText(this, "ACCÈS DIRECTS", 17f, true);
+        destinationsLabel.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 8));
+        root.addView(destinationsLabel);
+        LinearLayout destinations = Ui.row(this);
+        LinearLayout parcours = primaryTile(destinations, "Parcours Hifz", "Parcours", v -> showParcours());
+        LinearLayout study = primaryTile(destinations, "Lecture", "Lecture",
+            v -> startActivity(new Intent(this, StudyReaderActivity.class)));
+        LinearLayout semanticMap = primaryTile(destinations, "Atlas", "Atlas",
+            v -> startActivity(new Intent(this, AtlasMapActivity.class)));
+        root.addView(destinations);
 
-        LinearLayout free = homeNavLine(root, "Mémorisation libre", v -> startActivity(new Intent(this, FreeMemActivity.class)));
-        LinearLayout parcours = homeNavLine(root, "Parcours Hifz", v -> showParcours());
-        LinearLayout progress = homeNavLine(root, "Progression", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
+        LinearLayout secondary = Ui.row(this);
+        secondary.setPadding(0, Ui.dp(this, 12), 0, 0);
+        LinearLayout free = secondaryTile(secondary, "Mémorisation libre", "Libre",
+            v -> startActivity(new Intent(this, FreeMemActivity.class)));
+        LinearLayout progress = secondaryTile(secondary, "Progression", "Progression",
+            v -> startActivity(new Intent(this, ProgressMapActivity.class)));
+        root.addView(Ui.divider(this));
+        root.addView(secondary);
+
         geometryActions.add(study);
         geometryActions.add(semanticMap);
-
         geometryActions.add(free);
         geometryActions.add(progress);
 
@@ -103,25 +116,30 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout pathHeader = Ui.row(this);
         pathHeader.setGravity(Gravity.CENTER_VERTICAL);
         pathHeader.addView(Ui.iconButton(this, "‹", "Retour", v -> showHome()));
-        TextView pathTitle = Ui.bookText(this, "Parcours Hifz", 18, true);
+        TextView pathTitle = Ui.bookText(this, "Parcours Hifz", 24, true);
         pathTitle.setGravity(Gravity.CENTER);
         Ui.weight(pathTitle, 1f);
         pathHeader.addView(pathTitle);
         pathHeader.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
         path.addView(pathHeader);
         path.addView(Ui.divider(this));
-        parcoursTodayAction = todayLine();
-        parcoursToday = Ui.settingValue(parcoursTodayAction);
-        path.addView(parcoursTodayAction);
-        path.addView(Ui.divider(this));
-
-        LinearLayout sabqi = navLine(path, "Apprentissage", "1 page/semaine", v -> openMode(HifzSessionActivity.SABQI));
-        itqanCard = navLine(path, "Stabilisation", stabilizationProgramCue(),
+        LinearLayout coreModes = Ui.row(this);
+        LinearLayout sabqi = pathTile(coreModes, "Apprentissage", "5 lignes",
+            v -> openMode(HifzSessionActivity.SABQI));
+        itqanCard = pathTile(coreModes, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
         LinearLayout itqan = itqanCard;
-        LinearLayout murajaah = navLine(path, "Révision", "Au choix", v -> showRevisionSelector());
-        LinearLayout renforcement = navLine(path, "Renforcement", "Boule de neige", v -> openMode(renforcementQuickAccessMode()));
-        LinearLayout consolidation = navLine(path, "Consolidation", "Boule de neige", v -> openMode(consolidationQuickAccessMode()));
+        LinearLayout murajaah = pathTile(coreModes, "Révision", "Au choix",
+            v -> showRevisionSelector());
+        path.addView(coreModes);
+
+        LinearLayout otherModes = Ui.row(this);
+        LinearLayout renforcement = secondaryTile(otherModes, "Renforcement", "Renforcement",
+            v -> openMode(renforcementQuickAccessMode()));
+        LinearLayout consolidation = secondaryTile(otherModes, "Consolidation", "Consolidation",
+            v -> openMode(consolidationQuickAccessMode()));
+        otherModes.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 10));
+        path.addView(otherModes);
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
         geometryActions.add(parcours);
@@ -132,13 +150,16 @@ public final class MainActivity extends android.app.Activity {
         geometryActions.add(consolidation);
         setGeometryActionsEnabled(false);
 
-        dashboardTitle = Ui.bookText(this, "Cette semaine", 15, true);
+        dashboardTitle = Ui.bookText(this, "Cette semaine", 20, true);
         dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
         dashboardTitle.setOnClickListener(v -> chooseWeeklyProgram());
         dashboardTitle.setContentDescription("Choisir le programme hebdomadaire");
         path.addView(dashboardTitle);
         dashboard = Ui.column(this);
         dashboard.setPadding(0, 0, 0, 0);
+        weekStrip = Ui.row(this);
+        weekDayPanel = Ui.column(this);
+        weekDayPanel.setPadding(Ui.dp(this, 6), Ui.dp(this, 14), Ui.dp(this, 6), 0);
         path.addView(dashboard);
 
         showHome();
@@ -174,7 +195,9 @@ public final class MainActivity extends android.app.Activity {
     private static void setLineEnabled(View line, boolean enabled) {
         if (line == null) return;
         line.setEnabled(enabled);
-        line.setAlpha(enabled ? 1f : 0.42f);
+        // Disabled items retain readable high contrast on E-Ink.
+        // Their touch target is disabled, without fading the text into the paper.
+        line.setAlpha(1f);
     }
 
     private LinearLayout page() {
@@ -196,16 +219,113 @@ public final class MainActivity extends android.app.Activity {
         return scroll;
     }
 
-    /** Aujourd’hui remains the same computed action, with one larger accessible touch target. */
+    /** One dominant BOOX-safe action, preserving the existing openToday() routing. */
     private LinearLayout todayLine() {
-        LinearLayout line = Ui.settingRow(this, "Aujourd’hui", "…", v -> openToday());
-        line.setMinimumHeight(Ui.dp(this, 56));
-        if (line.getChildAt(0) instanceof TextView) {
-            ((TextView) line.getChildAt(0)).setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD);
-        }
+        LinearLayout line = Ui.column(this);
+        line.setPadding(Ui.dp(this, 18), Ui.dp(this, 16), Ui.dp(this, 18), Ui.dp(this, 16));
+        Ui.panel(line);
+        TextView label = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
+        line.addView(label);
+        TextView value = Ui.bookText(this, "…", 23f, true);
+        value.setPadding(0, Ui.dp(this, 9), 0, Ui.dp(this, 9));
+        value.setMaxLines(3);
+        line.addView(value);
+        TextView action = Ui.bookText(this, "CONTINUER  ›", 20f, true);
+        action.setGravity(Gravity.END);
+        line.addView(action);
+        line.setMinimumHeight(Ui.dp(this, 136));
         line.setContentDescription("Ouvrir la séance du jour");
+        line.setClickable(true);
+        line.setFocusable(true);
+        line.setOnClickListener(v -> openToday());
         setLineEnabled(line, false);
         return line;
+    }
+
+    /** Three equal-size primary destinations: no list-style layout. */
+    private LinearLayout primaryTile(LinearLayout parent, String role, String display,
+                                    View.OnClickListener listener) {
+        LinearLayout tile = Ui.column(this);
+        tile.setPadding(Ui.dp(this, 4), Ui.dp(this, 16), Ui.dp(this, 4), Ui.dp(this, 14));
+        tile.setGravity(Gravity.CENTER);
+        Ui.panel(tile);
+        tile.setMinimumHeight(Ui.dp(this, 112));
+        int drawable = Ui.iconFor(role, role);
+        if (drawable != 0) {
+            ImageView icon = new ImageView(this);
+            icon.setImageResource(drawable);
+            icon.setColorFilter(Ui.INK);
+            icon.setPadding(Ui.dp(this, 9), Ui.dp(this, 9), Ui.dp(this, 9), Ui.dp(this, 9));
+            tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, 50), Ui.dp(this, 50)));
+        }
+        TextView title = Ui.bookText(this, display, 18f, true);
+        title.setGravity(Gravity.CENTER);
+        tile.addView(title);
+        tile.setContentDescription(role);
+        tile.setClickable(true);
+        tile.setFocusable(true);
+        tile.setOnClickListener(listener);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
+            ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(Ui.dp(this, 3), 0, Ui.dp(this, 3), 0);
+        parent.addView(tile, lp);
+        return tile;
+    }
+
+    /** Two clearly labeled links below the primary grid. */
+    private LinearLayout secondaryTile(LinearLayout parent, String role, String display,
+                                      View.OnClickListener listener) {
+        LinearLayout tile = Ui.row(this);
+        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
+        tile.setMinimumHeight(Ui.dp(this, 60));
+        int drawable = Ui.iconFor(role, role);
+        if (drawable != 0) {
+            ImageView icon = new ImageView(this);
+            icon.setImageResource(drawable);
+            icon.setColorFilter(Ui.INK);
+            icon.setPadding(Ui.dp(this, 5), Ui.dp(this, 5), Ui.dp(this, 5), Ui.dp(this, 5));
+            tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, 34), Ui.dp(this, 34)));
+        }
+        TextView title = Ui.bookText(this, display, 17f, true);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        tile.addView(title);
+        tile.setContentDescription(role);
+        tile.setClickable(true);
+        tile.setFocusable(true);
+        tile.setOnClickListener(listener);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
+            ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
+        parent.addView(tile, lp);
+        return tile;
+    }
+
+    /** Compact Hifz tile with state at index 1, preserving Ui.settingValue. */
+    private LinearLayout pathTile(LinearLayout parent, String label, String state,
+                                 View.OnClickListener listener) {
+        LinearLayout tile = Ui.column(this);
+        tile.setPadding(Ui.dp(this, 3), Ui.dp(this, 11), Ui.dp(this, 3), Ui.dp(this, 12));
+        tile.setGravity(Gravity.CENTER);
+        tile.setMinimumHeight(Ui.dp(this, 130));
+        Ui.panel(tile);
+        TextView name = Ui.bookText(this, label, 17f, true);
+        name.setGravity(Gravity.CENTER);
+        name.setMaxLines(2);
+        tile.addView(name);
+        TextView cue = Ui.text(this, state, 15f, false);
+        cue.setGravity(Gravity.CENTER);
+        cue.setMaxLines(3);
+        cue.setPadding(0, Ui.dp(this, 9), 0, 0);
+        tile.addView(cue);
+        tile.setContentDescription(label);
+        tile.setClickable(true);
+        tile.setFocusable(true);
+        tile.setOnClickListener(listener);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
+            ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(Ui.dp(this, 3), 0, Ui.dp(this, 3), 0);
+        parent.addView(tile, lp);
+        return tile;
     }
 
     /**
@@ -745,54 +865,76 @@ public final class MainActivity extends android.app.Activity {
             }).setNegativeButton("Fermer",null).show();
     }
 
+    /** Seven-day interactive rail, with one readable day instead of seven stacked lists. */
     private void refreshDashboard() {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
-        if(dashboardTitle!=null) dashboardTitle.setText("Cette semaine · "+
+        if (dashboardTitle != null) dashboardTitle.setText("Cette semaine · "+
             (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-                ?"Standard · 3/4":prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
-                ?"Manuel · jours configurables":"Historique · programme classique")+" ▾");
-        TextView scheduleHours=Ui.text(this,"Matin "+prefs.suggestedMorningTime()+
-            "  ·  Soir "+prefs.suggestedEveningTime(),11f,false);
-        scheduleHours.setTextColor(Ui.MUTED);
-        scheduleHours.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));
-        dashboard.addView(scheduleHours);
-        // Portrait BOOX: full-width, readable daily rows; never four 10sp columns.
-        dashboard.addView(Ui.divider(this));
-
+                ? "Standard · 3/4" : prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
+                ? "Manuel" : "Historique")+"  ▾");
         List<WeeklyDashboardPlanner.Row> rows;
         try {
             rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today());
             todayRow = rows.isEmpty() ? null : rows.get(0);
         } catch (RuntimeException error) {
             todayRow = null;
-            dashboard.removeAllViews();
-            TextView unavailable = Ui.text(this, "Semaine indisponible", 10.8f, false);
-            unavailable.setTextColor(Ui.MUTED);
-            unavailable.setPadding(Ui.dp(this, 4), Ui.dp(this, 3), Ui.dp(this, 4), Ui.dp(this, 3));
+            weekRows = new ArrayList<>();
+            TextView unavailable = Ui.bookText(this, "Semaine indisponible", 18f, false);
             dashboard.addView(unavailable);
             return;
         }
-        for (int i = 0; i < rows.size(); i++) {
-            WeeklyDashboardPlanner.Row item = rows.get(i);
-            LinearLayout day=Ui.column(this);
-            day.setPadding(Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8));
-            TextView dayTitle=Ui.bookText(this,
-                item.day+"   ·   "+compactState(item.state),13,true);
-            dayTitle.setTextColor(Ui.INK);
-            day.addView(dayTitle);
-            TextView morning=Ui.text(this,
-                "Matin  ·  "+compactScheduleLine(item.morning),12.5f,false);
-            morning.setTextColor(Ui.INK);
-            morning.setPadding(0,Ui.dp(this,5),0,Ui.dp(this,2));
-            day.addView(morning);
-            TextView evening=Ui.text(this,
-                "Soir  ·  "+compactScheduleLine(item.evening),12.5f,false);
-            evening.setTextColor(Ui.INK);
-            day.addView(evening);
-            dashboard.addView(day);
-            if (i + 1 < rows.size())dashboard.addView(Ui.divider(this));
+        weekRows = rows;
+        LocalDate todayDate = HifzClock.today();
+        boolean found = false;
+        for (WeeklyDashboardPlanner.Row row : rows)
+            if (row.date.equals(selectedWeekDate)) found = true;
+        if (!found) selectedWeekDate = todayDate;
+        TextView hours = Ui.text(this, "Matin "+prefs.suggestedMorningTime()+
+            "  ·  Soir "+prefs.suggestedEveningTime(), 17f, false);
+        hours.setTextColor(Ui.MUTED);
+        dashboard.addView(hours);
+        dashboard.addView(weekStrip);
+        dashboard.addView(weekDayPanel);
+        renderSelectedWeekDay();
+    }
+
+    private void renderSelectedWeekDay() {
+        if (weekStrip == null || weekDayPanel == null) return;
+        weekStrip.removeAllViews();
+        weekDayPanel.removeAllViews();
+        if (weekRows.isEmpty()) return;
+        String[] initials = {"L", "M", "M", "J", "V", "S", "D"};
+        WeeklyDashboardPlanner.Row chosen = weekRows.get(0);
+        for (WeeklyDashboardPlanner.Row row : weekRows) {
+            boolean active = row.date.equals(selectedWeekDate);
+            if (active) chosen = row;
+            TextView day = Ui.bookText(this,
+                initials[row.date.getDayOfWeek().getValue()-1], 19f, active);
+            day.setGravity(Gravity.CENTER);
+            day.setMinimumHeight(Ui.dp(this, 56));
+            day.setContentDescription(row.day+" · "+row.date);
+            day.setClickable(true);
+            day.setFocusable(true);
+            if (active) Ui.panel(day);
+            else day.setBackgroundColor(Ui.PAPER);
+            day.setOnClickListener(v -> {
+                selectedWeekDate = row.date;
+                renderSelectedWeekDay();
+            });
+            weekStrip.addView(day,new LinearLayout.LayoutParams(0,Ui.dp(this, 56),1f));
         }
+        TextView heading = Ui.bookText(this,
+            chosen.day+" · "+compactState(chosen.state), 20f, true);
+        weekDayPanel.addView(heading);
+        TextView morning = Ui.text(this, "MATIN", 16f, true);
+        morning.setPadding(0, Ui.dp(this, 14), 0, 0);
+        weekDayPanel.addView(morning);
+        weekDayPanel.addView(Ui.text(this, compactScheduleLine(chosen.morning), 18f, false));
+        TextView evening = Ui.text(this, "SOIR", 16f, true);
+        evening.setPadding(0, Ui.dp(this, 14), 0, 0);
+        weekDayPanel.addView(evening);
+        weekDayPanel.addView(Ui.text(this, compactScheduleLine(chosen.evening), 18f, false));
     }
 
     private void addCell(LinearLayout row, String value, float weight, boolean bold, boolean singleLine) {
