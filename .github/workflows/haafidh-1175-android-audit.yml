@@ -5,6 +5,9 @@ on:
       - work/haafidh-1175-boox-ux-hifz-atlas
     paths:
       - '.github/workflows/haafidh-1175-android-audit.yml'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/BooxFlowStroke.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/WeeklyProgramPolicyTest.java'
   workflow_dispatch:
 permissions:
   contents: read
@@ -51,7 +54,13 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest
+          script: |
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest
+            mkdir -p hifz-app/build/boox-audit
+            adb shell am start -n com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity
+            sleep 3
+            adb exec-out screencap -p > hifz-app/build/boox-audit/home-portrait-android-emulator.png
+            test -s hifz-app/build/boox-audit/home-portrait-android-emulator.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -60,4 +69,5 @@ jobs:
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
             hifz-app/build/reports/
+            hifz-app/build/boox-audit/
           retention-days: 14
