@@ -320,8 +320,13 @@ android {
 
     sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
     if (private114) {
+        // Isolated debug stays unchanged for parallel BOOX tests.
         sourceSets.getByName("debug").assets.srcDir("src/private114/assets")
         sourceSets.getByName("debug").manifest.srcFile("src/private114/AndroidManifest.xml")
+        // An official upgrade must be a RELEASE, keeping defaultConfig.applicationId
+        // without a suffix. Private assets are staged OFFLINE before packaging.
+        // Do not overlay the private debug manifest/launcher label on release.
+        sourceSets.getByName("release").assets.srcDir("src/private114/assets")
     }
 
     signingConfigs {
@@ -347,8 +352,10 @@ android {
             versionNameSuffix = if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
-            buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", "false")
-            buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", "false")
+            // Private Atlas content is enabled only by an explicit local build flag.
+            // The official package identity and launcher label remain unchanged.
+            buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", private114.toString())
+            buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", private114.toString())
             isMinifyEnabled = false
             isDebuggable = false
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
