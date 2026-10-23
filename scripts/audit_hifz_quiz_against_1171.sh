@@ -69,10 +69,20 @@ while IFS= read -r file; do
       python3 scripts/verify_post_nas_three_pass_delta.py || bad=1
       ;;
     "$prefix/HifzBackup.java")
-      if [[ "$(git hash-object "$file")" == "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]]; then
+      if [[ "$(git hash-object "$file")" == "6337d3730476b84dcc8c18b963a12d5f388b8634" ]]; then
+        echo "EXACT V3 BACKUP + FREE MEMORY: $file"
+      elif [[ "$(git hash-object "$file")" == "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]]; then
         echo "EXACT PRE-RELEASE P0 BACKUP: $file"
       else
         python3 scripts/verify_backup_schema_import_delta.py || bad=1
+      fi
+      ;;
+    "$prefix/HifzAudioPack.java")
+      if [[ "$(git hash-object "$file")" == "c219ca2d33da446fa5cda468e1a5defff9411128" ]]; then
+        echo "EXACT AUDIO IMPORT SERIALIZATION: $file"
+      else
+        echo "::error file=$file::Unreviewed audio importer edit"
+        bad=1
       fi
       ;;
     "$prefix/DashboardLedger.java")
