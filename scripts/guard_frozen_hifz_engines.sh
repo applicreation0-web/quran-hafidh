@@ -32,10 +32,22 @@ while IFS= read -r file; do
       fi
       ;;
     "$APP_ROOT/HifzBackup.java")
-      if [ "$(git hash-object "$file")" != "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]; then
+      # v3 cross-store free-memory restore is approved ONLY at this exact Git blob.
+      # The v1/v2 compatibility and strict journal rollback have instrumented tests.
+      if [ "$(git hash-object "$file")" = "6337d3730476b84dcc8c18b963a12d5f388b8634" ]; then
+        echo "EXACT AUDIT-1174 V3 BACKUP (five-store recovery): $file"
+      elif [ "$(git hash-object "$file")" != "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]; then
         python3 scripts/verify_backup_schema_import_delta.py || bad=1
       else
         echo "EXACT PRE-RELEASE P0 BACKUP: $file"
+      fi
+      ;;
+    "$APP_ROOT/HifzAudioPack.java")
+      if [ "$(git hash-object "$file")" != "7379d4308a04e25a6d0d0894c2fc56ba7a248a7a" ]; then
+        echo "::error file=$file::Unauthorized audio importer change"
+        bad=1
+      else
+        echo "EXACT AUDIT-1174 AUDIO IMPORT SERIALIZATION: $file"
       fi
       ;;
     "$APP_ROOT/DashboardLedger.java")
