@@ -4,6 +4,9 @@ plugins {
 
 // Separate intermediates prevent private/public incremental asset contamination.
 val private114 = System.getenv("AYAH_THEMES_PRIVATE_114") == "1"
+// Explicit opt-in: private corpus belongs in an official in-place RELEASЕ only on a
+// trusted offline assembler; ordinary debug previews always keep their suffix.
+val privateReleaseUpgrade = private114 && System.getenv("HIFZ_PRIVATE_RELEASE_UPGRADE") == "1"
 if (private114) layout.buildDirectory.set(file("build-private114"))
 
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
@@ -326,7 +329,7 @@ android {
         // An official upgrade must be a RELEASE, keeping defaultConfig.applicationId
         // without a suffix. Private assets are staged OFFLINE before packaging.
         // Do not overlay the private debug manifest/launcher label on release.
-        sourceSets.getByName("release").assets.srcDir("src/private114/assets")
+        if (privateReleaseUpgrade) sourceSets.getByName("release").assets.srcDir("src/private114/assets")
     }
 
     signingConfigs {
@@ -354,8 +357,8 @@ android {
         getByName("release") {
             // Private Atlas content is enabled only by an explicit local build flag.
             // The official package identity and launcher label remain unchanged.
-            buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", private114.toString())
-            buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", private114.toString())
+            buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", privateReleaseUpgrade.toString())
+            buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", privateReleaseUpgrade.toString())
             isMinifyEnabled = false
             isDebuggable = false
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
