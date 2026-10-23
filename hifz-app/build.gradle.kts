@@ -1,3 +1,4 @@
+import java.security.KeyStore
 import java.security.MessageDigest
 plugins {
     id("com.android.application")
@@ -382,11 +383,23 @@ val verifyPrivateReleaseInputs by tasks.registering {
     doLast {
         if (!privateReleaseUpgrade) return@doLast
         check(hasReleaseSigning) { "NO-GO: official upgrade requires the official release signing keystore (never the private debug key)." }
+        val storePath = file(System.getenv("HIFZ_KEYSTORE_PATH"))
+        val storePassword = System.getenv("HIFZ_KEYSTORE_PASSWORD") ?: error("NO-GO: missing release keystore password")
+        val alias = System.getenv("HIFZ_KEY_ALIAS") ?: error("NO-GO: missing release signing alias")
+        check(storePath.isFile) { "NO-GO: missing release keystore file" }
+        val certificate = KeyStore.getInstance(storePath, storePassword.toCharArray())
+            .getCertificate(alias) ?: error("NO-GO: release keystore alias unavailable")
+        val certSha256 = MessageDigest.getInstance("SHA-256").digest(certificate.encoded)
+            .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+        // Fingerprint from the actual signed official 1.17.1 GitHub Actions run #37824956514.
+        check(certSha256 == "66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14") {
+            "NO-GO: signing certificate differs from official Quran Haafidh 1.17.1"
+        }
         privateReleaseAssets.forEach { (relative, expected) ->
             val asset = file("src/private114/assets/$relative")
             check(asset.isFile) { "NO-GO: missing private Atlas asset: $relative" }
             val digest = MessageDigest.getInstance("SHA-256")
-                .digest(asset.readBytes()).joinToString("") { "%02x".format(it) }
+                .digest(asset.readBytes()).joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
             check(digest == expected) { "NO-GO: private Atlas asset checksum mismatch: $relative" }
         }
         println("PASS: 7/7 private Atlas resources match audited SHA-256; official release keystore path configured")
