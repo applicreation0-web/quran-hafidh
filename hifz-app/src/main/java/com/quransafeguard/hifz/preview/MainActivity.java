@@ -749,8 +749,9 @@ public final class MainActivity extends android.app.Activity {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
         if(dashboardTitle!=null) dashboardTitle.setText("Cette semaine · "+
-            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
-                ?"Manuel · jours configurables":"Standard · 3/4")+" ▾");
+            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
+                ?"Standard · 3/4":prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
+                ?"Manuel · jours configurables":"Historique · programme classique")+" ▾");
         TextView scheduleHours=Ui.text(this,"Matin "+prefs.suggestedMorningTime()+
             "  ·  Soir "+prefs.suggestedEveningTime(),11f,false);
         scheduleHours.setTextColor(Ui.MUTED);
