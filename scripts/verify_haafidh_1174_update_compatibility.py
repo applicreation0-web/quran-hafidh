@@ -27,7 +27,7 @@ def execute(*args):
 
 def metadata(apk, aapt):
     text = execute(aapt, "dump", "badging", apk)
-    m = re.search(r"^package: name='([^']+)' versionCode='(\\d+)' versionName='([^']+)'", text, re.M)
+    m = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", text, re.M)
     if not m:
         raise ValueError("Cannot read Android package identity: " + apk)
     return m.group(1), int(m.group(2)), m.group(3)
