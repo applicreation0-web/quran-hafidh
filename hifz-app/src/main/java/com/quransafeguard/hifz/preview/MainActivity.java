@@ -1,6 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -94,7 +95,6 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout semanticMap = primaryTile(destinations, "Atlas", "Atlas",
             v -> startActivity(new Intent(this, AtlasMapActivity.class)));
         root.addView(destinations);
-        root.addView(new BooxFlowStroke(this));
 
         LinearLayout secondary = Ui.row(this);
         secondary.setPadding(0, Ui.dp(this, 12), 0, 0);
@@ -123,30 +123,36 @@ public final class MainActivity extends android.app.Activity {
         pathHeader.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
         path.addView(pathHeader);
         path.addView(Ui.divider(this));
-        LinearLayout coreModes = Ui.row(this);
-        LinearLayout sabqi = pathTile(coreModes, "Apprentissage", "1 page/semaine",
+        // Six Hifz functions in equal-width pairs, with maximal BOOX pictograms.
+        // Navigation only: cadence and Hifz credit engines remain unchanged.
+        LinearLayout learningModes = Ui.row(this);
+        LinearLayout sabqi = pathTile(learningModes, "Apprentissage", "1 page/semaine",
             v -> openMode(HifzSessionActivity.SABQI));
-        itqanCard = pathTile(coreModes, "Stabilisation", stabilizationProgramCue(),
+        itqanCard = pathTile(learningModes, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
         LinearLayout itqan = itqanCard;
-        LinearLayout murajaah = pathTile(coreModes, "Révision", "Au choix",
-            v -> showRevisionSelector());
-        path.addView(coreModes);
-        path.addView(new BooxFlowStroke(this));
+        path.addView(learningModes);
+
+        LinearLayout reviewModes = Ui.row(this);
+        LinearLayout activeRevision = pathTile(reviewModes, "Révision active", "Récitation masquée",
+            v -> openMode(HifzSessionActivity.MURAJAAH_ACTIVE));
+        LinearLayout passiveRevision = pathTile(reviewModes, "Révision passive", "Texte visible",
+            v -> openMode(HifzSessionActivity.MURAJAAH));
+        path.addView(reviewModes);
 
         LinearLayout otherModes = Ui.row(this);
-        LinearLayout renforcement = secondaryTile(otherModes, "Renforcement", "Renforcement",
+        LinearLayout renforcement = pathTile(otherModes, "Renforcement", "Sabqi",
             v -> openMode(renforcementQuickAccessMode()));
-        LinearLayout consolidation = secondaryTile(otherModes, "Consolidation", "Consolidation",
+        LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
             v -> openMode(consolidationQuickAccessMode()));
-        otherModes.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 10));
         path.addView(otherModes);
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
         geometryActions.add(parcours);
         geometryActions.add(sabqi);
         geometryActions.add(itqan);
-        geometryActions.add(murajaah);
+        geometryActions.add(activeRevision);
+        geometryActions.add(passiveRevision);
         geometryActions.add(renforcement);
         geometryActions.add(consolidation);
         setGeometryActionsEnabled(false);
@@ -248,23 +254,31 @@ public final class MainActivity extends android.app.Activity {
         return line;
     }
 
+    /** Use the widest icon permitted by the live BOOX column width. */
+    private int booxIconDp(int columns, int maxDp) {
+        int widthDp = getResources().getConfiguration().screenWidthDp;
+        if (widthDp <= 0) widthDp = 360;
+        return Math.max(62, Math.min(maxDp, (widthDp - 48) / columns - 14));
+    }
+
     /** Three equal-size primary destinations: no list-style layout. */
     private LinearLayout primaryTile(LinearLayout parent, String role, String display,
                                     View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
-        tile.setPadding(Ui.dp(this, 4), Ui.dp(this, 16), Ui.dp(this, 4), Ui.dp(this, 14));
+        tile.setPadding(Ui.dp(this, 3), Ui.dp(this, 12), Ui.dp(this, 3), Ui.dp(this, 12));
         tile.setGravity(Gravity.CENTER);
-        // BOOX navigation is a borderless icon rail, not three independent cards.
-        tile.setMinimumHeight(Ui.dp(this, 112));
+        int sideDp = booxIconDp(3, 112);
+        tile.setMinimumHeight(Ui.dp(this, sideDp + 54));
         int drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
             icon.setColorFilter(Ui.INK);
-            icon.setPadding(Ui.dp(this, 9), Ui.dp(this, 9), Ui.dp(this, 9), Ui.dp(this, 9));
-            tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, 50), Ui.dp(this, 50)));
+            icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            icon.setPadding(Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2));
+            tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
-        TextView title = Ui.bookText(this, display, 18f, true);
+        TextView title = Ui.bookText(this, display, 19f, true);
         title.setGravity(Gravity.CENTER);
         title.setMaxLines(1);
         tile.addView(title);
@@ -284,14 +298,16 @@ public final class MainActivity extends android.app.Activity {
                                       View.OnClickListener listener) {
         LinearLayout tile = Ui.row(this);
         tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
-        tile.setMinimumHeight(Ui.dp(this, 60));
+        int sideDp = booxIconDp(2, 82);
+        tile.setMinimumHeight(Ui.dp(this, sideDp + 20));
         int drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
             icon.setColorFilter(Ui.INK);
-            icon.setPadding(Ui.dp(this, 5), Ui.dp(this, 5), Ui.dp(this, 5), Ui.dp(this, 5));
-            tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, 34), Ui.dp(this, 34)));
+            icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            icon.setPadding(Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2));
+            tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
         TextView title = Ui.bookText(this, display, 17f, true);
         title.setGravity(Gravity.CENTER_VERTICAL);
@@ -311,18 +327,22 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout pathTile(LinearLayout parent, String label, String state,
                                  View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
-        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 12), Ui.dp(this, 2), Ui.dp(this, 10));
+        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 12), Ui.dp(this, 2), Ui.dp(this, 12));
         tile.setGravity(Gravity.CENTER);
-        tile.setMinimumHeight(Ui.dp(this, 108));
+        int sideDp = booxIconDp(2, 124);
+        tile.setMinimumHeight(Ui.dp(this, sideDp + 76));
         String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
             : "Stabilisation".equals(label) ? "Stabiliser"
             : "Révision".equals(label) ? "Réviser" : label;
-        TextView name = Ui.bookText(this, shortLabel, 17f, true);
+        TextView name = Ui.bookText(this, shortLabel, 19f, true);
         name.setGravity(Gravity.CENTER);
-        name.setMaxLines(1);
+        name.setMaxLines(2);
         int icon = Ui.iconFor(label, label);
         if (icon == 0) throw new IllegalArgumentException("Unmapped Hifz mode: "+label);
-        name.setCompoundDrawablesWithIntrinsicBounds(0, icon, 0, 0);
+        // Intrinsic drawable size is only 24dp; explicit bounds keep it legible on BOOX.
+        Drawable architectural = getDrawable(icon).mutate();
+        architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp));
+        name.setCompoundDrawables(null, architectural, null, null);
         name.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Ui.INK));
         name.setCompoundDrawablePadding(Ui.dp(this, 9));
         tile.addView(name);
@@ -862,7 +882,6 @@ public final class MainActivity extends android.app.Activity {
         hours.setTextColor(Ui.MUTED);
         dashboard.addView(hours);
         dashboard.addView(weekStrip);
-        dashboard.addView(new BooxFlowStroke(this));
         dashboard.addView(weekDayPanel);
         renderSelectedWeekDay();
     }
