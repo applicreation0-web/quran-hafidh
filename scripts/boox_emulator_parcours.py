@@ -32,8 +32,8 @@ def verify(path, lower=False):
     names=[n.attrib.get("text","") for n in parse(path)]
     expected=["Renforcement","Consolidation"] if lower else ["Parcours Hifz","Apprendre","Stabiliser"]
     if any(label not in names for label in expected):
-        raise SystemExit("Not the approved "+("lower":"upper")+" Parcours screenshot: "+repr(names[:60]))
-    print("PASS: "+("lower":"upper")+" BOOX icon viewport matches the six-mode source contract")
+        raise SystemExit("Not the approved "+("lower" if lower else "upper")+" Parcours screenshot: "+repr(names[:60]))
+    print("PASS: "+("lower" if lower else "upper")+" BOOX icon viewport matches the six-mode source contract")
 
 if __name__=="__main__":
     if len(sys.argv)!=3:raise SystemExit("Usage: boox_emulator_parcours.py tap|verify path.xml")
