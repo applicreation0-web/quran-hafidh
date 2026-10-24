@@ -286,11 +286,15 @@ public final class MainActivity extends android.app.Activity {
         return 0;
     }
 
-    /** Use the widest icon permitted by the live BOOX column width. */
+    /** Keep phone icons unchanged; allow large BOOX portrait panels to use their full width. */
     private int booxIconDp(int columns, int maxDp) {
         int widthDp = getResources().getConfiguration().screenWidthDp;
         if (widthDp <= 0) widthDp = 360;
-        return Math.max(62, Math.min(maxDp, (widthDp - 48) / columns - 14));
+        // The historical 112/124dp caps made the 10-inch BOOX glyphs look tiny.
+        // Larger E-Ink layouts use 2x caps; column width still prevents clipping.
+        // On phone-width screens the existing dimensions are preserved exactly.
+        int responsiveCapDp = widthDp >= 600 ? maxDp * 2 : maxDp;
+        return Math.max(62, Math.min(responsiveCapDp, (widthDp - 48) / columns - 14));
     }
 
     /** Three equal-size primary destinations: no list-style layout or internal icon gutters. */
