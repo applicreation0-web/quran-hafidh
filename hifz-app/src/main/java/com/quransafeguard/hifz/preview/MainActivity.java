@@ -516,10 +516,9 @@ public final class MainActivity extends android.app.Activity {
             setLineEnabled(itqanQuickAccess,HifzSessionActivity.ITQAN.equals(oldest.mode));
             return;
         }
-        CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),
-            prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
-        setLineEnabled(sabqiQuickAccess,action==CadenceAction.LEARNING);
-        setLineEnabled(itqanQuickAccess,action==CadenceAction.STABILIZATION);
+        CadenceAction action = WeeklyProgramPolicy.actionFor(HifzClock.today().getDayOfWeek(),prefs.weeklyProgramMode(),effectiveLearningDaysPerWeek());
+        setLineEnabled(sabqiQuickAccess, action == CadenceAction.LEARNING);
+        setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION);
     }
 
     /** The Révision card opens this compact selector rather than jumping straight to a mode:
