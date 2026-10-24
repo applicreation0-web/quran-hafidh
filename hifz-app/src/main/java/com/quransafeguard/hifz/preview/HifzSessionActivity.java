@@ -493,7 +493,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (!today.equals(prefs.sabqiTodayReviewDate())) {
             sessionCompleted = true;
             program.setText("Apprentissage · aucun bloc");
-            progress.setText("Validez d’abord les 5 lignes du matin.");
+            progress.setText("Validez d’abord les 5 lignes d’Apprentissage du soir.");
             return;
         }
         int start = prefs.sabqiTodayReviewStartLine();
@@ -1077,7 +1077,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ?unitRange:QuranSurahNames.block(geometry,currentLineIds,unitRange);
         return "Stabilisation · "+where+" · ×"+itqanTargetReps
             +(itqanRegime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
-                ?" · entretien 1 hizb · "+ItqanMaintenancePolicy.VISIBLE_REPS+" lectures + "+ItqanMaintenancePolicy.ANCHOR_REPS+" avec ancrages":"")
+                ?" · répétition d’un hizb · "+ItqanMaintenancePolicy.VISIBLE_REPS+" lectures + "+ItqanMaintenancePolicy.ANCHOR_REPS+" avec ancrages":"")
             +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
     }
 
