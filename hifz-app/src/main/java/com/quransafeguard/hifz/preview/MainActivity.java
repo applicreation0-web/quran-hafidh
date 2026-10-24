@@ -1081,6 +1081,11 @@ public final class MainActivity extends android.app.Activity {
         TextView morning = Ui.text(this, "MATIN", 16f, true);
         morning.setPadding(0, Ui.dp(this, 7), 0, 0);
         morning.setText("MATIN · détails ›");
+        morning.setContentDescription("Matin · afficher les informations complètes");
+        morning.setClickable(true);
+        morning.setFocusable(true);
+        final String fullMorning = chosen.morning;
+        morning.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
         weekDayPanel.addView(morning);
         TextView morningPreview = Ui.text(this, compactSchedulePreview(chosen.morning), 17f, false);
         morningPreview.setMaxLines(3);
@@ -1088,11 +1093,15 @@ public final class MainActivity extends android.app.Activity {
         morningPreview.setContentDescription(scheduleDetail(chosen.morning));
         morningPreview.setClickable(true);
         morningPreview.setFocusable(true);
-        final String fullMorning = chosen.morning;
         morningPreview.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
         weekDayPanel.addView(morningPreview);
         TextView evening = Ui.text(this, "SOIR · détails ›", 16f, true);
         evening.setPadding(0, Ui.dp(this, 8), 0, 0);
+        evening.setContentDescription("Soir · afficher les informations complètes");
+        evening.setClickable(true);
+        evening.setFocusable(true);
+        final String fullEvening = chosen.evening;
+        evening.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
         weekDayPanel.addView(evening);
         TextView eveningPreview = Ui.text(this, compactSchedulePreview(chosen.evening), 17f, false);
         eveningPreview.setMaxLines(3);
@@ -1100,7 +1109,6 @@ public final class MainActivity extends android.app.Activity {
         eveningPreview.setContentDescription(scheduleDetail(chosen.evening));
         eveningPreview.setClickable(true);
         eveningPreview.setFocusable(true);
-        final String fullEvening = chosen.evening;
         eveningPreview.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
         weekDayPanel.addView(eveningPreview);
     }
