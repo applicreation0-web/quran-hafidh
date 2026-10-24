@@ -38,7 +38,7 @@ final class WeeklyDashboardPlanner {
         this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;this.speedStore=speedStore;
     }
 
-    /** P4 J-15: the passive Entretien grows with the real ACQUIRED corpus instead of staying a
+    /** P4 J-15: the passive Révision passive grows with the real ACQUIRED corpus instead of staying a
      *  flat constant — see MaintenanceCoveragePolicy. */
     private int maintenanceMinutes(){
         return MaintenanceCoveragePolicy.minutes(
@@ -97,8 +97,6 @@ final class WeeklyDashboardPlanner {
                 case LEARNING:{
                     DashboardLedger.Record morningActual=ledger.find(date,HifzSessionActivity.SABQI);
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.LEARNING_CONSOLIDATION);
-                    DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
-                    DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
                     String learningCue=learningSessionCue(date.getDayOfWeek(),prefs.weeklyProgramFor(date));
                     if(morningActual!=null)morning="✓ "+compact(morningActual.label)+learningCue;
@@ -107,17 +105,11 @@ final class WeeklyDashboardPlanner {
                         morning="Apprentissage"+learningCue+" · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
-                    boolean eveningDone=(snowballActual!=null || (date.equals(today)
-                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,date)))
-                        &&activeActual!=null&&entretienActual!=null;
-                    if(eveningDone)evening="✓ Renforcement + Révision active + Entretien";
-                    else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
-                        evening="Renforcement + Révision active ("+revisionMinutes+" min) + Entretien · "+projected.label;
-                        murajaahCursor=projected.next;
-                    }
-                    boolean m=morningActual!=null;
-                    state=m&&eveningDone?"Validé":m?"Soir à faire":"À faire";
+                    boolean snowballDone=snowballActual!=null || (date.equals(today)
+                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,date));
+                    evening=snowballDone?"✓ Renforcement":"Renforcement · boule de neige";
+                    boolean lessonDone=morningActual!=null;
+                    state=lessonDone&&snowballDone?"Validé":lessonDone?"Soir à faire":"À faire";
                     break;
                 }
                 case STABILIZATION:{
@@ -188,18 +180,10 @@ final class WeeklyDashboardPlanner {
                         break;
                     }
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
-                    DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
-                    DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
-                    boolean eveningDone=(snowballActual!=null || (date.equals(today)
-                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date)))
-                        &&activeActual!=null&&entretienActual!=null;
-                    if(eveningDone)evening="✓ Consolidation + Révision active + Entretien";
-                    else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
-                        evening="Consolidation + Révision active ("+revisionMinutes+" min) + Entretien · "+projected.label;
-                        murajaahCursor=projected.next;
-                    }
-                    state=morningDone&&eveningDone?"Validé":morningDone?"Soir à faire":"À faire";
+                    boolean snowballDone=snowballActual!=null || (date.equals(today)
+                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date));
+                    evening=snowballDone?"✓ Consolidation":"Consolidation · boule de neige";
+                    state=morningDone&&snowballDone?"Validé":morningDone?"Soir à faire":"À faire";
                     break;
                 }
                 case REVISION:{
@@ -215,15 +199,32 @@ final class WeeklyDashboardPlanner {
                 }
                 default:throw new IllegalStateException("Action de cadence inconnue");
             }
-            if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY
-                    && prefs.weeklyProgramFor(date)!=HifzPrefs.WeeklyProgram.CLASSIC) {
+            if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY) {
+                // Contract: morning = active + passive review; evening = Hifz lesson + snowball.
                 boolean activeDone=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE)!=null;
-                morning=(activeDone?"✓ Révision active ":"Révision active ")
-                    +revisionMinutes+" min + "+morning;
-                // Active is proposed in the morning, NOT repeated as an evening quota.
-                evening=evening.replace(" + Révision active ("
-                    +revisionMinutes+" min)","")
-                    .replace(" + Révision active + Entretien"," + Entretien");
+                boolean passiveDone=ledger.find(date,HifzSessionActivity.MURAJAAH)!=null;
+                String active=(activeDone?"✓ ":"")+"Révision active · "+revisionMinutes+" min";
+                String passive=(passiveDone?"✓ ":"")+"Révision passive · "+revisionMinutes+" min";
+                if(!passiveDone) {
+                    Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
+                    passive+=" · "+projected.label;
+                    murajaahCursor=projected.next; // Read-only forecast, not a saved cursor.
+                }
+                if(action==CadenceAction.LEARNING || action==CadenceAction.STABILIZATION) {
+                    String lesson=morning, snowball=evening;
+                    morning=active+" + "+passive;
+                    evening=lesson+" + "+snowball;
+                    boolean lessonDone=ledger.find(date,action==CadenceAction.LEARNING
+                        ?HifzSessionActivity.SABQI:HifzSessionActivity.ITQAN)!=null
+                        || (action==CadenceAction.STABILIZATION
+                            && date.toString().equals(prefs.lastItqanDate()));
+                    state=activeDone&&passiveDone&&lessonDone&&snowball.startsWith("✓ ")?"Validé"
+                        :activeDone&&passiveDone?"Soir à faire":"À faire";
+                } else {
+                    morning=active+" + "+passive;
+                    evening="—";
+                    state=activeDone&&passiveDone?"Validé":"À faire";
+                }
             }
             out.add(new Row(date,day(date,today),morning,evening,state));
         }
