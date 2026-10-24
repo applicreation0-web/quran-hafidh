@@ -2,17 +2,18 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
     android:viewportWidth="24" android:viewportHeight="24">
-    <!-- Original coherent memory-palace family. Scale with ImageView/Drawable bounds. -->
+    <!-- Quran Haafidh 1.17.5: Lucide ISC source shape, BOOX stroke 2.2;
+         pictograms are independent of the frozen 23 action glyphs. -->
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M2 22V14C2 8 6 4 9 3 M15 3C18 4 22 8 22 14V22" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M15 2h-4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8" />
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M6 22V14C6 11 8 9 10 8 M14 8C16 9 18 11 18 14V22 M2 22H7 M17 22H22" />
-    <path android:fillColor="#121211" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M9 3H15L16 8L12 11L8 8Z" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M16.706 2.706A2.4 2.4 0 0 0 15 2v5a1 1 0 0 0 1 1h5a2.4 2.4 0 0 0-.706-1.706z" />
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M3 11L7 12 M21 11L17 12" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M5 7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 1.732-1" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M10.5 11.7C11.3 9.8 13.7 9.5 15.4 10.7L16.5 11.7 M16.5 9.4V12H13.9 M17 14.2C16.2 16.2 13.8 16.6 12.1 15.2L11 14.2 M11 16.5V14H13.6" />
 </vector>

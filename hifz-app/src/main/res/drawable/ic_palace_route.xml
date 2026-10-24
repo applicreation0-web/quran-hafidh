@@ -2,14 +2,15 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
     android:viewportWidth="24" android:viewportHeight="24">
-    <!-- Original coherent memory-palace family. Scale with ImageView/Drawable bounds. -->
+    <!-- Quran Haafidh 1.17.5: Lucide ISC source shape, BOOX stroke 2.2;
+         pictograms are independent of the frozen 23 action glyphs. -->
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M3 21V14Q3 11 6 11Q9 11 9 14V21 M2 21H10" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M9 19 A3 3 0 1 0 3 19 A3 3 0 1 0 9 19" />
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M15 11V6Q15 3 18 3Q21 3 21 6V11 M14 11H22" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" />
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M7 17C11 18 13 13 17 14 M14 15L17 14L16 17" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M21 5 A3 3 0 1 0 15 5 A3 3 0 1 0 21 5" />
 </vector>

@@ -2,11 +2,15 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
     android:viewportWidth="24" android:viewportHeight="24">
-    <!-- Original coherent memory-palace family. Scale with ImageView/Drawable bounds. -->
+    <!-- Quran Haafidh 1.17.5: Lucide ISC source shape, BOOX stroke 2.2;
+         pictograms are independent of the frozen 23 action glyphs. -->
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M4 3H20V6H4Z M7 6H17V18H7Z M4 18H20V21H4Z" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M9.5 8V16 M12 8V16 M14.5 8V16 M3 22H21" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M14 2v5a1 1 0 0 0 1 1h5" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M8.5 13.5C9.3 11.4 11.7 10.8 13.4 12 L14.5 13.1 M14.5 10.8V13.2H12.1 M15.5 15.3C14.7 17.5 12.3 18 10.6 16.6 L9.5 15.7 M9.5 18V15.4H11.9" />
 </vector>

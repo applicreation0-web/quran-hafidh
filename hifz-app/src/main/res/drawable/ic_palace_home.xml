@@ -2,14 +2,18 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
     android:viewportWidth="24" android:viewportHeight="24">
-    <!-- Original coherent memory-palace family. Scale with ImageView/Drawable bounds. -->
+    <!-- Quran Haafidh 1.17.5: Lucide ISC source shape, BOOX stroke 2.2;
+         pictograms are independent of the frozen 23 action glyphs. -->
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M2 21H22 M3 20V9H21V20 M6 9V5H18V9 M9 5V3H15V5" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M4 3H9Q10 3 10 4V11Q10 12 9 12H4Q3 12 3 11V4Q3 3 4 3Z" />
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M5 20V16Q5 13 7 13Q9 13 9 16V20 M15 20V16Q15 13 17 13Q19 13 19 16V20" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M15 3H20Q21 3 21 4V7Q21 8 20 8H15Q14 8 14 7V4Q14 3 15 3Z" />
     <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
-        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M10 21V16Q10 13 12 13Q14 13 14 16V21" />
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M15 12H20Q21 12 21 13V20Q21 21 20 21H15Q14 21 14 20V13Q14 12 15 12Z" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="2.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M4 16H9Q10 16 10 17V20Q10 21 9 21H4Q3 21 3 20V17Q3 16 4 16Z" />
 </vector>

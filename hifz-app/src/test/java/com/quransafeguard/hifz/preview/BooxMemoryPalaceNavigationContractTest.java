@@ -20,10 +20,10 @@ public final class BooxMemoryPalaceNavigationContractTest {
     @Test public void sixPathsAppearAndRemainIndividuallySelectable() throws Exception {
         String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue(main.contains("pathTile(learningModes, \"Apprentissage\""));
-        assertTrue(main.contains("pathTile(learningModes, \"Stabilisation\""));
+        assertTrue(main.contains("pathTile(otherModes, \"Stabilisation\""));
         assertTrue(main.contains("pathTile(reviewModes, \"Révision active\""));
         assertTrue(main.contains("pathTile(reviewModes, \"Révision passive\""));
-        assertTrue(main.contains("pathTile(otherModes, \"Renforcement\""));
+        assertTrue(main.contains("pathTile(learningModes, \"Renforcement\""));
         assertTrue(main.contains("pathTile(otherModes, \"Consolidation\""));
         assertTrue(main.contains("HifzSessionActivity.MURAJAAH_ACTIVE"));
         assertTrue(main.contains("HifzSessionActivity.MURAJAAH"));

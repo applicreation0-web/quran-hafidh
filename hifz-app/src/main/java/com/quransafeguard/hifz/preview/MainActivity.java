@@ -134,29 +134,34 @@ public final class MainActivity extends android.app.Activity {
         path.addView(Ui.divider(this));
         backlogParcoursRow = backlogRow();
         path.addView(backlogParcoursRow);
-        // Six Hifz functions in equal-width pairs, with maximal BOOX pictograms.
-        // Navigation only: cadence and Hifz credit engines remain unchanged.
+        // Hifz semantic grammar: paired by the real corpus and operation.
+        // Sabqi: introduce one set, then cumulatively revisit it.
+        path.addView(Ui.text(this, "SABQI · nouvelles lignes et renforcement", 16f, true));
         LinearLayout learningModes = Ui.row(this);
         LinearLayout sabqi = pathTile(learningModes, "Apprentissage", "1 page/semaine",
             v -> openMode(HifzSessionActivity.SABQI));
-        itqanCard = pathTile(learningModes, "Stabilisation", stabilizationProgramCue(),
-            v -> openMode(HifzSessionActivity.ITQAN));
-        LinearLayout itqan = itqanCard;
+        LinearLayout renforcement = pathTile(learningModes, "Renforcement", "Sabqi",
+            v -> openMode(renforcementQuickAccessMode()));
         path.addView(learningModes);
 
+        // Itqan: one bounded memorization unit, then its accumulated units.
+        path.addView(Ui.text(this, "ITQĀN · stabilisation et consolidation", 16f, true));
+        LinearLayout otherModes = Ui.row(this);
+        itqanCard = pathTile(otherModes, "Stabilisation", stabilizationProgramCue(),
+            v -> openMode(HifzSessionActivity.ITQAN));
+        LinearLayout itqan = itqanCard;
+        LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
+            v -> openMode(consolidationQuickAccessMode()));
+        path.addView(otherModes);
+
+        // Same acquired corpus, two modalities: text masked vs text visible.
+        path.addView(Ui.text(this, "RÉVISION · sur les acquis", 16f, true));
         LinearLayout reviewModes = Ui.row(this);
         LinearLayout activeRevision = pathTile(reviewModes, "Révision active", "Récitation masquée",
             v -> openMode(HifzSessionActivity.MURAJAAH_ACTIVE));
         LinearLayout passiveRevision = pathTile(reviewModes, "Révision passive", "Texte visible",
             v -> openMode(HifzSessionActivity.MURAJAAH));
         path.addView(reviewModes);
-
-        LinearLayout otherModes = Ui.row(this);
-        LinearLayout renforcement = pathTile(otherModes, "Renforcement", "Sabqi",
-            v -> openMode(renforcementQuickAccessMode()));
-        LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
-            v -> openMode(consolidationQuickAccessMode()));
-        path.addView(otherModes);
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
         geometryActions.add(parcours);
@@ -280,7 +285,8 @@ public final class MainActivity extends android.app.Activity {
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(3, 112);
         tile.setMinimumHeight(Ui.dp(this, sideDp + 54));
-        int drawable = Ui.iconFor(role, role);
+        int drawable = "Lecture".equals(role) ? R.drawable.ic_hifz_nav_reading
+            : Ui.iconFor(role, role);
         if (drawable != 0) {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
@@ -311,7 +317,8 @@ public final class MainActivity extends android.app.Activity {
         tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
         int sideDp = booxIconDp(2, 82);
         tile.setMinimumHeight(Ui.dp(this, sideDp + 20));
-        int drawable = Ui.iconFor(role, role);
+        int drawable = "Progression".equals(role) ? R.drawable.ic_hifz_nav_progress
+            : Ui.iconFor(role, role);
         if (drawable != 0) {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
@@ -430,6 +437,8 @@ public final class MainActivity extends android.app.Activity {
         view.setTextColor(Ui.INK);
         view.setPadding(Ui.dp(this,8),Ui.dp(this,12),Ui.dp(this,8),Ui.dp(this,12));
         view.setMinimumHeight(Ui.dp(this,52));
+        view.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_hifz_catchup_clock,0,0,0);
+        view.setCompoundDrawablePadding(Ui.dp(this,8));
         view.setVisibility(View.GONE);
         view.setOnClickListener(v->showBacklog());
         return view;
