@@ -272,11 +272,18 @@ val verifyHifzConvergenceRules by tasks.registering {
                 && !main.contains("\"Séance\", v -> openToday")) {
             "The approved BOOX Today hero must remain the single scheduled-session entry point."
         }
-        check(ui.contains("ic_hifz_new_lesson")
-                && ui.contains("ic_hifz_anchor")
-                && ui.contains("ic_hifz_maintenance")
-                && ui.contains("ic_hifz_consolidation")) {
-            "Hifz pictograms must use the explicit monochrome semantic icon family."
+        val palaceHifz = listOf("door", "column", "buttress", "keystone", "torch", "mirror")
+        check(palaceHifz.all { icon ->
+            ui.contains("R.drawable.ic_palace_" + icon)
+                && file("src/main/res/drawable/ic_palace_" + icon + ".xml").exists()
+        }) {
+            "Six unique BOOX memory-palace Hifz vectors must be mapped and bundled."
+        }
+        check(listOf("home", "route", "compass").all { icon ->
+            ui.contains("R.drawable.ic_palace_" + icon)
+                && file("src/main/res/drawable/ic_palace_" + icon + ".xml").exists()
+        }) {
+            "Grand Palais, Parcours and Atlas boussole must be distinct real vectors."
         }
         check(manifest.contains("ic_quran_hifz_logo")) { "Quran Hifz launcher icon must use the Mushaf/rehal identity." }
 
