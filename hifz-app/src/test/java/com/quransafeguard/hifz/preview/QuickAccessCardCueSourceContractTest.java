@@ -28,7 +28,7 @@ public final class QuickAccessCardCueSourceContractTest {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue("Apprentissage states its weekly objective, not per-session lines",
-            main.contains("pathTile(coreModes, \"Apprentissage\", \"1 page/semaine\""));
+            main.contains("pathTile(learningModes, \"Apprentissage\", \"1 page/semaine\""));
         assertTrue("Stabilisation uses the identical page/week unit",
             main.contains("2 pages/semaine"));
         assertTrue("Stabilisation's cue must state its own fixed weekly line target, not a vague word",
