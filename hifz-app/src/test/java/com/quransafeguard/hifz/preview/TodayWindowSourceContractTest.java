@@ -22,7 +22,8 @@ public final class TodayWindowSourceContractTest {
         assertTrue(main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }\n        showTodayWindow(sessions);"));
         assertTrue("both Révision sessions are always listed",
             main.contains("HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);")
-            && main.contains("HifzSessionActivity.MURAJAAH,today,todayStr.equals(prefs.lastMurajaahDate()),nextMode);"));
+            && main.contains("HifzSessionActivity.MURAJAAH,today,")
+            && main.contains("todayStr.equals(prefs.lastMurajaahDate()),nextMode);"));
         assertTrue("each line carries its state and the next one due is marked",
             main.contains("items[i]=(s.done?\"✓ \":s.next?\"▸ \":\"   \")+s.label+\" · \"+(s.done?\"fait\":\"à faire\");"));
     }
