@@ -61,8 +61,25 @@ jobs:
             sleep 3
             adb exec-out screencap -p > hifz-app/build/boox-audit/home-portrait-android-emulator.png
             test -s hifz-app/build/boox-audit/home-portrait-android-emulator.png
-            # Tap approved borderless Parcours icon destination on the fixed Pixel 2 AVD.
-            adb shell input tap 210 1120
+            # Dynamic target: the BOOX icon rail now scales with available width.
+            # Never use obsolete hard-coded coordinates for visual evidence.
+            adb shell uiautomator dump /sdcard/haafidh-ui.xml >/dev/null
+            adb pull /sdcard/haafidh-ui.xml "$RUNNER_TEMP/haafidh-ui.xml" >/dev/null
+            python3 - "$RUNNER_TEMP/haafidh-ui.xml" "$RUNNER_TEMP/parcours-tap.txt" <<'PY'
+            import pathlib, re, sys, xml.etree.ElementTree as ET
+            ui = ET.parse(sys.argv[1]).getroot()
+            candidates = [n for n in ui.iter("node") if n.attrib.get("content-desc") == "Parcours Hifz"]
+            if len(candidates) != 1:
+                raise SystemExit(f"Expected one real Parcours Hifz navigation tile; got {len(candidates)}")
+            bounds = candidates[0].attrib.get("bounds", "")
+            xy = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
+            if not xy: raise SystemExit("Parcours has no reliable visible bounds: " + bounds)
+            x1, y1, x2, y2 = map(int, xy.groups())
+            if x2 <= x1 or y2 <= y1: raise SystemExit("Parcours bounds are empty")
+            pathlib.Path(sys.argv[2]).write_text(f"{(x1+x2)//2} {(y1+y2)//2}")
+            PY
+            read -r TAP_X TAP_Y < "$RUNNER_TEMP/parcours-tap.txt"
+            adb shell input tap "$TAP_X" "$TAP_Y"
             sleep 2
             adb exec-out screencap -p > hifz-app/build/boox-audit/parcours-portrait-android-emulator.png
             test -s hifz-app/build/boox-audit/parcours-portrait-android-emulator.png
