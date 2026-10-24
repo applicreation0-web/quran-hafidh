@@ -111,12 +111,11 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(week.contains("\"Reprise du soir ·"));
         assertFalse(week.contains("\"Ancrage ·"));
         assertFalse(week.contains("\"Ancrage fractionné ·"));
-        // Every evening — weekday LEARNING/STABILIZATION and Sunday's REVISION alike — is genuinely
-        // compound: Révision active (a mandatory 15-min step, see HifzSchedule.ACTIVE_REVIEW_MINUTES
-        // and MainActivity's eveningLearningMode/eveningStabilizationMode/eveningRevisionMode) always
-        // comes before Entretien, so none of these evening labels may ever go bare.
-        assertTrue(week.contains("evening=\"Renforcement + Révision active ("));
-        assertTrue(week.contains("evening=\"Consolidation + Révision active ("));
+        // The agreed split is explicit: 05:30 active/passive reviews,
+        // 20:00 Sabqi/Itqan plus Renforcement/Consolidation without duplicate revision.
+        assertTrue(week.contains("morning=active+\" + \"+passive;"));
+        assertTrue(week.contains("evening=lesson+\" + \"+snowball;"));
+        assertFalse(week.contains("Entretien"));
         assertTrue("Sunday final-only planning must never schedule a generic passive cursor",
             week.contains("// Sunday cannot consume a passive cursor or schedule any general revisions."));
     }
