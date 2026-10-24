@@ -67,7 +67,12 @@ public final class MainActivity extends android.app.Activity {
         homeScroll = scrollOf(root);
         LinearLayout header = Ui.row(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+        // The Grand Palais must be visible on the actual home, not merely stored as a vector.
+        ImageView palaceEmblem = new ImageView(this);
+        palaceEmblem.setImageResource(Ui.iconFor("Accueil", "Accueil"));
+        palaceEmblem.setColorFilter(Ui.INK);
+        palaceEmblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        header.addView(palaceEmblem, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
         TextView title = Ui.bookText(this, "Quran Haafidh", 24, true);
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
