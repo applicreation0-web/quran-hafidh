@@ -56,10 +56,19 @@ public final class MorningEveningRevisionContractTest {
             session.contains(" · entretien 1 hizb · "));
     }
 
+    @Test public void directShortcutCannotScheduleRevisionOnSunday() throws Exception {
+        String main=source("MainActivity.java");
+        assertTrue(main.contains("setTitle(\"Dimanche sans révision\")"));
+        assertTrue(main.contains("HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)"));
+        assertTrue(main.contains("HifzSessionActivity.MURAJAAH.equals(mode)"));
+    }
+
     @Test public void displayUsesOnlyRevisionPassiveTerminology() throws Exception {
         String settings=source("SettingsActivity.java");
         String selector=source("RevisionSelector.java");
         assertTrue(settings.contains("Matin · Révision active "));
+        assertTrue(settings.contains("Vitesse · Révision passive"));
+        assertTrue(settings.contains("Position Révision passive : "));
         assertTrue(settings.contains("Soir : Apprentissage ou Stabilisation"));
         assertTrue(selector.contains("\"Révision passive · \" + maintenanceCue"));
         assertFalse(settings.contains("Entretien"));
