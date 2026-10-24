@@ -72,8 +72,7 @@ public final class MainActivity extends android.app.Activity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         // The Grand Palais must be visible on the actual home, not merely stored as a vector.
         ImageView palaceEmblem = new ImageView(this);
-        palaceEmblem.setImageResource(Ui.iconFor("Accueil", "Accueil"));
-        palaceEmblem.setColorFilter(Ui.INK);
+        palaceEmblem.setImageResource(largeIconFor("Accueil"));
         palaceEmblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
         header.addView(palaceEmblem, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
         TextView title = Ui.bookText(this, "Quran Haafidh", 24, true);
@@ -270,6 +269,23 @@ public final class MainActivity extends android.app.Activity {
         return line;
     }
 
+
+    /** Full-size BOOX pictograms. Small action icons and their tint contract remain in Ui. */
+    private static int largeIconFor(String role) {
+        if ("Accueil".equals(role)) return R.drawable.ic_haafidh_accueil;
+        if ("Parcours".equals(role) || "Parcours Hifz".equals(role)) return R.drawable.ic_haafidh_parcours;
+        if ("Lecture".equals(role)) return R.drawable.ic_haafidh_lecture;
+        if ("Atlas".equals(role)) return R.drawable.ic_haafidh_atlas;
+        if ("Progression".equals(role)) return R.drawable.ic_haafidh_progression;
+        if ("Apprentissage".equals(role)) return R.drawable.ic_haafidh_apprentissage;
+        if ("Renforcement".equals(role)) return R.drawable.ic_haafidh_renforcement;
+        if ("Stabilisation".equals(role)) return R.drawable.ic_haafidh_stabilisation;
+        if ("Consolidation".equals(role)) return R.drawable.ic_haafidh_consolidation;
+        if ("Révision active".equals(role)) return R.drawable.ic_haafidh_revision_active;
+        if ("Révision passive".equals(role)) return R.drawable.ic_haafidh_revision_passive;
+        return 0;
+    }
+
     /** Use the widest icon permitted by the live BOOX column width. */
     private int booxIconDp(int columns, int maxDp) {
         int widthDp = getResources().getConfiguration().screenWidthDp;
@@ -285,12 +301,11 @@ public final class MainActivity extends android.app.Activity {
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(3, 112);
         tile.setMinimumHeight(Ui.dp(this, sideDp + 54));
-        int drawable = "Lecture".equals(role) ? R.drawable.ic_hifz_nav_reading
-            : Ui.iconFor(role, role);
+        int drawable = largeIconFor(role);
+        if (drawable == 0) drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
-            icon.setColorFilter(Ui.INK);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
             icon.setPadding(Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2));
             tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
@@ -317,12 +332,11 @@ public final class MainActivity extends android.app.Activity {
         tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
         int sideDp = booxIconDp(2, 82);
         tile.setMinimumHeight(Ui.dp(this, sideDp + 20));
-        int drawable = "Progression".equals(role) ? R.drawable.ic_hifz_nav_progress
-            : Ui.iconFor(role, role);
+        int drawable = largeIconFor(role);
+        if (drawable == 0) drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
-            icon.setColorFilter(Ui.INK);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
             icon.setPadding(Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2));
             tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
@@ -355,13 +369,13 @@ public final class MainActivity extends android.app.Activity {
         TextView name = Ui.bookText(this, shortLabel, 19f, true);
         name.setGravity(Gravity.CENTER);
         name.setMaxLines(2);
-        int icon = Ui.iconFor(label, label);
+        int icon = largeIconFor(label);
+        if (icon == 0) icon = Ui.iconFor(label, label);
         if (icon == 0) throw new IllegalArgumentException("Unmapped Hifz mode: "+label);
         // Intrinsic drawable size is only 24dp; explicit bounds keep it legible on BOOX.
         Drawable architectural = getDrawable(icon).mutate();
         architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp));
         name.setCompoundDrawables(null, architectural, null, null);
-        name.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Ui.INK));
         name.setCompoundDrawablePadding(Ui.dp(this, 9));
         tile.addView(name);
         // The real target/verse range is on the selected day, not crammed into a 1/3-width cell.
