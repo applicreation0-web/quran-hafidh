@@ -83,6 +83,15 @@ jobs:
             sleep 2
             adb exec-out screencap -p > hifz-app/build/boox-audit/parcours-portrait-android-emulator.png
             test -s hifz-app/build/boox-audit/parcours-portrait-android-emulator.png
+            # Confirm the screenshot is really Parcours and not a stale coordinate target.
+            adb shell uiautomator dump /sdcard/haafidh-parcours.xml >/dev/null
+            adb pull /sdcard/haafidh-parcours.xml "$RUNNER_TEMP/haafidh-parcours.xml" >/dev/null
+            python3 - "$RUNNER_TEMP/haafidh-parcours.xml" <<'PY'
+            import sys, xml.etree.ElementTree as ET
+            root = ET.parse(sys.argv[1]).getroot()
+            names = [node.attrib.get("text", "") for node in root.iter("node")]
+            assert "Parcours Hifz" in names, "Parcours screenshot did not open the true screen"
+            PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
