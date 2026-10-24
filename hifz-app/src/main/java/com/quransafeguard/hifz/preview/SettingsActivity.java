@@ -67,10 +67,10 @@ public final class SettingsActivity extends android.app.Activity {
         LinearLayout advanced = subScreen(root, "Avancé");
         LinearLayout about = subScreen(null, "À propos du parcours");
 
-        protocol=Ui.text(this,weeklyCadenceSummary(),11f,false);
+        protocol=Ui.text(this,weeklyCadenceSummary(),16f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4));parcours.addView(protocol);
         LinearLayout roadmapModeRow=Ui.row(this);roadmapModeRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));roadmapModeRow.setMinimumHeight(Ui.dp(this,48));
-        TextView roadmapModeLabel=Ui.text(this,"Pilotage Roadmap · Automatique",13f,false);Ui.weight(roadmapModeLabel,1);roadmapModeRow.addView(roadmapModeLabel);
+        TextView roadmapModeLabel=Ui.text(this,"Pilotage Roadmap · Automatique",16f,false);Ui.weight(roadmapModeLabel,1);roadmapModeRow.addView(roadmapModeLabel);
         Switch roadmapModeSwitch=new Switch(this);roadmapModeSwitch.setChecked(prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO);roadmapModeSwitch.setContentDescription("Pilotage Roadmap automatique");
         roadmapModeRow.addView(roadmapModeSwitch);parcours.addView(roadmapModeRow);parcours.addView(Ui.divider(this));
         weeklyProgramSetting=Ui.settingRow(this,"Programme hebdomadaire",
@@ -91,7 +91,7 @@ public final class SettingsActivity extends android.app.Activity {
         eveningTimeSetting=Ui.settingRow(this,"Horaire proposé · soir",
             suggestedTimeLabel(false),v->chooseSuggestedTime(false));
         parcours.addView(eveningTimeSetting);parcours.addView(Ui.divider(this));
-        TextView noLock=Ui.text(this,"Horaires indicatifs : aucune séance bloquée. Le dimanche matin peut être prolongé.",11f,false);
+        TextView noLock=Ui.text(this,"Horaires indicatifs : aucune séance bloquée. Le dimanche matin peut être prolongé.",16f,false);
         parcours.addView(noLock);
 
 
@@ -99,7 +99,7 @@ public final class SettingsActivity extends android.app.Activity {
         parcours.addView(sabqiStartRow);parcours.addView(Ui.divider(this));
         sabqiEndRow=Ui.settingRow(this,"Fin de la plage d’Apprentissage",prefs.sabqiEnd().toString(),v->chooseVerse("Fin de la plage d’Apprentissage",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
         parcours.addView(sabqiEndRow);
-        sabqiStatus=Ui.text(this,"",11f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));parcours.addView(sabqiStatus);
+        sabqiStatus=Ui.text(this,"",16f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));parcours.addView(sabqiStatus);
 
         section(corpus,"Plages à stabiliser");
         stabilizationRangesBox=Ui.column(this);stabilizationRangesBox.setPadding(0,0,0,0);corpus.addView(stabilizationRangesBox);
@@ -112,7 +112,7 @@ public final class SettingsActivity extends android.app.Activity {
         corpus.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseAcquiredRange(null,-1)));
 
         section(corpus,"Rotation");
-        itqanStatus=Ui.text(this,"",11f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,2));corpus.addView(itqanStatus);
+        itqanStatus=Ui.text(this,"",16f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,2));corpus.addView(itqanStatus);
         rotationSetting=Ui.settingRow(this,"Début de rotation de stabilisation",prefs.itqanRotationStart().toString(),
             v->chooseVerse("Début de rotation de stabilisation",prefs.itqanRotationStart(),this::setRotationStart));
         corpus.addView(rotationSetting);
@@ -121,12 +121,12 @@ public final class SettingsActivity extends android.app.Activity {
         corpus.addView(hardAnchoringSetting);
 
         section(corpus,"Corpus effectif");
-        effectiveCorpusStatus=Ui.text(this,"",11f,false);
+        effectiveCorpusStatus=Ui.text(this,"",16f,false);
         effectiveCorpusStatus.setTextColor(Ui.MUTED);
         effectiveCorpusStatus.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,2));
         corpus.addView(effectiveCorpusStatus);
 
-        murajaahStatus=Ui.text(this,"",12f,false);murajaahStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));revision.addView(murajaahStatus);
+        murajaahStatus=Ui.text(this,"",16f,false);murajaahStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));revision.addView(murajaahStatus);
         revision.addView(Ui.divider(this));
         revision.addView(Ui.settingRow(this,"Vitesse · Révision passive",speedStore.maintenanceSummary(),null));
         revision.addView(Ui.divider(this));
@@ -135,13 +135,13 @@ public final class SettingsActivity extends android.app.Activity {
         audioSetting=Ui.settingRow(this,"Al-Husary Muʿallim","Choisir le pack",v->selectAudioZip());
         audioStatus=Ui.settingValue(audioSetting);audioDisplay.addView(audioSetting);audioDisplay.addView(Ui.divider(this));
         LinearLayout einkRow=Ui.row(this);einkRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));einkRow.setMinimumHeight(Ui.dp(this,48));
-        TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",13f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
+        TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",16f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
         Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);audioDisplay.addView(einkRow);
 
         backup.addView(Ui.settingRow(this,"Exporter","Fichier à conserver hors de l’appareil",v->exportBackup()));backup.addView(Ui.divider(this));
         backup.addView(Ui.settingRow(this,"Importer","Restaurer depuis un fichier exporté",v->confirmImportBackup()));backup.addView(Ui.divider(this));
         LinearLayout backupNoteRow=Ui.row(this);backupNoteRow.setGravity(Gravity.CENTER_VERTICAL);
-        TextView backupNote=Ui.text(this,"Progression stockée uniquement sur cet appareil.",11.5f,false);
+        TextView backupNote=Ui.text(this,"Progression stockée uniquement sur cet appareil.",16f,false);
         backupNote.setTextColor(Ui.MUTED);backupNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);Ui.weight(backupNote,1);backupNoteRow.addView(backupNote);
         backupNoteRow.addView(Ui.iconButton(this,"i","Référence · sauvegarde",v->new AlertDialog.Builder(this)
             .setTitle("Sauvegarde")
@@ -162,13 +162,13 @@ public final class SettingsActivity extends android.app.Activity {
         advanced.addView(Ui.settingRow(this,"À propos du parcours","",v->showScreen(about)));advanced.addView(Ui.divider(this));
         advanced.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
 
-        TextView schema=Ui.bookText(this,"Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision",12.5f,true);
+        TextView schema=Ui.bookText(this,"Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision",16f,true);
         schema.setPadding(Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,5));about.addView(schema);
-        consolidationSchemaNote=Ui.text(this,"",11f,false);
+        consolidationSchemaNote=Ui.text(this,"",16f,false);
         consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));about.addView(consolidationSchemaNote);
-        renforcementSchemaNote=Ui.text(this,"",11f,false);
+        renforcementSchemaNote=Ui.text(this,"",16f,false);
         renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));about.addView(renforcementSchemaNote);
-        TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau du même type — aucun jour n’est perdu.",11f,false);
+        TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau du même type — aucun jour n’est perdu.",16f,false);
         carryoverSchemaNote.setTextColor(Ui.MUTED);carryoverSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));about.addView(carryoverSchemaNote);
 
         showScreen(root);
@@ -212,7 +212,7 @@ public final class SettingsActivity extends android.app.Activity {
     @Override public void onBackPressed(){goBack();}
 
     private void section(LinearLayout root,String title){
-        TextView view=Ui.bookText(this,title,15,true);view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
+        TextView view=Ui.bookText(this,title,18,true);view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
     }
 
     private void refreshAll(){refreshWeeklyCadence();refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
@@ -415,11 +415,11 @@ public final class SettingsActivity extends android.app.Activity {
     private void renderRanges(LinearLayout box,List<VerseRange> ranges,boolean stabilization){
         box.removeAllViews();
         if(ranges.isEmpty()){
-            TextView empty=Ui.text(this,"Aucune plage",11.5f,false);empty.setTextColor(Ui.MUTED);empty.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));box.addView(empty);return;
+            TextView empty=Ui.text(this,"Aucune plage",16f,false);empty.setTextColor(Ui.MUTED);empty.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));box.addView(empty);return;
         }
         for(int i=0;i<ranges.size();i++){
             final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);row.setMinimumHeight(Ui.dp(this,46));
-            TextView label=Ui.text(this,"Plage "+(i+1),12.5f,true);label.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);row.addView(label);
+            TextView label=Ui.text(this,"Plage "+(i+1),16f,true);label.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);row.addView(label);
             TextView value=Ui.text(this,QuranSurahNames.range(range.getStart(),range.getEndInclusive()),11.5f,false);value.setTextColor(Ui.MUTED);Ui.weight(value,1);row.addView(value);
             row.addView(Ui.iconButton(this,"","Modifier la plage",v->{if(stabilization)chooseStabilizationRange(range,index);else chooseAcquiredRange(range,index);}));
             row.addView(Ui.iconButton(this,"","Supprimer la plage",v->{if(stabilization)removeStabilizationRange(index);else removeAcquiredRange(index);}));box.addView(row);
