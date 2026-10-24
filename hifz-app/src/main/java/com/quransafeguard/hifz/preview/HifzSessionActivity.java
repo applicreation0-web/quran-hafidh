@@ -124,35 +124,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         } catch (RuntimeException invalidRecordedDate) {
             sessionDate = capturedToday;
         }
-        if (SABQI.equals(mode) || ITQAN.equals(mode)) {
-            // The source of truth is the persistent dated receipt ledger, not the
-            // current weekday or a shortcut that could create a duplicate credit.
-            DashboardLedger attendance=new DashboardLedger(this);
-            attendance.capture(prefs);
-            HifzBacklog.Due oldest=HifzBacklog.first(HifzBacklog.pending(
-                prefs,attendance,capturedToday,prefs.learningDaysPerWeek()));
-            if(oldest==null || !oldest.mode.equals(mode) || !oldest.date.equals(sessionDate)) {
-                if(oldest==null) {
-                    new AlertDialog.Builder(this).setTitle("Séance non due")
-                        .setMessage("Aucune nouvelle séance Sabqi ou Itqān n’est due.")
-                        .setPositiveButton("Retour",(dialog,which)->finish())
-                        .setOnCancelListener(dialog->finish()).show();
-                } else {
-                    new AlertDialog.Builder(this).setTitle("Leçon en retard")
-                        .setMessage("La priorité est "+oldest.frenchName()+" du "+oldest.date+
-                            ". L’avancement actuel restera inchangé.")
-                        .setPositiveButton("Ouvrir le report",(dialog,which)->{
-                            Intent intent=new Intent(this,HifzSessionActivity.class);
-                            intent.putExtra(EXTRA_MODE,oldest.mode);
-                            intent.putExtra(EXTRA_SCHEDULED_DATE,oldest.date.toString());
-                            finish();
-                            startActivity(intent);
-                        }).setNegativeButton("Retour",(dialog,which)->finish())
-                        .setOnCancelListener(dialog->finish()).show();
-                }
-                return;
-            }
-        }
         // Resume the original frozen evening/final session, including its calendar date,
         // instead of assigning yesterday's repetitions to today's new cumulative set.
         ConsolidationCycleEngine.Family resumeFamily =
@@ -176,6 +147,37 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         } catch (Throwable error) {
             Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
             return;
+        }
+        if (SABQI.equals(mode) || ITQAN.equals(mode)) {
+            // The source of truth is the persistent dated receipt ledger, not the
+            // current weekday or a shortcut that could create a duplicate credit.
+            DashboardLedger attendance=new DashboardLedger(this);
+            attendance.capture(prefs);
+            RoadmapPolicy.Decision roadmap=prefs.currentRoadmapDecision(geometry);
+            int learningDays=roadmap==null?prefs.learningDaysPerWeek():roadmap.learningDays;
+            HifzBacklog.Due oldest=HifzBacklog.first(HifzBacklog.pending(
+                prefs,attendance,capturedToday,learningDays));
+            if(oldest==null || !oldest.mode.equals(mode) || !oldest.date.equals(sessionDate)) {
+                if(oldest==null) {
+                    new AlertDialog.Builder(this).setTitle("Séance non due")
+                        .setMessage("Aucune nouvelle séance Sabqi ou Itqān n’est due.")
+                        .setPositiveButton("Retour",(dialog,which)->finish())
+                        .setOnCancelListener(dialog->finish()).show();
+                } else {
+                    new AlertDialog.Builder(this).setTitle("Leçon en retard")
+                        .setMessage("La priorité est "+oldest.frenchName()+" du "+oldest.date+
+                            ". L’avancement actuel restera inchangé.")
+                        .setPositiveButton("Ouvrir le report",(dialog,which)->{
+                            Intent intent=new Intent(this,HifzSessionActivity.class);
+                            intent.putExtra(EXTRA_MODE,oldest.mode);
+                            intent.putExtra(EXTRA_SCHEDULED_DATE,oldest.date.toString());
+                            finish();
+                            startActivity(intent);
+                        }).setNegativeButton("Retour",(dialog,which)->finish())
+                        .setOnCancelListener(dialog->finish()).show();
+                }
+                return;
+            }
         }
         murajaahActualEnd = prefs.murajaahActualEnd();
         clock = new SessionClock(prefs.elapsedFor(mode), elapsed -> {
