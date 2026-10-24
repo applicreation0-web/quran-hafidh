@@ -40,6 +40,22 @@ public final class MorningEveningRevisionContractTest {
         assertFalse(main.contains("Entretien"));
     }
 
+    @Test public void lateDisplayFixesArePresentAndSundayItqanIsNotTheFinale() throws Exception {
+        String main=source("MainActivity.java");
+        String planner=source("WeeklyDashboardPlanner.java");
+        String session=source("HifzSessionActivity.java");
+        String vocabulary=source("HifzDisplayVocabulary.java");
+        assertTrue("Sunday Itqan must never inherit the evening finale label",
+            main.contains("addToday(out,anchoringTodayDetail(prefs,geometry),HifzSessionActivity.ITQAN,"));
+        assertTrue("Passive forecast must suppress its repeated duration",
+            planner.contains("if(range.endsWith(trailing))"));
+        assertTrue(session.contains("Validez d’abord les 5 lignes d’Apprentissage du soir."));
+        assertTrue(session.contains(" · répétition d’un hizb · "));
+        assertTrue(vocabulary.contains(".replace(\"Entretien\", \"Révision passive\")"));
+        assertFalse("An old post-Nas user-facing label must be absent",
+            session.contains(" · entretien 1 hizb · "));
+    }
+
     @Test public void displayUsesOnlyRevisionPassiveTerminology() throws Exception {
         String settings=source("SettingsActivity.java");
         String selector=source("RevisionSelector.java");
