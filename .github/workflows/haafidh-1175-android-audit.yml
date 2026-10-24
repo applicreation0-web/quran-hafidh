@@ -16,7 +16,7 @@ permissions:
   contents: read
 concurrency:
   group: haafidh-1175-android-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   instrumentation:
     runs-on: ubuntu-latest
