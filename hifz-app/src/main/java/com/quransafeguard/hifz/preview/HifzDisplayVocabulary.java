@@ -18,8 +18,8 @@ final class HifzDisplayVocabulary {
   .replace("Itqan", "Stabilisation")
   .replace("Ancrage fractionné", "Stabilisation")
   .replace("Ancrage", "Stabilisation")
-  .replace("Entretien installé", "Révision installée")
-  .replace("Entretien", "Révision")
+  .replace("Entretien installé", "Révision passive installée")
+  .replace("Entretien", "Révision passive")
   .replace("Murājaʿah", "Révision")
   .replace("Murajaah", "Révision");
     }
