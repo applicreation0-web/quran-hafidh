@@ -43,10 +43,10 @@ public final class QuickAccessFinaleRoutingSourceContractTest {
     @Test public void quickAccessTilesNoLongerHardcodeTheNonGraduatingReview() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue("the Renforcement tile must resolve its mode instead of always opening the evening review",
-            main.contains("secondaryTile(otherModes, \"Renforcement\", \"Renforcement\",")
+            main.contains("pathTile(otherModes, \"Renforcement\", \"Sabqi\",")
             && main.contains("v -> openMode(renforcementQuickAccessMode())"));
         assertTrue("the Consolidation tile must resolve its mode instead of always opening the evening review",
-            main.contains("secondaryTile(otherModes, \"Consolidation\", \"Consolidation\",")
+            main.contains("pathTile(otherModes, \"Consolidation\", \"Itqān\",")
             && main.contains("v -> openMode(consolidationQuickAccessMode())"));
         assertFalse("the tiles must not hardcode the non-final mode directly anymore",
             main.contains("v -> openMode(HifzSessionActivity.LEARNING_CONSOLIDATION)"));
