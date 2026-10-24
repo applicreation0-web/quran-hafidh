@@ -86,7 +86,7 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
 
     @Test public void homeCardCueIsRefreshedOnEveryReturnToHome() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertEquals(1, count(main, "pathTile(learningModes, \"Stabilisation\", stabilizationProgramCue(),"));
+        assertEquals(1, count(main, "pathTile(otherModes, \"Stabilisation\", stabilizationProgramCue(),"));
         assertEquals(1, count(main, "if (itqanCue != null) itqanCue.setText(stabilizationProgramCue());"));
         assertTrue("The refreshed Stabilisation tile must expose its live cue in child index 1",
             main.contains("TextView cue = Ui.text(this, state, 15f, false);")
