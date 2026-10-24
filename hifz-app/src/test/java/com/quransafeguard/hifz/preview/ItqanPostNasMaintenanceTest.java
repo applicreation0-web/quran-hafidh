@@ -348,7 +348,7 @@ public final class ItqanPostNasMaintenanceTest {
 
     @Test public void homeStabilisationCardFollowsTheRegime() {
         assertEquals("22 lignes/semaine", Ui.stabilizationCue(false));
-        assertEquals("1 hizb · entretien", Ui.stabilizationCue(true));
+        assertEquals("Stabilisation · 1 hizb", Ui.stabilizationCue(true));
     }
 
     // ---- 6. post-Nas target: 1 hizb × 3 passes = 2 visible + 1 with anchors ----
