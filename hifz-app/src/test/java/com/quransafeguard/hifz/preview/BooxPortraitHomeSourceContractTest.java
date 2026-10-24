@@ -48,7 +48,8 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("Ui.bookText(this, \"AUJOURD’HUI\", 17f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"…\", 23f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)"));
-        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, 112))"));
+        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 54))"));
+        assertTrue(home.contains("booxIconDp(3, 112)"));
         for(String name: new String[]{"Parcours Hifz","Lecture","Atlas"})
             assertTrue("Missing direct destination "+name,home.contains("primaryTile(destinations, \""+name+"\""));
         assertTrue(home.contains("secondaryTile(secondary, \"Mémorisation libre\""));
@@ -71,15 +72,15 @@ public final class BooxPortraitHomeSourceContractTest {
 
     @Test public void booxNavigationHasNoCardsAndRetainsApprovedHifzIcons() throws Exception {
         String home=read(MAIN);
-        String curve=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/BooxFlowStroke.java");
         assertFalse("The previous bordered-card UI is rejected by the BOOX owner",
             home.contains("Ui.panel(line)") || home.contains("Ui.panel(tile)")
             || home.contains("Ui.panel(day)"));
-        assertTrue("Home, Parcours and the day rail share a curved Atlas-inspired line",
-            home.contains("new BooxFlowStroke(this)") && curve.contains("path.cubicTo"));
-        assertTrue("Every Hifz mode uses an existing frozen semantic pictogram",
+        assertFalse("Decorative curves were rejected by the BOOX owner",
+            home.contains("new BooxFlowStroke(this)"));
+        assertTrue("Each Hifz mode uses an approved dedicated full-size vector",
             home.contains("int icon = Ui.iconFor(label, label)")
-                && home.contains("name.setCompoundDrawablesWithIntrinsicBounds(0, icon, 0, 0)"));
+                && home.contains("architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp))")
+                && home.contains("booxIconDp(2, 124)"));
         assertTrue("Compact mode names must fit in one BOOX column",
             home.contains("\"Apprentissage\".equals(label) ? \"Apprendre\"")
                 && home.contains("\"Stabilisation\".equals(label) ? \"Stabiliser\""));
