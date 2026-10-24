@@ -147,6 +147,7 @@ while IFS= read -r file; do
     "$prefix/HifzBacklog.java" | \
     "$prefix/MainActivity.java" | \
     "$prefix/BooxFlowStroke.java" | \
+    "$prefix/WeeklyBilan.java" | \
     "$prefix/RevisionSelector.java" | \
     "$prefix/AtlasMapActivity.java" | \
     "$prefix/FreeMemActivity.java" | \
