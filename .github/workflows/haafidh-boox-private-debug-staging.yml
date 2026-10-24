@@ -11,6 +11,8 @@ on:
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzDisplayVocabulary.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyBilan.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/WeeklyBilanTest.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/MorningEveningRevisionContractTest.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/HifzDisplayVocabularyTest.java'
