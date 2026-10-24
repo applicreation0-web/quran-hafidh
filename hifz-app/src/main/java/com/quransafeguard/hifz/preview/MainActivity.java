@@ -532,6 +532,15 @@ public final class MainActivity extends android.app.Activity {
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
 
     private void openMode(String mode,LocalDate scheduledDate) {
+        if (HifzClock.today().getDayOfWeek()==DayOfWeek.SUNDAY
+                && (HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)
+                    || HifzSessionActivity.MURAJAAH.equals(mode))) {
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Dimanche sans révision")
+                .setMessage("Aucune Révision active ou Révision passive n’est programmée le dimanche. Consultez les séances Itqān et les finales du jour.")
+                .setPositiveButton("Fermer",null).show();
+            return;
+        }
         if (HifzSessionActivity.SABQI.equals(mode) || HifzSessionActivity.ITQAN.equals(mode)) {
             // Also guard launcher/direct access: no credit for a future date while debt exists.
             List<HifzBacklog.Due> due=HifzBacklog.pending(prefs,ledger,
