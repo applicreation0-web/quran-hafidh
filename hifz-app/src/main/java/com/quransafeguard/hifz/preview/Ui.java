@@ -31,7 +31,7 @@ final class Ui {
     private Ui() {}
 
     static Button button(Context context, String label, View.OnClickListener listener) {
-        Button button = styled(new Button(context), context, 14.5f, dp(context, 14));
+        Button button = styled(new Button(context), context, 17f, dp(context, 14));
         button.setText(label);
         button.setOnClickListener(listener);
         button.setMinHeight(dp(context, 46));
@@ -44,7 +44,7 @@ final class Ui {
 
     /** Compact text action, reserved for tabs and explicit text choices. */
     static Button smallButton(Context context, String label, View.OnClickListener listener) {
-        Button button = styled(new Button(context), context, 13.5f, dp(context, 10));
+        Button button = styled(new Button(context), context, 16f, dp(context, 10));
         String shown = label;
         int iconRes = iconFor(label, label);
         if (label != null && label.toLowerCase(Locale.ROOT).contains("audio")) shown = "Écouter";
@@ -130,7 +130,7 @@ final class Ui {
      *  arrival every session is one hizb of maintenance. */
     static String stabilizationCue(boolean postNasMaintenance) {
         return postNasMaintenance
-            ? "1 hizb · entretien"
+            ? "Stabilisation · 1 hizb"
             : PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine";
     }
 
@@ -138,16 +138,16 @@ final class Ui {
     static LinearLayout settingRow(Context context, String label, String value, View.OnClickListener listener) {
         LinearLayout row = row(context);
         row.setPadding(dp(context, 2), dp(context, 7), dp(context, 2), dp(context, 7));
-        row.setMinimumHeight(dp(context, 48));
+        row.setMinimumHeight(dp(context, 56));
         // Device report (phone): a long value ("Stabilisation · bloc 1/3 · p. 515 …") took the
         // whole width and squeezed the label into one letter-column ("Auj/our/d'h/ui"). The label
         // keeps its natural width (up to half the screen); the value takes the rest and wraps.
-        TextView name = text(context, label, 15f, true);
+        TextView name = text(context, label, 17f, true);
         name.setPadding(dp(context, 4), 0, dp(context, 6), 0);
         name.setMaxWidth(context.getResources().getDisplayMetrics().widthPixels / 2);
         row.addView(name, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView current = text(context, value == null ? "" : value, 13.5f, false);
+        TextView current = text(context, value == null ? "" : value, 16f, false);
         current.setTextColor(MUTED);
         current.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         current.setMaxLines(3);
