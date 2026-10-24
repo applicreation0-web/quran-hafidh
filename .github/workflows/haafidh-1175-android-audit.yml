@@ -7,6 +7,8 @@ on:
       - '.github/workflows/haafidh-1175-android-audit.yml'
       - 'scripts/boox_emulator_parcours.py'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzDisplayVocabulary.java'
+      - 'scripts/verify_authorized_hifz_session_delta.py'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java'
