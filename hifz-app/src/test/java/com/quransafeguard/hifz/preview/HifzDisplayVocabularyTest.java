@@ -16,8 +16,8 @@ public final class HifzDisplayVocabularyTest {
   HifzDisplayVocabulary.canonicalize("Itqān installé à conserver"));
     }
 
-    @Test public void schemaFiveMaintenanceLabelDisplaysAsRevisionWithFrenchAgreement() {
-        assertEquals("Révision installée à conserver",
+    @Test public void schemaFiveMaintenanceLabelDisplaysAsPassiveRevisionWithFrenchAgreement() {
+        assertEquals("Révision passive installée à conserver",
   HifzDisplayVocabulary.canonicalize("Entretien installé à conserver"));
     }
 
