@@ -8,6 +8,7 @@ on:
       - '.github/workflows/haafidh-boox-private-debug-staging.yml'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
+      - 'hifz-app/src/main/res/drawable/ic_haafidh_*.xml'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzDisplayVocabulary.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java'
