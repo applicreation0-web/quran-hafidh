@@ -298,10 +298,12 @@ final class Ui {
     static int iconFor(String semantic, String fallbackSymbol) {
         String s = semantic == null ? "" : semantic.toLowerCase(Locale.ROOT);
         // Frozen BOOX pictograms: never infer shapes from fallback Unicode glyphs.
-        if (s.equals("accueil")) return R.drawable.ic_ui_home;
-        if (s.equals("parcours hifz")) return R.drawable.ic_ui_revision;
+        if (s.equals("accueil")) return R.drawable.ic_palace_home;
+        if (s.equals("parcours hifz")) return R.drawable.ic_palace_route;
         if (s.equals("focus")) return R.drawable.ic_ui_focus;
-        if (s.equals("révision") || s.equals("révision active")) return R.drawable.ic_ui_revision;
+        if (s.equals("révision active")) return R.drawable.ic_palace_torch;
+        if (s.equals("révision passive") || s.equals("entretien")) return R.drawable.ic_palace_mirror;
+        if (s.equals("révision")) return R.drawable.ic_ui_revision;
         if (s.contains("difficulté") || s.contains("difficulte")) return R.drawable.ic_ui_difficulty;
         if (s.equals("marquer") || s.startsWith("touchez le verset")) return R.drawable.ic_ui_difficulty;
         if (s.contains("plus d’options") || s.contains("plus d'options")) return R.drawable.ic_ui_more;
@@ -311,7 +313,8 @@ final class Ui {
         if (s.contains("effacer les notes")) return R.drawable.ic_ui_annotation_erase;
         if (s.contains("retour")) return R.drawable.ic_ui_back;
         if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
-        if (s.equals("atlas") || s.equals("carte atlas") || s.equals("carte") || s.equals("carte ibn kathīr")) return R.drawable.ic_ui_semantic_map;
+        if (s.equals("atlas")) return R.drawable.ic_palace_compass;
+        if (s.equals("carte atlas") || s.equals("carte") || s.equals("carte ibn kathīr")) return R.drawable.ic_ui_semantic_map;
         if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
         if (s.contains("passage vers le haut") || s.contains("passage vers le bas")) return R.drawable.ic_ui_previous;
         if (s.contains("passage précédent du corpus")) return R.drawable.ic_ui_jump_prev;
@@ -352,12 +355,15 @@ final class Ui {
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
         if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
-        if (s.contains("apprentissage") || s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_hifz_new_lesson;
+        if (s.contains("apprentissage") || s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_palace_door;
         if (s.contains("reprise")) return R.drawable.ic_hifz_reprise;
         if (s.contains("finale")) return R.drawable.ic_hifz_final_review;
-        if (s.contains("renforcement") || s.contains("consolidation")) return R.drawable.ic_hifz_consolidation;
-        if (s.contains("stabilisation") || s.contains("ancrage")) return R.drawable.ic_hifz_anchor;
-        if (s.contains("révision") || s.contains("revision") || s.contains("entretien")) return R.drawable.ic_hifz_maintenance;
+        if (s.contains("renforcement")) return R.drawable.ic_palace_buttress;
+        if (s.contains("consolidation")) return R.drawable.ic_palace_keystone;
+        if (s.contains("stabilisation") || s.contains("ancrage")) return R.drawable.ic_palace_column;
+        if (s.contains("révision passive") || s.contains("revision passive") || s.contains("entretien")) return R.drawable.ic_palace_mirror;
+        if (s.contains("révision active") || s.contains("revision active")) return R.drawable.ic_palace_torch;
+        if (s.contains("révision") || s.contains("revision")) return R.drawable.ic_hifz_maintenance;
         if (s.contains("valider") || s.equals("revu") || s.contains("termin")) return R.drawable.ic_ui_validate;
         if (s.startsWith("début")) return R.drawable.ic_ui_start;
         if (s.startsWith("fin")) return R.drawable.ic_ui_end;
@@ -365,9 +371,9 @@ final class Ui {
         if (s.contains("modifier")) return R.drawable.ic_ui_edit;
         if (s.contains("supprimer")) return R.drawable.ic_ui_annotation_erase;
         if (s.contains("choisir le pack") || s.contains("import")) return R.drawable.ic_ui_import;
-        if (s.contains("sabqi")) return R.drawable.ic_hifz_new_lesson;
-        if (s.contains("itq")) return R.drawable.ic_hifz_anchor;
-        if (s.contains("murāja") || s.contains("muraja")) return R.drawable.ic_hifz_maintenance;
+        if (s.contains("sabqi")) return R.drawable.ic_palace_door;
+        if (s.contains("itq")) return R.drawable.ic_palace_column;
+        if (s.contains("murāja") || s.contains("muraja")) return R.drawable.ic_palace_mirror;
         if (s.contains("annuler")) return R.drawable.ic_ui_undo;
         if (s.contains("effacer")) return R.drawable.ic_ui_annotation_erase;
         return 0;
