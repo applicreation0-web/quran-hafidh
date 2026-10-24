@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Original coherent memory-palace family. Scale with ImageView/Drawable bounds. -->
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M4 22V9C4 4 7 2 12 2C17 2 20 4 20 9V22Z" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M7 19V9C7 6 9 5 12 5C15 5 17 6 17 9V19Z" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="1.65" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M8.5 14L13 9 M9 18L16 11 M3 22H21" />
+</vector>
