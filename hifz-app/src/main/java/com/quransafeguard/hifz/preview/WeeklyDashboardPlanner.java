@@ -38,7 +38,7 @@ final class WeeklyDashboardPlanner {
         this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;this.speedStore=speedStore;
     }
 
-    /** P4 J-15: the passive Révision passive grows with the real ACQUIRED corpus instead of staying a
+    /** P4 J-15: Révision passive grows with the real ACQUIRED corpus instead of staying a
      *  flat constant — see MaintenanceCoveragePolicy. */
     private int maintenanceMinutes(){
         return MaintenanceCoveragePolicy.minutes(
@@ -207,7 +207,12 @@ final class WeeklyDashboardPlanner {
                 String passive=(passiveDone?"✓ ":"")+"Révision passive · "+revisionMinutes+" min";
                 if(!passiveDone) {
                     Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
-                    passive+=" · "+projected.label;
+                    // projectMurajaah already includes duration; display it once.
+                    String range=projected.label;
+                    String trailing=" · "+revisionMinutes+" min";
+                    if(range.endsWith(trailing))
+                        range=range.substring(0,range.length()-trailing.length());
+                    passive+=" · "+range;
                     murajaahCursor=projected.next; // Read-only forecast, not a saved cursor.
                 }
                 if(action==CadenceAction.LEARNING || action==CadenceAction.STABILIZATION) {
