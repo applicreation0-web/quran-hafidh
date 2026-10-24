@@ -34,10 +34,10 @@ public final class PreDebugVisualRestorationSourceContractTest {
             cue.contains("setAttribute('stroke-width'"));
     }
 
-    @Test public void contractPictogramsStayVisibleAndParcoursUsesBrain() throws Exception {
+    @Test public void contractPictogramsStayVisibleAndParcoursUsesArchitecturalPath() throws Exception {
         String ui=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String home=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(ui.contains("if (s.equals(\"parcours hifz\")) return R.drawable.ic_ui_revision;"));
+        assertTrue(ui.contains("if (s.equals(\"parcours hifz\")) return R.drawable.ic_palace_route;"));
         assertTrue(ui.contains("new int[]{MUTED,PAPER,INK,INK}"));
         assertTrue("Selected icon must be dark on light background",ui.contains(
             "shape(SURFACE, LINE, dp(context, 6), Math.max(1, dp(context, 1)))"));
@@ -48,7 +48,8 @@ public final class PreDebugVisualRestorationSourceContractTest {
             home.contains("ImageView icon = new ImageView(this);")
             && home.contains("icon.setImageResource(drawable);")
             && home.contains("icon.setColorFilter(Ui.INK);")
-            && home.contains("tile.setMinimumHeight(Ui.dp(this, 112))"));
+            && home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 54))")
+            && home.contains("booxIconDp(3, 112)"));
     }
 
     @Test public void weeklyDialogIsCompactAndManualIsTruthfullyNamed() throws Exception {
