@@ -11,8 +11,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * P4's J-15 dynamic Entretien duration must replace every reader of the old flat
- * HifzSchedule.MAINTENANCE_MINUTES constant for the passive Murajaah/Entretien session — the
+ * P4's J-15 dynamic Révision passive duration must replace every reader of the old flat
+ * HifzSchedule.MAINTENANCE_MINUTES constant for the passive Murajaah/Révision passive session — the
  * session's own target-minutes computation, the MainActivity dashboard's "today" label, the
  * WeeklyDashboardPlanner's 7-day ETA projection, and both SettingsActivity display strings.
  */
@@ -68,9 +68,9 @@ public final class MaintenanceCoverageWiringSourceContractTest {
         assertTrue("One acquired-corpus coverage calculation must drive both menu options",
             selector.contains("MaintenanceCoveragePolicy.minutes(")
                 && selector.contains("prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()"));
-        assertTrue("Active revision must display the same dynamic duration as Entretien",
+        assertTrue("Active revision must display the same dynamic duration as Révision passive",
             selector.contains("\"Révision active · \" + maintenanceCue + \" · \"")
-                && selector.contains("\"Entretien · \" + maintenanceCue + \" · \""));
+                && selector.contains("\"Révision passive · \" + maintenanceCue + \" · \""));
         assertFalse("The historical 15-minute label must never return to the menu",
             selector.contains("Révision active · 15 min"));
     }
@@ -79,9 +79,9 @@ public final class MaintenanceCoverageWiringSourceContractTest {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertFalse(settings.contains("HifzSchedule.MAINTENANCE_MINUTES"));
         assertTrue(settings.contains("private int maintenanceMinutes(){"));
-        assertTrue(settings.contains("+maintenanceMinutes()+\" min les jours de semaine. Aucune Révision le dimanche.\");"));
-        assertTrue(settings.contains("+maintenanceMinutes()+\" min · chaque soir · position \"+prefs.murajaahCursor());"));
-        assertTrue(settings.contains("Révision active \"+maintenanceMinutes()+\" min et Entretien passif"));
+        assertTrue(settings.contains("+maintenanceMinutes()+\" min. Soir : Apprentissage ou Stabilisation, puis Renforcement ou Consolidation. Aucune Révision le dimanche.\");"));
+        assertTrue(settings.contains("+maintenanceMinutes()+\" min · position \"+prefs.murajaahCursor());"));
+        assertTrue(settings.contains("Révision active \"+maintenanceMinutes()+\" min + Révision passive"));
         assertFalse(settings.contains("HifzSchedule.ACTIVE_REVIEW_MINUTES"));
     }
 }
