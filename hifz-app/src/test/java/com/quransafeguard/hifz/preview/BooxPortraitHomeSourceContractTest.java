@@ -79,7 +79,8 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("Decorative curves were rejected by the BOOX owner",
             home.contains("new BooxFlowStroke(this)"));
         assertTrue("Each Hifz mode uses an approved dedicated full-size vector",
-            home.contains("int icon = Ui.iconFor(label, label)")
+            home.contains("int icon = largeIconFor(label)")
+                && home.contains("if (icon == 0) icon = Ui.iconFor(label, label)")
                 && home.contains("architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp))")
                 && home.contains("booxIconDp(2, 124)"));
         assertTrue("Compact mode names must fit in one BOOX column",
