@@ -73,7 +73,7 @@ public final class MainActivity extends android.app.Activity {
         // Home brand mark must match the actual installed Android launcher icon.
         // Do not substitute the unrelated house/home navigation pictogram.
         ImageView appEmblem = new ImageView(this);
-        appEmblem.setImageResource(R.drawable.ic_quran_hifz_logo);
+        appEmblem.setImageResource(R.drawable.ic_quran_hifz_header);
         appEmblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
         appEmblem.setContentDescription("Quran Haafidh");
         header.addView(appEmblem, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
@@ -246,23 +246,25 @@ public final class MainActivity extends android.app.Activity {
     /** One dominant BOOX-safe action, preserving the existing openToday() routing. */
     private LinearLayout todayLine() {
         LinearLayout line = Ui.column(this);
-        line.setPadding(Ui.dp(this, 18), Ui.dp(this, 16), Ui.dp(this, 18), Ui.dp(this, 16));
+        line.setPadding(Ui.dp(this, 18), Ui.dp(this, 10), Ui.dp(this, 18), Ui.dp(this, 10));
         // Typographic reading surface, not a bordered card.
         TextView label = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
         line.addView(label);
         TextView value = Ui.bookText(this, "…", 23f, true);
-        value.setPadding(0, Ui.dp(this, 9), 0, Ui.dp(this, 9));
+        value.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
         value.setMaxLines(3);
         line.addView(value);
         todayObjective = Ui.text(this, "", 16f, false);
         todayObjective.setTextColor(Ui.MUTED);
         // Never truncate the authentic page/verse range on the BOOX screen.
-        todayObjective.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 10));
+        todayObjective.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 6));
+        todayObjective.setMaxLines(3);
+        todayObjective.setEllipsize(android.text.TextUtils.TruncateAt.END);
         line.addView(todayObjective);
         TextView action = Ui.bookText(this, "CONTINUER  ›", 20f, true);
         action.setGravity(Gravity.END);
         line.addView(action);
-        line.setMinimumHeight(Ui.dp(this, 136));
+        line.setMinimumHeight(Ui.dp(this, 120));
         line.setContentDescription("Ouvrir la séance du jour");
         line.setClickable(true);
         line.setFocusable(true);
@@ -408,7 +410,8 @@ public final class MainActivity extends android.app.Activity {
             todayObjective.setText(text.startsWith("Report ")
                 ? "PRIORITÉ · séance datée à rattraper avant toute nouvelle leçon"
                 : todayRow == null ? "Programme détaillé dans Parcours"
-                : "MATIN · "+scheduleDetail(todayRow.morning));
+                : "MATIN · "+compactSchedulePreview(todayRow.morning));
+            todayObjective.setContentDescription(todayRow==null ? "Programme détaillé dans Parcours" : scheduleDetail(todayRow.morning));
         }
         if (todayAction != null && todayAction.getChildCount() >= 4
                 && todayAction.getChildAt(3) instanceof TextView) {
@@ -1032,9 +1035,17 @@ public final class MainActivity extends android.app.Activity {
             date->WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
                 prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
             (date,mode)->ledger.find(date,mode)!=null);
-        TextView weeklyBalance=Ui.text(this,bilan.display(),17f,false);
-        weeklyBalance.setPadding(Ui.dp(this,6),Ui.dp(this,20),Ui.dp(this,6),Ui.dp(this,16));
+        String balancePreview = "BILAN · "+bilan.validated+"/"+bilan.planned+" validées · "+bilan.dueToday+" à faire"
+            +"\nRetards : "+bilan.lateLessons+" leçon(s) · "+bilan.missedReviews+" révision(s)"
+            +(bilan.unverifiedDays>0 ? "\n"+bilan.unverifiedDays+" jour(s) non vérifiable(s)" : "");
+        TextView weeklyBalance=Ui.text(this,balancePreview,16f,false);
+        weeklyBalance.setPadding(Ui.dp(this,6),Ui.dp(this,9),Ui.dp(this,6),Ui.dp(this,10));
         weeklyBalance.setContentDescription(bilan.display());
+        weeklyBalance.setClickable(true);
+        weeklyBalance.setFocusable(true);
+        weeklyBalance.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
+            .setTitle("Bilan de la semaine").setMessage(bilan.display())
+            .setPositiveButton("Fermer",null).show());
         dashboard.addView(Ui.divider(this));
         dashboard.addView(weeklyBalance);
     }
@@ -1068,13 +1079,30 @@ public final class MainActivity extends android.app.Activity {
             chosen.day+" "+chosen.date.getDayOfMonth()+" · "+compactState(chosen.state), 20f, true);
         weekDayPanel.addView(heading);
         TextView morning = Ui.text(this, "MATIN", 16f, true);
-        morning.setPadding(0, Ui.dp(this, 14), 0, 0);
+        morning.setPadding(0, Ui.dp(this, 7), 0, 0);
+        morning.setText("MATIN · détails ›");
         weekDayPanel.addView(morning);
-        weekDayPanel.addView(Ui.text(this, scheduleDetail(chosen.morning), 18f, false));
-        TextView evening = Ui.text(this, "SOIR", 16f, true);
-        evening.setPadding(0, Ui.dp(this, 14), 0, 0);
+        TextView morningPreview = Ui.text(this, compactSchedulePreview(chosen.morning), 17f, false);
+        morningPreview.setMaxLines(3);
+        morningPreview.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        morningPreview.setContentDescription(scheduleDetail(chosen.morning));
+        morningPreview.setClickable(true);
+        morningPreview.setFocusable(true);
+        final String fullMorning = chosen.morning;
+        morningPreview.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
+        weekDayPanel.addView(morningPreview);
+        TextView evening = Ui.text(this, "SOIR · détails ›", 16f, true);
+        evening.setPadding(0, Ui.dp(this, 8), 0, 0);
         weekDayPanel.addView(evening);
-        weekDayPanel.addView(Ui.text(this, scheduleDetail(chosen.evening), 18f, false));
+        TextView eveningPreview = Ui.text(this, compactSchedulePreview(chosen.evening), 17f, false);
+        eveningPreview.setMaxLines(3);
+        eveningPreview.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        eveningPreview.setContentDescription(scheduleDetail(chosen.evening));
+        eveningPreview.setClickable(true);
+        eveningPreview.setFocusable(true);
+        final String fullEvening = chosen.evening;
+        eveningPreview.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
+        weekDayPanel.addView(eveningPreview);
     }
 
     private void addCell(LinearLayout row, String value, float weight, boolean bold, boolean singleLine) {
@@ -1095,6 +1123,28 @@ public final class MainActivity extends android.app.Activity {
     private static String compactSession(String value) {
         if (value == null || value.trim().isEmpty()) return "—";
         return value.replace("Sourate ", "S.").replace("v.", "");
+    }
+
+    /** Render only a compact preview: the full unmodified forecast stays one tap away.
+     * No schedule, credit, line or verse boundary is changed by this formatter. */
+    static String compactSchedulePreview(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return "—";
+        String value = raw.replace(" bloc(s)", " bloc");
+        // Two independent reviews each keep their own minutes; range stays on the next line.
+        if (value.contains("Révision active · ") && value.contains("Révision passive · ")) {
+            value = value.replace("Révision active · ", "Active ")
+                .replace("Révision passive · ", "Passive ");
+            int range = value.indexOf(" min · ", value.indexOf("Passive "));
+            if (range >= 0) value = value.substring(0, range + 4)
+                + "\n" + value.substring(range + " min · ".length());
+        }
+        return value;
+    }
+
+    private void showScheduleDetail(String title, String raw) {
+        new android.app.AlertDialog.Builder(this)
+            .setTitle(title).setMessage(scheduleDetail(raw))
+            .setPositiveButton("Fermer", null).show();
     }
 
     /** Show *real* verse boundaries from WeeklyDashboardPlanner instead of discarding
