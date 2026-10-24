@@ -75,6 +75,14 @@ jobs:
             adb shell uiautomator dump /sdcard/haafidh-parcours.xml >/dev/null
             adb pull /sdcard/haafidh-parcours.xml "$RUNNER_TEMP/haafidh-parcours.xml" >/dev/null
             python3 scripts/boox_emulator_parcours.py verify "$RUNNER_TEMP/haafidh-parcours.xml"
+            # The maximised Hifz icons need vertical scrolling on the smaller Pixel emulator.
+            adb shell input swipe 250 740 250 240 600
+            sleep 2
+            adb exec-out screencap -p > hifz-app/build/boox-audit/parcours-lower-icons-android-emulator.png
+            test -s hifz-app/build/boox-audit/parcours-lower-icons-android-emulator.png
+            adb shell uiautomator dump /sdcard/haafidh-parcours-lower.xml >/dev/null
+            adb pull /sdcard/haafidh-parcours-lower.xml "$RUNNER_TEMP/haafidh-parcours-lower.xml" >/dev/null
+            python3 scripts/boox_emulator_parcours.py verify-lower "$RUNNER_TEMP/haafidh-parcours-lower.xml"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
