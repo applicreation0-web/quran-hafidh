@@ -149,6 +149,12 @@ public final class SettingsActivity extends android.app.Activity {
             .setPositiveButton("OK",null).show()));
         backup.addView(backupNoteRow);
 
+        // Keep episodic, manually scoped memorisation available without adding a
+        // competing Home tile or touching saved FreeMem state and Hifz engines.
+        advanced.addView(Ui.settingRow(this,"Mémorisation ponctuelle",
+            "Passage, répétitions, masque · hors Parcours",
+            v->startActivity(new Intent(this,FreeMemActivity.class))));
+        advanced.addView(Ui.divider(this));
         advanced.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));advanced.addView(Ui.divider(this));
         weakVersesSetting=Ui.settingRow(this,"Repères faibles","",v->startActivity(new Intent(this,WeakVersesActivity.class)));
         advanced.addView(weakVersesSetting);advanced.addView(Ui.divider(this));

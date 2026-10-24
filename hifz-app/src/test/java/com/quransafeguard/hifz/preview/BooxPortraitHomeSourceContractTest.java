@@ -52,7 +52,8 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("booxIconDp(3, 112)"));
         for(String name: new String[]{"Parcours Hifz","Lecture","Atlas"})
             assertTrue("Missing direct destination "+name,home.contains("primaryTile(destinations, \""+name+"\""));
-        assertTrue(home.contains("secondaryTile(secondary, \"Mémorisation libre\""));
+        assertFalse("Free memorisation is an optional advanced tool, not a Home destination",
+            home.contains("secondaryTile(secondary, \"Mémorisation libre\""));
         assertTrue(home.contains("secondaryTile(secondary, \"Progression\""));
         assertTrue("No dimmed E-Ink labels", home.contains("line.setAlpha(1f)"));
         assertFalse("Never fade a control to 42%", home.contains("0.42f"));
@@ -99,7 +100,8 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION)"));
         assertTrue(home.contains("new Intent(this, StudyReaderActivity.class)"));
         assertTrue(home.contains("new Intent(this, AtlasMapActivity.class)"));
-        assertTrue(home.contains("new Intent(this, FreeMemActivity.class)"));
+        assertFalse("No FreeMem shortcut on the Home navigation",
+            home.contains("new Intent(this, FreeMemActivity.class)"));
         assertTrue(home.contains("new Intent(this, ProgressMapActivity.class)"));
         assertFalse(home.contains("new Intent(this, IbnKathirMapActivity.class)"));
         assertFalse(home.contains("new Intent(this, QuizActivity.class)"));

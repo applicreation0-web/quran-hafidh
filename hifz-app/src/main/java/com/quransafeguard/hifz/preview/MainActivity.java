@@ -108,8 +108,8 @@ public final class MainActivity extends android.app.Activity {
 
         LinearLayout secondary = Ui.row(this);
         secondary.setPadding(0, Ui.dp(this, 12), 0, 0);
-        LinearLayout free = secondaryTile(secondary, "Mémorisation libre", "Libre",
-            v -> startActivity(new Intent(this, FreeMemActivity.class)));
+        // The separate free-memory engine is preserved under advanced tools.
+        // It is intentionally not a top-level destination: Lecture is the Mushaf entry.
         LinearLayout progress = secondaryTile(secondary, "Progression", "Progression",
             v -> startActivity(new Intent(this, ProgressMapActivity.class)));
         root.addView(Ui.divider(this));
@@ -117,7 +117,6 @@ public final class MainActivity extends android.app.Activity {
 
         geometryActions.add(study);
         geometryActions.add(semanticMap);
-        geometryActions.add(free);
         geometryActions.add(progress);
 
         // --- Parcours Hifz: the five paths, one line each, then this week.
@@ -305,7 +304,7 @@ public final class MainActivity extends android.app.Activity {
         return tile;
     }
 
-    /** Two clearly labeled links below the primary grid. */
+    /** Secondary progression link below the three primary Mushaf destinations. */
     private LinearLayout secondaryTile(LinearLayout parent, String role, String display,
                                       View.OnClickListener listener) {
         LinearLayout tile = Ui.row(this);
