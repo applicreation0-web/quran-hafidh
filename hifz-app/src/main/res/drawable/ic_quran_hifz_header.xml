@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp" android:height="64dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <!-- Same pictogram as the actual launcher icon, retraced from its bitmap.
+         The source PNG embeds a false checkerboard background: exclude that artefact.
+         Single vector fill, no bitmap scaling or grey grid on E-Ink. -->
+    <group android:scaleX="1.12" android:scaleY="1.12"
+        android:pivotX="256" android:pivotY="256">
+        <path android:fillColor="#121211" android:fillType="evenOdd"
+            android:pathData="M134,117 L53,251 L52,255 L55,261 L155,307 L139,387 L140,397 L144,400 L151,399 L256,352 L360,399 L369,399 L372,396 L372,387 L356,307 L456,261 L459,255 L458,251 L379,119 L375,116 L369,116 L352,124 L344,112 L338,111 L264,147 L254,150 L173,111 L167,112 L159,124 L142,116 Z M128,233 L131,217 L133,216 L254,277 L257,277 L378,216 L380,217 L383,234 L255,299 L129,235 Z M336,129 L341,136 L374,200 L264,256 L263,165 Z M348,194 L343,190 L336,191 L290,213 L286,218 L286,222 L290,227 L293,228 L302,225 L346,204 L349,199 Z M342,170 L338,166 L332,166 L285,188 L281,191 L280,198 L284,203 L291,203 L338,181 L342,177 Z M336,149 L332,144 L325,144 L278,166 L274,170 L273,175 L278,181 L284,181 L331,159 L336,154 Z M175,129 L248,165 L247,256 L137,200 L171,134 Z M162,196 L165,204 L209,225 L218,228 L221,227 L225,222 L225,218 L221,213 L175,191 L168,190 Z M169,170 L169,177 L173,181 L220,203 L227,203 L231,198 L231,193 L226,188 L179,166 L173,166 Z M176,147 L175,154 L177,157 L227,181 L233,181 L238,175 L237,170 L233,166 L186,144 L179,144 Z" />
+    </group>
+</vector>
