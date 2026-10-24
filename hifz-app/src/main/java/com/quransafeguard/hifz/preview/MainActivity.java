@@ -777,7 +777,7 @@ public final class MainActivity extends android.app.Activity {
                 todayStr.equals(prefs.lastMurajaahDate()),nextMode);
         }
         if(recommendedSunday(today)){
-            addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Itqān · 8 lignes",HifzSessionActivity.ITQAN,
+            addToday(out,anchoringTodayDetail(prefs,geometry),HifzSessionActivity.ITQAN,
                 today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
             if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
                 addToday(out,"Finale Renforcement Sabqi · matin",HifzSessionActivity.LEARNING_FINAL,
