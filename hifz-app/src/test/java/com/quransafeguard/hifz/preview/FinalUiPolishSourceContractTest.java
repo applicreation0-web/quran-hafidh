@@ -82,7 +82,7 @@ public final class FinalUiPolishSourceContractTest {
     @Test public void settingsExposeReadableSeparatedSpeeds() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         String speed = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSpeedStore.java");
-        assertTrue(settings.contains("\"Vitesse · Révision\"") && settings.contains("\"Vitesse · Consolidation\""));
+        assertTrue(settings.contains("\"Vitesse · Révision passive\"") && settings.contains("\"Vitesse · Consolidation\""));
         assertTrue(settings.contains("speedStore.maintenanceSummary()"));
         assertTrue(settings.contains("speedStore.consolidationSummary()"));
         assertTrue(speed.contains("s/ligne"));
