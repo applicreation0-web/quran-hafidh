@@ -293,7 +293,7 @@ public final class MainActivity extends android.app.Activity {
         return Math.max(62, Math.min(maxDp, (widthDp - 48) / columns - 14));
     }
 
-    /** Three equal-size primary destinations: no list-style layout. */
+    /** Three equal-size primary destinations: no list-style layout or internal icon gutters. */
     private LinearLayout primaryTile(LinearLayout parent, String role, String display,
                                     View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
@@ -307,7 +307,7 @@ public final class MainActivity extends android.app.Activity {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            icon.setPadding(Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2));
+            icon.setPadding(0, 0, 0, 0);
             tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
         TextView title = Ui.bookText(this, display, 19f, true);
@@ -338,7 +338,7 @@ public final class MainActivity extends android.app.Activity {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            icon.setPadding(Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2), Ui.dp(this, 2));
+            icon.setPadding(0, 0, 0, 0);
             tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
         TextView title = Ui.bookText(this, display, 17f, true);
