@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 
 /**
- * The compact Révision selector (P2): Révision active, Entretien — free order. A dialogue, not a
+ * The compact Révision selector (P2): Révision active, Révision passive — free order. A dialogue, not a
  * new Activity. Carries no progression logic of its own; it only reports today's done/to-do status
  * and defers the actual navigation to the caller.
  */
@@ -27,7 +27,7 @@ final class RevisionSelector {
             : "durée variable";
         String[] items = {
             "Révision active · " + maintenanceCue + " · " + (activeDone ? "fait" : "à faire"),
-            "Entretien · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
+            "Révision passive · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
         };
         new AlertDialog.Builder(activity)
             .setTitle("Révision")
