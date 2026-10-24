@@ -22,8 +22,9 @@ ATLAS_ONLY_SHA="4d52f8bc8e5cbd7a5bfa836b4c73c07c52647f55"
 # immutable 1.17.5 pre-backlog base must both match. All repetition, cursor,
 # promotion, QCF and mask code remains byte-identical to the pinned baseline.
 GUARDED_BACKLOG_SHA="e244a330a5fff551f2032dad228cb587f82434f4"
+GUARDED_BACKLOG_LABELS_SHA="add8fe985f8b3a2206fa4142c6e384e5a48a8c0c"
 PRE_BACKLOG_COMMIT="7f7a3e8ebd859f2a4871794f12c4550bf8cf7787"
-if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==GUARDED_BACKLOG_SHA:
+if subprocess.check_output(["git","hash-object",PATH],text=True).strip() in (GUARDED_BACKLOG_SHA, GUARDED_BACKLOG_LABELS_SHA):
     baseline=subprocess.check_output(
         ["git","show",PRE_BACKLOG_COMMIT+":"+PATH]).decode("utf-8")
     if subprocess.check_output(["git","hash-object","--stdin"],
@@ -34,7 +35,20 @@ if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==GUARDE
     end="        murajaahActualEnd = prefs.murajaahActualEnd();"
     start=actual.find(marker)
     stop=actual.find(end,start)
-    if start<0 or stop<start or baseline!=actual[:start]+actual[stop:]:
+    original=baseline
+    if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==GUARDED_BACKLOG_LABELS_SHA:
+        # Two exact presentation-only substitutions. Repetitions, QCF masks,
+        # credits, persistence and cursor algorithms must stay identical.
+        changes=(
+            ("Validez d’abord les 5 lignes du matin.",
+             "Validez d’abord les 5 lignes d’Apprentissage du soir."),
+            (" · entretien 1 hizb · ", " · répétition d’un hizb · "),
+        )
+        for before, after in changes:
+            if original.count(before)!=1:
+                raise SystemExit("FAIL: Hifz session label baseline mismatch")
+            original=original.replace(before,after)
+    if start<0 or stop<start or original!=actual[:start]+actual[stop:]:
         raise SystemExit("FAIL: backlog HifzSession delta touches frozen engines")
     guard=actual[start:stop]
     for needle in ("attendance.capture(prefs)","prefs.currentRoadmapDecision(geometry)",
