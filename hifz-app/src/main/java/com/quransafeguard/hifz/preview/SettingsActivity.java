@@ -128,7 +128,7 @@ public final class SettingsActivity extends android.app.Activity {
 
         murajaahStatus=Ui.text(this,"",12f,false);murajaahStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));revision.addView(murajaahStatus);
         revision.addView(Ui.divider(this));
-        revision.addView(Ui.settingRow(this,"Vitesse · Révision",speedStore.maintenanceSummary(),null));
+        revision.addView(Ui.settingRow(this,"Vitesse · Révision passive",speedStore.maintenanceSummary(),null));
         revision.addView(Ui.divider(this));
         revision.addView(Ui.settingRow(this,"Vitesse · Consolidation",speedStore.consolidationSummary(),null));
 
@@ -742,12 +742,12 @@ public final class SettingsActivity extends android.app.Activity {
             +"\nLignes acquises (Itqan) : "+progression.acquired.size()+"\nCorpus de travail : "+prefs.effectiveItqanRanges().size()+" plage(s)"
             +"\nPlages promues (Sabqi) : "+prefs.promotedRanges().size()+"\nLignes à stabiliser (Itqan) : "+progression.stabilized.size()
             +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanRotationLiveCursor(geometry)
-            +"\nPosition Révision : "+prefs.murajaahCursor()
+            +"\nPosition Révision passive : "+prefs.murajaahCursor()
             +"\nPosition Révision active : "+prefs.activeMurajaahCursor()
             +"\nFile de Consolidation : "+prefs.recentSabqi().size()
             +"\nQuarantaine : "+quarantine.size()+" ligne(s)"
             +"\nEstimation fin Stabilisation : "+stabilizationEtaSummary()
-            +"\nVitesse Révision : "+speedStore.maintenanceSummary()
+            +"\nVitesse Révision passive : "+speedStore.maintenanceSummary()
             +"\nVitesse Consolidation : "+speedStore.consolidationSummary();
         AlertDialog.Builder dialog=new AlertDialog.Builder(this)
             .setTitle("Diagnostic Hifz").setMessage(state).setPositiveButton("Fermer",null);
