@@ -18,6 +18,32 @@ ATLAS_ONLY_SHA="4d52f8bc8e5cbd7a5bfa836b4c73c07c52647f55"
 # changes. Verify it against the pinned Atlas-only session source byte for byte.
 # The Itqān ×3 amendment is reconstructed exactly from the last audited
 # 1.17.2 active/passive duration commit, preserving all other Hifz bytes.
+# Explicitly reviewed backlog-only session entry guard. Exact current bytes and
+# immutable 1.17.5 pre-backlog base must both match. All repetition, cursor,
+# promotion, QCF and mask code remains byte-identical to the pinned baseline.
+GUARDED_BACKLOG_SHA="e244a330a5fff551f2032dad228cb587f82434f4"
+PRE_BACKLOG_COMMIT="7f7a3e8ebd859f2a4871794f12c4550bf8cf7787"
+if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==GUARDED_BACKLOG_SHA:
+    baseline=subprocess.check_output(
+        ["git","show",PRE_BACKLOG_COMMIT+":"+PATH]).decode("utf-8")
+    if subprocess.check_output(["git","hash-object","--stdin"],
+        input=baseline.encode()).decode().strip()!="bf2234d5bbb47086c5e81a6e667b6751605a212f":
+        raise SystemExit("FAIL: immutable HifzSession source pin changed")
+    actual=Path(PATH).read_text(encoding="utf-8")
+    marker="        if (SABQI.equals(mode) || ITQAN.equals(mode)) {"
+    end="        murajaahActualEnd = prefs.murajaahActualEnd();"
+    start=actual.find(marker)
+    stop=actual.find(end,start)
+    if start<0 or stop<start or baseline!=actual[:start]+actual[stop:]:
+        raise SystemExit("FAIL: backlog HifzSession delta touches frozen engines")
+    guard=actual[start:stop]
+    for needle in ("attendance.capture(prefs)","prefs.currentRoadmapDecision(geometry)",
+                   "HifzBacklog.pending(","oldest.date.equals(sessionDate)",
+                   "L’avancement actuel restera inchangé."):
+        if needle not in guard: raise SystemExit("FAIL: missing chronological backlog guard: "+needle)
+    print("PASS: exact receipt-backed session-entry UI delta; masks, cursors and credits frozen")
+    raise SystemExit(0)
+
 before_three=subprocess.check_output(
     ["git","show","ecbe005a79e5d89e77b9e9ac6968e6916cc8bdb8:"+PATH]).decode("utf-8")
 old_header='''        // Latest user decision: FULL only for every new unit; deep ×40 + progressive eraser until
