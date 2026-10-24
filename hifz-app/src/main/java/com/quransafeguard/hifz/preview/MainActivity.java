@@ -996,6 +996,18 @@ public final class MainActivity extends android.app.Activity {
         dashboard.addView(weekStrip);
         dashboard.addView(weekDayPanel);
         renderSelectedWeekDay();
+        // CP6: receipts only; never interpret time spent as acquired mastery.
+        // Unlike the seven-day forward rail, this balance covers Monday through today.
+        WeeklyBilan.Summary bilan=WeeklyBilan.calculate(HifzClock.today(),
+            prefs.programStartDate(),ledger.coverageStartDate(),
+            date->WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
+                prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
+            (date,mode)->ledger.find(date,mode)!=null);
+        TextView weeklyBalance=Ui.text(this,bilan.display(),17f,false);
+        weeklyBalance.setPadding(Ui.dp(this,6),Ui.dp(this,20),Ui.dp(this,6),Ui.dp(this,16));
+        weeklyBalance.setContentDescription(bilan.display());
+        dashboard.addView(Ui.divider(this));
+        dashboard.addView(weeklyBalance);
     }
 
     private void renderSelectedWeekDay() {
