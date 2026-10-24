@@ -21,7 +21,8 @@ public final class TodayWindowSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue(main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }\n        showTodayWindow(sessions);"));
         assertTrue("both Révision sessions are always listed",
-            main.contains("HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);")
+            main.contains("HifzSessionActivity.MURAJAAH_ACTIVE,today,")
+            && main.contains("todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);")
             && main.contains("HifzSessionActivity.MURAJAAH,today,")
             && main.contains("todayStr.equals(prefs.lastMurajaahDate()),nextMode);"));
         assertTrue("each line carries its state and the next one due is marked",
