@@ -57,8 +57,8 @@ for row in rows:
 
 ui=(ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java").read_text(encoding="utf-8")
 for label, target in {
-    '"accueil"':"ic_ui_home",
-    '"parcours hifz"':"ic_ui_revision",
+    '"accueil"':"ic_palace_home",
+    '"parcours hifz"':"ic_palace_route",
     '"focus"':"ic_ui_focus",
     '"révision"':"ic_ui_revision",
     '"difficulté"':"ic_ui_difficulty",
@@ -76,5 +76,18 @@ reader=(ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReader
 if reader.count('readerActions.addView(')<4: fail("4 permanent reader controls missing")
 if 'Ui.iconButton(this, "", "Focus"' in reader: fail("Focus improperly added as fifth permanent icon")
 hifz=(ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java").read_text(encoding="utf-8")
-if 'R.drawable.ic_hifz_anchor' not in hifz: fail("Itqan anchoring pictogram removed")
+for role, icon in {
+    'accueil': 'ic_palace_home',
+    'parcours hifz': 'ic_palace_route',
+    'atlas': 'ic_palace_compass',
+    'révision active': 'ic_palace_torch',
+}.items():
+    if f'if (s.equals("{role}")) return R.drawable.{icon};' not in hifz:
+        fail(f"Memory palace role mismatch: {role}/{icon}")
+if 'R.drawable.ic_palace_mirror' not in hifz or 'R.drawable.ic_palace_column' not in hifz:
+    fail("Révision passive mirror and Stabilisation column must keep independent role mappings")
+for suffix in ('home','route','compass','door','column','buttress','keystone','torch','mirror'):
+    path = ROOT/'hifz-app/src/main/res/drawable'/('ic_palace_'+suffix+'.xml')
+    if not path.is_file():
+        fail(f"Missing dedicated BOOX memory-palace vector: {suffix}")
 print(f"PASS: byte integrity for exact {len(PRIMARY)}+{len(SECONDARY)} contract files; 3 historical originals immutable; Lucide commit {PIN}")
