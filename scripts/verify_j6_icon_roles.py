@@ -94,7 +94,7 @@ check(len(screens)>=8 and all_actions>=38, "active Hifz icon inventory unexpecte
 # All contracted action types are explicit in the central mapper, even where
 # their screen is hidden until Hifz progresses.
 expected = {
-    "Accueil":"ic_ui_home","Lecture":"ic_ui_reading","Carte":"ic_ui_semantic_map",
+    "Accueil":"ic_palace_home","Lecture":"ic_ui_reading","Carte":"ic_ui_semantic_map",
     "Afficher les ancres":"ic_ui_semantic_anchor","Tafsir":"ic_ui_tafsir",
     "Focus":"ic_ui_focus","Révision":"ic_ui_revision",
     "Difficulté":"ic_ui_difficulty","Annoter":"ic_ui_edit",
