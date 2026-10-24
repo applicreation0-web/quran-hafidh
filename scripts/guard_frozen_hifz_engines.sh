@@ -97,6 +97,14 @@ while IFS= read -r file; do
         echo "EXACT CP09 ATLAS SOURCE READER: $file"
       fi
       ;;
+    "$APP_ROOT/HifzDisplayVocabulary.java")
+      if [[ "$(git hash-object "$file")" != "feb1e3807d3718a6a07ea12b0e4118dd64d75e2c" ]]; then
+        echo "::error file=$file::Display vocabulary differs from reviewed Révision passive labels."
+        bad=1
+      else
+        echo "EXACT REVIEWED DISPLAY VOCABULARY: $file"
+      fi
+      ;;
     "$APP_ROOT/HifzSessionActivity.java" | \
     "$APP_ROOT/HifzPrefs.java" | \
     "$APP_ROOT/ConsolidationCycleEngine.java" | \
