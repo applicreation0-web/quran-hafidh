@@ -70,11 +70,13 @@ public final class MainActivity extends android.app.Activity {
         homeScroll = scrollOf(root);
         LinearLayout header = Ui.row(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        // The Grand Palais must be visible on the actual home, not merely stored as a vector.
-        ImageView palaceEmblem = new ImageView(this);
-        palaceEmblem.setImageResource(largeIconFor("Accueil"));
-        palaceEmblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        header.addView(palaceEmblem, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
+        // Home brand mark must match the actual installed Android launcher icon.
+        // Do not substitute the unrelated house/home navigation pictogram.
+        ImageView appEmblem = new ImageView(this);
+        appEmblem.setImageResource(R.drawable.ic_quran_hifz_logo);
+        appEmblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        appEmblem.setContentDescription("Quran Haafidh");
+        header.addView(appEmblem, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
         TextView title = Ui.bookText(this, "Quran Haafidh", 24, true);
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
