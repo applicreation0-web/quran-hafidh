@@ -50,6 +50,9 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout itqanCard;
     private ScrollView homeScroll;
     private ScrollView parcoursScroll;
+    private TextView backlogHomeRow;
+    private TextView backlogParcoursRow;
+    private List<HifzBacklog.Due> backlogPending = java.util.Collections.emptyList();
     private boolean showingParcours;
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
@@ -84,6 +87,8 @@ public final class MainActivity extends android.app.Activity {
         todayAction = todayLine();
         today = Ui.settingValue(todayAction);
         root.addView(todayAction);
+        backlogHomeRow = backlogRow();
+        root.addView(backlogHomeRow);
 
         recentSabqiAdvisory = Ui.text(this, "", 17f, false);
         recentSabqiAdvisory.setTextColor(Ui.MUTED);
@@ -128,6 +133,8 @@ public final class MainActivity extends android.app.Activity {
         pathHeader.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
         path.addView(pathHeader);
         path.addView(Ui.divider(this));
+        backlogParcoursRow = backlogRow();
+        path.addView(backlogParcoursRow);
         // Six Hifz functions in equal-width pairs, with maximal BOOX pictograms.
         // Navigation only: cadence and Hifz credit engines remain unchanged.
         LinearLayout learningModes = Ui.row(this);
@@ -372,7 +379,9 @@ public final class MainActivity extends android.app.Activity {
         // The single hero CTA always describes its actual destination.
         if (todayObjective != null) {
             // One read-only preview of actual schedule objectives, never a credit or cursor advance.
-            todayObjective.setText(todayRow == null ? "Programme détaillé dans Parcours"
+            todayObjective.setText(text.startsWith("Report ")
+                ? "PRIORITÉ · séance datée à rattraper avant toute nouvelle leçon"
+                : todayRow == null ? "Programme détaillé dans Parcours"
                 : "MATIN · "+scheduleDetail(todayRow.morning));
         }
         if (todayAction != null && todayAction.getChildCount() >= 4
@@ -414,7 +423,58 @@ public final class MainActivity extends android.app.Activity {
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshDashboard(); refreshToday(); refreshRecentSabqiAdvisory(); refreshStabilizationPosition(); }
+    private void refreshAll() { refreshBacklog(); refreshQuickAccessCadenceGating(); refreshDashboard(); refreshToday(); refreshRecentSabqiAdvisory(); refreshStabilizationPosition(); }
+
+    /** BOOX-only compact text cue; never another oversized competing pictogram. */
+    private TextView backlogRow() {
+        TextView view=Ui.bookText(this,"",17f,true);
+        view.setTextColor(Ui.INK);
+        view.setPadding(Ui.dp(this,8),Ui.dp(this,12),Ui.dp(this,8),Ui.dp(this,12));
+        view.setMinimumHeight(Ui.dp(this,52));
+        view.setVisibility(View.GONE);
+        view.setOnClickListener(v->showBacklog());
+        return view;
+    }
+
+    private void refreshBacklog() {
+        if(geometry==null)return;
+        backlogPending=HifzBacklog.pending(prefs,ledger,HifzClock.today(),effectiveLearningDaysPerWeek());
+        int count=HifzBacklog.lateCount(backlogPending,HifzClock.today());
+        String summary=count+" séance"+(count>1?"s":"")+" à rattraper  ›";
+        for(TextView label:new TextView[]{backlogHomeRow,backlogParcoursRow}) {
+            if(label==null)continue;
+            label.setVisibility(count==0?View.GONE:View.VISIBLE);
+            label.setText(count==0?"":summary);
+            label.setContentDescription(count+" leçons manquées, ouvrir les dates de rattrapage");
+        }
+    }
+
+    private void showBacklog() {
+        int overdue=HifzBacklog.lateCount(backlogPending,HifzClock.today());
+        if(overdue==0)return;
+        // Show the real dated queue, not future unearned verse ranges.
+        int visible=Math.min(overdue,24);
+        String[] rows=new String[visible];
+        for(int i=0;i<visible;i++) {
+            HifzBacklog.Due due=backlogPending.get(i);
+            rows[i]=(i==0?"▸ ":"  ")+due.date+" · "+due.frenchName()+
+                (i==0?" · à reprendre":" · en attente");
+        }
+        String note=overdue>visible?" (et "+(overdue-visible)+" autres)": "";
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Rattrapages · "+overdue+" séance"+(overdue>1?"s":"")+note)
+            .setItems(rows,(dialog,index)->{
+                if(index==0) {
+                    HifzBacklog.Due first=backlogPending.get(0);
+                    openMode(first.mode,first.date);
+                } else {
+                    new android.app.AlertDialog.Builder(this).setTitle("Ordre des leçons")
+                        .setMessage("Terminer d’abord la séance du "+backlogPending.get(0).date+
+                            ". Les plages suivantes seront déterminées par les curseurs validés.")
+                        .setPositiveButton("Compris",null).show();
+                }
+            }).setNegativeButton("Fermer",null).show();
+    }
 
     /** Describes the selected weekly plan, never a stale fixed 22-line budget. */
     private String stabilizationProgramCue() {
@@ -448,9 +508,18 @@ public final class MainActivity extends android.app.Activity {
 
     private void refreshQuickAccessCadenceGating() {
         if (geometry == null) return;
-        CadenceAction action = WeeklyProgramPolicy.actionFor(HifzClock.today().getDayOfWeek(),prefs.weeklyProgramMode(),effectiveLearningDaysPerWeek());
-        setLineEnabled(sabqiQuickAccess, action == CadenceAction.LEARNING);
-        setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION);
+        LocalDate today=HifzClock.today();
+        HifzBacklog.Due oldest=HifzBacklog.first(backlogPending);
+        if(oldest!=null && oldest.overdue(today)) {
+            // The oldest outstanding lesson alone may advance a learning cursor.
+            setLineEnabled(sabqiQuickAccess,HifzSessionActivity.SABQI.equals(oldest.mode));
+            setLineEnabled(itqanQuickAccess,HifzSessionActivity.ITQAN.equals(oldest.mode));
+            return;
+        }
+        CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),
+            prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+        setLineEnabled(sabqiQuickAccess,action==CadenceAction.LEARNING);
+        setLineEnabled(itqanQuickAccess,action==CadenceAction.STABILIZATION);
     }
 
     /** The Révision card opens this compact selector rather than jumping straight to a mode:
@@ -465,6 +534,26 @@ public final class MainActivity extends android.app.Activity {
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
 
     private void openMode(String mode,LocalDate scheduledDate) {
+        if (HifzSessionActivity.SABQI.equals(mode) || HifzSessionActivity.ITQAN.equals(mode)) {
+            // Also guard launcher/direct access: no credit for a future date while debt exists.
+            List<HifzBacklog.Due> due=HifzBacklog.pending(prefs,ledger,
+                HifzClock.today(),effectiveLearningDaysPerWeek());
+            HifzBacklog.Due oldest=HifzBacklog.first(due);
+            if(oldest==null || !oldest.mode.equals(mode)
+                    || scheduledDate==null || !oldest.date.equals(scheduledDate)) {
+                if(oldest==null) {
+                    new android.app.AlertDialog.Builder(this).setTitle("Séances à jour")
+                        .setMessage("Aucune nouvelle séance de cette catégorie n’est due aujourd’hui.")
+                        .setPositiveButton("Fermer",null).show();
+                } else {
+                    new android.app.AlertDialog.Builder(this).setTitle("Rattrapage prioritaire")
+                        .setMessage("Terminer d’abord : "+oldest.frenchName()+" du "+oldest.date+".")
+                        .setPositiveButton("Ouvrir le report",(dialog,which)->openMode(oldest.mode,oldest.date))
+                        .setNegativeButton("Fermer",null).show();
+                }
+                return;
+            }
+        }
         Intent intent=new Intent(this,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,mode);
         if(scheduledDate!=null)intent.putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,scheduledDate.toString());
         startActivity(intent);
@@ -824,9 +913,22 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void refreshRecentSabqiAdvisory() {
-        if (recentSabqiAdvisory == null) return;
-        recentSabqiAdvisory.setText("");
-        recentSabqiAdvisory.setVisibility(View.GONE);
+        if(recentSabqiAdvisory==null || geometry==null)return;
+        // An overdue Sunday must NOT be counted as earned. Previously worked but
+        // unpromoted physical blocks remain in extended history until a verified finale.
+        boolean learning=!prefs.learningSnowballFinalUnits(HifzClock.today()).isEmpty();
+        boolean stabilization=!prefs.stabilizationSnowballFinalUnits(HifzClock.today()).isEmpty();
+        if(!learning && !stabilization) {
+            recentSabqiAdvisory.setText("");
+            recentSabqiAdvisory.setVisibility(View.GONE);
+            return;
+        }
+        boolean sunday=HifzClock.today().getDayOfWeek()==DayOfWeek.SUNDAY;
+        recentSabqiAdvisory.setText("À consolider · "+
+            (learning&&stabilization?"Sabqi et Itqān":learning?"Sabqi":"Itqān")+
+            (sunday?" · finales du jour":" · prochaines finales dimanche")+
+            " · aucun crédit anticipé");
+        recentSabqiAdvisory.setVisibility(View.VISIBLE);
     }
 
     /**
