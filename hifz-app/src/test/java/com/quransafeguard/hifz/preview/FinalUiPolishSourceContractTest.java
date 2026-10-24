@@ -131,7 +131,12 @@ public final class FinalUiPolishSourceContractTest {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(main.contains("\"Lecture\""));
-        assertTrue(main.contains("\"Mémorisation libre\""));
+        String advanced = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+        assertFalse("Libre must no longer compete with Lecture on Home",
+            main.contains("secondaryTile(secondary, \"Mémorisation libre\""));
+        assertTrue("Free memorisation remains reachable as a preserved advanced tool",
+            advanced.contains("Ui.settingRow(this,\"Mémorisation ponctuelle\"")
+            && advanced.contains("new Intent(this,FreeMemActivity.class)"));
         assertTrue(main.contains("\"Paramètres\""));
         assertTrue(free.contains("Retirer une répétition"));
         assertTrue(free.contains("Ajouter une répétition"));
