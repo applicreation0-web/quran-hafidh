@@ -136,6 +136,7 @@ while IFS= read -r file; do
     "$prefix/ItqanFourSessionPolicy.java" | \
     "$prefix/ItqanFourSessionSnapshot.java" | \
     "$prefix/ItqanFourSessionStore.java" | \
+    "$prefix/HifzBacklog.java" | \
     "$prefix/MainActivity.java" | \
     "$prefix/BooxFlowStroke.java" | \
     "$prefix/RevisionSelector.java" | \
