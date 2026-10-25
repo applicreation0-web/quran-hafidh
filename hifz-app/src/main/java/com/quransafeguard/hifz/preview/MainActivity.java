@@ -271,7 +271,7 @@ public final class MainActivity extends android.app.Activity {
         TextView value = Ui.bookText(this, "…", 23f, true);
         if (wideBoox()) value.setTextSize(30f);
         value.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
-        value.setMaxLines(3);
+        value.setMaxLines(2);
         line.addView(value);
         todayObjective = Ui.text(this, "", 16f, false);
         if (wideBoox()) todayObjective.setTextSize(21f);
@@ -436,16 +436,15 @@ public final class MainActivity extends android.app.Activity {
         if (todayObjective != null) {
             // One read-only preview of actual schedule objectives, never a credit or cursor advance.
             todayObjective.setText(text.startsWith("Report ")
-                ? "PRIORITÉ · séance datée à rattraper avant toute nouvelle leçon"
-                : todayRow == null ? "Programme détaillé dans Parcours"
-                : "MATIN · "+compactSchedulePreview(todayRow.morning));
+                ? "PRIORITÉ · séance datée à rattraper"
+                : "Sélectionnez la séance pour les détails");
             todayObjective.setContentDescription(todayRow==null ? "Programme détaillé dans Parcours" : scheduleDetail(todayRow.morning));
         }
         if (todayAction != null && todayAction.getChildCount() >= 4
                 && todayAction.getChildAt(3) instanceof TextView) {
             TextView action = (TextView) todayAction.getChildAt(3);
-            action.setText(text.startsWith("Programme à jour") ? "VOIR LES SÉANCES  ›"
-                : text.startsWith("Consolidation · état") ? "VÉRIFIER  ›" : "CONTINUER  ›");
+            action.setText(text.startsWith("Consolidation · état") ? "VÉRIFIER  ›"
+                : "VOIR LES SÉANCES  ›");
         }
         setTodayEnabled(enabled);
     }
@@ -807,7 +806,12 @@ public final class MainActivity extends android.app.Activity {
         List<TodaySession> sessions;
         try{ sessions=todaySessions(current,mode,scheduled); }
         catch(RuntimeException error){ sessions=new ArrayList<>(); }
-        if(sessions.size()<=1){ openMode(mode,scheduled); return; }
+        // Always show the destination before navigating, even for a single session.
+        if(sessions.isEmpty()){
+            new android.app.AlertDialog.Builder(this).setTitle("Aujourd’hui")
+                .setMessage("Aucune séance disponible.").setPositiveButton("Fermer",null).show();
+            return;
+        }
         showTodayWindow(sessions);
     }
 
@@ -942,11 +946,17 @@ public final class MainActivity extends android.app.Activity {
             ? WeeklyDashboardPlanner.learningSessionCue(scheduledForCue.getDayOfWeek(),
                 prefs.weeklyProgramFor(scheduledForCue)) : "";
         setToday(prefix+todaySummary(mode)+learningFraction,true);
+        if(todayObjective!=null){
+            String description=homePreviewForMode(mode,todayRow,prefs.itqanPostNasMaintenance());
+            todayObjective.setText(description);
+            todayObjective.setContentDescription("Séance prévue : "+description);
+        }
     }
 
-    private static String todaySummary(String mode) {
+    private String todaySummary(String mode) {
         if(HifzSessionActivity.SABQI.equals(mode))return "Apprentissage";
-        if(HifzSessionActivity.ITQAN.equals(mode))return "Stabilisation";
+        if(HifzSessionActivity.ITQAN.equals(mode))return prefs.itqanPostNasMaintenance()
+            ? "Itqān · Entretien" : "Itqān · Consolidation";
         if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode))return "Revue apprentissage";
         if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode))return "Révision active";
         if(HifzSessionActivity.MURAJAAH.equals(mode))return "Révision passive";
@@ -1118,9 +1128,12 @@ public final class MainActivity extends android.app.Activity {
         final String fullMorning = chosen.morning;
         morning.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
         weekDayPanel.addView(morning);
-        TextView morningPreview = Ui.text(this, compactSchedulePreview(chosen.morning), 17f, false);
+        TextView morningTitle=Ui.bookText(this,readableScheduleTitle(chosen.morning,prefs.itqanPostNasMaintenance()),19f,true);
+        morningTitle.setPadding(0,Ui.dp(this,5),0,0);
+        weekDayPanel.addView(morningTitle);
+        TextView morningPreview = Ui.text(this, readableScheduleEssentials(chosen.morning), 16f, false);
         if (wideBoox()) morningPreview.setTextSize(20f);
-        morningPreview.setMaxLines(3);
+        morningPreview.setMaxLines(2);
         morningPreview.setEllipsize(android.text.TextUtils.TruncateAt.END);
         morningPreview.setContentDescription(scheduleDetail(chosen.morning));
         morningPreview.setClickable(true);
@@ -1135,9 +1148,12 @@ public final class MainActivity extends android.app.Activity {
         final String fullEvening = chosen.evening;
         evening.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
         weekDayPanel.addView(evening);
-        TextView eveningPreview = Ui.text(this, compactSchedulePreview(chosen.evening), 17f, false);
+        TextView eveningTitle=Ui.bookText(this,readableScheduleTitle(chosen.evening,prefs.itqanPostNasMaintenance()),19f,true);
+        eveningTitle.setPadding(0,Ui.dp(this,5),0,0);
+        weekDayPanel.addView(eveningTitle);
+        TextView eveningPreview = Ui.text(this, readableScheduleEssentials(chosen.evening), 16f, false);
         if (wideBoox()) eveningPreview.setTextSize(20f);
-        eveningPreview.setMaxLines(3);
+        eveningPreview.setMaxLines(2);
         eveningPreview.setEllipsize(android.text.TextUtils.TruncateAt.END);
         eveningPreview.setContentDescription(scheduleDetail(chosen.evening));
         eveningPreview.setClickable(true);
@@ -1180,6 +1196,60 @@ public final class MainActivity extends android.app.Activity {
                 + "\n" + value.substring(range + " min · ".length());
         }
         return value;
+    }
+
+    /** Phone-first hierarchical rendering; original Mushaf bounds remain in details. */
+    static String readableScheduleTitle(String raw, boolean postNas) {
+        if(raw==null||raw.trim().isEmpty()||"—".equals(raw.trim()))return "Aucune séance";
+        String value=stripDone(raw);
+        if(value.startsWith("Stabilisation"))return postNas?"Itqān · Entretien":"Itqān · Consolidation";
+        if(value.startsWith("Apprentissage"))return "Sabqi · Apprentissage";
+        if(value.contains("Finale Renforcement Sabqi"))return "Finale · Sabqi";
+        if(value.contains("Finale Consolidation Itqān"))return "Finale · Itqān";
+        if(value.startsWith("Renforcement"))return "Renforcement · Sabqi";
+        if(value.startsWith("Consolidation"))return postNas?"Entretien · Itqān":"Consolidation · Itqān";
+        if(value.startsWith("Révision active"))return "Révision active";
+        if(value.startsWith("Révision passive"))return "Révision passive";
+        return value.split(" · ",2)[0];
+    }
+
+    /** Avoid a wall of blocks/pages/Arabic coordinates in the main phone rail. */
+    static String readableScheduleEssentials(String raw) {
+        if(raw==null||raw.trim().isEmpty())return "Aucune séance";
+        String[] tokens=stripDone(raw).split(" · ");
+        java.util.ArrayList<String> essentials=new java.util.ArrayList<>();
+        for(String part:tokens){
+            String t=part.trim();
+            if(t.matches("séance \\d+/\\d+") || t.matches("\\d+ lignes?")
+                || t.matches("\\d+ pages?") || t.matches("\\d+ min")
+                || t.matches("×\\d+")) essentials.add(t);
+        }
+        if(essentials.isEmpty())return raw.startsWith("✓")?"Terminée":"Détails disponibles";
+        return String.join(" · ",essentials);
+    }
+
+    static String homePreviewForMode(String mode,WeeklyDashboardPlanner.Row row,boolean postNas){
+        if(row==null)return "Séances à consulter";
+        String morning=row.morning==null?"":row.morning;
+        String evening=row.evening==null?"":row.evening;
+        if(HifzSessionActivity.ITQAN.equals(mode)){
+            String scheduled=morning.contains("Stabilisation")?morning:
+                evening.contains("Stabilisation")?evening:"";
+            if(!scheduled.isEmpty())return readableScheduleEssentials(scheduled);
+            return postNas?"1 hizb · 2 visibles + 1 masquée":"Voir le programme Itqān";
+        }
+        if(HifzSessionActivity.SABQI.equals(mode))
+            return readableScheduleEssentials(evening.contains("Apprentissage")?evening:morning);
+        if(HifzSessionActivity.LEARNING_FINAL.equals(mode))
+            return "Finale Sabqi · 1 visible + 2 masquées";
+        if(HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode))
+            return "Finale Itqān · 1 visible + 2 masquées";
+        if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
+            ||HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode))
+            return readableScheduleEssentials(evening);
+        if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)
+            ||HifzSessionActivity.MURAJAAH.equals(mode))return "Révision du matin";
+        return "Consulter les séances prévues";
     }
 
     private void showScheduleDetail(String title, String raw) {
