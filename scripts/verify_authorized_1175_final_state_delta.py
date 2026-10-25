@@ -11,8 +11,8 @@ import subprocess
 BASE = "4135df3863e17da72adbd06457f46f2966ddcb6a"
 PREFIX = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 FILES = {
-    "HifzPrefs.java": ("066d2685a920b50877a6cd62cb6ad023337e16f4", "b3faeb478bc4b3f940380901d69ec530244ea0e5"),
-    "HifzSessionActivity.java": ("add8fe985f8b3a2206fa4142c6e384e5a48a8c0c", "4684858ed1ef1884be48169592539d639b78f7e5"),
+    "HifzPrefs.java": ("066d2685a920b50877a6cd62cb6ad023337e16f4", "2d1cc4b8bd7c3c1d7b6ecbcb31874545fb38cd0d"),
+    "HifzSessionActivity.java": ("add8fe985f8b3a2206fa4142c6e384e5a48a8c0c", "4ea129cf2065b27f2d495e091fca358b1b107800"),
 }
 def git(*args):
     return subprocess.check_output(["git", *args], text=True).strip()
@@ -30,9 +30,13 @@ for needle in (
     "consolidationFinalStateKey(ConsolidationCycleEngine.Family.LEARNING)",
     "consolidationFinalStateKey(ConsolidationCycleEngine.Family.STABILIZATION)",
     "restoreConsolidationSession(engine,family,null)",
+    "SundayFinalPagePolicy.physicalPageUnits(inputs, positions)",
+    "SundayFinalPagePolicy.earnedEveryLine(due, new ArrayList<>(paid), acquired)",
 ):
     assert needle in prefs, "Missing 1.17.5 migration invariant: " + needle
 assert "restoreConsolidationSession(consolidationEngine, family,cycleIdPrefix+today)" in session
 assert "discardConsolidationSession(family,cycleIdPrefix+today)" in session
 assert "mushaf.showFreeActivePreparedPage(currentPage,currentLineIds," in session
+assert "applySundayFinalAnchors()" in session
+assert "sundayFinalAnchorUnavailable" in session
 print("PASS: final and weekday states isolated, legacy payload migrated; QCF, Atlas, masks and post-Nas protocols retain prior independent gates")

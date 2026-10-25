@@ -2801,7 +2801,7 @@ public final class HifzPrefs {
         return earned;
     }
 
-    private static final int SNOWBALL_EXTENDED_WEEKS = 8;
+    private static final int SNOWBALL_EXTENDED_WEEKS = 4; // historical acquired material rotates to ordinary review; unacquired never expires
 
     private static LocalDate mondayOf(LocalDate date) {
         return date.minusDays(date.getDayOfWeek().getValue() - 1L);
@@ -3045,6 +3045,44 @@ public final class HifzPrefs {
     List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today) {
         return extendedSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today);
     }
+
+    /**
+     * New Sunday sessions use QCF page boundaries; existing OPEN finals retain the
+     * pinned SNOWBALL_EXTENDED protocol on restore. Never synthesize a combined pass.
+     * The source receipts continue to describe their original physical subblocks.
+     */
+    private List<ConsolidationCycleEngine.Unit> sundayFinalPageUnits(
+            ConsolidationCycleEngine.Family family, LocalDate today, GeometryRepository geometry) {
+        if (geometry == null) throw new IllegalArgumentException("Exact QCF geometry required");
+        List<ConsolidationCycleEngine.Unit> legacy = extendedSnowballUnits(family, today);
+        if (legacy.isEmpty()) return Collections.emptyList();
+        int physical = legacy.size() > 1 ? legacy.size() - 1 : legacy.size();
+        ArrayList<String> inputs = new ArrayList<>();
+        java.util.LinkedHashMap<String, SundayFinalPagePolicy.LinePosition> positions =
+            new java.util.LinkedHashMap<>();
+        for (int i = 0; i < physical; i++) {
+            String encoded = legacy.get(i).id();
+            inputs.add(encoded);
+            List<String> ids = ConsolidationPhysicalUnitPolicy.decodeLineUnit(encoded);
+            List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(ids);
+            if (physicalLines.size() != ids.size())
+                throw new IllegalStateException("Incomplete exact physical QCF line metadata");
+            for (GeometryRepository.LineMeta line : physicalLines)
+                positions.put(line.id, new SundayFinalPagePolicy.LinePosition(line.page, line.globalIndex));
+        }
+        ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
+        for (String page : SundayFinalPagePolicy.physicalPageUnits(inputs, positions))
+            out.add(new ConsolidationCycleEngine.Unit(page, ConsolidationCycleEngine.Protocol.SUNDAY_PAGE));
+        return Collections.unmodifiableList(out);
+    }
+
+    List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today, GeometryRepository geometry) {
+        return sundayFinalPageUnits(ConsolidationCycleEngine.Family.STABILIZATION, today, geometry);
+    }
+    List<ConsolidationCycleEngine.Unit> learningSnowballFinalUnits(LocalDate today, GeometryRepository geometry) {
+        return sundayFinalPageUnits(ConsolidationCycleEngine.Family.LEARNING, today, geometry);
+    }
+
 
     /**
      * Sunday's extended review: every physical Apprentissage block from the current + 7 previous
@@ -3480,7 +3518,15 @@ public final class HifzPrefs {
      */
     private static List<String> physicalUnitIds(ConsolidationCycleEngine.Session session) {
         List<String> unitIds = session.unitIds();
-        return unitIds.size() > 1 ? unitIds.subList(0, unitIds.size() - 1) : unitIds;
+        boolean pages = !session.cycle().units().isEmpty()
+            && session.cycle().units().get(0).protocol() == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;
+        return pages || unitIds.size() == 1
+            ? unitIds : unitIds.subList(0, unitIds.size() - 1);
+    }
+
+    private static boolean sundayPageSession(ConsolidationCycleEngine.Session session) {
+        return session != null && !session.cycle().units().isEmpty()
+            && session.cycle().units().get(0).protocol() == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;
     }
 
     /** Atomically closes a frozen 1..3 physical-unit Consolidation group and makes its exact lines Acquired. */
@@ -3500,16 +3546,27 @@ public final class HifzPrefs {
             LinkedHashSet<String> paid=earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
             for(String unitId:physicalUnitIds(session)){
                 List<String> due=ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
-                if(!acquired.containsAll(due)&&!paid.contains(unitId))
-                    throw new IllegalStateException("Missing evening ×7/×10 receipt: "+unitId);
+                if(!acquired.containsAll(due)
+                        && !(sundayPageSession(session)
+                            ? SundayFinalPagePolicy.earnedEveryLine(due, new ArrayList<>(paid), acquired)
+                            : paid.contains(unitId)))
+                    throw new IllegalStateException("Missing exact-line evening receipt: "+unitId);
             }
 
             for (String unitId : physicalUnitIds(session)) {
                 List<String> ids = ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
                 List<GeometryRepository.LineMeta> physical = geometry.linesForExactIds(ids);
-                List<StabilizationHalfPagePolicy.Unit> verified = StabilizationHalfPagePolicy.planPage(physical);
-                if (verified.size() != 1 || !verified.get(0).lineIds.equals(ids))
-                    throw new IllegalStateException("Invalid frozen physical Consolidation unit");
+                if (sundayPageSession(session)) {
+                    if (physical.size() != ids.size() || physical.isEmpty())
+                        throw new IllegalStateException("Invalid Sunday page QCF geometry");
+                    int page = physical.get(0).page;
+                    for (GeometryRepository.LineMeta line : physical)
+                        if (line.page != page) throw new IllegalStateException("Sunday finale spans pages");
+                } else {
+                    List<StabilizationHalfPagePolicy.Unit> verified = StabilizationHalfPagePolicy.planPage(physical);
+                    if (verified.size() != 1 || !verified.get(0).lineIds.equals(ids))
+                        throw new IllegalStateException("Invalid frozen physical Consolidation unit");
+                }
                 for (String lineId : ids) {
                     ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
                     if (state == ProgressState.STABILIZED) {
@@ -3592,8 +3649,11 @@ public final class HifzPrefs {
             LinkedHashSet<String> paid=earnedEveningUnits(ConsolidationCycleEngine.Family.LEARNING);
             for(String unitId:physicalUnitIds(session)){
                 List<String> due=ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
-                if(!acquired.containsAll(due)&&!paid.contains(unitId))
-                    throw new IllegalStateException("Missing evening ×7/×10 receipt: "+unitId);
+                if(!acquired.containsAll(due)
+                        && !(sundayPageSession(session)
+                            ? SundayFinalPagePolicy.earnedEveryLine(due, new ArrayList<>(paid), acquired)
+                            : paid.contains(unitId)))
+                    throw new IllegalStateException("Missing exact-line evening receipt: "+unitId);
             }
 
             ArrayList<RecentSabqi> processed = new ArrayList<>();

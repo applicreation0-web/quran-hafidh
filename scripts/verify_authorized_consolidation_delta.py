@@ -14,5 +14,21 @@ pairs=[
 for before,after in pairs:
     assert old.count(before)==1,"Official ConsolidationCycleEngine baseline unexpectedly differs"
     old=old.replace(before,after)
+# 1.17.5's next explicitly approved Sunday-page protocol retains all legacy
+# engine vectors, including SNOWBALL_EXTENDED for persisted OPEN sessions.
+for before, after in (
+    ("SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS }",
+     "SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SUNDAY_PAGE }"),
+    ("if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;",
+     "if (protocol == Protocol.SNOWBALL_EXTENDED || protocol == Protocol.SUNDAY_PAGE) return 30;"),
+    ("            case SNOWBALL_EXTENDED:\\n                return copy(3, 0, 0, 0, 0);",
+     "            case SNOWBALL_EXTENDED:\\n                return copy(3, 0, 0, 0, 0);\\n            case SUNDAY_PAGE:\\n                return copy(3, 0, 0, 0, 0); // one visible + two anchored masked passes"),
+    ("|| unit.protocol() == Protocol.SNOWBALL_EXTENDED) return;",
+     "|| unit.protocol() == Protocol.SNOWBALL_EXTENDED\\n                || unit.protocol() == Protocol.SUNDAY_PAGE) return;"),
+):
+    before = before.replace("\\n", "\n")
+    after = after.replace("\\n", "\n")
+    assert old.count(before)==1, "Authorized Sunday page engine baseline drift: " + before
+    old=old.replace(before,after)
 assert Path(FILE).read_text(encoding="utf-8")==old,"UNAUTHORIZED ConsolidationCycleEngine change"
 print("PASS: Renforcement, old sessions, all frozen cycle logic unchanged; only J4 ×7/continuous introduced")

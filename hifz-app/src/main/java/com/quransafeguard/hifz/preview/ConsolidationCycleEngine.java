@@ -17,7 +17,7 @@ final class ConsolidationCycleEngine {
      * backs Sunday's extended review: the current + 7 previous weeks' accumulated blocks, read
      * ×3 each instead of the evening's ×10, replacing the old this-week-only ×10 Sunday final.
      */
-    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS }
+    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SUNDAY_PAGE }
 
     /**
      * LEARNING37/LIGHT/FULL cycles freeze at three physical units (their quota tables only define
@@ -28,7 +28,7 @@ final class ConsolidationCycleEngine {
      * combined pass, so it needs far more headroom than a single week ever could.
      */
     static int maxUnitsFor(Protocol protocol) {
-        if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;
+        if (protocol == Protocol.SNOWBALL_EXTENDED || protocol == Protocol.SUNDAY_PAGE) return 30;
         if (protocol == Protocol.SNOWBALL_STABILIZATION_SEVEN || protocol == Protocol.SNOWBALL_CONTINUOUS) return 31; // up to 30 composite subblocks + old continuous
         return (protocol == Protocol.SNOWBALL || protocol == Protocol.SNOWBALL_FINAL) ? 7 : 3;
     }
@@ -265,6 +265,8 @@ final class ConsolidationCycleEngine {
                 return copy(5, 0, 0, 0, 0);
             case SNOWBALL_EXTENDED:
                 return copy(3, 0, 0, 0, 0);
+            case SUNDAY_PAGE:
+                return copy(3, 0, 0, 0, 0); // one visible + two anchored masked passes
             default:
                 throw new IllegalArgumentException("unsupported protocol");
         }
@@ -301,7 +303,8 @@ final class ConsolidationCycleEngine {
     private static void validateUnitForFamily(Family family, Unit unit) {
         if (unit == null) throw new IllegalArgumentException("unit required");
         if (unit.protocol() == Protocol.SNOWBALL || unit.protocol() == Protocol.SNOWBALL_FINAL
-                || unit.protocol() == Protocol.SNOWBALL_EXTENDED) return;
+                || unit.protocol() == Protocol.SNOWBALL_EXTENDED
+                || unit.protocol() == Protocol.SUNDAY_PAGE) return;
         if (unit.protocol() == Protocol.SNOWBALL_STABILIZATION_SEVEN
                 || unit.protocol() == Protocol.SNOWBALL_CONTINUOUS) {
             if(family!=Family.STABILIZATION)throw new IllegalArgumentException(

@@ -521,7 +521,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private static int physicalUnitCount(ConsolidationCycleEngine.Session session) {
         int groupSize = session.sessionGroupSize();
-        return groupSize > 1 ? groupSize - 1 : groupSize;
+        return session.cycle().units().get(0).protocol() == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE
+            ? groupSize : groupSize > 1 ? groupSize - 1 : groupSize;
     }
 
     /** Shared plumbing for every grouped ×N repetition cycle (evening snowball or Sunday final review). */
@@ -581,13 +582,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentPage = unitFirstPage;
         currentLineIds = new ArrayList<>(exactLineIds);
         currentSelection = geometry.versesOnLines(currentLineIds);
-        currentMask = 0;
+        // The page itself is one complete review unit: first fully visible, then twice
+        // fully masked with exact anchors. Legacy OPEN grouped cycles are unchanged.
+        boolean sundayPage = consolidationSession.cycle().units().get(position).protocol()
+            == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;
+        currentMask = sundayPage && consolidationSession.donePerStage() > 0 ? 100 : 0;
         // A grouped-cycle unit is a frozen physical-line window, never a freshly reconstructed
         // verse range. showCurrent() applies the same exact-line reading focus as Sabqi/Itqān,
         // clipped to these persisted line ids, without changing the unit or progression logic.
         sessionCompleted = false;
-        program.setText(displayName + " · " + currentLineIds.size() + " lignes · unité "
-            + (position + 1) + "/" + consolidationSession.sessionGroupSize());
+        program.setText(sundayPage
+            ? displayName + " · page " + unitFirstPage + " · " + currentLineIds.size()
+                + " lignes · " + (position + 1) + "/" + consolidationSession.sessionGroupSize()
+            : displayName + " · " + currentLineIds.size() + " lignes · unité "
+                + (position + 1) + "/" + consolidationSession.sessionGroupSize());
         showCurrent();
         updateGroupedCycleRepAction();
     }
@@ -607,7 +615,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int position = consolidationSession.nextUnitIndex();
         int[] vector = consolidationSession.stageVectorAt(position);
         int target = vector[consolidationSession.stage()];
-        progress.setText("Répétition " + consolidationSession.donePerStage() + "/" + target);
+        if (isSundayFinalPageRepetition() && currentMask == 100 && sundayFinalAnchorUnavailable) {
+            progress.setText("Ancrages QCF indisponibles · validation masquée suspendue.");
+            return;
+        }
+        progress.setText("Répétition " + consolidationSession.donePerStage() + "/" + target
+            + (isSundayFinalPageRepetition() ? currentMask == 100 ? " · masquée 100 %" : " · visible" : ""));
         addRoundAction("↻", "Répétition", v -> completeGroupedCycleRep());
     }
 
@@ -685,7 +698,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));
             return;
         }
-        renderGroupedCycle(prefs.stabilizationSnowballFinalUnits(sessionDate), ConsolidationCycleEngine.Family.STABILIZATION,
+        renderGroupedCycle(prefs.stabilizationSnowballFinalUnits(sessionDate, geometry), ConsolidationCycleEngine.Family.STABILIZATION,
             "stabilization-final-", "Consolidation", "Aucune boule de neige à finaliser cette semaine.",
             this::validateConsolidationFinalReview);
     }
@@ -719,7 +732,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText(prefs.lastLearningConsolidationLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastLearningConsolidationLabel()));
             return;
         }
-        renderGroupedCycle(prefs.learningSnowballFinalUnits(sessionDate), ConsolidationCycleEngine.Family.LEARNING,
+        renderGroupedCycle(prefs.learningSnowballFinalUnits(sessionDate, geometry), ConsolidationCycleEngine.Family.LEARNING,
             "learning-final-", "Renforcement", "Aucune boule de neige à finaliser cette semaine.",
             this::validateLearningFinalReview);
     }
@@ -1835,8 +1848,62 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         if(ITQAN.equals(mode))applyItqanAnchors();
+        else if (isSundayFinalPageRepetition()) applySundayFinalAnchors();
         boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();
         mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);
+    }
+
+
+    /** A Sunday finale must never count a visible pass as the required masked recall. */
+    private boolean sundayFinalAnchorUnavailable;
+
+    private boolean isSundayFinalPageRepetition() {
+        return consolidationSession != null && !consolidationSession.readyToClose()
+            && (LEARNING_FINAL.equals(mode) || CONSOLIDATION_FINAL.equals(mode))
+            && consolidationSession.cycle().units().get(consolidationSession.nextUnitIndex())
+                .protocol() == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;
+    }
+
+    /**
+     * Reuse the exact, approved Al-Munir/Atlas QCF word boxes. Missing anchors
+     * fail OPEN visually and CLOSED for credit, rather than displaying a blind
+     * masked page or silently counting a visible pass as masked.
+     */
+    private void applySundayFinalAnchors() {
+        sundayFinalAnchorUnavailable = false;
+        mushaf.setLandmarkLines(null, null);
+        mushaf.clearPageLandmarkBoxes();
+        if (currentMask != 100) {
+            mushaf.clearSemanticCues();
+            return;
+        }
+        if (semanticPassages == null || !semanticPassages.isAvailable()) {
+            sundayFinalAnchorUnavailable = true;
+            mushaf.clearSemanticCues();
+            return;
+        }
+        org.json.JSONArray exact = new org.json.JSONArray();
+        try {
+            org.json.JSONArray page = semanticPassages.readerCuesForPage(currentPage);
+            for (int i = 0; i < page.length(); i++) {
+                org.json.JSONObject cue = page.getJSONObject(i);
+                SemanticPassageRepository.Cue meta = semanticPassages.cue(cue.getString("id"));
+                if (meta == null || !currentSelection.contains(meta.startVerse)) continue;
+                if (cue.getJSONArray("boxes").length() != cue.getInt("anchorWordCount")) {
+                    sundayFinalAnchorUnavailable = true;
+                    break;
+                }
+                exact.put(cue);
+            }
+        } catch (org.json.JSONException error) {
+            sundayFinalAnchorUnavailable = true;
+        }
+        if (exact.length() == 0) sundayFinalAnchorUnavailable = true;
+        if (sundayFinalAnchorUnavailable) {
+            mushaf.clearSemanticCues();
+            return;
+        }
+        mushaf.setSemanticCues(exact, true, false);
     }
 
     /** True when an anchored post-An-Nās page has an amorce without exact geometry: that page
@@ -1892,6 +1959,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Fail open on active-recall pages with incomplete QCF landmark/cue geometry too. */
     private int displayedMask() {
         if (ITQAN.equals(mode) && itqanAnchorFailOpen) return 0;
+        if (isSundayFinalPageRepetition() && sundayFinalAnchorUnavailable) return 0;
         if (MURAJAAH_ACTIVE.equals(mode) && currentMask > 0
                 && !activeAyahThemesReady) return 0;
         return currentMask;
