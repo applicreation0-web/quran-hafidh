@@ -57,7 +57,7 @@ Ne pas annoncer ces fonctionnalités comme livrées sans preuves supplémentaire
 | 01 Paramètres | Petits intitulés, sous-lignes absentes | Titres 21sp et sous-lignes serif 18sp sur grande tablette | Lisibilité/touch BOOX physique |
 | 02 Plages et corpus | Références coraniques trop fines/petites, champs peu distincts | Taille des bornes agrandie, zones 48dp, pas de troncature intentionnelle | RTL et densité BOOX |
 | 03 Atlas Lecture | Frises/titres petits, grand espace autour du Mushaf | Retour volontaire au ratio QCF éprouvé ; sélection Ayah Themes, Jalalayn et ancres figés | **P1 visuel :** lecture effective des frises sur BOOX 10 pouces, sans déformer le Mushaf |
-| 04 Progression | Grille 604 pages sans légende visible | Légende des 4 états remontée au-dessus du quadrillage | Perception des contrastes/hamiltons E-Ink sur appareil |
+| 04 Progression | Grille 604 pages sans légende visible | Légende des 4 états remontée au-dessus du quadrillage | Perception des contrastes E-Ink sur appareil |
 | 05 Parcours Hifz | Titres faibles en regard des six grandes icônes | En-têtes SABQI/ITQĀN/RÉVISION agrandis, planning en dessous, six icônes conservées | Vérifier déroulement sur BOOX |
 | 06 Accueil | Petit objectif et zone d'accès rapide déséquilibrée | Grille 2×2 **Parcours/Progression ; Lecture/Atlas**, sans séparateur interne ; grands libellés et icônes figées | Vérifier portrait BOOX sans collision/défilement anormal |
 
@@ -74,9 +74,12 @@ Il ne représente pas le rendu d'un écran E-Ink réel.
   run 40191493617 ; **PASS staging hors ligne**
   run 40191493631 (artefact 12597962877, uniquement
   `UNFINALIZED-PRIVATE-ASSETS-MISSING-DO-NOT-INSTALL.apk`).
-- HEAD 2f1bf367 : **PASS source/JVM** run 40191876023 ; tests Android instrumentés
-  étendus lancés dans run 40191876038 (vérifier sa conclusion finale avant
-  de considérer la persistance instrumentée comme validée).
+- HEAD 2f1bf367 : **PASS source/JVM** run 40191876023 ; **PASS instrumentation Android** run 40191876038.
+  Rapport XML du run vérifié : **31 tests, 0 échec, 0 erreur, 0 ignoré**.
+  Artefact 12598302054. Les deux tests ajoutés
+  `SundayFinalPersistenceInstrumentedTest.bothFamiliesKeepSundayAndWeekdayStatesAfterReopen`
+  et `legacySundaySlotMigratesWithoutChangingAnyRepetitions` sont bien exécutés, sans échec.
+  Le HEAD ultérieur de documentation ne modifie aucun fichier exécutable.
 - Les captures BOOX initiales ont des SHA-256 conformes au manifeste 6/6,
   mais sont antérieures au code candidat.
 
@@ -96,8 +99,9 @@ Il ne représente pas le rendu d'un écran E-Ink réel.
 
 ## 7. Décision
 
-**NO-GO RELEASE OFFICIELLE** — tant que la reprise réelle des sessions
-et l'expérience de masquage n'ont pas été testées sur la BOOX et que les
+**NO-GO RELEASE OFFICIELLE** — les tests Android instrumentés sont maintenant
+verts mais la reprise réelle des sessions et l'expérience de masquage sur la BOOX
+physique doivent encore être validées, ainsi que les
 ressources privées et la signature release n'ont pas été validées.
 
 **NO-GO DEBUG PRIVÉ INSTALLABLE IN-PLACE** — seul le staging
