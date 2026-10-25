@@ -625,6 +625,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void completeGroupedCycleRep() {
+        if (isSundayFinalPageRepetition() && currentMask == 100 && sundayFinalAnchorUnavailable) {
+            onError("Amorces QCF exactes indisponibles : répétition masquée non validée.");
+            return;
+        }
         if (!takeRepLock() || consolidationSession == null || consolidationSession.readyToClose()) return;
         consolidationSession = consolidationEngine.recordRepetition(consolidationSession);
         if (!prefs.persistConsolidationSession(consolidationSession)) {
@@ -1847,8 +1851,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 activePageLandmarks,activePageAmorces,activeAyahThemesReady);
             return;
         }
-        if(ITQAN.equals(mode))applyItqanAnchors();
-        else if (isSundayFinalPageRepetition()) applySundayFinalAnchors();
+        if (isSundayFinalPageRepetition()) {
+            if (currentMask == 100) {
+                showSundayFinalLectureMaskPage();
+                return;
+            }
+            sundayFinalAnchorUnavailable = false;
+            mushaf.setMaskFollowsSelection(true);
+            mushaf.clearSemanticCues();
+            mushaf.clearPageLandmarkBoxes();
+        } else if(ITQAN.equals(mode))applyItqanAnchors();
         boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();
         mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);
     }
@@ -1865,45 +1877,41 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     /**
-     * Reuse the exact, approved Al-Munir/Atlas QCF word boxes. Missing anchors
-     * fail OPEN visually and CLOSED for credit, rather than displaying a blind
-     * masked page or silently counting a visible pass as masked.
+     * Reuses exactly the Lecture > Révision active amorce mask:
+     * Ayah Themes word-one cues, six exact QCF landmark words, and the
+     * atomic prepared first paint in MushafView. No Al-Munīr fallback.
+     * Only currentLineIds, kept separately, can earn final credits.
      */
-    private void applySundayFinalAnchors() {
-        sundayFinalAnchorUnavailable = false;
-        mushaf.setLandmarkLines(null, null);
-        mushaf.clearPageLandmarkBoxes();
-        if (currentMask != 100) {
-            mushaf.clearSemanticCues();
-            return;
-        }
-        if (semanticPassages == null || !semanticPassages.isAvailable()) {
-            sundayFinalAnchorUnavailable = true;
-            mushaf.clearSemanticCues();
-            return;
-        }
-        org.json.JSONArray exact = new org.json.JSONArray();
+    private void showSundayFinalLectureMaskPage() {
+        java.util.List<String> pageLines = java.util.Collections.emptyList();
+        org.json.JSONArray landmarks = new org.json.JSONArray();
+        org.json.JSONArray anchors = new org.json.JSONArray();
+        boolean ready = false;
         try {
-            org.json.JSONArray page = semanticPassages.readerCuesForPage(currentPage);
-            for (int i = 0; i < page.length(); i++) {
-                org.json.JSONObject cue = page.getJSONObject(i);
-                SemanticPassageRepository.Cue meta = semanticPassages.cue(cue.getString("id"));
-                if (meta == null || !currentSelection.contains(meta.startVerse)) continue;
-                if (cue.getJSONArray("boxes").length() != cue.getInt("anchorWordCount")) {
-                    sundayFinalAnchorUnavailable = true;
-                    break;
+            pageLines = geometry.lineIdsOnPage(currentPage);
+            if (ayahThemesTitles != null && !pageLines.isEmpty()) {
+                landmarks = WordGeometryRepository.shared(this).pageLandmarkBoxes(currentPage);
+                anchors = ayahThemesTitles.forPage(currentPage);
+                if (landmarks.length() == 6) {
+                    ready = true;
+                    for (int i = 0; i < anchors.length(); i++) {
+                        org.json.JSONObject cue = anchors.getJSONObject(i);
+                        if (cue.getInt("anchorWordCount") != 1
+                            || cue.getJSONArray("boxes").length() != 1
+                            || cue.getString("id").isEmpty()) {
+                            ready = false;
+                            break;
+                        }
+                    }
                 }
-                exact.put(cue);
             }
-        } catch (org.json.JSONException error) {
-            sundayFinalAnchorUnavailable = true;
+        } catch (Exception missingExactGeometry) {
+            ready = false;
         }
-        if (exact.length() == 0) sundayFinalAnchorUnavailable = true;
-        if (sundayFinalAnchorUnavailable) {
-            mushaf.clearSemanticCues();
-            return;
-        }
-        mushaf.setSemanticCues(exact, true, false);
+        sundayFinalAnchorUnavailable = !ready;
+        // Never show the Arabic glyphs unmasked and then paint the mask over
+        // them: BOOX retains the momentary frame as E-Ink ghosting.
+        mushaf.showFreeActivePreparedPage(currentPage, pageLines, landmarks, anchors, ready);
     }
 
     /** True when an anchored post-An-Nās page has an amorce without exact geometry: that page

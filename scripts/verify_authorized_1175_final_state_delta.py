@@ -12,7 +12,7 @@ BASE = "4135df3863e17da72adbd06457f46f2966ddcb6a"
 PREFIX = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 FILES = {
     "HifzPrefs.java": ("066d2685a920b50877a6cd62cb6ad023337e16f4", "2d1cc4b8bd7c3c1d7b6ecbcb31874545fb38cd0d"),
-    "HifzSessionActivity.java": ("add8fe985f8b3a2206fa4142c6e384e5a48a8c0c", "4ea129cf2065b27f2d495e091fca358b1b107800"),
+    "HifzSessionActivity.java": ("add8fe985f8b3a2206fa4142c6e384e5a48a8c0c", "dabe2d656dde78029fde6fc4d9cb4f0f38ac1086"),
 }
 def git(*args):
     return subprocess.check_output(["git", *args], text=True).strip()
@@ -37,6 +37,10 @@ for needle in (
 assert "restoreConsolidationSession(consolidationEngine, family,cycleIdPrefix+today)" in session
 assert "discardConsolidationSession(family,cycleIdPrefix+today)" in session
 assert "mushaf.showFreeActivePreparedPage(currentPage,currentLineIds," in session
-assert "applySundayFinalAnchors()" in session
+assert "showSundayFinalLectureMaskPage()" in session
+assert "anchors = ayahThemesTitles.forPage(currentPage);" in session
+assert "mushaf.showFreeActivePreparedPage(currentPage, pageLines, landmarks, anchors, ready);" in session
+assert "semanticPassages.readerCuesForPage(currentPage)" in session  # Only unchanged post-Nas Itqan paths
+assert "mushaf.showFreeActivePreparedPage(currentPage,currentLineIds," in session
 assert "sundayFinalAnchorUnavailable" in session
 print("PASS: final and weekday states isolated, legacy payload migrated; QCF, Atlas, masks and post-Nas protocols retain prior independent gates")
