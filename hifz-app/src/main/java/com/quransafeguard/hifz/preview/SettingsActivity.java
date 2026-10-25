@@ -73,10 +73,10 @@ public final class SettingsActivity extends android.app.Activity {
         TextView roadmapModeLabel=Ui.text(this,"Pilotage Roadmap · Automatique",16f,false);Ui.weight(roadmapModeLabel,1);roadmapModeRow.addView(roadmapModeLabel);
         Switch roadmapModeSwitch=new Switch(this);roadmapModeSwitch.setChecked(prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO);roadmapModeSwitch.setContentDescription("Pilotage Roadmap automatique");
         roadmapModeRow.addView(roadmapModeSwitch);parcours.addView(roadmapModeRow);parcours.addView(Ui.divider(this));
-        weeklyProgramSetting=Ui.settingRow(this,"Programme hebdomadaire",
+        weeklyProgramSetting=Ui.settingRow(this,"Programme",
             weeklyProgramSummary(),v->chooseWeeklyProgram());
         parcours.addView(weeklyProgramSetting);parcours.addView(Ui.divider(this));
-        learningDaysSetting=Ui.settingRow(this,"Séances d’Apprentissage par semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
+        learningDaysSetting=Ui.settingRow(this,"Apprentissage / semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
         learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL
             && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
         roadmapModeSwitch.setOnCheckedChangeListener((button,checked)->{
@@ -85,19 +85,19 @@ public final class SettingsActivity extends android.app.Activity {
             refreshWeeklyCadence();
         });
         parcours.addView(learningDaysSetting);parcours.addView(Ui.divider(this));
-        morningTimeSetting=Ui.settingRow(this,"Horaire proposé · matin",
+        morningTimeSetting=Ui.settingRow(this,"Matin · horaire",
             suggestedTimeLabel(true),v->chooseSuggestedTime(true));
         parcours.addView(morningTimeSetting);parcours.addView(Ui.divider(this));
-        eveningTimeSetting=Ui.settingRow(this,"Horaire proposé · soir",
+        eveningTimeSetting=Ui.settingRow(this,"Soir · horaire",
             suggestedTimeLabel(false),v->chooseSuggestedTime(false));
         parcours.addView(eveningTimeSetting);parcours.addView(Ui.divider(this));
         TextView noLock=Ui.text(this,"Horaires indicatifs : aucune séance bloquée. Le dimanche matin peut être prolongé.",16f,false);
         parcours.addView(noLock);
 
 
-        sabqiStartRow=Ui.settingRow(this,"Début de la plage d’Apprentissage",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage d’Apprentissage",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
+        sabqiStartRow=Ui.settingRow(this,"Début Apprentissage",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage d’Apprentissage",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
         parcours.addView(sabqiStartRow);parcours.addView(Ui.divider(this));
-        sabqiEndRow=Ui.settingRow(this,"Fin de la plage d’Apprentissage",prefs.sabqiEnd().toString(),v->chooseVerse("Fin de la plage d’Apprentissage",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
+        sabqiEndRow=Ui.settingRow(this,"Fin Apprentissage",prefs.sabqiEnd().toString(),v->chooseVerse("Fin de la plage d’Apprentissage",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
         parcours.addView(sabqiEndRow);
         sabqiStatus=Ui.text(this,"",16f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));parcours.addView(sabqiStatus);
 
@@ -113,11 +113,11 @@ public final class SettingsActivity extends android.app.Activity {
 
         section(corpus,"Rotation");
         itqanStatus=Ui.text(this,"",16f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,2));corpus.addView(itqanStatus);
-        rotationSetting=Ui.settingRow(this,"Début de rotation de stabilisation",prefs.itqanRotationStart().toString(),
+        rotationSetting=Ui.settingRow(this,"Début rotation Itqān",prefs.itqanRotationStart().toString(),
             v->chooseVerse("Début de rotation de stabilisation",prefs.itqanRotationStart(),this::setRotationStart));
         corpus.addView(rotationSetting);
         corpus.addView(Ui.divider(this));
-        hardAnchoringSetting=Ui.settingRow(this,"Sourates difficiles à stabiliser","0 sourate",v->showHardAnchoringSelector());
+        hardAnchoringSetting=Ui.settingRow(this,"Sourates difficiles","0 sourate",v->showHardAnchoringSelector());
         corpus.addView(hardAnchoringSetting);
 
         section(corpus,"Corpus effectif");
@@ -138,8 +138,8 @@ public final class SettingsActivity extends android.app.Activity {
         TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",16f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
         Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);audioDisplay.addView(einkRow);
 
-        backup.addView(Ui.settingRow(this,"Exporter","Fichier à conserver hors de l’appareil",v->exportBackup()));backup.addView(Ui.divider(this));
-        backup.addView(Ui.settingRow(this,"Importer","Restaurer depuis un fichier exporté",v->confirmImportBackup()));backup.addView(Ui.divider(this));
+        backup.addView(Ui.settingRow(this,"Exporter","Hors de l’appareil",v->exportBackup()));backup.addView(Ui.divider(this));
+        backup.addView(Ui.settingRow(this,"Importer","Depuis une sauvegarde",v->confirmImportBackup()));backup.addView(Ui.divider(this));
         LinearLayout backupNoteRow=Ui.row(this);backupNoteRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView backupNote=Ui.text(this,"Progression stockée uniquement sur cet appareil.",16f,false);
         backupNote.setTextColor(Ui.MUTED);backupNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);Ui.weight(backupNote,1);backupNoteRow.addView(backupNote);
@@ -152,7 +152,7 @@ public final class SettingsActivity extends android.app.Activity {
         // Keep episodic, manually scoped memorisation available without adding a
         // competing Home tile or touching saved FreeMem state and Hifz engines.
         advanced.addView(Ui.settingRow(this,"Mémorisation ponctuelle",
-            "Passage, répétitions, masque · hors Parcours",
+            "Passage · répétitions · masque",
             v->startActivity(new Intent(this,FreeMemActivity.class))));
         advanced.addView(Ui.divider(this));
         advanced.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));advanced.addView(Ui.divider(this));
