@@ -57,7 +57,9 @@ public final class HifzUiLayoutInstrumentedTest {
     @Test public void structuredSessionHeaderAllowsLongAnchoringTitleToWrapWithoutEllipsis() {
         Context context = ApplicationProvider.getApplicationContext();
         Intent intent = new Intent(context, HifzSessionActivity.class)
-            .putExtra(HifzSessionActivity.EXTRA_MODE, HifzSessionActivity.ITQAN);
+            // UI-only layout check: use an unconditional final screen. A naked
+            // ordinary Itqān launch now correctly refuses a non-due lesson.
+            .putExtra(HifzSessionActivity.EXTRA_MODE, HifzSessionActivity.LEARNING_FINAL);
         String longRealTitle = "Ancrage fractionné · 55:1 → 56:16 · bloc 4/4 · 40 répétitions";
         try (ActivityScenario<HifzSessionActivity> scenario = ActivityScenario.launch(intent)) {
             scenario.onActivity(activity -> {
