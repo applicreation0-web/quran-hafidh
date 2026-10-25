@@ -2328,6 +2328,32 @@ public final class HifzPrefs {
         return ItqanRegimeStore.postNasMaintenance(p);
     }
 
+    /** A voluntary, forward-dated programme switch never overwrites old credits. */
+    public String itqanProgrammeChoice() {
+        String mode=p.getString("itqanProgrammeChoiceV1","AUTO");
+        return "CONSOLIDATION".equals(mode)||"ENTRETIEN".equals(mode)?mode:"AUTO";
+    }
+
+    public LocalDate itqanProgrammeStartDate() {
+        String raw=p.getString("itqanProgrammeStartsOnV1","");
+        return raw==null||raw.isEmpty()?null:safeDate(raw,null);
+    }
+
+    public boolean scheduleItqanProgramme(String programme,LocalDate from) {
+        if (!"CONSOLIDATION".equals(programme) && !"ENTRETIEN".equals(programme))
+            throw new IllegalArgumentException("Invalid Itqān programme");
+        if (from==null || from.isBefore(HifzClock.today()))
+            throw new IllegalArgumentException("Les journées passées sont préservées.");
+        // Do not change An-Nās latch, OPEN repetition plan or any schema-6 credit.
+        return p.edit().putString("itqanProgrammeChoiceV1",programme)
+            .putString("itqanProgrammeStartsOnV1",from.toString()).commit();
+    }
+
+    public boolean itqanEntretienActive() {
+        return ItqanRegimeStore.selectionRegime(p)
+            ==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
+    }
+
     /**
      * Regime + protocol for the Itqān unit [entry.start, entry.end] about to be rendered — see
      * ItqanRegimeStore.resolvePlan. The legacy protocol mirrors exactly what pre-decision code

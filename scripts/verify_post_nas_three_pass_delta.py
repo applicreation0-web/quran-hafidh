@@ -11,7 +11,7 @@ BASE="ecbe005a79e5d89e77b9e9ac6968e6916cc8bdb8"
 PREFIX="hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 PINS={
     "ItqanMaintenancePolicy.java":"05c9dfaec00b7d67b3ab3aa8763337294da62935",
-    "ItqanRegimeStore.java":"50cba248a261821285010f27bad3c3a16c457d5e",
+    "ItqanRegimeStore.java":"bf9f44a95fdbaeccdb80a7239372743f4eaf7225",
     "ItqanBalancedMaskSchedule.java":"4ed14f4f2559977405a7d23d61cac080302d8b06",
 }
 def git(*args):

@@ -536,7 +536,7 @@ public final class MainActivity extends android.app.Activity {
 
     /** Describes the selected weekly plan, never a stale fixed 22-line budget. */
     private String stabilizationProgramCue() {
-        return prefs.itqanPostNasMaintenance() ? "1 hizb · répétitions"
+        return prefs.itqanEntretienActive() ? "1 hizb · répétitions"
             : "2 pages/semaine";
     }
 
@@ -947,7 +947,7 @@ public final class MainActivity extends android.app.Activity {
                 prefs.weeklyProgramFor(scheduledForCue)) : "";
         setToday(prefix+todaySummary(mode)+learningFraction,true);
         if(todayObjective!=null){
-            String description=homePreviewForMode(mode,todayRow,prefs.itqanPostNasMaintenance());
+            String description=homePreviewForMode(mode,todayRow,prefs.itqanEntretienActive());
             todayObjective.setText(description);
             todayObjective.setContentDescription("Séance prévue : "+description);
         }
@@ -955,7 +955,7 @@ public final class MainActivity extends android.app.Activity {
 
     private String todaySummary(String mode) {
         if(HifzSessionActivity.SABQI.equals(mode))return "Apprentissage";
-        if(HifzSessionActivity.ITQAN.equals(mode))return prefs.itqanPostNasMaintenance()
+        if(HifzSessionActivity.ITQAN.equals(mode))return prefs.itqanEntretienActive()
             ? "Itqān · Entretien" : "Itqān · Consolidation";
         if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode))return "Revue apprentissage";
         if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode))return "Révision active";
@@ -1128,7 +1128,7 @@ public final class MainActivity extends android.app.Activity {
         final String fullMorning = chosen.morning;
         morning.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
         weekDayPanel.addView(morning);
-        TextView morningTitle=Ui.bookText(this,readableScheduleTitle(chosen.morning,prefs.itqanPostNasMaintenance()),19f,true);
+        TextView morningTitle=Ui.bookText(this,readableScheduleTitle(chosen.morning,prefs.itqanEntretienActive()),19f,true);
         morningTitle.setPadding(0,Ui.dp(this,5),0,0);
         weekDayPanel.addView(morningTitle);
         TextView morningPreview = Ui.text(this, readableScheduleEssentials(chosen.morning), 16f, false);
@@ -1148,7 +1148,7 @@ public final class MainActivity extends android.app.Activity {
         final String fullEvening = chosen.evening;
         evening.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
         weekDayPanel.addView(evening);
-        TextView eveningTitle=Ui.bookText(this,readableScheduleTitle(chosen.evening,prefs.itqanPostNasMaintenance()),19f,true);
+        TextView eveningTitle=Ui.bookText(this,readableScheduleTitle(chosen.evening,prefs.itqanEntretienActive()),19f,true);
         eveningTitle.setPadding(0,Ui.dp(this,5),0,0);
         weekDayPanel.addView(eveningTitle);
         TextView eveningPreview = Ui.text(this, readableScheduleEssentials(chosen.evening), 16f, false);

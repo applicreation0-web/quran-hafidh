@@ -1,6 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
 import android.content.SharedPreferences;
+import java.time.LocalDate;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -83,6 +84,25 @@ final class ItqanRegimeStore {
         return readRotationState(p).initialTailCompleted;
     }
 
+    /**
+     * Forward-dated, explicit user choice. With no choice, historical switching
+     * behaviour remains unchanged. Entretien requires the real An-Nās latch,
+     * so a requested future date cannot manufacture physical achievement.
+     */
+    private static boolean maintenanceForNewSession(SharedPreferences p) {
+        boolean reached=postNasMaintenance(p);
+        String programme=p.getString("itqanProgrammeChoiceV1","AUTO");
+        String startRaw=p.getString("itqanProgrammeStartsOnV1","");
+        if(startRaw==null||startRaw.isEmpty()||"AUTO".equals(programme))return reached;
+        LocalDate start;
+        try { start=LocalDate.parse(startRaw); }
+        catch(RuntimeException invalid){return reached;}
+        if(HifzClock.today().isBefore(start))return reached;
+        if("CONSOLIDATION".equals(programme))return false;
+        if("ENTRETIEN".equals(programme))return reached;
+        return reached;
+    }
+
     /** Regime and protocol frozen for one Itqān unit. */
     static final class UnitPlan {
         final ItqanMaintenancePolicy.Regime regime;
@@ -133,7 +153,7 @@ final class ItqanRegimeStore {
             return new UnitPlan(ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS,
                 ItqanMaintenancePolicy.protocolFor(true, legacyProtocol));
         }
-        ItqanMaintenancePolicy.Regime regime=ItqanMaintenancePolicy.regimeFor(postNasMaintenance(p));
+        ItqanMaintenancePolicy.Regime regime=ItqanMaintenancePolicy.regimeFor(maintenanceForNewSession(p));
         return new UnitPlan(regime,ItqanMaintenancePolicy.protocolForNewSession(),
             regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
                 ?MaskProfile.POST_NAS_THREE:MaskProfile.BALANCED_20_5_5_5_5);
@@ -147,7 +167,7 @@ final class ItqanRegimeStore {
             UnitPlan stamped = parsePlan(p.getString(UNIT_PLAN, ""), start, end);
             return stamped != null ? stamped.regime : ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS;
         }
-        return ItqanMaintenancePolicy.regimeFor(postNasMaintenance(p));
+        return ItqanMaintenancePolicy.regimeFor(maintenanceForNewSession(p));
     }
 
     static boolean stampPlan(SharedPreferences p, String start, String end, UnitPlan plan) {

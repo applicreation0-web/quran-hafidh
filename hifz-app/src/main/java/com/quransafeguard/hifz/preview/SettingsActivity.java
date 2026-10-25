@@ -23,6 +23,7 @@ import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,7 +36,7 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
     private GeometryRepository geometry;
-    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, morningTimeSetting, eveningTimeSetting, weakVersesSetting;
+    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, itqanProgrammeSetting, morningTimeSetting, eveningTimeSetting, weakVersesSetting;
     private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
     private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
     private static final DayOfWeek[] WEEKDAYS = {
@@ -76,6 +77,9 @@ public final class SettingsActivity extends android.app.Activity {
         weeklyProgramSetting=Ui.settingRow(this,"Programme",
             weeklyProgramSummary(),v->chooseWeeklyProgram());
         parcours.addView(weeklyProgramSetting);parcours.addView(Ui.divider(this));
+        itqanProgrammeSetting=Ui.settingRow(this,"Programme Itqān",
+            itqanProgrammeSummary(),v->chooseItqanProgramme());
+        parcours.addView(itqanProgrammeSetting);parcours.addView(Ui.divider(this));
         learningDaysSetting=Ui.settingRow(this,"Apprentissage / semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
         learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL
             && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
@@ -106,10 +110,12 @@ public final class SettingsActivity extends android.app.Activity {
         corpus.addView(Ui.divider(this));
         corpus.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseStabilizationRange(null,-1)));
 
-        section(corpus,"Plages acquises");
-        acquiredRangesBox=Ui.column(this);acquiredRangesBox.setPadding(0,0,0,0);corpus.addView(acquiredRangesBox);
-        corpus.addView(Ui.divider(this));
-        corpus.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseAcquiredRange(null,-1)));
+        section(corpus,"Acquis");
+        acquiredRangesBox=Ui.column(this); // read-only; do not edit physical credits
+        TextView acquiredNote=Ui.menuSubline(this,
+            "Acquis déterminés par les validations réelles ou une sauvegarde restaurée. Aucune plage présumée.");
+        acquiredNote.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,8));
+        corpus.addView(acquiredNote);
 
         section(corpus,"Rotation");
         itqanStatus=Ui.text(this,"",16f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,2));corpus.addView(itqanStatus);
@@ -232,7 +238,14 @@ public final class SettingsActivity extends android.app.Activity {
         view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
     }
 
-    private void refreshAll(){refreshWeeklyCadence();refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
+    private void refreshAll(){
+        refreshWeeklyCadence();
+        if(itqanProgrammeSetting!=null) {
+            TextView chosen=Ui.settingValue(itqanProgrammeSetting);
+            if(chosen!=null)chosen.setText(itqanProgrammeSummary());
+        }
+        refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();
+    }
 
     /** P4: the Roadmap's own automatic ratio for today, when active, otherwise the user's manual
      *  learningDaysPerWeek setting — see HifzPrefs.currentRoadmapDecision for exactly when the
@@ -325,6 +338,56 @@ public final class SettingsActivity extends android.app.Activity {
             : prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
                 ? "Manuel · jours Sabqi : "+effectiveLearningDaysPerWeek()
                     +" · dimanche Itqān" : "Historique 6 jours · migration lundi";
+    }
+
+    private String itqanProgrammeSummary() {
+        String mode=prefs.itqanProgrammeChoice();
+        LocalDate from=prefs.itqanProgrammeStartDate();
+        if("AUTO".equals(mode))return (prefs.itqanEntretienActive()
+            ? "Entretien · après An-Nās" : "Consolidation · avant An-Nās")+" · automatique";
+        return ("ENTRETIEN".equals(mode)?"Entretien · hizb ×3":"Consolidation · protocole approfondi")
+            +" · dès le "+from;
+    }
+
+    /** Explicit programme and effective date; does not rewrite existing Hifz sessions. */
+    private void chooseItqanProgramme() {
+        String[] choices={
+            "Consolidation · protocole approfondi (avant An-Nās)",
+            "Entretien · 1 hizb ×3 (après An-Nās)"
+        };
+        int[] selected={"ENTRETIEN".equals(prefs.itqanProgrammeChoice())?1:0};
+        new AlertDialog.Builder(this).setTitle("Quel programme Itqān souhaitez-vous ?")
+            .setSingleChoiceItems(choices,selected[0],(dialog,index)->selected[0]=index)
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Choisir la date",(dialog,which)->{
+                LocalDate today=HifzClock.today();
+                LocalDate scheduled=prefs.itqanProgrammeStartDate();
+                LocalDate initial=scheduled!=null&&!scheduled.isBefore(today)?scheduled:today;
+                android.app.DatePickerDialog dateDialog=new android.app.DatePickerDialog(this,
+                    (picker,year,month,day)->{
+                        LocalDate from=LocalDate.of(year,month+1,day);
+                        String selectedMode=selected[0]==0?"CONSOLIDATION":"ENTRETIEN";
+                        String caution=selected[0]==1 && !prefs.itqanPostNasMaintenance()
+                            ? "\nEntretien commencera au plus tôt après l'arrivée effective à An-Nās."
+                            : "";
+                        new AlertDialog.Builder(this).setTitle("Confirmer le programme")
+                            .setMessage(choices[selected[0]]+"\nÀ partir du "+from+
+                                "\nLes acquis et les séances déjà commencées restent inchangés."+caution)
+                            .setNegativeButton("Annuler",null)
+                            .setPositiveButton("Enregistrer",(accept,button)->{
+                                try {
+                                    if(!prefs.scheduleItqanProgramme(selectedMode,from))
+                                        throw new IllegalStateException("Écriture impossible");
+                                    refreshAll();
+                                }catch(RuntimeException error){
+                                    Toast.makeText(this,"Programme non enregistré : "+error.getMessage(),
+                                        Toast.LENGTH_LONG).show();
+                                }
+                            }).show();
+                    },initial.getYear(),initial.getMonthValue()-1,initial.getDayOfMonth());
+                dateDialog.getDatePicker().setMinDate(System.currentTimeMillis()-86400000L);
+                dateDialog.show();
+            }).show();
     }
 
     private void chooseWeeklyProgram() {
@@ -426,7 +489,8 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshAcquiredRanges(){
-        renderRanges(acquiredRangesBox,prefs.itqanRanges(),false);
+        // Acquis is progression, never a manually editable base setting.
+        acquiredRangesBox.removeAllViews();
     }
 
     private void renderRanges(LinearLayout box,List<VerseRange> ranges,boolean stabilization){
