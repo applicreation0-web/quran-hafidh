@@ -159,6 +159,11 @@ final class Ui {
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         copy.addView(name);
         TextView current = menuSubline(context, value);
+        // Read-only values have no destination: never hide their full programme/speed.
+        if (listener == null) {
+            current.setMaxLines(Integer.MAX_VALUE);
+            current.setEllipsize(null);
+        }
         current.setPadding(0, dp(context, 2), 0, 0);
         copy.addView(current);
         row.addView(copy, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
