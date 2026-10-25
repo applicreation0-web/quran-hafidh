@@ -78,6 +78,7 @@ public final class MainActivity extends android.app.Activity {
         appEmblem.setContentDescription("Quran Haafidh");
         header.addView(appEmblem, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
         TextView title = Ui.bookText(this, "Quran Haafidh", 24, true);
+        if (wideBoox()) title.setTextSize(29f);
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
         header.addView(title);
@@ -97,6 +98,7 @@ public final class MainActivity extends android.app.Activity {
         root.addView(recentSabqiAdvisory);
 
         TextView destinationsLabel = Ui.bookText(this, "ACCÈS DIRECTS", 17f, true);
+        if (wideBoox()) destinationsLabel.setTextSize(21f);
         destinationsLabel.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 8));
         root.addView(destinationsLabel);
         LinearLayout destinations = Ui.row(this);
@@ -127,6 +129,7 @@ public final class MainActivity extends android.app.Activity {
         pathHeader.setGravity(Gravity.CENTER_VERTICAL);
         pathHeader.addView(Ui.iconButton(this, "‹", "Retour", v -> showHome()));
         TextView pathTitle = Ui.bookText(this, "Parcours Hifz", 24, true);
+        if (wideBoox()) pathTitle.setTextSize(27f);
         pathTitle.setGravity(Gravity.CENTER);
         Ui.weight(pathTitle, 1f);
         pathHeader.addView(pathTitle);
@@ -135,6 +138,17 @@ public final class MainActivity extends android.app.Activity {
         path.addView(Ui.divider(this));
         backlogParcoursRow = backlogRow();
         path.addView(backlogParcoursRow);
+        // The full weekly planner follows the six large pictograms. This direct
+        // text link makes it reachable in one tap without shrinking those icons.
+        TextView jumpToWeek = Ui.bookText(this, "PLANNING DE LA SEMAINE ↓", 16f, true);
+        if (wideBoox()) jumpToWeek.setTextSize(20f);
+        jumpToWeek.setPadding(Ui.dp(this, 5), Ui.dp(this, 12), Ui.dp(this, 5), Ui.dp(this, 12));
+        jumpToWeek.setContentDescription("Aller au planning de la semaine");
+        jumpToWeek.setClickable(true);
+        jumpToWeek.setFocusable(true);
+        jumpToWeek.setOnClickListener(v ->
+            parcoursScroll.post(() -> parcoursScroll.scrollTo(0, dashboardTitle.getTop())));
+        path.addView(jumpToWeek);
         // Hifz semantic grammar: paired by the real corpus and operation.
         // Sabqi: introduce one set, then cumulatively revisit it.
         path.addView(Ui.text(this, "SABQI", 16f, true));
@@ -175,6 +189,7 @@ public final class MainActivity extends android.app.Activity {
         setGeometryActionsEnabled(false);
 
         dashboardTitle = Ui.bookText(this, "Cette semaine", 20, true);
+        if (wideBoox()) dashboardTitle.setTextSize(24f);
         dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
         dashboardTitle.setOnClickListener(v -> chooseWeeklyProgram());
         dashboardTitle.setContentDescription("Choisir le programme hebdomadaire");
@@ -249,12 +264,15 @@ public final class MainActivity extends android.app.Activity {
         line.setPadding(Ui.dp(this, 18), Ui.dp(this, 10), Ui.dp(this, 18), Ui.dp(this, 10));
         // Typographic reading surface, not a bordered card.
         TextView label = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
+        if (wideBoox()) label.setTextSize(22f);
         line.addView(label);
         TextView value = Ui.bookText(this, "…", 23f, true);
+        if (wideBoox()) value.setTextSize(30f);
         value.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
         value.setMaxLines(3);
         line.addView(value);
         todayObjective = Ui.text(this, "", 16f, false);
+        if (wideBoox()) todayObjective.setTextSize(21f);
         todayObjective.setTextColor(Ui.MUTED);
         // Never truncate the authentic page/verse range on the BOOX screen.
         todayObjective.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 6));
@@ -262,6 +280,7 @@ public final class MainActivity extends android.app.Activity {
         todayObjective.setEllipsize(android.text.TextUtils.TruncateAt.END);
         line.addView(todayObjective);
         TextView action = Ui.bookText(this, "CONTINUER  ›", 20f, true);
+        if (wideBoox()) action.setTextSize(24f);
         action.setGravity(Gravity.END);
         line.addView(action);
         line.setMinimumHeight(Ui.dp(this, 120));
@@ -288,6 +307,11 @@ public final class MainActivity extends android.app.Activity {
         if ("Révision active".equals(role)) return R.drawable.ic_haafidh_revision_active;
         if ("Révision passive".equals(role)) return R.drawable.ic_haafidh_revision_passive;
         return 0;
+    }
+
+    /** BOOX typography responds to physical tablet proportions, not to phone font sizes. */
+    private boolean wideBoox() {
+        return getResources().getConfiguration().smallestScreenWidthDp >= 600;
     }
 
     /** Keep phone icons unchanged; allow large BOOX portrait panels to use their full width. */
@@ -319,6 +343,7 @@ public final class MainActivity extends android.app.Activity {
             tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
         TextView title = Ui.bookText(this, display, 19f, true);
+        if (wideBoox()) title.setTextSize(23f);
         title.setGravity(Gravity.CENTER);
         title.setMaxLines(1);
         tile.addView(title);
@@ -350,6 +375,7 @@ public final class MainActivity extends android.app.Activity {
             tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
         TextView title = Ui.bookText(this, display, 17f, true);
+        if (wideBoox()) title.setTextSize(21f);
         title.setGravity(Gravity.CENTER_VERTICAL);
         tile.addView(title);
         tile.setContentDescription(role);
@@ -375,6 +401,7 @@ public final class MainActivity extends android.app.Activity {
             : "Stabilisation".equals(label) ? "Stabiliser"
             : "Révision".equals(label) ? "Réviser" : label;
         TextView name = Ui.bookText(this, shortLabel, 19f, true);
+        if (wideBoox()) name.setTextSize(22f);
         name.setGravity(Gravity.CENTER);
         name.setMaxLines(2);
         int icon = largeIconFor(label);
@@ -1044,6 +1071,7 @@ public final class MainActivity extends android.app.Activity {
         if (!found) selectedWeekDate = todayDate;
         TextView hours = Ui.text(this, "Matin "+prefs.suggestedMorningTime()+
             "  ·  Soir "+prefs.suggestedEveningTime(), 17f, false);
+        if (wideBoox()) hours.setTextSize(20f);
         hours.setTextColor(Ui.MUTED);
         dashboard.addView(hours);
         dashboard.addView(weekStrip);
@@ -1109,6 +1137,7 @@ public final class MainActivity extends android.app.Activity {
         morning.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
         weekDayPanel.addView(morning);
         TextView morningPreview = Ui.text(this, compactSchedulePreview(chosen.morning), 17f, false);
+        if (wideBoox()) morningPreview.setTextSize(20f);
         morningPreview.setMaxLines(3);
         morningPreview.setEllipsize(android.text.TextUtils.TruncateAt.END);
         morningPreview.setContentDescription(scheduleDetail(chosen.morning));
@@ -1125,6 +1154,7 @@ public final class MainActivity extends android.app.Activity {
         evening.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
         weekDayPanel.addView(evening);
         TextView eveningPreview = Ui.text(this, compactSchedulePreview(chosen.evening), 17f, false);
+        if (wideBoox()) eveningPreview.setTextSize(20f);
         eveningPreview.setMaxLines(3);
         eveningPreview.setEllipsize(android.text.TextUtils.TruncateAt.END);
         eveningPreview.setContentDescription(scheduleDetail(chosen.evening));
