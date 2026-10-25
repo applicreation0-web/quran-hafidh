@@ -51,9 +51,9 @@ public final class ProgressMapSourceContractTest {
 
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue("Home must offer a direct way in, alongside Lecture/Mémoriser/Paramètres",
-            main.contains("secondaryTile(secondary, \"Progression\", \"Progression\",")
+            main.contains("primaryTile(practiceRow, \"Progression\", \"Progression\",")
             && main.contains("new Intent(this, ProgressMapActivity.class)"));
-        assertTrue("it must gate behind geometry loading like the other three home cards",
+        assertTrue("it must gate behind geometry loading like the other home destinations",
             main.contains("geometryActions.add(progress);"));
 
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
