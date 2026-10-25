@@ -63,7 +63,7 @@ public final class MainActivity extends android.app.Activity {
         speedStore = new HifzSpeedStore(this);
         ledger = new DashboardLedger(this);
 
-        // 1.17.5 CP1: BOOX-first home, one dominant session and three primary destinations.
+        // 1.17.5 CP1: BOOX-first home, one dominant session and four equally sized destinations.
         // Navigation-only refactor: all cadence, Hifz credits and geometry guards are unchanged.
         LinearLayout root = page();
         // BOOX portrait home: fill the viewport without a centered 720dp tablet inset.
@@ -101,22 +101,22 @@ public final class MainActivity extends android.app.Activity {
         if (wideBoox()) destinationsLabel.setTextSize(21f);
         destinationsLabel.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 8));
         root.addView(destinationsLabel);
-        LinearLayout destinations = Ui.row(this);
-        LinearLayout parcours = primaryTile(destinations, "Parcours Hifz", "Parcours", v -> showParcours());
-        LinearLayout study = primaryTile(destinations, "Lecture", "Lecture",
-            v -> startActivity(new Intent(this, StudyReaderActivity.class)));
-        LinearLayout semanticMap = primaryTile(destinations, "Atlas", "Atlas",
-            v -> startActivity(new Intent(this, AtlasMapActivity.class)));
-        root.addView(destinations);
-
-        LinearLayout secondary = Ui.row(this);
-        secondary.setPadding(0, Ui.dp(this, 12), 0, 0);
-        // The separate free-memory engine is preserved under advanced tools.
-        // It is intentionally not a top-level destination: Lecture is the Mushaf entry.
-        LinearLayout progress = secondaryTile(secondary, "Progression", "Progression",
+        // Two rows with one visual grammar: practice + follow-up, reading + understanding.
+        // No separator: Progression is an equal navigation destination, not a footer.
+        LinearLayout practiceRow = Ui.row(this);
+        LinearLayout parcours = primaryTile(practiceRow, "Parcours Hifz", "Parcours", v -> showParcours());
+        LinearLayout progress = primaryTile(practiceRow, "Progression", "Progression",
             v -> startActivity(new Intent(this, ProgressMapActivity.class)));
-        root.addView(Ui.divider(this));
-        root.addView(secondary);
+        root.addView(practiceRow);
+
+        LinearLayout readingRow = Ui.row(this);
+        LinearLayout study = primaryTile(readingRow, "Lecture", "Lecture",
+            v -> startActivity(new Intent(this, StudyReaderActivity.class)));
+        LinearLayout semanticMap = primaryTile(readingRow, "Atlas", "Atlas",
+            v -> startActivity(new Intent(this, AtlasMapActivity.class)));
+        root.addView(readingRow);
+
+        // Mémorisation ponctuelle remains an optional advanced tool, not a fifth icon.
 
         geometryActions.add(study);
         geometryActions.add(semanticMap);
@@ -333,13 +333,13 @@ public final class MainActivity extends android.app.Activity {
         return Math.max(62, Math.min(responsiveCapDp, (widthDp - 48) / columns - 14));
     }
 
-    /** Three equal-size primary destinations: no list-style layout or internal icon gutters. */
+    /** Four equal-size home destinations in a 2×2 BOOX grid, without cards or separators. */
     private LinearLayout primaryTile(LinearLayout parent, String role, String display,
                                     View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
         tile.setPadding(Ui.dp(this, 3), Ui.dp(this, 12), Ui.dp(this, 3), Ui.dp(this, 12));
         tile.setGravity(Gravity.CENTER);
-        int sideDp = booxIconDp(3, 112);
+        int sideDp = booxIconDp(2, 112);
         tile.setMinimumHeight(Ui.dp(this, sideDp + 54));
         int drawable = largeIconFor(role);
         if (drawable == 0) drawable = Ui.iconFor(role, role);
@@ -362,37 +362,6 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.setMargins(Ui.dp(this, 3), 0, Ui.dp(this, 3), 0);
-        parent.addView(tile, lp);
-        return tile;
-    }
-
-    /** Secondary progression link below the three primary Mushaf destinations. */
-    private LinearLayout secondaryTile(LinearLayout parent, String role, String display,
-                                      View.OnClickListener listener) {
-        LinearLayout tile = Ui.row(this);
-        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
-        int sideDp = booxIconDp(2, 82);
-        tile.setMinimumHeight(Ui.dp(this, sideDp + 20));
-        int drawable = largeIconFor(role);
-        if (drawable == 0) drawable = Ui.iconFor(role, role);
-        if (drawable != 0) {
-            ImageView icon = new ImageView(this);
-            icon.setImageResource(drawable);
-            icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            icon.setPadding(0, 0, 0, 0);
-            tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
-        }
-        TextView title = Ui.bookText(this, display, 17f, true);
-        if (wideBoox()) title.setTextSize(21f);
-        title.setGravity(Gravity.CENTER_VERTICAL);
-        tile.addView(title);
-        tile.setContentDescription(role);
-        tile.setClickable(true);
-        tile.setFocusable(true);
-        tile.setOnClickListener(listener);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
         parent.addView(tile, lp);
         return tile;
     }
