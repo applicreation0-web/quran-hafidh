@@ -41,8 +41,8 @@ public final class StabilizationEtaSourceContractTest {
             settings.contains("+\"\\nEstimation fin Stabilisation : \"+stabilizationEtaSummary()"));
         assertTrue("forecast is programme-specific rather than stale fixed 22 lines",
             settings.contains("int weeklyPace=forecastItqanLinesPerWeek();")
-                && settings.contains("if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return 30;")
-                && settings.contains("(7-effectiveLearningDaysPerWeek())*7"));
+                && settings.contains("if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return PreviewConfig.STABILIZATION_WEEKLY_LINES;")
+                && settings.contains("(6-effectiveLearningDaysPerWeek())*7"));
         assertTrue("projection uses the selected weekly pace",
             settings.contains("(remaining+weeklyPace-1)/weeklyPace"));
         assertTrue("the projection must be dated from today, not a static offset",
