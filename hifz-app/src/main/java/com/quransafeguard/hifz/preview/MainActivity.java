@@ -151,7 +151,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(jumpToWeek);
         // Hifz semantic grammar: paired by the real corpus and operation.
         // Sabqi: introduce one set, then cumulatively revisit it.
-        path.addView(Ui.text(this, "SABQI", 16f, true));
+        path.addView(pathSectionTitle("SABQI"));
         LinearLayout learningModes = Ui.row(this);
         LinearLayout sabqi = pathTile(learningModes, "Apprentissage", "1 page/semaine",
             v -> openMode(HifzSessionActivity.SABQI));
@@ -160,7 +160,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(learningModes);
 
         // Itqan: one bounded memorization unit, then its accumulated units.
-        path.addView(Ui.text(this, "ITQĀN", 16f, true));
+        path.addView(pathSectionTitle("ITQĀN"));
         LinearLayout otherModes = Ui.row(this);
         itqanCard = pathTile(otherModes, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
@@ -170,7 +170,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(otherModes);
 
         // Same acquired corpus, two modalities: text masked vs text visible.
-        path.addView(Ui.text(this, "RÉVISION", 16f, true));
+        path.addView(pathSectionTitle("RÉVISION"));
         LinearLayout reviewModes = Ui.row(this);
         LinearLayout activeRevision = pathTile(reviewModes, "Révision active", "Récitation masquée",
             v -> openMode(HifzSessionActivity.MURAJAAH_ACTIVE));
@@ -312,6 +312,14 @@ public final class MainActivity extends android.app.Activity {
     /** BOOX typography responds to physical tablet proportions, not to phone font sizes. */
     private boolean wideBoox() {
         return getResources().getConfiguration().smallestScreenWidthDp >= 600;
+    }
+
+    /** BOOX-only text hierarchy for Hifz group labels; leaves modes and icons untouched. */
+    private TextView pathSectionTitle(String caption) {
+        TextView heading = Ui.bookText(this, caption, 16f, true);
+        if (wideBoox()) heading.setTextSize(22f);
+        heading.setPadding(Ui.dp(this, 4), Ui.dp(this, 9), 0, Ui.dp(this, 2));
+        return heading;
     }
 
     /** Keep phone icons unchanged; allow large BOOX portrait panels to use their full width. */
