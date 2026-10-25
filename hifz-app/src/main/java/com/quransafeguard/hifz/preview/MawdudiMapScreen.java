@@ -124,9 +124,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   LinearLayout root=Ui.column(activity);root.setBackgroundColor(Ui.PAPER);
   LinearLayout top=Ui.row(activity);top.setGravity(Gravity.CENTER_VERTICAL);
   top.addView(Ui.iconButton(activity,"","Retour",v->goBack()),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
-  heading=Ui.text(activity,"",12f,false);
-   if (activity.getResources().getConfiguration().smallestScreenWidthDp>=600)heading.setTextSize(18f);
-   heading.setMaxLines(2);heading.setEllipsize(TextUtils.TruncateAt.END);
+  heading=Ui.text(activity,"",12f,false);heading.setMaxLines(2);heading.setEllipsize(TextUtils.TruncateAt.END);
   heading.setClickable(true);heading.setFocusable(true);heading.setOnClickListener(v->chooseUnit());
   top.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
   top.addView(Ui.iconButton(activity,"","Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);setLevel(true);})),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
@@ -156,7 +154,6 @@ final class MawdudiMapScreen implements MushafView.Listener {
   });
   boolean compact=activity.getResources().getDisplayMetrics().heightPixels<Ui.dp(activity,700);
   passageTitle=Ui.text(activity,"",16f,true);
-   if (activity.getResources().getConfiguration().smallestScreenWidthDp>=600)passageTitle.setTextSize(22f);
   passageTitle.setTypeface(android.graphics.Typeface.DEFAULT,android.graphics.Typeface.BOLD);
   passageTitle.setGravity(Gravity.CENTER);
   passageTitle.setMaxLines(3);passageTitle.setEllipsize(TextUtils.TruncateAt.END);
@@ -165,17 +162,15 @@ final class MawdudiMapScreen implements MushafView.Listener {
   titlePanel=new ScrollView(activity);titlePanel.setFillViewport(false);
   titlePanel.setVerticalScrollBarEnabled(true);
   titlePanel.addView(passageTitle,new ScrollView.LayoutParams(-1,-2));
-  root.addView(titlePanel,new LinearLayout.LayoutParams(-1,captionHeight()));
+  root.addView(titlePanel,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?48:56)));
   // Original 17 October subordinate Ayah Themes caption, same private catalogue.
   passageSubtitle=Ui.text(activity,"",12.5f,false);
-   if (activity.getResources().getConfiguration().smallestScreenWidthDp>=600)passageSubtitle.setTextSize(18f);
   passageSubtitle.setTypeface(android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.ITALIC));
   passageSubtitle.setGravity(Gravity.CENTER);
   passageSubtitle.setMaxLines(2);
   passageSubtitle.setPadding(Ui.dp(activity,8),0,Ui.dp(activity,8),Ui.dp(activity,2));
   passageSubtitle.setContentDescription("Titre Ayah Themes du passage actif");
-  root.addView(passageSubtitle,new LinearLayout.LayoutParams(-1,
-       Ui.dp(activity,activity.getResources().getConfiguration().smallestScreenWidthDp>=600?58:compact?36:46)));
+  root.addView(passageSubtitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?36:46)));
   thumbnails=new MapQcfThumbnails(activity,new MapQcfThumbnails.Listener(){
    @Override public void onPageChosen(int p){onThumbnailPage(p);}
    @Override public void onOpenReading(int p){onThumbnailPage(p);openReader();}
@@ -198,8 +193,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  MushafView mushaf(){return mushaf;}
  private int captionHeight(){
-  return Ui.dp(activity,activity.getResources().getConfiguration().smallestScreenWidthDp>=600
-      ?76:activity.getResources().getDisplayMetrics().heightPixels<Ui.dp(activity,700)?48:56);
+  return Ui.dp(activity,activity.getResources().getDisplayMetrics().heightPixels<Ui.dp(activity,700)?48:56);
  }
  private void closeTitle(){
   if(!titleExpanded)return;
@@ -514,7 +508,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
     c.drawCircle(x,y,Ui.dp(activity,18),p);
     p.setStyle(Paint.Style.FILL);
    }
-   p.setTextSize(Ui.dp(activity,activity.getResources().getConfiguration().smallestScreenWidthDp>=600?15:11));
+   p.setTextSize(Ui.dp(activity,11));
    c.drawText("U"+(ordinal+1),x,y-Ui.dp(activity,22),p);
   }
   // Small edge marks communicate that further units exist off-screen.
@@ -615,7 +609,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
    float x=passageX(j,visible,width);
    paint.setStyle(Paint.Style.FILL);
    canvas.drawCircle(x,y,Ui.dp(activity,ordinal==selectedIndex?6:3),paint);
-   paint.setTextAlign(Paint.Align.CENTER);paint.setTextSize(Ui.dp(activity,activity.getResources().getConfiguration().smallestScreenWidthDp>=600?13:9));
+   paint.setTextAlign(Paint.Align.CENTER);paint.setTextSize(Ui.dp(activity,9));
    canvas.drawText(n.first==n.last?String.valueOf(n.first):n.first+"–"+n.last,x,y-Ui.dp(activity,12),paint);
   }
  }
