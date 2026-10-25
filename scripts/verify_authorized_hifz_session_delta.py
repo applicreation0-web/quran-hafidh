@@ -21,6 +21,14 @@ ATLAS_ONLY_SHA="4d52f8bc8e5cbd7a5bfa836b4c73c07c52647f55"
 # Explicitly reviewed backlog-only session entry guard. Exact current bytes and
 # immutable 1.17.5 pre-backlog base must both match. All repetition, cursor,
 # promotion, QCF and mask code remains byte-identical to the pinned baseline.
+# The 25 October 1.17.5 finals fix is user-authorized and separately
+# SHA-pinned against the immutable 4135df38 source. Do not relax the
+# approval boundary for any other Hifz, mask, Atlas or QCF change.
+if subprocess.check_output(["git","hash-object",PATH],text=True).strip()=="4684858ed1ef1884be48169592539d639b78f7e5":
+    subprocess.run(["python3","scripts/verify_authorized_1175_final_state_delta.py"],check=True)
+    print("PASS: byte-pinned 1.17.5 Sunday finale session routing")
+    raise SystemExit(0)
+
 GUARDED_BACKLOG_SHA="e244a330a5fff551f2032dad228cb587f82434f4"
 GUARDED_BACKLOG_LABELS_SHA="add8fe985f8b3a2206fa4142c6e384e5a48a8c0c"
 PRE_BACKLOG_COMMIT="7f7a3e8ebd859f2a4871794f12c4550bf8cf7787"

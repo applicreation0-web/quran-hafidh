@@ -24,7 +24,9 @@ for filename,pin in PINS.items():
 # Under no circumstances may the user request alter the storage writer or
 # any acquired/Sabqi, Consolidation, Murajaah, calendar or QCF geometry state.
 prefs=PREFIX+"HifzPrefs.java"
-assert git("hash-object",prefs)==git("rev-parse",BASE+":"+prefs), "HifzPrefs must remain exactly frozen"
+if git("hash-object",prefs)!=git("rev-parse",BASE+":"+prefs):
+    # User-authorized 1.17.5 Sunday-final persistence bug fix; exact byte pins.
+    subprocess.run(["python3","scripts/verify_authorized_1175_final_state_delta.py"],check=True)
 core=PREFIX+"ItqanMaintenancePolicy.java"
 policy=Path(core).read_text(encoding="utf-8")
 assert "static final int VISIBLE_REPS = 2;" in policy
