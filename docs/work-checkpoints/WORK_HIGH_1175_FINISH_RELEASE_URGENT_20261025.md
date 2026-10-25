@@ -71,3 +71,27 @@ Rapport compact :
 - GO/NO-GO ; APK privée installable signée et checksum **uniquement en cas de GO**, ou blocage précis, sans promesse de délais ni résultats inventés.
 
 **Agir maintenant ; ne pas refaire les audits précédents. Limiter les travaux au planning et à l'adaptateur V1 exactement justifié.**
+
+### ADDENDUM BLOQUANT — FINALE SABQI DU DIMANCHE 25 OCTOBRE (VÉRIFIÉ DANS LE JSON 08:02)
+
+**La finale Sabqi du dimanche matin est permanente dans les DEUX régimes Itqān ; elle ne doit JAMAIS être omise du calendrier, ni remplacée par la finale Itqān.**
+
+Analyse vérifiée des clés de la sauvegarde originale `quran-hifz-sauvegarde-2026-10-25.json` (export 08:02:41 UTC) :
+
+- `lastLearningConsolidationDate = 2026-10-18` : dernière finale Sabqi validée le dimanche précédent.
+- `v6ConsolidationLearningStateFinalV1` **absent** ; aucune finale Sabqi du 25 ouverte à l'export. `learning_finalElapsedMs=0`. Ne pas prétendre qu'elle a été exécutée.
+- `learningSnowballUnitIds` = **trois blocs de cinq lignes physiques de la page QCF 16** : `16:0..4`, `16:5..9`, `16:10..14` (15 lignes hebdomadaires). Les versets exacts doivent être résolus depuis la géométrie QCF, pas devinés.
+- `v6LearningEarnedEveningUnitsV1` = **DEUX reçus uniquement** : `16:0..4` et `16:5..9`. **Reçu absent pour `16:10..14`.**
+- `v6ConsolidationLearningState` = **OPEN** `learning-2026-10-24` avec **4 unités gelées** (`16:0..4`, `16:5..9`, `16:10..14`, lecture continue `16:0..14`), stade 0, répétition 0, `SNOWBALL`. Cette séance doit pouvoir se terminer en reprenant EXACTEMENT son snapshot et sa date du samedi.
+- La finale Itqān, distincte, est elle-même OPEN en `stabilization-final-2026-10-25`, protocole `SNOWBALL_EXTENDED` ; **ne jamais intervertir, fusionner, ou écraser** ses clés avec celles de Sabqi.
+
+**DANGER LOGIQUE ACTUEL À TESTER :** `HifzPrefs.sundayFinalPageUnits(LEARNING,...)` construit son corpus à partir des seuls reçus déjà acquis. Avec deux blocs reçus sur trois, il peut construire une finale partielle pour dix lignes de la page 16 tout en omettant les cinq autres. La clôture `completeLearningConsolidationSessionV6` écrit la date finale et vide l'accumulateur hebdomadaire. On ne doit pas valider/présenter cette clôture comme **finale complète des 15 lignes** et perdre les cinq lignes non traitées. Ne pas ajouter une approbation implicite de validation partielle : l'utilisateur n'a pas arbitré un tel comportement.
+
+**Comportement requis dans ce cas réel :**
+1. Le dimanche matin affiche **« Finale Renforcement Sabqi »**, l'état réel (**« En attente du Renforcement du samedi »** si ses justificatifs manquent), sourate(s)/versets/pages/lignes exacts et bloc(s) non éligibles ; ne pas annoncer « Terminé ».
+2. Proposer/reprendre **le Renforcement Sabqi du samedi déjà OPEN**, par l'accès direct de reprise, sans remettre à zéro ses répétitions, sans changer la date/snapshot et sans lancer une nouvelle séance fictive. Après sa validation ×10 selon son protocole original, revérifier les trois reçus, puis autoriser la finale Sabqi du dimanche ×3 par page (**1 lecture visible, 2 récitations masquées avec amorces**) ; promotion `Appris→Acquis` seulement des lignes réellement éligibles.
+3. **Si le Renforcement du samedi n'est pas terminé :** ne pas attribuer un crédit fictif, ne pas effacer le troisième bloc, ne pas clore silencieusement une finale « partielle ». Afficher le blocage/reprise possible et conserver les unités en dette jusqu'à la validation légitime à une date ultérieure ; historique daté inchangé. La règle d'éligibilité existante reste autorité, sans réécrire le moteur de promotion.
+4. La finale Sabqi doit être proposée **aussi dans le second régime Itqān**, même quand aucune finale Itqān n'est programmée.
+5. **Tests reproductibles supplémentaires :** JSON réel sur copie, 10/15 lignes avec reçus et renforcement 24 OPEN, final Sabqi 25 NON OPEN ; après clôture du renforcement, 15/15 reçus ; test de non-clôture partielle ; reprise avant/après redémarrage ; historique de date et `sourceSnapshot` ; aucune interférence avec la finale Itqān OPEN. Vérifier le corps des 15 IDs, pas seulement la quantité.
+
+**Ce correctif est une exigence de PLANIFICATION, de garde d'éligibilité et d'AFFICHAGE, pas une autorisation de modifier `ConsolidationCycleEngine` ou les fonctions de crédit.** Si impossible sans moteur, STOP avec fail précis. **NO-GO tant que ce cas personnel n'est pas testé et sûr.**
