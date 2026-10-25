@@ -686,7 +686,7 @@ public final class MainActivity extends android.app.Activity {
      * would be revisited, the accumulator has already rolled to a new week — so once a Sunday is
      * no longer today it is treated as satisfied rather than stalling every later cadence day.
      */
-    /** Recommended Sunday contains Itqan plus two independent finals, never generic revision. */
+    /** Recommended Sunday contains finals only; no seventh ordinary lesson. */
     private boolean recommendedSunday(LocalDate date) {
         return date.getDayOfWeek()==DayOfWeek.SUNDAY
             && prefs.weeklyProgramFor(date)!=HifzPrefs.WeeklyProgram.CLASSIC;
@@ -706,7 +706,8 @@ public final class MainActivity extends android.app.Activity {
             case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
             case REVISION:
                 if(!date.equals(HifzClock.today()))return true;
-                return learningFinalResolved(date)&&consolidationFinalResolved(date);
+                return learningFinalResolved(date)
+                    && (prefs.itqanEntretienActive() || consolidationFinalResolved(date));
             default:return false;
         }
     }
