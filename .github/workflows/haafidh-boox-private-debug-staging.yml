@@ -4,6 +4,7 @@ on:
     branches:
       - work/haafidh-1171-atlas-only-pre20-mask
       - work/haafidh-1175-boox-ux-hifz-atlas
+      - work/haafidh-1175-audit-corrections-20261025
     paths:
       - '.github/workflows/haafidh-boox-private-debug-staging.yml'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java'
