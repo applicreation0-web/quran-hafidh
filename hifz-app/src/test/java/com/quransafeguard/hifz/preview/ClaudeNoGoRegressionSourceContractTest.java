@@ -453,29 +453,18 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             && usesFocus.contains("CONSOLIDATION_FINAL.equals(mode)") && usesFocus.contains("LEARNING_FINAL.equals(mode)"));
     }
 
-    /**
-     * Reported directly: Renforcement's Friday evening session showed bloc1, bloc2 and bloc1+2 but
-     * never bloc3, even though Friday's own Sabqi block had already been learned that morning. Root
-     * cause: renderGroupedCycle only builds a fresh cycle when NO session is persisted — a session
-     * opened Wednesday with 2 units (bloc1, bloc2, combined) that the user hadn't finished all ×10
-     * reps for by Friday was reused as-is, its unit set frozen at cycle-open time and never
-     * re-checked against the week's now-larger accumulator (Cycle/addUnit explicitly forbids adding
-     * a unit to an OPEN session, so the engine has no way to grow it in place). Bloc3 sat in the
-     * weekly accumulator, invisible to Renforcement, until that stale session finally closed on its
-     * own. The fix: when the freshly computed unit list has grown past the persisted session's own
-     * size, discard the stale session (losing its in-progress reps, but never silently skipping the
-     * new block) and fall through to rebuild fresh from the current, complete unit list.
-     */
-    @Test public void groupedCycleRebuildsWhenTheWeekAddsABlockToAStaleUnfinishedSession() throws Exception {
+    /** Current contract: finish the frozen OPEN session without losing repetitions.
+     * New accumulator blocks remain due after the old exact source is closed. */
+    @Test public void groupedCyclePreservesOpenSessionWhenTheWeekAddsABlock() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String renderGroupedCycle = method(session,
             "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
-        assertTrue("must detect a grown accumulator by comparing the persisted session's own size against the fresh unit list",
-            renderGroupedCycle.contains("consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()"));
-        assertTrue("stale units must be discarded from the matching cycle only, never the other Sunday/weekday slot",
-            renderGroupedCycle.contains("prefs.discardConsolidationSession(family,cycleIdPrefix+today);"));
-        assertTrue("discarding must fall through to the fresh-build path, not skip it",
-            renderGroupedCycle.contains("prefs.discardConsolidationSession(family,cycleIdPrefix+today);\n            consolidationSession = null;\n        }\n        if (consolidationSession == null) {"));
+        assertFalse("A larger accumulator cannot erase existing OPEN repetitions",
+            renderGroupedCycle.contains("discardConsolidationSession("));
+        assertTrue("Always resume the dated session before considering new units",
+            renderGroupedCycle.contains("restoreConsolidationSession(consolidationEngine, family,cycleIdPrefix+today)"));
+        assertTrue("New units are only opened when no frozen session exists",
+            renderGroupedCycle.contains("if (consolidationSession == null) {"));
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue("legacy ordinary discard remains backward-compatible and cannot mark an evening validated",
             prefs.contains("boolean discardConsolidationSession(ConsolidationCycleEngine.Family family) {\n        return discardConsolidationSession(family,null);\n    }"));

@@ -39,4 +39,12 @@ public final class SundayFinalLectureMaskSourceContractTest {
         assertFalse("Sunday mask setup must not alter exact due-line credits",
             implementation.contains("currentLineIds ="));
     }
+    @Test public void legacyOpenGroupedSessionCannotBeDiscardedDuringRender() throws Exception {
+        String activity = source("src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        int start = activity.indexOf("private void renderGroupedCycle(");
+        int end = activity.indexOf("private void updateGroupedCycleRepAction()", start);
+        assertTrue(start >= 0 && end > start);
+        assertFalse("A larger current corpus never authorizes silent loss of OPEN repetitions",
+            activity.substring(start, end).contains("discardConsolidationSession("));
+    }
 }

@@ -34,6 +34,15 @@ public final class ConsolidationOpenSlotSafetyTest {
         } catch (IllegalStateException expected) { }
         assertEquals(before, disk.getAll());
     }
+    @Test public void staleRepetitionCannotRollBackAlreadyPersistedProgress() {
+        InMemoryPrefs disk = new InMemoryPrefs(); HifzPrefs prefs = new HifzPrefs(disk);
+        ConsolidationCycleEngine.Session original = open("learning-final-2026-10-25", "same");
+        assertTrue(prefs.persistConsolidationSession(engine.recordRepetition(original)));
+        Map<String, ?> before = disk.getAll();
+        try { prefs.persistConsolidationSession(original); fail("Stale repetition must be refused"); }
+        catch (IllegalStateException expected) { }
+        assertEquals(before, disk.getAll());
+    }
     @Test public void ownNextRepetitionPreservesSnapshotAndSurvivesReopen() {
         InMemoryPrefs disk = new InMemoryPrefs();
         HifzPrefs prefs = new HifzPrefs(disk);

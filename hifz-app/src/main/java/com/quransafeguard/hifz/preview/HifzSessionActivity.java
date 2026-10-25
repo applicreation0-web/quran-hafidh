@@ -539,15 +539,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 +consolidationSession.cycle().cycleId()
                 +". Reprendre l'ancienne séance avant une nouvelle validation.");
         }
-        if (consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()
-                && prefs.frozenConsolidationSnapshot(family,cycleIdPrefix+today).isEmpty()) {
-            // The week's accumulator grew a new block (e.g. Friday's own) since this session was
-            // frozen open at a smaller size (e.g. Wednesday's 2 units) — reusing it as-is would
-            // silently finish out the old, now-incomplete unit set and never review the new block
-            // this week. Abandon its unfinished progress and fall through to rebuild fresh below.
-            prefs.discardConsolidationSession(family,cycleIdPrefix+today);
-            consolidationSession = null;
-        }
+        // A growing accumulator does not authorize discarding a legacy OPEN
+        // session. Finish its exact frozen units; newly added work remains due.
         if (consolidationSession == null) {
             if (units.isEmpty()) {
                 sessionCompleted = true;

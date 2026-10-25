@@ -3445,9 +3445,26 @@ public final class HifzPrefs {
                 units.put(encoded);
             }
             root.put("units", units);
-            return p.edit()
-                .putString(consolidationStateKeyForCycle(cycle.family(),cycle.cycleId()), root.toString())
-                .commit();
+            synchronized (V6_STATE_LOCK) {
+                String key = consolidationStateKeyForCycle(cycle.family(),cycle.cycleId());
+                String existing = p.getString(key, "");
+                if (existing != null && !existing.isEmpty()) {
+                    JSONObject frozen = new JSONObject(existing);
+                    if (!frozen.getBoolean("open")
+                            || !cycle.cycleId().equals(frozen.getString("cycleId"))
+                            || !cycle.family().name().equals(frozen.getString("family"))
+                            || !session.sessionId().equals(frozen.getString("sessionId"))
+                            || !units.toString().equals(frozen.getJSONArray("units").toString()))
+                        throw new IllegalStateException("Another frozen OPEN Consolidation session must be resumed first");
+                    int oldStage = frozen.getInt("stage"), oldUnit = frozen.getInt("nextUnitIndex");
+                    if (session.stage() < oldStage
+                            || (session.stage() == oldStage && session.nextUnitIndex() < oldUnit)
+                            || (session.stage() == oldStage && session.nextUnitIndex() == oldUnit
+                                && session.donePerStage() < frozen.getInt("donePerStage")))
+                        throw new IllegalStateException("Stale Consolidation repetition cannot roll back persisted progress");
+                }
+                return p.edit().putString(key, root.toString()).commit();
+            }
         } catch (Exception error) {
             throw new IllegalStateException("Unable to persist Consolidation session", error);
         }

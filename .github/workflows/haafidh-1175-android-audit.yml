@@ -8,6 +8,7 @@ on:
       - 'hifz-app/src/test/**'
       - 'hifz-app/src/androidTest/**'
       - 'scripts/export_jvm_audit_runtime.init.gradle'
+      - 'scripts/run_1175_process_death_audit.sh'
       - '.github/workflows/haafidh-1175-android-audit.yml'
       - 'scripts/boox_emulator_parcours.py'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
@@ -80,7 +81,8 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.PhoneProgrammeMigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzUiLayoutInstrumentedTest,com.quransafeguard.hifz.preview.MapQcfLifecycleInstrumentedTest
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalMaskReadinessInstrumentedTest,com.quransafeguard.hifz.preview.PhoneProgrammeMigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzUiLayoutInstrumentedTest,com.quransafeguard.hifz.preview.MapQcfLifecycleInstrumentedTest
+            bash scripts/run_1175_process_death_audit.sh
             mkdir -p hifz-app/build/boox-audit
             adb shell am start -n com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity
             sleep 3
