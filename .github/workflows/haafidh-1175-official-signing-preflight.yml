@@ -1,0 +1,40 @@
+name: Haafidh 1.17.5 official signer identity preflight (NO APK)
+on:
+  push:
+    branches:
+      - work/haafidh-1175-official-signing-preflight-20261025
+    paths:
+      - .github/workflows/haafidh-1175-official-signing-preflight.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Compare existing protected signer against installed official certificate
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.HIFZ_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.HIFZ_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.HIFZ_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_KEYSTORE_B64" || { echo "::error::Official keystore secret unavailable"; exit 1; }
+          test -n "$RELEASE_STORE_PASSWORD" || { echo "::error::Official keystore password secret unavailable"; exit 1; }
+          test -n "$RELEASE_KEY_ALIAS" || { echo "::error::Official signing alias unavailable"; exit 1; }
+          store="$RUNNER_TEMP/haafidh-official-preflight.jks"
+          trap 'rm -f "$store"' EXIT
+          printf '%s' "$RELEASE_KEYSTORE_B64" | base64 -d > "$store"
+          test -s "$store"
+          output=$(keytool -list -v -keystore "$store" -storepass:env RELEASE_STORE_PASSWORD -alias "$RELEASE_KEY_ALIAS" 2>/dev/null) || {
+            echo "::error::Official signing key cannot be opened with protected credentials"; exit 1;
+          }
+          fingerprint=$(printf '%s\n' "$output" | sed -n 's/^[[:space:]]*SHA256: //p' | head -1 | tr -d ':' | tr '[:upper:]' '[:lower:]')
+          expected=66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14
+          test "$fingerprint" = "$expected" || {
+            echo "::error::Stored signing certificate is NOT compatible with installed official Quran Haafidh"; exit 1;
+          }
+          echo "PASS: protected repository signer matches exact official v1.17.4/1.17.1 certificate"
+          echo "PASS: certificate identity checked without exporting keystore, credentials or APK"
