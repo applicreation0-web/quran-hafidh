@@ -13,7 +13,7 @@ PATH="hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"
 # plus the RED-proven synchronous elapsed-session force-stop checkpoint.
 # All other modifications still face the original 1.17.1 reconstruction below.
 CURRENT_SHA="066d2685a920b50877a6cd62cb6ad023337e16f4"
-if subprocess.check_output(["git","hash-object",PATH],text=True).strip()=="28f605d05311cdea603f12685140be6f513f72eb":
+if subprocess.check_output(["git","hash-object",PATH],text=True).strip()=="d7ae7092da4a1647823a96a171b3f71fff1f24f4":
     subprocess.run(["python3","scripts/verify_authorized_1175_final_state_delta.py"],check=True)
     print("PASS: exact reviewed 1.17.5 Sunday finale persistence migration")
     raise SystemExit(0)

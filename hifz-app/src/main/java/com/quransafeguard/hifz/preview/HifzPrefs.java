@@ -88,7 +88,9 @@ public final class HifzPrefs {
                 .putString("upperTailStart", "49:1")
                 .putString("sabqiStart", "2:75")
                 .putString("sabqiEnd", "2:286")
-                .putString("itqanRanges", defaultItqanRangesJson())
+                // First install: no fictitious acquired credit from a prefilled range.
+                .putString("itqanRanges", "[]")
+                .putBoolean("v6AcquiredBootstrapSeeded", true)
                 .putString("promotedRanges", bootstrapReconstructionJson())
                 .putString("unconsolidatedPromotedRanges", bootstrapReconstructionJson())
                 .putString("legacyMurajaahPromotedRanges", "[]")
@@ -911,7 +913,7 @@ public final class HifzPrefs {
     public void setSabqiStart(VerseRef value) { putRef("sabqiStart", value); }
     public void setSabqiEnd(VerseRef value) { putRef("sabqiEnd", value); }
 
-    public List<VerseRange> itqanRanges() { return parseRanges("itqanRanges"); }
+    public List<VerseRange> itqanRanges() { return parseRangesAllowEmpty("itqanRanges"); }
     public List<VerseRange> promotedRanges() { return parseRangesAllowEmpty("promotedRanges"); }
     public List<VerseRange> unconsolidatedPromotedRanges() { return parseRangesAllowEmpty("unconsolidatedPromotedRanges"); }
     public List<VerseRange> legacyMurajaahPromotedRanges() { return parseRangesAllowEmpty("legacyMurajaahPromotedRanges"); }
@@ -981,41 +983,16 @@ public final class HifzPrefs {
     }
 
     /**
-     * The bootstrap default "Plages acquises" (itqanRanges) has always been a range-level
-     * concept — material already known before installing the app, shown in Settings — but
-     * schema6's own per-line ACQUIRED credit (v6AcquiredCreditLineIds), which every strict-
-     * acquired-only reader (entryIsFullyStabilizedOrAcquired, ETA math) actually
-     * checks, was never backfilled for it: ensureSchema sets itqanRanges without touching
-     * v6AcquiredCreditLineIds at all, since that would need GeometryRepository (real I/O)
-     * inside the SharedPreferences-only constructor. Runs once, as soon as geometry is
-     * actually available, and only ever adds credit for a line still in its pristine NONE
-     * state — never touches one schema6 already has an opinion about.
+     * Acquis is earned by verified physical-line credits, never by automatic
+     * default settings or an upgrade. Keep all previous verified V6 credit,
+     * history, review state and cursors byte-for-byte.
      */
     public boolean reconcileV6AcquiredBootstrap(GeometryRepository geometry) {
+        if (geometry == null) throw new IllegalArgumentException("QCF geometry required");
         if (p.getBoolean("v6AcquiredBootstrapSeeded", false)) return true;
         synchronized (V6_STATE_LOCK) {
             requireSchema6ProgressionState();
-            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
-            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
-            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
-            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
-            LinkedHashMap<String, Long> activeJ10 = v6EpochDayMap("v6ActiveJ10LastReviewed");
-            LinkedHashSet<String> unknownDue = v6LineIdSet("v6UnknownDueLineIds");
-
-            ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
-            for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
-            for (String lineId : CorpusLinePolicy.ownedLineIds(itqanRanges(), allLines)) {
-                if (learned.contains(lineId) || stabilized.contains(lineId) || acquired.contains(lineId)
-                        || quarantine.contains(lineId) || legacyPartial.contains(lineId)) continue;
-                acquired.add(lineId);
-                if (!activeJ10.containsKey(lineId)) unknownDue.add(lineId);
-            }
-            return p.edit()
-                .putBoolean("v6AcquiredBootstrapSeeded", true)
-                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
-                .putString("v6UnknownDueLineIds", lineIdsJson(unknownDue))
-                .commit();
+            return p.edit().putBoolean("v6AcquiredBootstrapSeeded", true).commit();
         }
     }
 
@@ -1113,8 +1090,8 @@ public final class HifzPrefs {
 
     private void validateV6ManualRanges(List<VerseRange> acquiredRanges,
                                         List<VerseRange> stabilizationRanges) {
-        if (acquiredRanges == null || acquiredRanges.isEmpty())
-            throw new IllegalArgumentException("Au moins une plage Acquise est requise.");
+        if (acquiredRanges == null)
+            throw new IllegalArgumentException("Liste Acquise absente.");
         if (stabilizationRanges == null)
             throw new IllegalArgumentException("La liste À stabiliser est requise.");
         validateNoRangeOverlap(acquiredRanges, "Plages Acquises");
