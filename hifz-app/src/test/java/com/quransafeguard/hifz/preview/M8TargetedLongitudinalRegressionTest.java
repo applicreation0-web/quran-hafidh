@@ -91,7 +91,7 @@ public final class M8TargetedLongitudinalRegressionTest {
             CadenceAction action=WeeklyProgramPolicy.actionFor(weekday,programme,3);
             if(weekday==DayOfWeek.SUNDAY){
                 sundays++;
-                assertNotEquals("Sunday must not schedule active/passive general review",
+                assertEquals("Sunday is a dedicated finale day, not an ordinary Hifz lesson",
                     CadenceAction.REVISION,action);
             }
             LocalDate expected=firstUnfinished(date,done);
