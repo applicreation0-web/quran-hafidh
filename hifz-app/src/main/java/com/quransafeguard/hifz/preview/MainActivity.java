@@ -658,6 +658,12 @@ public final class MainActivity extends android.app.Activity {
      */
     private String renforcementQuickAccessMode(){
         LocalDate today=HifzClock.today();
+        if(prefs.unfinishedConsolidationSessionDate(
+                ConsolidationCycleEngine.Family.LEARNING,"learning-")!=null)
+            return HifzSessionActivity.LEARNING_CONSOLIDATION;
+        if(prefs.unfinishedConsolidationSessionDate(
+                ConsolidationCycleEngine.Family.LEARNING,"learning-final-")!=null)
+            return HifzSessionActivity.LEARNING_FINAL;
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         return today.getDayOfWeek()==DayOfWeek.SUNDAY && !learningFinalResolved(today)
             ? HifzSessionActivity.LEARNING_FINAL : HifzSessionActivity.LEARNING_CONSOLIDATION;
@@ -666,6 +672,9 @@ public final class MainActivity extends android.app.Activity {
     /** See renforcementQuickAccessMode: the Consolidation-track counterpart. */
     private String consolidationQuickAccessMode(){
         LocalDate today=HifzClock.today();
+        if(prefs.unfinishedConsolidationSessionDate(
+                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null)
+            return HifzSessionActivity.CONSOLIDATION_FINAL;
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         return today.getDayOfWeek()==DayOfWeek.SUNDAY && !consolidationFinalResolved(today)
             ? HifzSessionActivity.CONSOLIDATION_FINAL : HifzSessionActivity.RECENT_SABQI_REVIEW;
@@ -799,6 +808,20 @@ public final class MainActivity extends android.app.Activity {
 
     private void openToday() {
         LocalDate current=HifzClock.today();
+        // Frozen prior-day work is always accessible, even if a cadence check fails.
+        // This allows the 25 October Sunday finals to be resumed on Monday 26 without
+        // overwriting their original dated receipts or forcing an unrelated lesson.
+        List<TodaySession> unfinished=unfinishedWeekendSessions(current);
+        if(!unfinished.isEmpty()) {
+            try {
+                for(TodaySession row:todaySessions(current,null,null))
+                    addToday(unfinished,row.label,row.mode,row.scheduled,row.done,null);
+            } catch(RuntimeException unavailable) {
+                android.util.Log.w("QuranHifz","Today's preview unavailable during frozen recovery",unavailable);
+            }
+            showTodayWindow(unfinished);
+            return;
+        }
         ScheduledCadence due=nextDueCadence(current);
         String mode=nextMode(due);
         if(consolidationNeedsAttention||learningConsolidationNeedsAttention){
@@ -828,6 +851,48 @@ public final class MainActivity extends android.app.Activity {
             return;
         }
         showTodayWindow(sessions);
+    }
+
+    /** Incomplete dated sessions remain open across Sunday/Monday boundaries.
+     * This is navigation only: no new credit, replay, migration or week replan.
+     * Finale Itqan is shown after the regime switch ONLY if already frozen OPEN. */
+    private List<TodaySession> unfinishedWeekendSessions(LocalDate today) {
+        ArrayList<TodaySession> out=new ArrayList<>();
+        String learningEvening=prefs.unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.LEARNING,"learning-");
+        if(learningEvening!=null) {
+            LocalDate dated=LocalDate.parse(learningEvening);
+            if(!dated.isAfter(today))
+                addToday(out,"Reprendre Renforcement Sabqi du "+dated+" · soir",
+                    HifzSessionActivity.LEARNING_CONSOLIDATION,dated,false,null);
+        }
+        String sabqiFinal=prefs.unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.LEARNING,"learning-final-");
+        if(sabqiFinal!=null) {
+            LocalDate dated=LocalDate.parse(sabqiFinal);
+            if(!dated.isAfter(today))
+                addToday(out,"Reprendre finale Sabqi du "+dated+" · matin",
+                    HifzSessionActivity.LEARNING_FINAL,dated,false,null);
+        }
+        String itqanFinal=prefs.unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-");
+        if(itqanFinal!=null) {
+            LocalDate dated=LocalDate.parse(itqanFinal);
+            if(!dated.isAfter(today))
+                addToday(out,"Reprendre finale Itqān du "+dated+" · soir",
+                    HifzSessionActivity.CONSOLIDATION_FINAL,dated,false,null);
+        }
+        // The learning final may have been BLOCKED before it could open. Give
+        // access to the actual preceding Sunday rather than silently dropping
+        // the ungraduated lines on Monday. Do not create a new Itqan final here.
+        LocalDate sunday=today.minusDays(today.getDayOfWeek().getValue()%7);
+        if(sunday.isBefore(today) && !sunday.isBefore(prefs.programStartDate())
+                && !sunday.toString().equals(prefs.lastLearningConsolidationDate())
+                && !prefs.learningSnowballFinalUnits(sunday).isEmpty()) {
+            addToday(out,"Finale Sabqi du "+sunday+" · matin",
+                HifzSessionActivity.LEARNING_FINAL,sunday,false,null);
+        }
+        return out;
     }
 
     /** One session expected today, as the "Aujourd’hui" window lists it. */
@@ -951,6 +1016,15 @@ public final class MainActivity extends android.app.Activity {
         GeometryRepository g=geometry;
         if(g==null){setToday("…",todayAction.isEnabled());return;}
         LocalDate current=HifzClock.today();
+        // A past OPEN finale/renforcement outranks the new day's timetable.
+        // Do not redirect the learner into Settings because an old due-day
+        // cadence cannot be reconstructed after midnight.
+        if(!unfinishedWeekendSessions(current).isEmpty()) {
+            setToday("Reprendre les séances ouvertes · voir les finales",true);
+            if(todayObjective!=null)
+                todayObjective.setText("Sabqi / Itqān · reprendre les dates originales, sans perte d'acquis");
+            return;
+        }
         if(current.isBefore(prefs.programStartDate())){
             setToday("Parcours non démarré",false);return;
         }
