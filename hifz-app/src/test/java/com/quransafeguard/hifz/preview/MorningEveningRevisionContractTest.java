@@ -46,7 +46,7 @@ public final class MorningEveningRevisionContractTest {
         String planner=source("WeeklyDashboardPlanner.java");
         String session=source("HifzSessionActivity.java");
         String vocabulary=source("HifzDisplayVocabulary.java");
-        assertTrue("Sunday Itqan must never inherit the evening finale label",
+        assertFalse("Sunday must never offer ordinary Itqan",
             main.contains("addToday(out,anchoringTodayDetail(prefs,geometry),HifzSessionActivity.ITQAN,"));
         assertTrue("Passive forecast must suppress its repeated duration",
             planner.contains("if(range.endsWith(trailing))"));
