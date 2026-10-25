@@ -1063,7 +1063,7 @@ public final class MainActivity extends android.app.Activity {
     private String todaySummary(String mode) {
         if(HifzSessionActivity.SABQI.equals(mode))return "Apprentissage";
         if(HifzSessionActivity.ITQAN.equals(mode))return prefs.itqanEntretienActive()
-            ? "Entretien · Itqān" : "Stabilisation · Itqān";
+            ? "Itqān · Maintien de la maîtrise" : "Itqān · Consolidation";
         if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode))return "Revue apprentissage";
         if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode))return "Révision active";
         if(HifzSessionActivity.MURAJAAH.equals(mode))return "Révision passive";
@@ -1101,7 +1101,10 @@ public final class MainActivity extends android.app.Activity {
         // An overdue Sunday must NOT be counted as earned. Previously worked but
         // unpromoted physical blocks remain in extended history until a verified finale.
         boolean learning=!prefs.learningSnowballFinalUnits(HifzClock.today()).isEmpty();
-        boolean stabilization=!prefs.stabilizationSnowballFinalUnits(HifzClock.today()).isEmpty();
+        boolean historicalItqanFinal=prefs.unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null;
+        boolean stabilization=(!prefs.itqanEntretienActive() || historicalItqanFinal)
+            && !prefs.stabilizationSnowballFinalUnits(HifzClock.today()).isEmpty();
         if(!learning && !stabilization) {
             recentSabqiAdvisory.setText("");
             recentSabqiAdvisory.setVisibility(View.GONE);
@@ -1127,7 +1130,7 @@ public final class MainActivity extends android.app.Activity {
         // "Manuel" selects only a NUMBER of days via Settings, not weekday positions.
         String[] labels={
             "Manuel · nombre de jours",
-            "Standard · 3 Sabqi / 4 Itqān"
+            "Standard · 3 Sabqi / 3 Itqān"
         };
         int current=prefs.weeklyProgramMode()==options[1]?1:0;
         new android.app.AlertDialog.Builder(this)
@@ -1137,7 +1140,7 @@ public final class MainActivity extends android.app.Activity {
                 if(options[which]==prefs.weeklyProgramMode())return;
                 new android.app.AlertDialog.Builder(this)
                     .setTitle("Modifier le programme ?")
-                    .setMessage("À partir d’aujourd’hui. Acquis et séances passées conservés. Manuel : régler le nombre de jours dans Paramètres ; dimanche Itqān et finales.")
+                    .setMessage("À partir d’aujourd’hui. Acquis et séances passées conservés. Manuel : régler le nombre de jours dans Paramètres ; six jours ordinaires, finales le dimanche.")
                     .setNegativeButton("Annuler",null)
                     .setPositiveButton("Confirmer",(yes,button)->{
                         if(prefs.setWeeklyProgramMode(options[which])) refreshAll();
