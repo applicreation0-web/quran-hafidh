@@ -98,4 +98,44 @@ public final class SundayPageFinalCreditSafetyTest {
             assertEquals(before, disk.getAll());
         }
     }
+    @Test public void staleFinalCannotEraseANewerOpenFinalOrMoveValidationDateBackward() throws Exception {
+        for (ConsolidationCycleEngine.Family family : ConsolidationCycleEngine.Family.values()) {
+            InMemoryPrefs disk = EarnedEveningProtocolRegressionTest.disk();
+            List<String> oldLines = geometry.lineIdsOnPage(602).subList(0, 2);
+            String oldUnit = ConsolidationPhysicalUnitPolicy.encodeLineUnit(oldLines);
+            String newUnit = ConsolidationPhysicalUnitPolicy.encodeLineUnit(geometry.lineIdsOnPage(603).subList(0, 2));
+            disk.disk.put("v6AcquiredCreditLineIds", new JSONArray(oldLines).toString());
+            String stem = family == ConsolidationCycleEngine.Family.LEARNING ? "learning-final-" : "stabilization-final-";
+            ConsolidationCycleEngine.Session stale = engine.openSession(engine.startCycle(stem+"2026-10-18", family,
+                new ConsolidationCycleEngine.Unit(oldUnit, ConsolidationCycleEngine.Protocol.SUNDAY_PAGE)), "old");
+            while (!stale.readyToClose()) stale = engine.recordRepetition(stale);
+            ConsolidationCycleEngine.Session newer = open(family, Collections.singletonList(newUnit));
+            HifzPrefs prefs = new HifzPrefs(disk);
+            assertTrue(prefs.persistConsolidationSession(newer));
+            Map<String, ?> before = disk.getAll();
+            try {
+                if (family == ConsolidationCycleEngine.Family.LEARNING)
+                    prefs.completeLearningConsolidationSessionV6(stale, geometry, "2026-10-18", "stale");
+                else prefs.completeConsolidationSessionV6(stale, geometry, "2026-10-18", "stale");
+                fail("A stale final cannot remove another OPEN final");
+            } catch (IllegalStateException expected) { }
+            assertEquals(before, disk.getAll());
+        }
+    }
+    @Test public void oldCompletedFinalCannotMoveTheCompletionMarkerBackward() throws Exception {
+        for (ConsolidationCycleEngine.Family family : ConsolidationCycleEngine.Family.values()) {
+            InMemoryPrefs disk = EarnedEveningProtocolRegressionTest.disk();
+            String marker = family == ConsolidationCycleEngine.Family.LEARNING
+                ? "lastLearningConsolidationDate" : "lastRecentSabqiReviewDate";
+            disk.disk.put(marker, "2026-11-01");
+            List<String> lines = geometry.lineIdsOnPage(602).subList(0, 2);
+            disk.disk.put("v6AcquiredCreditLineIds", new JSONArray(lines).toString());
+            ConsolidationCycleEngine.Session old = open(family, Collections.singletonList(
+                ConsolidationPhysicalUnitPolicy.encodeLineUnit(lines)));
+            while (!old.readyToClose()) old = engine.recordRepetition(old);
+            HifzPrefs prefs = new HifzPrefs(disk); Map<String, ?> before = disk.getAll();
+            assertFalse(close(prefs, family, old));
+            assertEquals("Dates, snapshots and credit must not change on stale validation", before, disk.getAll());
+        }
+    }
 }
