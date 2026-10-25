@@ -622,7 +622,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("Sunday selector excludes both active and passive review",
             main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY) {"));
         assertTrue("Sunday forecast offers Consolidation finale instead of general Entretien",
-            weekly.contains("evening=consolidationDone?\"✓ Finale Consolidation Itqān\""));
+            weekly.contains("evening=!itqanFinalDue?\"—\":consolidationDone?\"✓ Finale Consolidation Itqān\""));
         assertFalse("Sunday REVISION branch must not project any passive cursor",
             method(weekly,"case REVISION:{","default:throw").contains("projectMurajaah("));
     }
