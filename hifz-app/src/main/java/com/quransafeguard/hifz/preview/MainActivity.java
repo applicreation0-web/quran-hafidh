@@ -396,7 +396,7 @@ public final class MainActivity extends android.app.Activity {
         subtitle.setMaxLines(1);
         subtitle.setPadding(0, Ui.dp(this, 3), 0, 0);
         tile.addView(subtitle);
-        tile.setContentDescription(label+" · "+state);
+        tile.setContentDescription(label+" · "+pathSubtitle(label)+" · "+state);
         tile.setClickable(true);
         tile.setFocusable(true);
         tile.setOnClickListener(listener);
