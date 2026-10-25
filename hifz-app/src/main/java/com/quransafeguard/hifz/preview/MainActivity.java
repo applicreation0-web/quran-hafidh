@@ -1140,6 +1140,13 @@ public final class MainActivity extends android.app.Activity {
         morningPreview.setFocusable(true);
         morningPreview.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
         weekDayPanel.addView(morningPreview);
+        String completedFinale=completedFinaleFromPreview(chosen.morning);
+        if(!completedFinale.isEmpty()){
+            TextView finalStatus=Ui.bookText(this,completedFinale,16f,true);
+            finalStatus.setPadding(0,Ui.dp(this,7),0,Ui.dp(this,4));
+            finalStatus.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
+            weekDayPanel.addView(finalStatus);
+        }
         TextView evening = Ui.text(this, "SOIR · détails ›", 16f, true);
         evening.setPadding(0, Ui.dp(this, 8), 0, 0);
         evening.setContentDescription("Soir · afficher les informations complètes");
@@ -1226,6 +1233,16 @@ public final class MainActivity extends android.app.Activity {
         }
         if(essentials.isEmpty())return raw.startsWith("✓")?"Terminée":"Détails disponibles";
         return String.join(" · ",essentials);
+    }
+
+    /** Older planning strings sometimes combine a lesson and an unrelated finale. */
+    static String completedFinaleFromPreview(String raw) {
+        if(raw==null)return "";
+        int at=raw.indexOf("✓ Finale ");
+        if(at<0)return "";
+        String tail=raw.substring(at).trim();
+        int next=tail.indexOf(" · ");
+        return next<0?tail:tail.substring(0,next);
     }
 
     static String homePreviewForMode(String mode,WeeklyDashboardPlanner.Row row,boolean postNas){
