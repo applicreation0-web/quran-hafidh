@@ -24,7 +24,8 @@ public final class MorningEveningRevisionContractTest {
         assertTrue(plan.contains("Révision passive · "));
         assertTrue(plan.contains("if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY)"));
         assertTrue(plan.contains("Sunday must NEVER forecast active/passive revision"));
-        assertFalse(plan.contains("Entretien"));
+        assertFalse("No obsolete user-facing Entretien label",
+            plan.contains("\"Entretien ·"));
     }
 
     @Test public void todayActionsOfferMorningReviewsBeforeEveningLearning() throws Exception {
@@ -37,7 +38,7 @@ public final class MorningEveningRevisionContractTest {
         assertTrue(main.contains("eveningLessonDetail=todayRow!=null?stripDone(compactSession(todayRow.evening))"));
         assertTrue(main.contains("if(!date.toString().equals(prefs.lastMurajaahDate()))"));
         assertTrue(main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
-        assertTrue(main.contains("Itqān · Entretien"));
+        assertTrue(main.contains("Itqān · Maintien de la maîtrise"));
         assertTrue(main.contains("Révision passive · matin"));
     }
 
