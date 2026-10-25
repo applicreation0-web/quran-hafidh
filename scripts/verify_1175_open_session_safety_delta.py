@@ -42,9 +42,9 @@ for file, start, end in [
         revised_doc='    /** Sunday is reserved for finales; this setting counts Mon–Sat ordinary days only. */'
         assert new.count(revised_doc)==1
         new=new.replace(revised_doc,prior_doc)
-        start='    public int itqanDaysPerWeek() {'
-        old_method=old[old.index(start):old.index('    /**',old.index(start)+len(start))]
-        new_method=new[new.index(start):new.index('    /**',new.index(start)+len(start))]
+        method_start='    public int itqanDaysPerWeek() {'
+        old_method=old[old.index(method_start):old.index('    /**',old.index(method_start)+len(method_start))]
+        new_method=new[new.index(method_start):new.index('    /**',new.index(method_start)+len(method_start))]
         assert new_method.count('return 6-learningDaysPerWeek();')==1
         new=new.replace(new_method,old_method,1)
         # Replace the one reviewed closure span (including its new identity guard)
