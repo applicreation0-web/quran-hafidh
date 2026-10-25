@@ -907,7 +907,7 @@ public final class SettingsActivity extends android.app.Activity {
         HifzPrefs.WeeklyProgram mode=prefs.weeklyProgramMode();
         if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return PreviewConfig.STABILIZATION_WEEKLY_LINES;
         if(mode==HifzPrefs.WeeklyProgram.MANUAL_SEVEN)
-            return Math.max(1,(7-effectiveLearningDaysPerWeek())*7);
+            return Math.max(0,(6-effectiveLearningDaysPerWeek())*7);
         return PreviewConfig.STABILIZATION_WEEKLY_LINES;
     }
 
@@ -915,6 +915,7 @@ public final class SettingsActivity extends android.app.Activity {
         int remaining=prefs.stabilizationLinesRemaining(geometry);
         if(remaining==0)return "à jour";
         int weeklyPace=forecastItqanLinesPerWeek();
+        if(weeklyPace==0)return remaining+" ligne(s) restante(s) · aucun jour Itqān programmé";
         int weeks=(remaining+weeklyPace-1)/weeklyPace;
         return remaining+" ligne(s) restante(s) · estimation ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
     }
