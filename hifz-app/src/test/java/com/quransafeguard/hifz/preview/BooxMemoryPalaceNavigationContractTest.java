@@ -31,9 +31,9 @@ public final class BooxMemoryPalaceNavigationContractTest {
 
     @Test public void vectorArtworkFillsBooxColumnsNotTinyIntrinsicBounds() throws Exception {
         String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(main.contains("booxIconDp(3, 112)"));
+        assertTrue(main.contains("booxIconDp(2, 112)"));
         assertTrue(main.contains("booxIconDp(2, 124)"));
-        assertTrue(main.contains("booxIconDp(2, 82)"));
+        assertTrue(main.contains("primaryTile(practiceRow, \"Progression\""));
         assertTrue(main.contains("architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp))"));
         assertFalse(main.contains("new BooxFlowStroke(this)"));
     }
