@@ -11,7 +11,7 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public final class WeeklyProgramPolicyTest {
-    @Test public void recommendedItqanIsExactlyFourDaysAndThirtyPhysicalLineTargets() {
+    @Test public void recommendedItqanIsThreeDaysTwentyTwoPhysicalLineTargets() {
         int itqanCount=0,sabqiCount=0,lines=0;
         for(DayOfWeek day:DayOfWeek.values()) {
             CadenceAction action=WeeklyProgramPolicy.actionFor(day,
@@ -22,15 +22,19 @@ public final class WeeklyProgramPolicyTest {
             } else if(action==CadenceAction.LEARNING) {
                 sabqiCount++;
                 assertEquals(0,WeeklyProgramPolicy.recommendedItqanTargetLines(day));
-            } else fail("Recommended Sunday cannot become general revision");
+            } else {
+                assertEquals(DayOfWeek.SUNDAY,day);
+                assertEquals(CadenceAction.REVISION,action);
+                assertEquals(0,WeeklyProgramPolicy.recommendedItqanTargetLines(day));
+            }
         }
-        assertEquals(4,itqanCount);
+        assertEquals(3,itqanCount);
         assertEquals(3,sabqiCount);
-        assertEquals(30,lines);
+        assertEquals(22,lines);
         assertEquals(8,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.TUESDAY));
         assertEquals(7,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.THURSDAY));
         assertEquals(7,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.SATURDAY));
-        assertEquals(8,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.SUNDAY));
+        assertEquals(0,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.SUNDAY));
     }
 
     @Test public void recommendedLearningThreeOfThreeIsCalendarOnlyAndRestartsOnMonday(){
