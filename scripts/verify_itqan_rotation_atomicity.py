@@ -26,8 +26,8 @@ for a,b in ((old_enum,new_enum),(old_return,new_return),(old_comment,new_comment
 # Strip ONLY the explicitly authorized user-selected, future-dated programme
 # addition, then prove every historical writer byte still equals the approved
 # post-An-Nas baseline. This is not a blanket relaxation of the freeze.
-canonical=source.replace("import java.time.LocalDate;\\n","",1)
-begin=canonical.index("    /**\\n     * Forward-dated, explicit user choice.")
+canonical=source.replace("import java.time.LocalDate;\n","",1)
+begin=canonical.index("    /**\n     * Forward-dated, explicit user choice.")
 end=canonical.index("    /** Regime and protocol frozen for one Itqān unit. */",begin)
 assert begin>0 and end>begin,"Missing reviewed dated regime block"
 additional=canonical[begin:end]
