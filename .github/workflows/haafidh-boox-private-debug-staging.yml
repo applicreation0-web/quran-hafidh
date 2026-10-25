@@ -18,6 +18,7 @@ on:
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/MorningEveningRevisionContractTest.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/HifzDisplayVocabularyTest.java'
       - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/FinalUiPolishSourceContractTest.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionSourceContractTest.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java'
       - 'scripts/verify_authorized_1175_final_state_delta.py'
