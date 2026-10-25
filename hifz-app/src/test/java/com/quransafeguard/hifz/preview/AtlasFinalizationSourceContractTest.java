@@ -123,7 +123,7 @@ public final class AtlasFinalizationSourceContractTest {
         String map=read(ROOT+"MawdudiMapScreen.java");
         String reader=read(ROOT+"StudyReaderActivity.java");
         String ui=read(ROOT+"Ui.java");
-        assertTrue(home.contains("primaryTile(destinations, \"Atlas\", \"Atlas\""));
+        assertTrue(home.contains("primaryTile(readingRow, \"Atlas\", \"Atlas\""));
         assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Atlas\""));
         assertTrue(map.contains("Unité Atlas · "));
         assertFalse("Passage captions belong to Lecture, not the unit-only Atlas",
