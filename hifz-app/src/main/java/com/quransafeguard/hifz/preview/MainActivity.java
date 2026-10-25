@@ -485,8 +485,8 @@ public final class MainActivity extends android.app.Activity {
     private void refreshItqanCardVocabulary() {
         if(consolidationCard==null || prefs==null) return;
         boolean afterNas=prefs.itqanEntretienActive();
-        String label=afterNas?"Entretien":"Consolidation";
-        String subtitle=afterNas?"Itqān · après An-Nās":"Itqān · avant An-Nās";
+        String label=afterNas?"Maintien":"Consolidation";
+        String subtitle=afterNas?"Itqān · Maintien de la maîtrise":"Itqān · Consolidation";
         if(consolidationCard.getChildAt(0) instanceof TextView)
             ((TextView)consolidationCard.getChildAt(0)).setText(label);
         if(consolidationCard.getChildCount()>2 && consolidationCard.getChildAt(2) instanceof TextView)
@@ -676,7 +676,8 @@ public final class MainActivity extends android.app.Activity {
                 ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null)
             return HifzSessionActivity.CONSOLIDATION_FINAL;
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
-        return today.getDayOfWeek()==DayOfWeek.SUNDAY && !consolidationFinalResolved(today)
+        return today.getDayOfWeek()==DayOfWeek.SUNDAY && !prefs.itqanEntretienActive()
+                && !consolidationFinalResolved(today)
             ? HifzSessionActivity.CONSOLIDATION_FINAL : HifzSessionActivity.RECENT_SABQI_REVIEW;
     }
 
@@ -1314,12 +1315,12 @@ public final class MainActivity extends android.app.Activity {
     static String readableScheduleTitle(String raw, boolean postNas) {
         if(raw==null||raw.trim().isEmpty()||"—".equals(raw.trim()))return "Aucune séance";
         String value=stripDone(raw);
-        if(value.startsWith("Stabilisation"))return postNas?"Itqān · Entretien":"Itqān · Consolidation";
+        if(value.startsWith("Stabilisation"))return postNas?"Itqān · Maintien de la maîtrise":"Itqān · Consolidation";
         if(value.startsWith("Apprentissage"))return "Apprentissage · Sabaq";
         if(value.contains("Finale Renforcement Sabqi"))return "Finale · Sabqi";
         if(value.contains("Finale Consolidation Itqān"))return "Finale · Itqān";
         if(value.startsWith("Renforcement"))return "Renforcement · Sabqi";
-        if(value.startsWith("Consolidation"))return postNas?"Entretien · Itqān":"Consolidation · Itqān";
+        if(value.startsWith("Consolidation"))return postNas?"Maintien de la maîtrise · Itqān":"Consolidation · Itqān";
         if(value.startsWith("Révision active"))return "Révision active";
         if(value.startsWith("Révision passive"))return "Révision passive";
         return value.split(" · ",2)[0];
