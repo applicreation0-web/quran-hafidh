@@ -381,7 +381,7 @@ public final class SettingsActivity extends android.app.Activity {
         String mode=prefs.itqanProgrammeChoice();
         LocalDate from=prefs.itqanProgrammeStartDate();
         if("AUTO".equals(mode))return (prefs.itqanEntretienActive()
-            ? "Entretien · après An-Nās" : "Consolidation · avant An-Nās")+" · automatique";
+            ? "Itqān · Maintien de la maîtrise" : "Itqān · Consolidation")+" · automatique";
         if("ENTRETIEN".equals(mode) && !prefs.itqanPostNasMaintenance())
             return "Entretien · en attente d’An-Nās · dès le "+from;
         if(from!=null && from.isAfter(HifzClock.today()))
