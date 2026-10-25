@@ -324,9 +324,9 @@ public final class SettingsActivity extends android.app.Activity {
     private String learningDaysSummary(){
         int days=effectiveLearningDaysPerWeek();
         String base=prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-            ? "3 jours Apprentissage · 4 jours Stabilisation"
-            : days+" jours Apprentissage · "+(7-days)
-                +" jours Stabilisation (dimanche imposé)";
+            ? "3 jours Apprentissage · 3 jours Stabilisation"
+            : days+" jours Apprentissage · "+(6-days)
+                +" jours Stabilisation + finales dimanche";
         return prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO ? base+"   ·   Automatique" : base;
     }
 
@@ -371,10 +371,10 @@ public final class SettingsActivity extends android.app.Activity {
 
     private String weeklyProgramSummary() {
         return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-            ? "Standard · 3 Sabqi / 4 Itqān"
+            ? "Standard · 3 Sabqi / 3 Itqān"
             : prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
                 ? "Manuel · jours Sabqi : "+effectiveLearningDaysPerWeek()
-                    +" · dimanche Itqān" : "Historique 6 jours · migration lundi";
+                    +" · dimanche Finales" : "Historique 6 jours · migration lundi";
     }
 
     private String itqanProgrammeSummary() {
@@ -436,7 +436,7 @@ public final class SettingsActivity extends android.app.Activity {
         HifzPrefs.WeeklyProgram previous=prefs.weeklyProgramMode();
         HifzPrefs.WeeklyProgram[] modes={HifzPrefs.WeeklyProgram.RECOMMENDED,
             HifzPrefs.WeeklyProgram.MANUAL_SEVEN};
-        String[] titles={"Standard · 3 Sabqi / 4 Itqān",
+        String[] titles={"Standard · 3 Sabqi / 3 Itqān",
             "Manuel · nombre de jours Sabqi"};
         int[] choice={previous==HifzPrefs.WeeklyProgram.MANUAL_SEVEN?1:0};
         new AlertDialog.Builder(this).setTitle("Programme hebdomadaire")
@@ -460,7 +460,7 @@ public final class SettingsActivity extends android.app.Activity {
         int checkedIndex=0;
         for(int i=0;i<labels.length;i++){
             int days=min+i;
-            labels[i]=days+" Apprentissage  +  "+(7-days)+" Stabilisation  = 7 jours";
+            labels[i]=days+" Apprentissage  +  "+(6-days)+" Stabilisation  = 6 jours + dimanche Finales";
             if(days==current)checkedIndex=i;
         }
         int[] selection={checkedIndex};
@@ -495,7 +495,7 @@ public final class SettingsActivity extends android.app.Activity {
     private void applyLearningDaysPerWeek(int days){
         if(!prefs.setLearningDaysPerWeek(days)){Toast.makeText(this,"Impossible d’enregistrer ce réglage.",Toast.LENGTH_LONG).show();return;}
         refreshWeeklyCadence();
-        Toast.makeText(this,"Cadence 7 jours : "+days+" Apprentissage + "+(7-days)+" Stabilisation.",Toast.LENGTH_LONG).show();
+        Toast.makeText(this,"Cadence 6 jours + finales dimanche : "+days+" Apprentissage + "+(6-days)+" Stabilisation.",Toast.LENGTH_LONG).show();
     }
 
     private void refreshSabqi(){
@@ -899,13 +899,13 @@ public final class SettingsActivity extends android.app.Activity {
 
     /**
      * Calendar-only estimates, never earned credits. Recommended Itqan target
-     * is 8+7+7+8 physical lines over 7 days; manual uses a conservative seven
+     * is 8+7+7 physical lines on Tue/Thu/Sat; manual uses seven
      * lines per Itqan day (actual physical surah/page boundaries can reduce it).
      * Historical CLASSIC retains its original 22-line estimate.
      */
     private int forecastItqanLinesPerWeek(){
         HifzPrefs.WeeklyProgram mode=prefs.weeklyProgramMode();
-        if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return 30;
+        if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return PreviewConfig.STABILIZATION_WEEKLY_LINES;
         if(mode==HifzPrefs.WeeklyProgram.MANUAL_SEVEN)
             return Math.max(1,(7-effectiveLearningDaysPerWeek())*7);
         return PreviewConfig.STABILIZATION_WEEKLY_LINES;
