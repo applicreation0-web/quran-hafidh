@@ -43,7 +43,8 @@ public final class SundayMondayResumeInstrumentedTest {
 
     @SuppressWarnings("unchecked")
     @Test public void mondayShowsBothOriginalOpenSessionsWithoutMutation() throws Exception {
-        HifzPrefs prefs=new HifzPrefs(ApplicationProvider.getApplicationContext());
+        Context context=ApplicationProvider.getApplicationContext();
+        HifzPrefs prefs=new HifzPrefs(context);
         assertTrue(prefs.persistConsolidationSession(frozen(
             "learning-2026-10-24",ConsolidationCycleEngine.Family.LEARNING,
             ConsolidationCycleEngine.Protocol.SNOWBALL)));
