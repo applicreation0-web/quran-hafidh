@@ -137,7 +137,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(backlogParcoursRow);
         // Hifz semantic grammar: paired by the real corpus and operation.
         // Sabqi: introduce one set, then cumulatively revisit it.
-        path.addView(Ui.text(this, "SABQI · nouvelles lignes et renforcement", 16f, true));
+        path.addView(Ui.text(this, "SABQI", 16f, true));
         LinearLayout learningModes = Ui.row(this);
         LinearLayout sabqi = pathTile(learningModes, "Apprentissage", "1 page/semaine",
             v -> openMode(HifzSessionActivity.SABQI));
@@ -146,7 +146,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(learningModes);
 
         // Itqan: one bounded memorization unit, then its accumulated units.
-        path.addView(Ui.text(this, "ITQĀN · stabilisation et consolidation", 16f, true));
+        path.addView(Ui.text(this, "ITQĀN", 16f, true));
         LinearLayout otherModes = Ui.row(this);
         itqanCard = pathTile(otherModes, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
@@ -156,7 +156,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(otherModes);
 
         // Same acquired corpus, two modalities: text masked vs text visible.
-        path.addView(Ui.text(this, "RÉVISION · sur les acquis", 16f, true));
+        path.addView(Ui.text(this, "RÉVISION", 16f, true));
         LinearLayout reviewModes = Ui.row(this);
         LinearLayout activeRevision = pathTile(reviewModes, "Révision active", "Récitation masquée",
             v -> openMode(HifzSessionActivity.MURAJAAH_ACTIVE));
@@ -367,10 +367,10 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout pathTile(LinearLayout parent, String label, String state,
                                  View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
-        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 12), Ui.dp(this, 2), Ui.dp(this, 12));
+        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(2, 124);
-        tile.setMinimumHeight(Ui.dp(this, sideDp + 76));
+        tile.setMinimumHeight(Ui.dp(this, sideDp + 84));
         String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
             : "Stabilisation".equals(label) ? "Stabiliser"
             : "Révision".equals(label) ? "Réviser" : label;
@@ -384,12 +384,18 @@ public final class MainActivity extends android.app.Activity {
         Drawable architectural = getDrawable(icon).mutate();
         architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp));
         name.setCompoundDrawables(null, architectural, null, null);
-        name.setCompoundDrawablePadding(Ui.dp(this, 9));
+        name.setCompoundDrawablePadding(Ui.dp(this, 6));
         tile.addView(name);
         // The real target/verse range is on the selected day, not crammed into a 1/3-width cell.
         TextView cue = Ui.text(this, state, 15f, false);
         cue.setVisibility(View.GONE);
         tile.addView(cue);
+        // A real short subtitle belongs under each large Hifz glyph, not in an invisible state label.
+        TextView subtitle = Ui.menuSubline(this, pathSubtitle(label));
+        subtitle.setGravity(Gravity.CENTER);
+        subtitle.setMaxLines(1);
+        subtitle.setPadding(0, Ui.dp(this, 3), 0, 0);
+        tile.addView(subtitle);
         tile.setContentDescription(label+" · "+state);
         tile.setClickable(true);
         tile.setFocusable(true);
@@ -399,6 +405,19 @@ public final class MainActivity extends android.app.Activity {
         lp.setMargins(Ui.dp(this, 2), 0, Ui.dp(this, 2), 0);
         parent.addView(tile, lp);
         return tile;
+    }
+
+    /** Clear, stable vocabulary: the selected-day panel carries all actual verse limits. */
+    private static String pathSubtitle(String label) {
+        switch (label) {
+            case "Apprentissage": return "Nouvelles lignes";
+            case "Renforcement": return "Reprise du Sabqi";
+            case "Stabilisation": return "Fixation Itqān";
+            case "Consolidation": return "Cumul Itqān";
+            case "Révision active": return "Sans texte";
+            case "Révision passive": return "Avec texte";
+            default: return "";
+        }
     }
 
     /** Today's dominant action displays the canonical next due session. */
