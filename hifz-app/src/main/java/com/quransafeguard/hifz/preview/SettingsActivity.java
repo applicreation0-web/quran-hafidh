@@ -382,8 +382,13 @@ public final class SettingsActivity extends android.app.Activity {
         LocalDate from=prefs.itqanProgrammeStartDate();
         if("AUTO".equals(mode))return (prefs.itqanEntretienActive()
             ? "Entretien · après An-Nās" : "Consolidation · avant An-Nās")+" · automatique";
-        return ("ENTRETIEN".equals(mode)?"Entretien · hizb ×3":"Consolidation · protocole approfondi")
-            +" · dès le "+from;
+        if("ENTRETIEN".equals(mode) && !prefs.itqanPostNasMaintenance())
+            return "Entretien · en attente d’An-Nās · dès le "+from;
+        if(from!=null && from.isAfter(HifzClock.today()))
+            return ("ENTRETIEN".equals(mode)?"Entretien · hizb ×3":"Consolidation · approfondie")
+                +" · programmé dès le "+from;
+        return ("ENTRETIEN".equals(mode)?"Entretien · hizb ×3":"Consolidation · approfondie")
+            +" · actif depuis le "+from;
     }
 
     /** Explicit programme and effective date; does not rewrite existing Hifz sessions. */
