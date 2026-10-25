@@ -6,7 +6,11 @@ final class HifzDisplayVocabulary {
 
     static String canonicalize(String label) {
         if (label == null || label.isEmpty()) return label;
-        return label
+        // Reserve the new Itqān label before translating historical "Entretien"
+        // (which originally meant passive review), then restore it verbatim.
+        String scoped=label.replace("Itqān · Entretien","__ITQAN_MAINTENANCE__")
+            .replace("Entretien · Itqān","__ITQAN_MAINTENANCE_REVERSED__");
+        return scoped
   .replace("Reprise du soir", "Apprentissage · reprise")
   .replace("Leçon neuve", "Apprentissage")
   .replace("Sabqi review", "Apprentissage · reprise")
@@ -21,6 +25,8 @@ final class HifzDisplayVocabulary {
   .replace("Entretien installé", "Révision passive installée")
   .replace("Entretien", "Révision passive")
   .replace("Murājaʿah", "Révision")
-  .replace("Murajaah", "Révision");
+  .replace("Murajaah", "Révision")
+  .replace("__ITQAN_MAINTENANCE__", "Itqān · Entretien")
+  .replace("__ITQAN_MAINTENANCE_REVERSED__", "Entretien · Itqān");
     }
 }

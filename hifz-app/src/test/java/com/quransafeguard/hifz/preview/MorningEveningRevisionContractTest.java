@@ -37,7 +37,8 @@ public final class MorningEveningRevisionContractTest {
         assertTrue(main.contains("eveningLessonDetail=todayRow!=null?stripDone(compactSession(todayRow.evening))"));
         assertTrue(main.contains("if(!date.toString().equals(prefs.lastMurajaahDate()))"));
         assertTrue(main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
-        assertFalse(main.contains("Entretien"));
+        assertTrue(main.contains("Itqān · Entretien"));
+        assertTrue(main.contains("Révision passive · matin"));
     }
 
     @Test public void lateDisplayFixesArePresentAndSundayItqanIsNotTheFinale() throws Exception {
@@ -71,7 +72,8 @@ public final class MorningEveningRevisionContractTest {
         assertTrue(settings.contains("Position Révision passive : "));
         assertTrue(settings.contains("Soir : Apprentissage ou Stabilisation"));
         assertTrue(selector.contains("\"Révision passive · \" + maintenanceCue"));
-        assertFalse(settings.contains("Entretien"));
+        assertTrue(settings.contains("Entretien · 1 hizb ×3"));
+        assertFalse(settings.contains("Vitesse · Entretien"));
         assertFalse(selector.contains("Entretien"));
     }
 }
