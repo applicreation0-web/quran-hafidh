@@ -74,16 +74,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Diagnose frozen vocabulary blob before guard (no bypass)
-        shell: bash
-        run: |
-          set -euo pipefail
-          file=hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzDisplayVocabulary.java
-          echo "HEAD=$(git rev-parse HEAD)"
-          echo "INDEX=$(git ls-files -s "$file")"
-          echo "DISK=$(git hash-object "$file")"
-          echo "COMMIT=$(git show "HEAD:$file" | git hash-object --stdin)"
-          if ! git diff --exit-code HEAD -- "$file"; then echo "SOURCE DIFFERENCE DETECTED"; fi
       - name: Enforce unmodified Hifz engine and review of approved icon grammar
         shell: bash
         run: |
