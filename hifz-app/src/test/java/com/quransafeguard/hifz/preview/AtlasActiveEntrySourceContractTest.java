@@ -20,7 +20,7 @@ public final class AtlasActiveEntrySourceContractTest {
   String home=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
   String manifest=source("hifz-app/src/main/AndroidManifest.xml");
   assertTrue("The approved Atlas tile must remain visible on Home",
-            home.contains("primaryTile(destinations, \"Atlas\", \"Atlas\""));
+            home.contains("primaryTile(readingRow, \"Atlas\", \"Atlas\""));
   assertTrue(home.contains("new Intent(this, AtlasMapActivity.class)"));
   assertFalse(home.contains("new Intent(this, IbnKathirMapActivity.class)"));
   assertTrue(manifest.contains("<activity android:name=\".AtlasMapActivity\" android:exported=\"false\""));
