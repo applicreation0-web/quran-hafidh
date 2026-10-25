@@ -1,0 +1,107 @@
+name: Haafidh 1.17.5 OFFLINE private-release staging (unsigned, NO publication)
+on:
+  push:
+    branches:
+      - work/haafidh-1175-official-signing-preflight-20261025
+    paths:
+      - .github/workflows/haafidh-1175-unsigned-release-offline-stage.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile-public-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Confirm application source equals proven 906-run SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=6fb3c073f6b11ee524f7733152b59d0d0cffc55d
+          git cat-file -e "$base^{commit}"
+          git diff --exit-code "$base" HEAD -- hifz-core safeguard-core hifz-app app/src
+          echo "PASS: exact approved application source $base; only offline workflow files differ"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Fetch canonical 604 QCF pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Compile equivalent PRIVATE release code flags without importing any protected assets or signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('hifz-app/build.gradle.kts')
+          s=p.read_text()
+          keys=[
+           ('buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", privateReleaseUpgrade.toString())',
+            'buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", "true")'),
+           ('buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", privateReleaseUpgrade.toString())',
+            'buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", "true")'),
+          ]
+          for old,new in keys:
+            if s.count(old)!=1: raise SystemExit('NO-GO: unexpected Gradle release BuildConfig shape')
+            s=s.replace(old,new)
+          p.write_text(s)
+          print('PASS: temporary build-time private UI flags enabled; NO persistence or Hifz source changed')
+          PY
+          test ! -e hifz-app/src/private114/assets/atlas
+          test ! -e hifz-app/src/private114/assets/atlas_private
+          test ! -e hifz-app/src/private114/assets/ayah_themes_private
+          gradle --no-daemon :hifz-app:assembleRelease --stacktrace
+      - name: Verify exact unsigned release identity and absent private assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          app=hifz-app/build-private114
+          apk=$(find "$app/outputs/apk/release" -type f -name '*unsigned.apk' -print -quit)
+          test -n "$apk" && test -s "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.quransafeguard.hifz' versionCode='43' versionName='1.17.5'"
+          config=$(find "$app/generated/source/buildConfig/release" -name BuildConfig.java -print -quit)
+          test -n "$config" && grep -F 'AYAH_THEMES_FINAL_PRIVATE = true' "$config"
+          grep -F 'ATLAS_PRIVATE_EDITORIAL_PREVIEW = true' "$config"
+          for f in atlas/atlas_display_catalog_v1.json atlas_private/atlas_366_comments_offline_reference_v1.json atlas_private/atlas_approved_unit_titles_366_v1.json atlas_private/maududi_original.pdf ayah_themes_private/macros_114.json ayah_themes_private/special_27.json ayah_themes_private/titles_114.json; do
+            ! unzip -Z1 "$apk" | grep -Fx "assets/$f" || { echo "NO-GO: private corpus unexpectedly present in public runner"; exit 1; }
+          done
+          stage="$RUNNER_TEMP/haafidh-1175-unsigned-stage"
+          mkdir -p "$stage"
+          cp "$apk" "$stage/quran-haafidh-1.17.5-code43-unsigned-private-flags.apk"
+          cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" "$stage/zipalign"
+          cp "$ANDROID_HOME/build-tools/36.0.0/aapt" "$stage/aapt"
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" "$stage/apksigner.jar"
+          {
+            echo "SOURCE_SHA=6fb3c073f6b11ee524f7733152b59d0d0cffc55d"
+            echo "VERSION=1.17.5"
+            echo "CODE=43"
+            echo "APPLICATION_ID=com.quransafeguard.hifz"
+            echo "PRIVATE_ANDROID_FLAGS=true"
+            echo "PRIVATE_ASSETS=ABSENT_BY_DESIGN"
+            echo "SIGNATURE=ABSENT_BY_DESIGN"
+            echo "FOR_OFFLINE_PRIVATE_INJECTION_AND_AUTHORIZED_SIGNING_ONLY=TRUE"
+            sha256sum "$stage/quran-haafidh-1.17.5-code43-unsigned-private-flags.apk"
+          } > "$stage/PROVENANCE.txt"
+          echo "PASS: unsigned offline staging verified. DO NOT INSTALL."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-1175-unsigned-private-release-staging-NOT-INSTALLABLE
+          path: ${{ runner.temp }}/haafidh-1175-unsigned-stage/
+          retention-days: 14
+          if-no-files-found: error
