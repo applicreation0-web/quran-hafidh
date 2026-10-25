@@ -81,7 +81,11 @@ public final class ConsolidationSevenAndSundayFinalTest {
         assertTrue(main.contains("if(recommendedSunday(date))"));
         assertTrue(main.contains("if(!learningFinalResolved(date))return HifzSessionActivity.LEARNING_FINAL;"));
         assertTrue(main.contains("!consolidationFinalResolved(date)")); 
-        assertFalse(main.contains("if(!modeComplete(date,HifzSessionActivity.ITQAN))return HifzSessionActivity.ITQAN;"));
+        int sunday=main.indexOf("if(recommendedSunday(date)){",main.indexOf("private String computeNextMode("));
+        int next=main.indexOf("switch(due.getAction())",sunday);
+        assertTrue(sunday>=0&&next>sunday);
+        assertFalse("Sunday must not route an ordinary Itqan lesson",
+            main.substring(sunday,next).contains("return HifzSessionActivity.ITQAN;"));
         assertTrue(main.contains("if(recommendedSunday(today)){"));
         assertTrue(main.contains("return out; // No active/passive reviews or ordinary Itqan on Sunday."));
         assertTrue(dashboard.contains("Finale Renforcement Sabqi"));
