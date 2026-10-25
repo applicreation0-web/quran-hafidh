@@ -143,6 +143,14 @@ while IFS= read -r file; do
         echo "EXACT REVIEWED DISPLAY VOCABULARY: $file"
       fi
       ;;
+    "$prefix/SundayFinalPagePolicy.java")
+      if [ "$(git hash-object "$file")" != "c419bcbad9d676a87b9ec6fed1b9ee50c58bd018" ]; then
+        echo "::error file=$file::Non-reviewed Sunday QCF page projection."
+        bad=1
+      else
+        echo "EXACT SUNDAY PAGE POLICY (no engine or Quiz freeze bypass): $file"
+      fi
+      ;;
     "$prefix/HifzSessionActivity.java" | \
     "$prefix/HifzPrefs.java" | \
     "$prefix/ConsolidationCycleEngine.java" | \
