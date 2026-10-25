@@ -8,6 +8,9 @@ on:
       - 'hifz-app/build.gradle.kts'
       - '.github/workflows/haafidh-1175-boox-home-check.yml'
       - 'scripts/guard_frozen_hifz_engines.sh'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java'
+      - 'scripts/verify_authorized_1175_final_state_delta.py'
+      - 'scripts/verify_authorized_program_preferences_delta.py'
       - 'scripts/audit_hifz_quiz_against_1171.sh'
   workflow_dispatch:
 permissions:
