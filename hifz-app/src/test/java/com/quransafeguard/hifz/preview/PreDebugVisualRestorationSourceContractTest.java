@@ -56,11 +56,11 @@ public final class PreDebugVisualRestorationSourceContractTest {
     @Test public void weeklyDialogIsCompactAndManualIsTruthfullyNamed() throws Exception {
         String main=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String settings=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        assertTrue(main.contains("Standard · 3 Sabqi / 4 Itqān"));
+        assertTrue(main.contains("Standard · 3 Sabqi / 3 Itqān"));
         assertTrue(main.contains("Manuel · nombre de jours"));
         assertFalse(main.contains("Manuel : répartition choisie"));
-        assertTrue(settings.contains("jours Stabilisation (dimanche imposé)"));
-        assertTrue(settings.contains("3 jours Apprentissage · 4 jours Stabilisation"));
+        assertTrue(settings.contains("jours Stabilisation + finales dimanche"));
+        assertTrue(settings.contains("3 jours Apprentissage · 3 jours Stabilisation"));
         assertTrue("Historical cadence changes remain effective-dated",
             read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java")
                 .contains("weeklyProgramTransitionsV1"));
