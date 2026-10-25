@@ -25,3 +25,11 @@ Only `MainActivity.java` changed in commit 17305f34: presentational group headin
 **Packaging:** versionName 1.17.5; versionCode 43; main applicationId com.quransafeguard.hifz. Debug uses suffix (BOOX .boox1175debug). Staged artifact **UNFINALIZED** excludes private Atlas corpus and official signing; it is not an installable in-place upgrade. An official release requires a matching official signing certificate and data-preserving installation proof.
 
 **Release: NO-GO** pending physical BOOX screenshots/tests, Atlas caption review, exact finalized artifact, matching release signature, and express user approval. CI PASS alone is not a BOOX acceptance test.
+
+## Completed CI checks at UI commit `17305f34`
+
+- **Source contracts + JVM:** PASS, [workflow 40174811428](https://github.com/applicreation0-web/quran-hafidh/actions/runs/40174811428).
+- **Unsigned non-private staging:** PASS, [workflow 40174811404](https://github.com/applicreation0-web/quran-hafidh/actions/runs/40174811404), artifact ID `12591558125`. This is NOT an installable APK.
+- **Android API 35 Pixel 2 emulator instrumentation:** PASS, **29 tests, 0 failures, 0 skipped**, [workflow 40174811470](https://github.com/applicreation0-web/quran-hafidh/actions/runs/40174811470), evidence artifact ID `12591029522`. Three PNG captures named `home-portrait-android-emulator.png`, `parcours-portrait-android-emulator.png`, `parcours-lower-icons-android-emulator.png`. These are emulator screenshots, **NOT physical BOOX photographs**.
+
+The on-screen Hifz typography and six approved large icons are visible in the emulator evidence, with the weekly plan reachable by scrolling. This does not validate the 10-inch BOOX E-Ink surface, the private Atlas corpus, or an official in-place update. Official release remains NO-GO.
