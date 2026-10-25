@@ -229,13 +229,13 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             prefs.contains("for (String unitId : session.unitIds()) {"));
     }
 
-    @Test public void newSundayFinalsUseRealPagesAndPreserveLegacyEightWeekReview() throws Exception {
+    @Test public void newSundayFinalsUseRealPagesAndPreserveLegacyOpenReview() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String legacy = method(prefs, "private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(", "\n    }");
         assertTrue("Legacy OPEN finals still have their source for byte-exact restore",
             legacy.contains("ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED"));
-        assertTrue("Unacquired historical physical blocks must not silently disappear",
-            prefs.contains("SNOWBALL_EXTENDED_WEEKS = 8"));
+        assertTrue("Use the approved four-week window without losing unacquired backlog",
+            prefs.contains("SNOWBALL_EXTENDED_WEEKS = 4"));
         String projected = method(prefs, "private List<ConsolidationCycleEngine.Unit> sundayFinalPageUnits(",
             "List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today, GeometryRepository geometry)");
         assertTrue(projected.contains("SundayFinalPagePolicy.physicalPageUnits(inputs, positions)"));
