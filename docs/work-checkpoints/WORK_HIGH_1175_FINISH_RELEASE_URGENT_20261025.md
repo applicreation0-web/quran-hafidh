@@ -107,3 +107,16 @@ Analyse vérifiée des clés de la sauvegarde originale `quran-hifz-sauvegarde-2
 **SABQI — incident UI antérieur à l'analyse du JSON :** l'utilisateur a extrait son JSON *pour analyser* sa finale Sabqi bloquée. Les 15 lignes de la page étaient déjà toutes **Apprises**. Ne pas attribuer par défaut le blocage au Renforcement samedi OPEN ni présenter comme oubli de l'utilisateur : reproduire, tracer et corriger la véritable cause (garde d'accès, conflit session, justificatif, date, etc.). L'export donne un état, pas la cause prouvée. Toute logique empêchant d'atteindre la finale doit identifier le prérequis précis sans effacer son acquis.
 
 **QA de non-régression ciblée :** (A) premier régime : 3 séances Itqān de semaine réalisées puis finale OPEN dimanche reprise sans recalcul ; (B) second régime : hizb ×3, jamais de finale Itqān quel que soit le statut des lignes ; (C) Sabqi : 15/15 Appris, finale bloquée à l'origine de l'export, reproduire le blocage et corriger sa cause sans relancer Sabqi ×37 ; (D) ancien Renforcement samedi OPEN repris exactement si pertinent, jamais effacé ; (E) finales et blocs physiques présentés avec sourates, versets exacts, pages et lignes QCF.
+
+### CONTRAT URGENT POUR LUNDI 26 OCTOBRE — ZÉRO MANIPULATION UTILISATEUR
+
+Le 25 octobre, l'utilisateur termine sa journée sans réaliser la finale Itqān ; sa finale Sabqi était bloquée malgré Sabqi 15/15 Appris. Il ne veut pas perdre lundi matin à réparer, à recoder ou à recommencer.
+
+**À implémenter et tester avant GO** :
+1. Sur l'accueil et le parcours du lundi 26, donner accès direct, visible et explicite à **« Reprendre les finales du dimanche 25 »** : finale Sabqi, finale Itqān OPEN du premier régime. Un lancement le lundi doit conserver **date, protocole, sourceSnapshot, pages, lignes, répétitions et état gelés du dimanche 25**.
+2. Résoudre spécifiquement la **finale Sabqi bloquée** sur la sauvegarde. Sabqi **15/15 appris**, donc pas de relance ×37. Si le Renforcement du samedi OPEN bloque légitimement la finale, fournir dans le même parcours un bouton **« Reprendre le Renforcement du samedi »**, puis revenir automatiquement à la finale Sabqi. Ne pas ignorer un prérequis ; ne pas exiger une édition JSON.
+3. La finale Itqān déjà OPEN doit se reprendre telle quelle lundi, sans basculement forcé en séance ordinaire. **Après An-Nās, zéro finale Itqān** ; la reprise d'un ancien OPEN du premier régime n'introduit aucune nouvelle finale du second régime.
+4. Les séances normales du lundi ne doivent **ni effacer ni réinitialiser ni bloquer** ces reprises. Le calendrier ordinaire reste lundi-samedi et dimanche finales ; pas une septième journée ordinaire.
+5. **Interdit de « valider » en modifiant arbitrairement le JSON** : l'utilisateur n'a pas effectué les répétitions manquantes. Tests : ouverture le 26/10 à froid, écran Aujourd'hui, reprise des deux finales du 25, accès au samedi OPEN, redémarrage, aucun crédit anticipé/double ni saut de ligne.
+6. Ne pas promettre une release certifiée si les tests Android/upgrade/signature échouent. Donner verdict franc. Minimiser l'interaction demandée à l'utilisateur.
+
