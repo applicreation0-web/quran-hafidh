@@ -78,6 +78,24 @@ public final class SundayPageFinalCreditSafetyTest {
             }
         }
     }
+    @Test public void realPageSixteenAllLearnedDoesNotMakeMissingSaturdayReceiptValid() {
+        // 25 October backup: the entire Sabqi page was LEARNED, but only
+        // two of three original five-line evening receipts were persisted.
+        // No fake final credit and no new Sabqi ×37 are allowed.
+        List<String> page=geometry.lineIdsOnPage(16);
+        assertEquals(15,page.size());
+        String first=ConsolidationPhysicalUnitPolicy.encodeLineUnit(page.subList(0,5));
+        String second=ConsolidationPhysicalUnitPolicy.encodeLineUnit(page.subList(5,10));
+        String third=ConsolidationPhysicalUnitPolicy.encodeLineUnit(page.subList(10,15));
+        List<String> receipts=new ArrayList<>(Arrays.asList(first,second));
+        assertFalse("10/15 evening receipts cannot graduate 15/15 learned lines",
+            SundayFinalPagePolicy.earnedEveryLine(page,receipts,Collections.emptySet()));
+        receipts.add(third);
+        assertTrue("Only the actual third verified receipt makes all 15 lines eligible",
+            SundayFinalPagePolicy.earnedEveryLine(page,receipts,Collections.emptySet()));
+        assertEquals("Never alter page identity",15,page.size());
+    }
+
     @Test public void missingReceiptOnOnePageRefusesTheWholeFinalWithoutAnyCredit() {
         for (ConsolidationCycleEngine.Family family : ConsolidationCycleEngine.Family.values()) {
             InMemoryPrefs disk = EarnedEveningProtocolRegressionTest.disk();
