@@ -185,7 +185,9 @@ public final class SettingsActivity extends android.app.Activity {
         LinearLayout page=Ui.column(this);scroll.addView(page);
         LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
         top.addView(Ui.iconButton(this,"","Retour",v->goBack()));
-        TextView heading=Ui.bookText(this,title,18,true);Ui.weight(heading,1);heading.setGravity(Gravity.CENTER);top.addView(heading);
+        TextView heading=Ui.bookText(this,title,18,true);
+        if(getResources().getConfiguration().smallestScreenWidthDp>=600)heading.setTextSize(22f);
+        Ui.weight(heading,1);heading.setGravity(Gravity.CENTER);top.addView(heading);
         top.addView(new View(this),new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         page.addView(top);page.addView(Ui.divider(this));
         int inset=Ui.dp(this,12);Ui.respectSystemBars(this,page,inset,0,inset,inset);
@@ -193,9 +195,22 @@ public final class SettingsActivity extends android.app.Activity {
         if(rootScreen==null)rootScreen=page;
         if(parent!=null){
             parents.put(page,parent);
-            parent.addView(Ui.settingRow(this,title,"",v->showScreen(page)));parent.addView(Ui.divider(this));
+            parent.addView(Ui.settingRow(this,title,menuSummary(title),v->showScreen(page)));parent.addView(Ui.divider(this));
         }else if(page!=rootScreen)parents.put(page,null);
         return page;
+    }
+
+    /** One-line summaries for the six root rubrics; full settings remain in their own screens. */
+    private static String menuSummary(String title) {
+        switch (title) {
+            case "Parcours": return "Jours · séances · horaires";
+            case "Plages & corpus": return "Apprentissage · Itqān · acquis";
+            case "Révision": return "Vitesses · corpus";
+            case "Audio & affichage": return "Récitation · écran BOOX";
+            case "Sauvegarde": return "Exporter · importer";
+            case "Avancé": return "Diagnostic · outils";
+            default: return "";
+        }
     }
 
     private void showScreen(LinearLayout page){
@@ -212,7 +227,9 @@ public final class SettingsActivity extends android.app.Activity {
     @Override public void onBackPressed(){goBack();}
 
     private void section(LinearLayout root,String title){
-        TextView view=Ui.bookText(this,title,18,true);view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
+        TextView view=Ui.bookText(this,title,18,true);
+        if(getResources().getConfiguration().smallestScreenWidthDp>=600)view.setTextSize(21f);
+        view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
     }
 
     private void refreshAll(){refreshWeeklyCadence();refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
@@ -419,8 +436,12 @@ public final class SettingsActivity extends android.app.Activity {
         }
         for(int i=0;i<ranges.size();i++){
             final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);row.setMinimumHeight(Ui.dp(this,46));
-            TextView label=Ui.text(this,"Plage "+(i+1),16f,true);label.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);row.addView(label);
-            TextView value=Ui.text(this,QuranSurahNames.range(range.getStart(),range.getEndInclusive()),11.5f,false);value.setTextColor(Ui.MUTED);Ui.weight(value,1);row.addView(value);
+            TextView label=Ui.text(this,"Plage "+(i+1),16f,true);
+            if(getResources().getConfiguration().smallestScreenWidthDp>=600)label.setTextSize(19f);
+            label.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);row.addView(label);
+            TextView value=Ui.menuSubline(this,QuranSurahNames.range(range.getStart(),range.getEndInclusive()));
+            value.setMaxLines(Integer.MAX_VALUE);value.setEllipsize(null);
+            Ui.weight(value,1);row.addView(value);
             row.addView(Ui.iconButton(this,"","Modifier la plage",v->{if(stabilization)chooseStabilizationRange(range,index);else chooseAcquiredRange(range,index);}));
             row.addView(Ui.iconButton(this,"","Supprimer la plage",v->{if(stabilization)removeStabilizationRange(index);else removeAcquiredRange(index);}));box.addView(row);
             if(i+1<ranges.size())box.addView(Ui.divider(this));
