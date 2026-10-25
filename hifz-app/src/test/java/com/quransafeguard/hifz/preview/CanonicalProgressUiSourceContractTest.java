@@ -37,9 +37,9 @@ public final class CanonicalProgressUiSourceContractTest {
         assertTrue(settings.contains("\"Dim · Finales (historique uniquement)\"")
             && settings.contains("\"Dim · Finales sans révision\""));
         assertTrue("Manual mode must describe Sunday as fixed, not a freely selected weekday",
-            settings.contains("jours Stabilisation (dimanche imposé)"));
-        assertTrue("Standard mode must keep the frozen three/four schedule",
-            settings.contains("3 jours Apprentissage · 4 jours Stabilisation"));
+            settings.contains("jours Stabilisation + finales dimanche"));
+        assertTrue("Standard mode must use six weekdays and a reserved Sunday",
+            settings.contains("3 jours Apprentissage · 3 jours Stabilisation"));
         assertFalse(settings.contains("days+\"/6 jours\""));
         assertFalse(settings.contains("Mar/Jeu · Stabilisation"));
         assertFalse(settings.contains("Sam/Dim · Révision"));
@@ -118,7 +118,8 @@ public final class CanonicalProgressUiSourceContractTest {
         // 20:00 Sabqi/Itqan plus Renforcement/Consolidation without duplicate revision.
         assertTrue(week.contains("morning=active+\" + \"+passive;"));
         assertTrue(week.contains("evening=lesson+\" + \"+snowball;"));
-        assertFalse(week.contains("Entretien"));
+        assertFalse("No obsolete UI Entretien label",
+            week.contains("\"Entretien ·"));
         assertTrue("Sunday final-only planning must never schedule a generic passive cursor",
             week.contains("// Sunday cannot consume a passive cursor or schedule any general revisions."));
     }
