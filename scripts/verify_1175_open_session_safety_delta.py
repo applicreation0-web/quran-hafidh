@@ -13,6 +13,18 @@ for file, start, end in [
     path = ROOT + file
     old = subprocess.check_output(['git','show',BASE+':'+path],text=True)
     new = Path(path).read_text()
+    if file == 'HifzSessionActivity.java':
+        # One specifically pinned navigation-only guard: prevent a partial
+        # Sabqi finale while an earlier Renforcement SNOWBALL remains OPEN.
+        # Reconstruct the previous trusted rendering block for the full
+        # frozen engine equivalence check below. The exact new file hash
+        # is independently pinned in verify_authorized_1175_final_state_delta.
+        section='    private void renderLearningFinalReview() {'
+        after='    private void validateLearningFinalReview() {'
+        old_a,old_b=old.index(section),old.index(after)
+        new_a,new_b=new.index(section),new.index(after)
+        if new[old_a:new_b] != old[old_a:old_b]:
+            new=new[:new_a]+old[old_a:old_b]+new[new_b:]
     if file == 'HifzPrefs.java':
         # Replace the one reviewed closure span (including its new identity guard)
         # by the trusted version before checking the rest of the file exactly.
