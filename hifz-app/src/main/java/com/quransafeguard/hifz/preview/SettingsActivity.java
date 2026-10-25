@@ -344,7 +344,7 @@ public final class SettingsActivity extends android.app.Activity {
         consolidationSchemaNote.setText("Consolidation · soir "+stabilizationDays);
         renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") :"
             +"\\n1. Renforcement Sabqi : protocole conservé. Consolidation Itqān : ×7 sur le nouveau bloc, puis passage continu des blocs précédents (sans refaire chacun ×7)."
-            +"\\n2. Dimanche matin : finale Renforcement Sabqi, distincte de l’Itqān recommandé. Dimanche soir : finale Consolidation Itqān. Seules ces finales permettent les promotions Acquis."
+            +"\\n2. Dimanche matin : finale Sabqi. Dimanche soir : finale Itqān seulement pendant le premier régime. Après An-Nās, aucune finale Itqān."
             +"\\n3. Matin : Révision active "+maintenanceMinutes()+" min + Révision passive "+maintenanceMinutes()+" min. Soir : Apprentissage ou Stabilisation, puis Renforcement ou Consolidation. Aucune Révision le dimanche.");
     }
 
