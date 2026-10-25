@@ -110,6 +110,8 @@ public final class MainActivity extends android.app.Activity {
         root.addView(practiceRow);
 
         LinearLayout readingRow = Ui.row(this);
+        // Eight dp of breathing room groups the two related pairs without drawing a rule.
+        readingRow.setPadding(0, Ui.dp(this, 8), 0, 0);
         LinearLayout study = primaryTile(readingRow, "Lecture", "Lecture",
             v -> startActivity(new Intent(this, StudyReaderActivity.class)));
         LinearLayout semanticMap = primaryTile(readingRow, "Atlas", "Atlas",
