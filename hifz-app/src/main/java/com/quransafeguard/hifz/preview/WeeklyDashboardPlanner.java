@@ -81,9 +81,10 @@ final class WeeklyDashboardPlanner {
             prefs.itqanRotationState(),currentItqan,prefs.itqanBlockIndex(),
             (leg,postNas)->prefs.cachedUnitsInLeg(leg,sabqiFrontier,geometry,
                 ItqanMaintenancePolicy.regimeFor(postNas)));
+        // V1 four-date windows may be displayed only when already frozen OPEN.
+        // Forecast must never present a NEW obsolete four-date plan.
         ItqanFourSessionSnapshot frozenItqan=prefs.frozenItqanSnapshot(geometry);
-        ItqanFourSessionPolicy.Plan fourDates=frozenItqan==null
-            ?prefs.previewFourDateItqanPlan(geometry):frozenItqan.plan;
+        ItqanFourSessionPolicy.Plan fourDates=frozenItqan==null?null:frozenItqan.plan;
         int nextFourDateSlot=frozenItqan==null?0:frozenItqan.sessionIndex;
 
         for(LocalDate date:window(today)){
@@ -190,10 +191,15 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record learningFinal=ledger.find(date,HifzSessionActivity.LEARNING_FINAL);
                     DashboardLedger.Record consolidationFinal=ledger.find(date,HifzSessionActivity.CONSOLIDATION_FINAL);
                     boolean learningDone=learningFinal!=null||prefs.learningSnowballFinalUnits(date).isEmpty();
+                    // In post-An-Nās maintenance no new Itqān finale exists.
+                    // A pre-existing frozen first-regime OPEN finale may still resume.
+                    boolean oldItqanFinal=prefs.unfinishedConsolidationSessionDate(
+                        ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null;
+                    boolean itqanFinalDue=!prefs.itqanEntretienActive()||oldItqanFinal;
                     boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
                     morning=learningDone?"✓ Finale Renforcement Sabqi":"Finale Renforcement Sabqi · ×3";
-                    evening=consolidationDone?"✓ Finale Consolidation Itqān":"Finale Consolidation Itqān · ×3";
-                    state=(learningDone&&consolidationDone)?"Validé":learningDone?"Soir à faire":"À faire";
+                    evening=!itqanFinalDue?"—":consolidationDone?"✓ Finale Consolidation Itqān":"Finale Consolidation Itqān · ×3";
+                    state=(learningDone&&(!itqanFinalDue||consolidationDone))?"Validé":learningDone?"Soir à faire":"À faire";
                     // Sunday cannot consume a passive cursor or schedule any general revisions.
                     break;
                 }
