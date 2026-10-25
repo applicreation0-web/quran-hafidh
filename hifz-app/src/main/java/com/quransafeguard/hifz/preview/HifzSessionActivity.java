@@ -827,7 +827,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void renderItqan(int autoChainDepth) {
         // Restore the exact saved plan BEFORE asking the legacy verse-unit picker.
         // Existing 1.17.1 OPEN units return null and finish unmodified.
-        frozenItqan=prefs.openOrResumeFrozenItqan(geometry,sessionDate);
+        // Existing OPEN V1 four-date sessions remain exactly frozen. New
+        // sessions use the established 8+7+7 physical-line Itqān engine.
+        // Never create a four-date plan merely by entering this screen.
+        frozenItqan=prefs.frozenItqanSnapshot(geometry);
         if(frozenItqan!=null){renderFrozenItqan();return;}
         String today=sessionDate.toString();
         if(today.equals(prefs.lastItqanDate())){
