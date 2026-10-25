@@ -17,15 +17,18 @@ public final class TodayWindowSourceContractTest {
         return new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
     }
 
-    @Test public void todayOpensTheWindowWhenSeveralSessionsAreExpected() throws Exception {
+    @Test public void todayAlwaysShowsSessionChoicesAndCompletionStates() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }\n        showTodayWindow(sessions);"));
+        org.junit.Assert.assertFalse(main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));
+        assertTrue(main.contains("showTodayWindow(sessions);"));
+        assertTrue(main.contains("if(sessions.isEmpty()){"));
         assertTrue("both Révision sessions are always listed",
             main.contains("HifzSessionActivity.MURAJAAH_ACTIVE,today,")
             && main.contains("todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);")
             && main.contains("HifzSessionActivity.MURAJAAH,today,")
             && main.contains("todayStr.equals(prefs.lastMurajaahDate()),nextMode);"));
         assertTrue("each line carries its state and the next one due is marked",
-            main.contains("items[i]=(s.done?\"✓ \":s.next?\"▸ \":\"   \")+s.label+\" · \"+(s.done?\"fait\":\"à faire\");"));
+            main.contains("items[i]=(s.done?\"✓ \":s.next?\"▸ \":\"  \")+slot+title+")
+                && main.contains("(s.done?\" · Terminé\":\" · À faire\")"));
     }
 }

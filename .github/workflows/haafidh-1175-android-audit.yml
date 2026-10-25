@@ -3,7 +3,12 @@ on:
   push:
     branches:
       - work/haafidh-1175-boox-ux-hifz-atlas
+      - work/haafidh-1175-audit-corrections-20261025
     paths:
+      - 'hifz-app/src/test/**'
+      - 'hifz-app/src/androidTest/**'
+      - 'scripts/export_jvm_audit_runtime.init.gradle'
+      - 'scripts/run_1175_process_death_audit.sh'
       - '.github/workflows/haafidh-1175-android-audit.yml'
       - 'scripts/boox_emulator_parcours.py'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
@@ -57,6 +62,21 @@ jobs:
           bash scripts/guard_frozen_hifz_engines.sh
           python3 scripts/verify_atlas_only_purity.py
           python3 scripts/verify_contractual_ui_icons.py
+      - name: Prepare missing public legacy test fixture (never a runtime asset)
+        run: |
+          fixture="$RUNNER_TEMP/legacy-bridge-fixture"
+          index=hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java
+          words=hifz-app/src/main/word-source/quran-ws-v1.1.2
+          python3 scripts/build_ibn_kathir_amorce_review.py "$index" "$words" scripts/data/quran-uthmani-tanzil.txt "$fixture/raw.json"
+          python3 scripts/audit_ibn_kathir_exact_hafs_qcf.py "$index" "$words" "$fixture/exact.json"
+          python3 scripts/gate_ibn_kathir_amorce_approvals.py "$fixture/raw.json" "$fixture/exact.json" "$fixture/gate.json"
+          python3 scripts/audit_ibn_kathir_j2.py "$fixture/raw.json" "$fixture/exact.json" "$fixture/gate.json" "$fixture/j2"
+          echo "IK_J2_REVIEW_PATH=$fixture/j2/ik-j2-review.json" >> "$GITHUB_ENV"
+      - name: Complete JVM and source contracts
+        run: gradle --no-daemon --continue :hifz-core:test :safeguard-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Export public JVM replay runtime
+        if: always()
+        run: gradle --no-daemon -I scripts/export_jvm_audit_runtime.init.gradle :hifz-app:exportJvmAuditRuntime
       - name: KVM for emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -71,7 +91,8 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.PhoneProgrammeMigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzUiLayoutInstrumentedTest,com.quransafeguard.hifz.preview.MapQcfLifecycleInstrumentedTest
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalMaskReadinessInstrumentedTest,com.quransafeguard.hifz.preview.PhoneProgrammeMigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzUiLayoutInstrumentedTest,com.quransafeguard.hifz.preview.MapQcfLifecycleInstrumentedTest
+            bash scripts/run_1175_process_death_audit.sh
             mkdir -p hifz-app/build/boox-audit
             adb shell am start -n com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity
             sleep 3
@@ -105,4 +126,8 @@ jobs:
             hifz-app/build/reports/androidTests/
             hifz-app/build/reports/
             hifz-app/build/boox-audit/
+            hifz-app/build/test-results/
+            hifz-core/build/test-results/
+            safeguard-core/build/test-results/
+            hifz-app/build/jvm-audit-runtime/
           retention-days: 14

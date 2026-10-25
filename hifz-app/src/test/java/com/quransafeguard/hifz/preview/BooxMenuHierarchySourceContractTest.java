@@ -20,7 +20,7 @@ public final class BooxMenuHierarchySourceContractTest {
         assertTrue(home.contains("TextView subtitle = Ui.menuSubline(this, pathSubtitle(label))"));
         assertTrue(home.contains("tile.addView(subtitle)"));
         for (String shortText : new String[] {
-            "Nouvelles lignes", "Reprise du Sabqi", "Fixation Itqān",
+            "Sabaq · nouvelle leçon", "Sabqi · révision récente", "Fixation Itqān",
             "Cumul Itqān", "Sans texte", "Avec texte"
         }) assertTrue(shortText, home.contains(shortText));
         assertTrue("Long stabilization state must remain available for updates",

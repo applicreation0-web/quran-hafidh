@@ -9,15 +9,9 @@ import java.nio.file.Paths;
 
 import static org.junit.Assert.assertTrue;
 
-/**
- * Reported directly: a strict-acquired-only reader stayed empty despite Réglages showing a real
- * "Plages acquises" range (2:1→2:74) — traced to a real bootstrap gap. ensureSchema seeds
- * itqanRanges (the range-level "Plages acquises" the user sees) but leaves
- * v6AcquiredCreditLineIds (the per-line credit every strict-acquired-only reader actually checks —
- * entryIsFullyStabilizedOrAcquired, ETA math) empty, since computing owned physical lines needs
- * GeometryRepository, real I/O the SharedPreferences-only constructor never does.
- * reconcileV6AcquiredBootstrap backfills it once real geometry is available, touching only a line
- * still in its pristine NONE state.
+/** Protect current persisted V6 credit from synthetic bootstrap/backfill.
+ * Historical initialization change 68ddc537 is reviewed separately, read-only.
+ * These tests cannot authorize changes to initializations or migrations.
  */
 public final class V6AcquiredBootstrapSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -28,22 +22,26 @@ public final class V6AcquiredBootstrapSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void bootstrapSeedsItqanRangesButLeavesAcquiredCreditEmpty() throws Exception {
+    @Test public void freshBootstrapKeepsPhysicalCreditEmptyAndNeverAssumesAcquiredRanges() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue(prefs.contains(".putString(\"itqanRanges\", defaultItqanRangesJson())"));
+        assertTrue(prefs.contains(".putString(\"itqanRanges\", \"[]\")"));
+        assertTrue(prefs.contains(".putBoolean(\"v6AcquiredBootstrapSeeded\", true)"));
         assertTrue(prefs.contains(".putString(\"v6AcquiredCreditLineIds\", \"[]\")"));
     }
 
-    @Test public void reconciliationBackfillsOnceAndOnlyUntouchedLines() throws Exception {
+    // 68ddc537 removed automatic credit. This contract must never restore it.
+    @Test public void reconciliationOnlyMarksCompletionAndNeverRewritesProgress() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue("must be a one-time, idempotent backfill",
-            prefs.contains("public boolean reconcileV6AcquiredBootstrap(GeometryRepository geometry) {\n"
-                + "        if (p.getBoolean(\"v6AcquiredBootstrapSeeded\", false)) return true;"));
-        assertTrue("must never touch a line schema6 already has an opinion about",
-            prefs.contains("if (learned.contains(lineId) || stabilized.contains(lineId) || acquired.contains(lineId)\n"
-                + "                        || quarantine.contains(lineId) || legacyPartial.contains(lineId)) continue;"));
-        assertTrue("must credit exactly the physical lines itqanRanges (\"Plages acquises\") owns",
-            prefs.contains("for (String lineId : CorpusLinePolicy.ownedLineIds(itqanRanges(), allLines)) {"));
+        int start = prefs.indexOf("public boolean reconcileV6AcquiredBootstrap(");
+        String method = prefs.substring(start, prefs.indexOf("\n    }", start));
+        assertTrue(method.contains("if (geometry == null) throw new IllegalArgumentException"));
+        assertTrue(method.contains("if (p.getBoolean(\"v6AcquiredBootstrapSeeded\", false)) return true;"));
+        assertTrue(method.contains("requireSchema6ProgressionState();"));
+        assertTrue(method.contains("putBoolean(\"v6AcquiredBootstrapSeeded\", true).commit()"));
+        org.junit.Assert.assertFalse("Never synthesize credits from configured ranges", method.contains("ownedLineIds"));
+        org.junit.Assert.assertFalse("Never rewrite progression, dates, journals or snapshots", method.contains("putString("));
+        org.junit.Assert.assertFalse(method.contains(".remove("));
+        org.junit.Assert.assertFalse(method.contains(".clear("));
     }
 
     @Test public void wiredAsSoonAsRealGeometryLoadsOnHomeScreen() throws Exception {

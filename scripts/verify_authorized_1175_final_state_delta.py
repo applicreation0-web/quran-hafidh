@@ -11,8 +11,8 @@ import subprocess
 BASE = "4135df3863e17da72adbd06457f46f2966ddcb6a"
 PREFIX = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 FILES = {
-    "HifzPrefs.java": ("066d2685a920b50877a6cd62cb6ad023337e16f4", "8eae28ef34c2ec4d002305431fd9eb13eb959b77"),
-    "HifzSessionActivity.java": ("add8fe985f8b3a2206fa4142c6e384e5a48a8c0c", "464a0f3b0b09c3bbebd67dcd49af0be166b94f4b"),
+    "HifzPrefs.java": ("066d2685a920b50877a6cd62cb6ad023337e16f4", "a44257e4ebd7735d51ce90286b6a9f1eb40a2879"),
+    "HifzSessionActivity.java": ("add8fe985f8b3a2206fa4142c6e384e5a48a8c0c", "872b66aec2666097ce144a51c9bb2c093dc8e0d5"),
 }
 def git(*args):
     return subprocess.check_output(["git", *args], text=True).strip()
@@ -35,7 +35,9 @@ for needle in (
 ):
     assert needle in prefs, "Missing 1.17.5 migration invariant: " + needle
 assert "restoreConsolidationSession(consolidationEngine, family,cycleIdPrefix+today)" in session
-assert "discardConsolidationSession(family,cycleIdPrefix+today)" in session
+subprocess.run(["python3", "scripts/verify_1175_open_session_safety_delta.py"], check=True)
+assert "Another frozen OPEN Consolidation session must be resumed first" in prefs
+assert "Stale Consolidation repetition cannot roll back persisted progress" in prefs
 assert "mushaf.showFreeActivePreparedPage(currentPage,currentLineIds," in session
 assert "showSundayFinalLectureMaskPage()" in session
 assert "anchors = ayahThemesTitles.forPage(currentPage);" in session

@@ -50,11 +50,14 @@ public final class Lot2SourceContractTest {
         assertFalse(session.contains("Mode \" + kind + \" absent du planning"));
     }
 
-    @Test public void schema6ExposesTwoIndependentEditableRangeLists() throws Exception {
+    @Test public void stabilizationIsEditableButAcquiredCreditsStayReadOnly() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue(settings.contains("section(corpus,\"Plages à stabiliser\")"));
-        assertTrue(settings.contains("section(corpus,\"Plages acquises\")"));
+        assertTrue(settings.contains("section(corpus,\"Acquis\")"));
+        assertTrue(settings.contains("Acquis déterminés par les validations réelles ou une sauvegarde restaurée."));
+        assertFalse("No manual Acquis add control", settings.contains("v->chooseAcquiredRange(null,-1)"));
+        assertFalse("No editable Acquis list attached", settings.contains("corpus.addView(acquiredRangesBox)"));
         assertTrue(settings.contains("chooseStabilizationRange"));
         assertTrue(settings.contains("chooseAcquiredRange"));
         assertTrue(settings.contains("removeStabilizationRange"));

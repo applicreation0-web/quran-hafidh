@@ -254,6 +254,10 @@ public final class HifzV6PersistentStateInstrumentedTest {
 
     @Test public void manualMultiRangesRejectCrossListOverlapAtomically() throws Exception {
         HifzPrefs prefs = new HifzPrefs(context);
+        // This test must establish its own acquired range: a fresh installation
+        // may have no Acquis and must not manufacture an overlap by default.
+        assertTrue(prefs.setV6AcquiredRanges(Arrays.asList(
+            new com.quransafeguard.hifz.core.VerseRange(new VerseRef(2,1), new VerseRef(2,20))), geometry));
         Map<String, ?> before = snapshot(main);
         try {
             prefs.setV6StabilizationRanges(Arrays.asList(

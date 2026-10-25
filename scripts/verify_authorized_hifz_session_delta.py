@@ -24,7 +24,7 @@ ATLAS_ONLY_SHA="4d52f8bc8e5cbd7a5bfa836b4c73c07c52647f55"
 # The 25 October 1.17.5 finals fix is user-authorized and separately
 # SHA-pinned against the immutable 4135df38 source. Do not relax the
 # approval boundary for any other Hifz, mask, Atlas or QCF change.
-if subprocess.check_output(["git","hash-object",PATH],text=True).strip()=="464a0f3b0b09c3bbebd67dcd49af0be166b94f4b":
+if subprocess.check_output(["git","hash-object",PATH],text=True).strip()=="872b66aec2666097ce144a51c9bb2c093dc8e0d5":
     subprocess.run(["python3","scripts/verify_authorized_1175_final_state_delta.py"],check=True)
     print("PASS: byte-pinned 1.17.5 Sunday finale session routing")
     raise SystemExit(0)

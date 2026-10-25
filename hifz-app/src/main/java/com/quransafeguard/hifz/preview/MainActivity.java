@@ -1233,7 +1233,7 @@ public final class MainActivity extends android.app.Activity {
     static String readableScheduleTitle(String raw, boolean postNas) {
         if(raw==null||raw.trim().isEmpty()||"—".equals(raw.trim()))return "Aucune séance";
         String value=stripDone(raw);
-        if(value.startsWith("Stabilisation"))return postNas?"Entretien · Itqān":"Stabilisation · Itqān";
+        if(value.startsWith("Stabilisation"))return postNas?"Itqān · Entretien":"Itqān · Consolidation";
         if(value.startsWith("Apprentissage"))return "Apprentissage · Sabaq";
         if(value.contains("Finale Renforcement Sabqi"))return "Finale · Sabqi";
         if(value.contains("Finale Consolidation Itqān"))return "Finale · Itqān";

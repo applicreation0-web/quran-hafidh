@@ -3445,9 +3445,26 @@ public final class HifzPrefs {
                 units.put(encoded);
             }
             root.put("units", units);
-            return p.edit()
-                .putString(consolidationStateKeyForCycle(cycle.family(),cycle.cycleId()), root.toString())
-                .commit();
+            synchronized (V6_STATE_LOCK) {
+                String key = consolidationStateKeyForCycle(cycle.family(),cycle.cycleId());
+                String existing = p.getString(key, "");
+                if (existing != null && !existing.isEmpty()) {
+                    JSONObject frozen = new JSONObject(existing);
+                    if (!frozen.getBoolean("open")
+                            || !cycle.cycleId().equals(frozen.getString("cycleId"))
+                            || !cycle.family().name().equals(frozen.getString("family"))
+                            || !session.sessionId().equals(frozen.getString("sessionId"))
+                            || !units.toString().equals(frozen.getJSONArray("units").toString()))
+                        throw new IllegalStateException("Another frozen OPEN Consolidation session must be resumed first");
+                    int oldStage = frozen.getInt("stage"), oldUnit = frozen.getInt("nextUnitIndex");
+                    if (session.stage() < oldStage
+                            || (session.stage() == oldStage && session.nextUnitIndex() < oldUnit)
+                            || (session.stage() == oldStage && session.nextUnitIndex() == oldUnit
+                                && session.donePerStage() < frozen.getInt("donePerStage")))
+                        throw new IllegalStateException("Stale Consolidation repetition cannot roll back persisted progress");
+                }
+                return p.edit().putString(key, root.toString()).commit();
+            }
         } catch (Exception error) {
             throw new IllegalStateException("Unable to persist Consolidation session", error);
         }
@@ -3550,6 +3567,39 @@ public final class HifzPrefs {
             && session.cycle().units().get(0).protocol() == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;
     }
 
+    /** A stale Activity cannot close or remove a different persisted finale. */
+    private void requireCurrentFinalSession(ConsolidationCycleEngine.Session session,
+            ConsolidationCycleEngine.Family family, String date) {
+        String prefix = family == ConsolidationCycleEngine.Family.LEARNING
+            ? "learning-final-" : "stabilization-final-";
+        if (session.cycle().family() != family
+                || (isFinalCycleId(session.cycle().cycleId())
+                    && !(prefix + date).equals(session.cycle().cycleId())))
+            throw new IllegalStateException("Finale family/date does not match its frozen session");
+        String raw = p.getString(consolidationFinalStateKey(family), "");
+        if (raw == null || raw.isEmpty()) return; // historical callers without a dedicated slot
+        try {
+            JSONObject frozen = new JSONObject(raw);
+            if (!frozen.getBoolean("open") || !session.cycle().cycleId().equals(frozen.getString("cycleId"))
+                    || !session.sessionId().equals(frozen.getString("sessionId"))
+                    || session.stage() != frozen.getInt("stage")
+                    || session.nextUnitIndex() != frozen.getInt("nextUnitIndex")
+                    || session.donePerStage() != frozen.getInt("donePerStage")
+                    || session.sessionGroupSize() != frozen.getInt("sessionGroupSize"))
+                throw new IllegalStateException("Finale differs from the persisted OPEN session");
+            JSONArray units = frozen.getJSONArray("units");
+            if (units.length() != session.cycle().units().size())
+                throw new IllegalStateException("Frozen finale unit count changed");
+            for (int i = 0; i < units.length(); i++) {
+                if (!session.cycle().units().get(i).id().equals(units.getJSONObject(i).getString("id"))
+                        || !session.cycle().units().get(i).protocol().name().equals(units.getJSONObject(i).getString("protocol")))
+                    throw new IllegalStateException("Frozen finale units changed");
+            }
+        } catch (Exception invalid) {
+            throw new IllegalStateException("Refusing stale or incompatible finale without changing saved progress", invalid);
+        }
+    }
+
     /** Atomically closes a frozen 1..3 physical-unit Consolidation group and makes its exact lines Acquired. */
     boolean completeConsolidationSessionV6(ConsolidationCycleEngine.Session session, GeometryRepository geometry,
                                            String date, String label) {
@@ -3558,7 +3608,9 @@ public final class HifzPrefs {
         if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
         synchronized (V6_STATE_LOCK) {
             // Idempotent final: a replay must not re-promote or rewrite the earned history.
-            if(date.equals(p.getString("lastRecentSabqiReviewDate","")))return false;
+            LocalDate completed = safeDate(p.getString("lastRecentSabqiReviewDate", ""), null);
+            if (completed != null && !LocalDate.parse(date).isAfter(completed)) return false;
+            requireCurrentFinalSession(session, ConsolidationCycleEngine.Family.STABILIZATION, date);
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -3661,7 +3713,9 @@ public final class HifzPrefs {
         if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
         synchronized (V6_STATE_LOCK) {
             // Idempotent final: a replay must not re-promote or rewrite the earned history.
-            if(date.equals(p.getString("lastLearningConsolidationDate","")))return false;
+            LocalDate completed = safeDate(p.getString("lastLearningConsolidationDate", ""), null);
+            if (completed != null && !LocalDate.parse(date).isAfter(completed)) return false;
+            requireCurrentFinalSession(session, ConsolidationCycleEngine.Family.LEARNING, date);
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");

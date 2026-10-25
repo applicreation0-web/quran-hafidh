@@ -92,7 +92,7 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
             main.contains("TextView cue = Ui.text(this, state, 15f, false);")
             && main.contains("TextView itqanCue = Ui.settingValue(itqanCard);"));
         assertTrue("Post-Nas summary stays a concise hizb cue",
-            main.contains("prefs.itqanPostNasMaintenance() ? \"1 hizb · répétitions\""));
+            main.contains("prefs.itqanEntretienActive() ? \"1 hizb · répétitions\""));
         assertTrue("Both weekly menu goals are expressed in pages, without session counts",
             main.contains("2 pages/semaine") && main.contains("1 page/semaine"));
         assertFalse("Detailed session count belongs inside Itqan",main.contains("2 pages / 4 séances"));

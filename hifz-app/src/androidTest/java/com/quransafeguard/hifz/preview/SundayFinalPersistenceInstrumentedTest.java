@@ -92,4 +92,33 @@ public final class SundayFinalPersistenceInstrumentedTest {
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED,
             restored.cycle().units().get(0).protocol());
     }
+
+    @Test public void incompatibleLegacyFinalSnapshotsFailClosedWithoutOverwritingEitherSession() {
+        HifzPrefs prefs=new HifzPrefs(context);
+        String currentId="stabilization-final-2026-10-25";
+        ConsolidationCycleEngine.Session current=engine.recordRepetition(open(
+            currentId,ConsolidationCycleEngine.Family.STABILIZATION,
+            ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED));
+        assertTrue(prefs.persistConsolidationSession(current));
+        String finalKey="v6ConsolidationStabilizationStateFinalV1";
+        String weekdayKey="v6ConsolidationStabilizationState";
+        String currentRaw=raw.getString(finalKey,"");
+        assertFalse(currentRaw.isEmpty());
+        // Another historical OPEN Sunday finale must not silently replace an
+        // already-stored finale or erase a weekday slot on migration.
+        String conflictingRaw=currentRaw.replace("2026-10-25","2026-10-18");
+        assertFalse(currentRaw.equals(conflictingRaw));
+        assertTrue(raw.edit().putString(weekdayKey,conflictingRaw).commit());
+        java.util.Map<String,?> before=new java.util.HashMap<>(raw.getAll());
+        try {
+            prefs.restoreConsolidationSession(engine,
+                ConsolidationCycleEngine.Family.STABILIZATION,currentId);
+            fail("incompatible finale snapshots must be refused");
+        } catch(IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("incompatible Sunday finale snapshots"));
+        }
+        assertEquals("migration must preserve every persisted byte on conflict",
+            before,raw.getAll());
+    }
+
 }
