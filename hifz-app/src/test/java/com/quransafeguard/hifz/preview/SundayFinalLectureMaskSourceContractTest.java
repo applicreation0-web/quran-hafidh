@@ -23,7 +23,8 @@ public final class SundayFinalLectureMaskSourceContractTest {
         assertTrue(activity.contains("sundayFinalMaskedPageReady = false;"));
         assertTrue(activity.contains("sundayFinalMaskedPageReady = !sundayFinalAnchorUnavailable;"));
         assertTrue(activity.contains("sundayFinalAnchorUnavailable || !sundayFinalMaskedPageReady"));
-        assertTrue(activity.contains("if (isSundayFinalPageRepetition() && currentMask == 100 && sundayFinalAnchorUnavailable)"));
+        assertTrue(activity.contains("if (isSundayFinalPageRepetition() && currentMask == 100"));
+        assertTrue(activity.contains("sundayFinalAnchorUnavailable || !sundayFinalMaskedPageReady"));
         assertFalse(activity.contains("applySundayFinalAnchors()"));
     }
     @Test public void noSecondAmorceCorpusForSundayMasks() throws Exception {
