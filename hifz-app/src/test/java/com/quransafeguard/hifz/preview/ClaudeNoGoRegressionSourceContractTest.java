@@ -473,13 +473,17 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
         assertTrue("must detect a grown accumulator by comparing the persisted session's own size against the fresh unit list",
             renderGroupedCycle.contains("consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()"));
-        assertTrue("a stale session must be discarded (not silently continued) once the week has grown a new block",
-            renderGroupedCycle.contains("prefs.discardConsolidationSession(family);"));
-        assertTrue("discarding must fall through to the existing fresh-build path, not skip it",
-            renderGroupedCycle.contains("prefs.discardConsolidationSession(family);\n            consolidationSession = null;\n        }\n        if (consolidationSession == null) {"));
+        assertTrue("stale units must be discarded from the matching cycle only, never the other Sunday/weekday slot",
+            renderGroupedCycle.contains("prefs.discardConsolidationSession(family,cycleIdPrefix+today);"));
+        assertTrue("discarding must fall through to the fresh-build path, not skip it",
+            renderGroupedCycle.contains("prefs.discardConsolidationSession(family,cycleIdPrefix+today);\n            consolidationSession = null;\n        }\n        if (consolidationSession == null) {"));
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue("discardConsolidationSession must exist and must NOT mark the evening as validated",
-            prefs.contains("boolean discardConsolidationSession(ConsolidationCycleEngine.Family family) {\n        return p.edit().remove(consolidationStateKey(family)).commit();\n    }"));
+        assertTrue("legacy ordinary discard remains backward-compatible and cannot mark an evening validated",
+            prefs.contains("boolean discardConsolidationSession(ConsolidationCycleEngine.Family family) {\n        return discardConsolidationSession(family,null);\n    }"));
+        assertTrue("the matching Sunday's frozen state must have an independent persisted slot",
+            prefs.contains("consolidationFinalStateKey(ConsolidationCycleEngine.Family family)")
+                && prefs.contains("private void migrateLegacyFinalSlot(ConsolidationCycleEngine.Family family)")
+                && prefs.contains("return isFinalCycleId(cycleId)"));
     }
 
     /**
