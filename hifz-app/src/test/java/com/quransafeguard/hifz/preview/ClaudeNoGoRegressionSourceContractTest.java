@@ -614,9 +614,10 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
         assertTrue("classic Sunday is complete after two separate finales",
             main.contains("return learningFinalResolved(date)&&consolidationFinalResolved(date);"));
-        assertTrue("recommended Sunday has Itqan plus two distinct finals",
+        assertTrue("Sunday has final reviews, not a seventh ordinary Itqan",
             main.contains("if(recommendedSunday(date))")
-            && main.contains("if(!modeComplete(date,HifzSessionActivity.ITQAN))return false;"));
+            && main.contains("!prefs.itqanEntretienActive() && !consolidationFinalResolved(date)"));
+        assertFalse(main.contains("if(!modeComplete(date,HifzSessionActivity.ITQAN))return false;"));
         assertTrue("Sunday selector excludes both active and passive review",
             main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY) {"));
         assertTrue("Sunday forecast offers Consolidation finale instead of general Entretien",
