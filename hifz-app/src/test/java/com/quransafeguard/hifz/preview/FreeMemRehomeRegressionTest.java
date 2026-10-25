@@ -27,10 +27,10 @@ public final class FreeMemRehomeRegressionTest {
         String main = source("MainActivity.java");
         assertFalse(main.contains("secondaryTile(secondary, \"Mémorisation libre\""));
         assertFalse(main.contains("geometryActions.add(free)"));
-        assertTrue(main.contains("primaryTile(destinations, \"Parcours Hifz\""));
-        assertTrue(main.contains("primaryTile(destinations, \"Lecture\""));
-        assertTrue(main.contains("primaryTile(destinations, \"Atlas\""));
-        assertTrue(main.contains("secondaryTile(secondary, \"Progression\""));
+        assertTrue(main.contains("primaryTile(practiceRow, \"Parcours Hifz\""));
+        assertTrue(main.contains("primaryTile(readingRow, \"Lecture\""));
+        assertTrue(main.contains("primaryTile(readingRow, \"Atlas\""));
+        assertTrue(main.contains("primaryTile(practiceRow, \"Progression\""));
     }
 
     @Test public void standaloneMemorisationStaysDiscoverableAsAnAdvancedTool() throws Exception {
