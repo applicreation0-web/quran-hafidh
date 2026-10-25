@@ -113,7 +113,7 @@ public final class IbnKathirMapJourneyTest {
         assertFalse(activity.contains("Intent.ACTION_VIEW"));
         assertTrue(manifest.contains("<activity android:name=\".IbnKathirMapActivity\""));
         assertTrue("Atlas remains a direct home destination",
-            home.contains("primaryTile(destinations, \"Atlas\", \"Atlas\""));
+            home.contains("primaryTile(readingRow, \"Atlas\", \"Atlas\""));
         assertTrue(home.contains("new Intent(this, AtlasMapActivity.class)"));
         assertFalse("Atlas must not open legacy Ibn Kathir in the home navigation",
             home.contains("new Intent(this, IbnKathirMapActivity.class)"));
