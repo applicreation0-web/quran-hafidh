@@ -237,9 +237,9 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
         assertEquals(DayOfWeek.SUNDAY, SUNDAY.getDayOfWeek());
         assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY, HifzPrefs.WeeklyProgram.CLASSIC, 3));
-        assertEquals(com.quransafeguard.hifz.core.CadenceAction.STABILIZATION,
+        assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY, HifzPrefs.WeeklyProgram.RECOMMENDED, 3));
-        assertEquals(com.quransafeguard.hifz.core.CadenceAction.STABILIZATION,
+        assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY, HifzPrefs.WeeklyProgram.MANUAL_SEVEN, 3));
 
         Path plannerPath = Paths.get(
