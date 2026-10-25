@@ -42,19 +42,29 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("No seven stacked day cards", home.contains("dashboard.addView(day)"));
     }
 
-    @Test public void homeShowsDominantSessionAndThreeLargeDestinations() throws Exception {
+    @Test public void homeShowsDominantSessionAndFourEqualDestinations() throws Exception {
         String home=read(MAIN);
         assertTrue(home.contains("todayAction = todayLine()"));
         assertTrue(home.contains("Ui.bookText(this, \"AUJOURD’HUI\", 17f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"…\", 23f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)"));
         assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 54))"));
-        assertTrue(home.contains("booxIconDp(3, 112)"));
-        for(String name: new String[]{"Parcours Hifz","Lecture","Atlas"})
-            assertTrue("Missing direct destination "+name,home.contains("primaryTile(destinations, \""+name+"\""));
+        assertTrue(home.contains("booxIconDp(2, 112)"));
+        assertTrue(home.contains("primaryTile(practiceRow, \"Parcours Hifz\", \"Parcours\""));
+        assertTrue(home.contains("primaryTile(practiceRow, \"Progression\", \"Progression\""));
+        assertTrue(home.contains("primaryTile(readingRow, \"Lecture\", \"Lecture\""));
+        assertTrue(home.contains("primaryTile(readingRow, \"Atlas\", \"Atlas\""));
+        // All four home destinations must be presented identically, without a visual divider.
+        int practiceEnd = home.indexOf("root.addView(practiceRow)");
+        int readingEnd = home.indexOf("root.addView(readingRow)");
+        int actionsStart = home.indexOf("geometryActions.add(study)");
+        assertTrue(practiceEnd > 0 && readingEnd > practiceEnd && actionsStart > readingEnd);
+        assertFalse("Home destination rows must not be split by a rule",
+            home.substring(practiceEnd, actionsStart).contains("Ui.divider(this)"));
+        assertFalse("No asymmetric footer navigation", home.contains("secondaryTile("));
         assertFalse("Free memorisation is an optional advanced tool, not a Home destination",
             home.contains("secondaryTile(secondary, \"Mémorisation libre\""));
-        assertTrue(home.contains("secondaryTile(secondary, \"Progression\""));
+        assertTrue(home.contains("new Intent(this, ProgressMapActivity.class)"));
         assertTrue("No dimmed E-Ink labels", home.contains("line.setAlpha(1f)"));
         assertFalse("Never fade a control to 42%", home.contains("0.42f"));
     }
