@@ -117,6 +117,15 @@ while IFS= read -r file; do
         echo "EXACT REVIEWED DISPLAY VOCABULARY: $file"
       fi
       ;;
+    "$APP_ROOT/SundayFinalPagePolicy.java")
+      # Explicit 1.17.5 page-exact projection only. No widened engine exemption.
+      if [ "$(git hash-object "$file")" != "c419bcbad9d676a87b9ec6fed1b9ee50c58bd018" ]; then
+        echo "::error file=$file::Unreviewed Sunday finale QCF page-policy change."
+        bad=1
+      else
+        echo "EXACT 1.17.5 SUNDAY QCF PAGE PROJECTION: $file"
+      fi
+      ;;
     "$APP_ROOT/HifzSessionActivity.java" | \
     "$APP_ROOT/HifzPrefs.java" | \
     "$APP_ROOT/ConsolidationCycleEngine.java" | \
