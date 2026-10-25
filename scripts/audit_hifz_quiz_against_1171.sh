@@ -61,6 +61,16 @@ while IFS= read -r file; do
         echo "EXACT P0 RECOVERY APPLICATION: $file"
       fi
       ;;
+    "$prefix/ProgressMapActivity.java")
+      # BOOX 1.17.5 screenshot review: only move existing legend before 604-page grid
+      # and enlarge its glyphs. Exact blob allowed; no progression computation changed.
+      if [[ "$(git hash-object "$file")" != "ab266d935e25bef19804bfad173c9fde8bbc7b10" ]]; then
+        echo "::error file=$file::ProgressMap source no longer matches reviewed visual-only patch."
+        bad=1
+      else
+        echo "EXACT BOOX 604-PAGE LEGEND UI PATCH: $file"
+      fi
+      ;;
     "$prefix/MushafView.java")
       # Never allow an unreviewed Hifz renderer drift: exact bytes pinned.
       python3 scripts/verify_authorized_mushaf_reader_delta.py || bad=1
