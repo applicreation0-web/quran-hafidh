@@ -1,0 +1,20 @@
+// Export public compiled classes + exact JVM dependencies for private local fixture replay.
+// No user backup, signing key or private Atlas asset belongs in this bundle.
+gradle.projectsEvaluated {
+    def app = gradle.rootProject.project(':hifz-app')
+    app.tasks.register('exportJvmAuditRuntime') {
+        dependsOn app.tasks.named('compileDebugUnitTestJavaWithJavac')
+        doLast {
+            def test = app.tasks.named('testDebugUnitTest').get()
+            def target = new File(app.layout.buildDirectory.get().asFile, 'jvm-audit-runtime')
+            target.deleteDir(); target.mkdirs()
+            test.classpath.files.eachWithIndex { source, index ->
+                if (source.exists()) {
+                    def dest = new File(target, String.format('%03d', index))
+                    if (source.directory) app.copy { from source; into dest }
+                    else { dest.mkdirs(); app.copy { from source; into dest } }
+                }
+            }
+        }
+    }
+}

@@ -5,6 +5,9 @@ on:
       - work/haafidh-1175-boox-ux-hifz-atlas
       - work/haafidh-1175-audit-corrections-20261025
     paths:
+      - 'hifz-app/src/test/**'
+      - 'hifz-app/src/androidTest/**'
+      - 'scripts/export_jvm_audit_runtime.init.gradle'
       - '.github/workflows/haafidh-1175-android-audit.yml'
       - 'scripts/boox_emulator_parcours.py'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
@@ -58,6 +61,11 @@ jobs:
           bash scripts/guard_frozen_hifz_engines.sh
           python3 scripts/verify_atlas_only_purity.py
           python3 scripts/verify_contractual_ui_icons.py
+      - name: Complete JVM and source contracts
+        run: gradle --no-daemon --continue :hifz-core:test :safeguard-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Export public JVM replay runtime
+        if: always()
+        run: gradle --no-daemon -I scripts/export_jvm_audit_runtime.init.gradle :hifz-app:exportJvmAuditRuntime
       - name: KVM for emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -106,4 +114,8 @@ jobs:
             hifz-app/build/reports/androidTests/
             hifz-app/build/reports/
             hifz-app/build/boox-audit/
+            hifz-app/build/test-results/
+            hifz-core/build/test-results/
+            safeguard-core/build/test-results/
+            hifz-app/build/jvm-audit-runtime/
           retention-days: 14

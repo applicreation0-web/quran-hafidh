@@ -106,7 +106,9 @@ public final class BooxPortraitHomeSourceContractTest {
     @Test public void todayAndHifzNavigationKeepCanonicalRouting() throws Exception {
         String home=read(MAIN);
         assertTrue(home.contains("line.setOnClickListener(v -> openToday())"));
-        assertTrue(home.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));
+        assertFalse("Even one session must show the choice window",
+            home.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));
+        assertTrue(home.contains("showTodayWindow(sessions);"));
         assertTrue(home.contains("setLineEnabled(sabqiQuickAccess, action == CadenceAction.LEARNING)"));
         assertTrue(home.contains("setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION)"));
         assertTrue(home.contains("new Intent(this, StudyReaderActivity.class)"));
