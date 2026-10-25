@@ -1054,7 +1054,7 @@ public final class MainActivity extends android.app.Activity {
             date->WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
                 prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
             (date,mode)->ledger.find(date,mode)!=null);
-        String balancePreview = "BILAN · "+bilan.validated+"/"+bilan.planned+" validées · "+bilan.dueToday+" à faire"
+        String balancePreview = "BILAN · "+bilan.validated+"/"+bilan.planned+" contrôlées · "+bilan.dueToday+" à faire"
             +"\nRetards : "+bilan.lateLessons+" leçon(s) · "+bilan.missedReviews+" révision(s)"
             +(bilan.unverifiedDays>0 ? "\n"+bilan.unverifiedDays+" jour(s) non vérifiable(s)" : "");
         TextView weeklyBalance=Ui.text(this,balancePreview,16f,false);
