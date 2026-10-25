@@ -539,6 +539,8 @@ public final class MainActivity extends android.app.Activity {
         // The Parcours menu contains navigation labels, not engine diagnostics.
         // Position, cursor, repetitions and block geometry stay inside Itqan.
         cue.setText(stabilizationProgramCue());
+        // Keep the full live programme accessible without overcrowding the visible subtitle.
+        itqanCard.setContentDescription("Stabilisation · " + cue.getText());
     }
 
     /**
