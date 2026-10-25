@@ -73,6 +73,15 @@ public final class ProgressMapActivity extends android.app.Activity {
         top.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
         root.addView(top);
 
+        // Always explain the 604 page cells before the grid fills the screen.
+        TextView gridHelp = Ui.text(this,
+            "604 pages · une case = une page · toucher pour ouvrir", 14f, false);
+        if (getResources().getConfiguration().smallestScreenWidthDp >= 600)
+            gridHelp.setTextSize(19f);
+        gridHelp.setTextColor(Ui.MUTED);
+        gridHelp.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 5));
+        root.addView(gridHelp);
+        root.addView(legend());
         grid = new ProgressGridView(this);
         grid.setOnPageTapped(page -> {
             Intent intent = new Intent(this, StudyReaderActivity.class);
@@ -85,11 +94,10 @@ public final class ProgressMapActivity extends android.app.Activity {
         root.addView(grid, gridParams);
         grid.setContentDescription("604 pages du Mushaf · touchez une page pour l’ouvrir en Lecture");
 
-        // The grid dominates; estimates are two plain lines under it, then a one-line legend.
+        // Estimates follow the grid. The decoding legend stays above, visible at entry.
         root.addView(Ui.divider(this));
         apprentissageEtaValue = etaBox(root, "Fin Apprentissage");
         stabilisationEtaValue = etaBox(root, "Fin Stabilisation");
-        root.addView(legend());
 
         setContentView(scroll);
         Ui.respectSystemBars(this, scroll, 0, 0, 0, 0);
@@ -117,9 +125,10 @@ public final class ProgressMapActivity extends android.app.Activity {
                     ProgressGridView.drawCell(canvas, new RectF(1, 1, getWidth() - 1, getHeight() - 1), status, fill, stroke);
                 }
             };
-            int size = Ui.dp(this, 14);
+            boolean wideBoox = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+            int size = Ui.dp(this, wideBoox ? 22 : 14);
             row.addView(swatch, new LinearLayout.LayoutParams(size, size));
-            TextView label = Ui.text(this, labels[i], 11f, false);
+            TextView label = Ui.text(this, labels[i], wideBoox ? 18f : 11f, false);
             label.setTextColor(Ui.MUTED);
             label.setPadding(Ui.dp(this, 4), 0, 0, 0);
             row.addView(label);
@@ -128,7 +137,7 @@ public final class ProgressMapActivity extends android.app.Activity {
                 line.setGravity(Gravity.CENTER);
                 box.addView(line);
             }
-            line.addView(row, new LinearLayout.LayoutParams(0, Ui.dp(this, 24), 1f));
+            line.addView(row, new LinearLayout.LayoutParams(0, Ui.dp(this, wideBoox ? 36 : 24), 1f));
         }
         return box;
     }
