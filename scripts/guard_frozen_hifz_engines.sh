@@ -110,6 +110,7 @@ while IFS= read -r file; do
       fi
       ;;
     "$APP_ROOT/HifzDisplayVocabulary.java")
+      echo "GUARD_CHECKED_PATH=<$file> GUARD_BLOB=<$(git hash-object "$file")> GUARD_EXPECTED=<f7219f9949eab732ecf1143e9b6266f1b4efc1bc>"
       if [[ "$(git hash-object "$file")" != "f7219f9949eab732ecf1143e9b6266f1b4efc1bc" ]]; then
         echo "::error file=$file::Display vocabulary differs from reviewed Révision passive labels."
         bad=1
