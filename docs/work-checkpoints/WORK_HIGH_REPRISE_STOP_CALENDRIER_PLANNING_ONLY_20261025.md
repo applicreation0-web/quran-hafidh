@@ -51,3 +51,18 @@ Si un changement de moteur semble nécessaire : **STOP, rapporter le blocage con
 6. Compte rendu probant avec HEAD, liste des fichiers modifiés, preuves PASS/FAIL/Non testé et verdict GO/NO-GO.
 
 **Ne pas publier de APK ; ne pas fusionner ; ne pas annoncer de tests non exécutés.**
+
+## Addendum validé : sourates, versets et pages QCF sur CHAQUE séance (affichage seulement)
+
+**Obligation de présentation**, sans modifier les moteurs ni les calculs de progression : dans `Aujourd'hui`, la frise du jour sélectionné, les détails matin/soir et l'écran d'une séance, afficher le **nom de sourate en arabe, les références complètes des versets concernés, les pages imprimées QCF et les numéros de lignes exacts** pour chaque partie de travail lorsque l'information existe.
+
+- **Sabqi** : plage physique des 5 lignes dues, identité de sourate(s), versets de début/fin, page(s), ligne(s) et fraction de semaine (1/3, 2/3, 3/3 pour le standard). Ne pas afficher un faux numéro de page lorsqu'une portion traverse deux pages.
+- **Itqān ordinaire** : chaque bloc physique (y compris les blocs séparés par frontière de sourate) avec plage(s) réelle(s), page(s), lignes et répétitions ; les anciens plans OPEN V1 à 4 dates gardent strictement leurs limites et protocoles figés.
+- **Renforcement / Consolidation du soir** : liste de tous les blocs cumulés avec pour chacun sa sourate et ses versets réels ; la lecture continue porte sur le corpus constitué de ces blocs, mais **aucune fausse plage continue** si des segments sont disjoints.
+- **Finales du dimanche** : lister **toutes les pages réellement éligibles** avec leur sourate(s), versets et portions de lignes ; afficher par page `1 visible + 2 masquées`, puis `À faire / En cours / Validé`. Les unités anciennes non acquises éligibles restent identifiées séparément. Ne jamais afficher des versets nouveaux comme acquis sur simple prévision.
+- **Révision active / passive** : même exigence pour les plages exactes et les éventuels segments disjoints ; durée et état restent affichés. Ne pas afficher seulement « 30 min » sans corpus.
+- **Titre** : `Nom de séance` ; **sous-titre** : `Sourate + versets exacts` ; **ligne de détail** : `p. QCF · l. n–m · nombre de lignes · répétitions`. En cas de plusieurs sourates, utiliser des lignes successives, ne pas tronquer en une seule plage mensongère. Les libellés Itqān conservent les noms fonctionnels sans « avant/après An-Nās ».
+- **Respect du référentiel actuel** : réutiliser `QuranSurahNames.range(...)` / `block(...)`, `GeometryRepository`, la présentation de plages en arabe et les isolats bidirectionnels Unicode déjà validés. **Pas de changement de données**, de l'algorithme de sélection, ni des vues Mushaf/Atlas.
+- **Données et états** : distinguer `programmée (prévision révisable)` de `ouverte (plage gelée)` et `validée (reçu réel)`. En cas de données de localisation indisponibles, montrer explicitement « plage à vérifier » au lieu d'inventer des versets ou une page.
+
+**Tests UI obligatoires** : 5 lignes Sabqi traversant deux pages, Itqān changement de sourate, boule de neige cumulée sur plusieurs sourates, finale plusieurs pages, plage partielle dans un verset `(début)/(suite)`, segments disjoints en révision, OPEN V1 historique, mises en page BOOX portrait, ordre droite-gauche des noms arabes et chiffres, état prévu vs validé. Exiger qu'aucun affichage compact ne cache les sourates/versets si les informations existent : détail complet accessible en un toucher.
