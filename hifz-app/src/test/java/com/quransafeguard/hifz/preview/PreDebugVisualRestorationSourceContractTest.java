@@ -44,13 +44,13 @@ public final class PreDebugVisualRestorationSourceContractTest {
         assertTrue("The compact Today action must keep a readable text CTA and a 120dp minimum touch area",
             home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)")
             && home.contains("line.setMinimumHeight(Ui.dp(this, 120))"));
-        assertTrue("The three primary destinations must retain their visible frozen pictograms",
+        assertTrue("The four equal home destinations must retain their visible frozen pictograms",
             home.contains("ImageView icon = new ImageView(this);")
             && home.contains("icon.setImageResource(drawable);")
             && home.contains("int drawable = largeIconFor(role);")
             && !home.contains("icon.setColorFilter(Ui.INK);")
             && home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 54))")
-            && home.contains("booxIconDp(3, 112)"));
+            && home.contains("booxIconDp(2, 112)"));
     }
 
     @Test public void weeklyDialogIsCompactAndManualIsTruthfullyNamed() throws Exception {
