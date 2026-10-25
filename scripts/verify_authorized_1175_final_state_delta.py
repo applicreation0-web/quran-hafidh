@@ -11,7 +11,7 @@ import subprocess
 BASE = "4135df3863e17da72adbd06457f46f2966ddcb6a"
 PREFIX = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 FILES = {
-    "HifzPrefs.java": ("066d2685a920b50877a6cd62cb6ad023337e16f4", "2d1cc4b8bd7c3c1d7b6ecbcb31874545fb38cd0d"),
+    "HifzPrefs.java": ("066d2685a920b50877a6cd62cb6ad023337e16f4", "28f605d05311cdea603f12685140be6f513f72eb"),
     "HifzSessionActivity.java": ("add8fe985f8b3a2206fa4142c6e384e5a48a8c0c", "464a0f3b0b09c3bbebd67dcd49af0be166b94f4b"),
 }
 def git(*args):

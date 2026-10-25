@@ -3060,19 +3060,32 @@ public final class HifzPrefs {
         ArrayList<String> inputs = new ArrayList<>();
         java.util.LinkedHashMap<String, SundayFinalPagePolicy.LinePosition> positions =
             new java.util.LinkedHashMap<>();
+        LinkedHashSet<String> acquired=v6LineIdSet("v6AcquiredCreditLineIds");
         for (int i = 0; i < physical; i++) {
             String encoded = legacy.get(i).id();
-            inputs.add(encoded);
             List<String> ids = ConsolidationPhysicalUnitPolicy.decodeLineUnit(encoded);
             List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(ids);
             if (physicalLines.size() != ids.size())
                 throw new IllegalStateException("Incomplete exact physical QCF line metadata");
-            for (GeometryRepository.LineMeta line : physicalLines)
+            ArrayList<String> outstanding=new ArrayList<>();
+            for (GeometryRepository.LineMeta line : physicalLines) {
+                if (acquired.contains(line.id)) continue; // never repeat already earned portions
+                outstanding.add(line.id);
                 positions.put(line.id, new SundayFinalPagePolicy.LinePosition(line.page, line.globalIndex));
+            }
+            if(!outstanding.isEmpty())
+                inputs.add(ConsolidationPhysicalUnitPolicy.encodeLineUnit(outstanding));
         }
+        if(inputs.isEmpty())return Collections.emptyList();
+        List<String> exactPages=SundayFinalPagePolicy.physicalPageUnits(inputs, positions);
+        // A long absence may yield more than 30 Mushaf pages even though the
+        // legacy receipt cap is only 29 subblocks. Keep the oldest first;
+        // outstanding, unacquired history is still eligible next Sunday.
+        int limit=Math.min(exactPages.size(),
+            ConsolidationCycleEngine.maxUnitsFor(ConsolidationCycleEngine.Protocol.SUNDAY_PAGE));
         ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
-        for (String page : SundayFinalPagePolicy.physicalPageUnits(inputs, positions))
-            out.add(new ConsolidationCycleEngine.Unit(page, ConsolidationCycleEngine.Protocol.SUNDAY_PAGE));
+        for (int i=0;i<limit;i++)
+            out.add(new ConsolidationCycleEngine.Unit(exactPages.get(i), ConsolidationCycleEngine.Protocol.SUNDAY_PAGE));
         return Collections.unmodifiableList(out);
     }
 
@@ -3127,7 +3140,12 @@ public final class HifzPrefs {
 
     String unfinishedConsolidationSessionDate(ConsolidationCycleEngine.Family family,
                                                String prefix) {
-        String raw=p.getString(consolidationStateKey(family),"");
+        if(prefix==null||prefix.isEmpty())throw new IllegalArgumentException("Frozen cycle prefix required");
+        // Sunday and ordinary grouped sessions now have separate persistence slots.
+        // Read the requested slot, including the one-time migration of old finals.
+        migrateLegacyFinalSlot(family);
+        String key=isFinalCycleId(prefix)?consolidationFinalStateKey(family):consolidationStateKey(family);
+        String raw=p.getString(key,"");
         if(raw==null||raw.isEmpty())return null;
         try {
             JSONObject root=new JSONObject(raw);
@@ -3657,6 +3675,7 @@ public final class HifzPrefs {
             }
 
             ArrayList<RecentSabqi> processed = new ArrayList<>();
+            LinkedHashSet<Integer> creditedPhysicalLines=new LinkedHashSet<>();
             ArrayList<VerseRef> versesToPromote = new ArrayList<>();
 
             for (String unitId : physicalUnitIds(session)) {
@@ -3673,6 +3692,8 @@ public final class HifzPrefs {
                 }
                 int startLine = physical.get(0).globalIndex;
                 int endLine = physical.get(physical.size() - 1).globalIndex;
+                for(GeometryRepository.LineMeta line:physical)
+                    creditedPhysicalLines.add(line.globalIndex);
                 processed.add(new RecentSabqi(startLine, endLine));
             }
             // Device report (2:82, 2:85 missing from Révision although acquired): a verse that
@@ -3685,7 +3706,7 @@ public final class HifzPrefs {
             }
             versesToPromote.addAll(promotable);
 
-            List<RecentSabqi> remaining = withoutRecentBlocks(recentSabqi(), processed);
+            List<RecentSabqi> remaining = withoutCreditedRecentLines(recentSabqi(), creditedPhysicalLines);
 
             ArrayList<VerseRef> fresh = new ArrayList<>();
             for (VerseRef verse : versesToPromote) if (!isPromoted(verse)) fresh.add(verse);
@@ -3944,6 +3965,35 @@ static List<RecentSabqi> withoutRecentBlocks(List<RecentSabqi> source, List<Rece
     }
     return out;
 }
+
+    /**
+     * New Sunday page units may combine or split the historic five-line Sabqi queue.
+     * Exact-range equality would leave acquired units behind (or lose a partial
+     * unfinished block). Subtract ONLY credited physical line indices and preserve
+     * original addedOn, streak and ordering for each remaining contiguous segment.
+     */
+    static List<RecentSabqi> withoutCreditedRecentLines(
+            List<RecentSabqi> source, java.util.Set<Integer> creditedIndexes) {
+        if (creditedIndexes == null) throw new IllegalArgumentException("Credited line set required");
+        ArrayList<RecentSabqi> remaining = new ArrayList<>();
+        if (source == null) return remaining;
+        for (RecentSabqi block : source) {
+            if (block == null || block.startLine < 0 || block.endLine < block.startLine)
+                throw new IllegalStateException("Invalid recent Sabqi interval");
+            int open = -1;
+            for (int index = block.startLine; index <= block.endLine; index++) {
+                if (!creditedIndexes.contains(index)) {
+                    if (open < 0) open = index;
+                } else if (open >= 0) {
+                    remaining.add(new RecentSabqi(open, index - 1, block.addedOn, block.reviewStreak));
+                    open = -1;
+                }
+            }
+            if (open >= 0)
+                remaining.add(new RecentSabqi(open, block.endLine, block.addedOn, block.reviewStreak));
+        }
+        return remaining;
+    }
 
     static int indexAfterDeferral(int index, int size) {
         if (size <= 0) return 0;
