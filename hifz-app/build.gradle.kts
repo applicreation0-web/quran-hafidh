@@ -268,7 +268,10 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(prefs.contains("itqanRanges") && prefs.contains("promotedRanges"))
         check(main.contains("todayAction = todayLine()")
                 && main.contains("line.setOnClickListener(v -> openToday())")
-                && main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }")
+                && main.contains("if(sessions.isEmpty()){")
+                && main.contains("showTodayWindow(sessions);")
+                && main.contains("VOIR LES SÉANCES  ›")
+                && !main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }")
                 && !main.contains("\"Séance\", v -> openToday")) {
             "The approved BOOX Today hero must remain the single scheduled-session entry point."
         }
