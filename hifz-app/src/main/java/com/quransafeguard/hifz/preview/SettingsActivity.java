@@ -168,6 +168,24 @@ public final class SettingsActivity extends android.app.Activity {
         advanced.addView(Ui.settingRow(this,"À propos du parcours","",v->showScreen(about)));advanced.addView(Ui.divider(this));
         advanced.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
 
+        // Read-only technical definitions: no new mode, scheduler, Hifz event or credit.
+        section(about,"Lexique du Hifz");
+        addGlossaryTerm(about,"Sabaq (سبق) · nouvelle leçon",
+            "Première mémorisation de nouvelles lignes. Dans Haafidh : Apprendre.");
+        addGlossaryTerm(about,"Sabqi (سبقي) · révision récente",
+            "Reprise rapprochée des passages récemment mémorisés. Dans Haafidh : Renforcement ; distinct de la nouvelle leçon.");
+        addGlossaryTerm(about,"Itqān (إتقان) · maîtrise",
+            "Précision et fluidité de la récitation. Dans Haafidh : Stabilisation et Consolidation avant An-Nās ; Entretien Itqān après An-Nās.");
+        addGlossaryTerm(about,"Murājaʿah (مراجعة) · révision",
+            "Maintien des passages déjà mémorisés. Haafidh distingue révision active (texte masqué) et révision passive (texte visible).");
+        addGlossaryTerm(about,"Manzil · révision ancienne",
+            "Nom donné dans certaines traditions au corpus ancien révisé régulièrement ; ce n’est pas un nouveau mode dans Haafidh.");
+        TextView glossaryNote=Ui.text(this,
+            "Ces définitions n’ajoutent aucune répétition et ne modifient ni les acquis ni les validations.",15f,false);
+        glossaryNote.setTextColor(Ui.MUTED);
+        glossaryNote.setPadding(Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,12));
+        about.addView(glossaryNote);
+
         TextView schema=Ui.bookText(this,"Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision",16f,true);
         schema.setPadding(Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,5));about.addView(schema);
         consolidationSchemaNote=Ui.text(this,"",16f,false);
@@ -179,6 +197,17 @@ public final class SettingsActivity extends android.app.Activity {
 
         showScreen(root);
         refreshAll();
+    }
+
+    /** Surface-only pedagogical term; never interacts with the Hifz engine. */
+    private void addGlossaryTerm(LinearLayout page,String label,String definition) {
+        TextView heading=Ui.bookText(this,label,16f,true);
+        heading.setPadding(Ui.dp(this,4),Ui.dp(this,9),Ui.dp(this,4),0);
+        page.addView(heading);
+        TextView explanation=Ui.text(this,definition,16f,false);
+        explanation.setTextColor(Ui.MUTED);
+        explanation.setPadding(Ui.dp(this,4),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,5));
+        page.addView(explanation);
     }
 
     private final java.util.Map<LinearLayout,ScrollView> screens=new java.util.HashMap<>();

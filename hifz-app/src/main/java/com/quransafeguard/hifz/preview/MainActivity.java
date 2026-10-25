@@ -402,7 +402,7 @@ public final class MainActivity extends android.app.Activity {
         // A real short subtitle belongs under each large Hifz glyph, not in an invisible state label.
         TextView subtitle = Ui.menuSubline(this, pathSubtitle(label));
         subtitle.setGravity(Gravity.CENTER);
-        subtitle.setMaxLines(1);
+        subtitle.setMaxLines(2);
         subtitle.setPadding(0, Ui.dp(this, 3), 0, 0);
         tile.addView(subtitle);
         tile.setContentDescription(label+" · "+pathSubtitle(label)+" · "+state);
@@ -419,8 +419,8 @@ public final class MainActivity extends android.app.Activity {
     /** Clear, stable vocabulary: the selected-day panel carries all actual verse limits. */
     private static String pathSubtitle(String label) {
         switch (label) {
-            case "Apprentissage": return "Nouvelles lignes";
-            case "Renforcement": return "Reprise du Sabqi";
+            case "Apprentissage": return "Sabaq · nouvelle leçon";
+            case "Renforcement": return "Sabqi · révision récente";
             case "Stabilisation": return "Fixation Itqān";
             case "Consolidation": return "Cumul Itqān";
             case "Révision active": return "Sans texte";
