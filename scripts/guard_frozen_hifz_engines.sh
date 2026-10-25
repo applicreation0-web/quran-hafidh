@@ -58,6 +58,18 @@ while IFS= read -r file; do
         echo "EXACT M9-P0 ONLY: $file"
       fi
       ;;
+    "$APP_ROOT/ProgressMapActivity.java")
+      # User-requested BOOX visual-only change: lift the already existing 604-page
+      # status legend above the grid and scale its labels. No earned-state,
+      # cursor, page classification or read/write logic is authorized to change.
+      # This byte-level pin fails closed if any future ProgressMap delta appears.
+      if [ "$(git hash-object "$file")" != "ab266d935e25bef19804bfad173c9fde8bbc7b10" ]; then
+        echo "::error file=$file::ProgressMap must match the individually reviewed BOOX legend-only delta."
+        bad=1
+      else
+        echo "EXACT REVIEWED BOOX PROGRESSION LEGEND ONLY: $file"
+      fi
+      ;;
     "$APP_ROOT/MushafView.java")
       # Exact SHA of reviewed queue + load-generation changes; any further delta fails.
       python3 scripts/verify_authorized_mushaf_reader_delta.py || bad=1
