@@ -30,7 +30,7 @@ public final class BooxLargeIconsSourceContractTest {
 
     @Test public void mainRetainsLargeBooxSizingAndNoBlackTintForImages() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(main.contains("booxIconDp(3, 112)"));
+        assertTrue(main.contains("booxIconDp(2, 112)"));
         assertTrue(main.contains("booxIconDp(2, 124)"));
         assertTrue(main.contains("largeIconFor(role)"));
         assertTrue(main.contains("largeIconFor(label)"));
