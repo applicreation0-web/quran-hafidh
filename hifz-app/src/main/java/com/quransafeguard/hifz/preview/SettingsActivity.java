@@ -37,7 +37,7 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzSpeedStore speedStore;
     private GeometryRepository geometry;
     private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, itqanProgrammeSetting, morningTimeSetting, eveningTimeSetting, weakVersesSetting;
-    private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
+    private TextView sabqiStatus, itqanStatus, acquiredStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
     private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
     private static final DayOfWeek[] WEEKDAYS = {
         DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
@@ -116,6 +116,9 @@ public final class SettingsActivity extends android.app.Activity {
             "Acquis déterminés par les validations réelles ou une sauvegarde restaurée. Aucune plage présumée.");
         acquiredNote.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,8));
         corpus.addView(acquiredNote);
+        acquiredStatus=Ui.bookText(this,"",16f,true);
+        acquiredStatus.setPadding(Ui.dp(this,4),Ui.dp(this,7),Ui.dp(this,4),Ui.dp(this,11));
+        corpus.addView(acquiredStatus);
 
         section(corpus,"Rotation");
         itqanStatus=Ui.text(this,"",16f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,2));corpus.addView(itqanStatus);
@@ -272,6 +275,11 @@ public final class SettingsActivity extends android.app.Activity {
         if(itqanProgrammeSetting!=null) {
             TextView chosen=Ui.settingValue(itqanProgrammeSetting);
             if(chosen!=null)chosen.setText(itqanProgrammeSummary());
+        }
+        if(acquiredStatus!=null) {
+            int count=prefs.acquiredLineCountV6();
+            acquiredStatus.setText(count==0?"0 ligne acquise · aucune plage initiale":
+                count+" lignes réellement acquises · progression conservée");
         }
         refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();
     }

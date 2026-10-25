@@ -48,6 +48,7 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout itqanQuickAccess;
     private final List<View> geometryActions = new ArrayList<>();
     private LinearLayout itqanCard;
+    private LinearLayout consolidationCard;
     private ScrollView homeScroll;
     private ScrollView parcoursScroll;
     private TextView backlogHomeRow;
@@ -169,6 +170,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout itqan = itqanCard;
         LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
             v -> openMode(consolidationQuickAccessMode()));
+        consolidationCard = consolidation; // Same action and immutable original icon.
         path.addView(otherModes);
 
         // Same acquired corpus, two modalities: text masked vs text visible.
@@ -479,7 +481,20 @@ public final class MainActivity extends android.app.Activity {
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshBacklog(); refreshQuickAccessCadenceGating(); refreshDashboard(); refreshToday(); refreshRecentSabqiAdvisory(); refreshStabilizationPosition(); }
+    /** Only change text; retain the original fixed pictogram and click destination. */
+    private void refreshItqanCardVocabulary() {
+        if(consolidationCard==null || prefs==null) return;
+        boolean afterNas=prefs.itqanEntretienActive();
+        String label=afterNas?"Entretien":"Consolidation";
+        String subtitle=afterNas?"Itqān · après An-Nās":"Itqān · avant An-Nās";
+        if(consolidationCard.getChildAt(0) instanceof TextView)
+            ((TextView)consolidationCard.getChildAt(0)).setText(label);
+        if(consolidationCard.getChildCount()>2 && consolidationCard.getChildAt(2) instanceof TextView)
+            ((TextView)consolidationCard.getChildAt(2)).setText(subtitle);
+        consolidationCard.setContentDescription(label+" · "+subtitle);
+    }
+
+    private void refreshAll() { refreshItqanCardVocabulary(); refreshBacklog(); refreshQuickAccessCadenceGating(); refreshDashboard(); refreshToday(); refreshRecentSabqiAdvisory(); refreshStabilizationPosition(); }
 
     /** BOOX-only compact text cue; never another oversized competing pictogram. */
     private TextView backlogRow() {
@@ -912,10 +927,19 @@ public final class MainActivity extends android.app.Activity {
         String[] items=new String[sessions.size()];
         for(int i=0;i<items.length;i++){
             TodaySession s=sessions.get(i);
-            items[i]=(s.done?"✓ ":s.next?"▸ ":"   ")+s.label+" · "+(s.done?"fait":"à faire");
+            String slot=s.label.contains("· matin")?"MATIN · ":
+                s.label.contains("· soir")?"SOIR · ":"";
+            String title=readableScheduleTitle(s.label,prefs.itqanEntretienActive());
+            String essential=readableScheduleEssentials(s.label);
+            // Completed finales are identified independently from the Itqān
+            // line geometry. Never present a Sabqi finale as Itqān repetition.
+            items[i]=(s.done?"✓ ":s.next?"▸ ":"  ")+slot+title+
+                (s.done?" · Terminé":" · À faire")+
+                ("Détails disponibles".equals(essential) || "Terminée".equals(essential)
+                    ? "" : "\n"+essential);
         }
         new android.app.AlertDialog.Builder(this)
-            .setTitle("Aujourd’hui")
+            .setTitle("Aujourd’hui · Choisir une séance")
             .setItems(items,(dialog,which)->{
                 TodaySession s=sessions.get(which);
                 openMode(s.mode,s.scheduled);
@@ -1210,7 +1234,7 @@ public final class MainActivity extends android.app.Activity {
         if(raw==null||raw.trim().isEmpty()||"—".equals(raw.trim()))return "Aucune séance";
         String value=stripDone(raw);
         if(value.startsWith("Stabilisation"))return postNas?"Itqān · Entretien":"Itqān · Consolidation";
-        if(value.startsWith("Apprentissage"))return "Sabqi · Apprentissage";
+        if(value.startsWith("Apprentissage"))return "Apprentissage · Sabaq";
         if(value.contains("Finale Renforcement Sabqi"))return "Finale · Sabqi";
         if(value.contains("Finale Consolidation Itqān"))return "Finale · Itqān";
         if(value.startsWith("Renforcement"))return "Renforcement · Sabqi";
