@@ -103,7 +103,7 @@ public final class WeeklyProgramPolicyTest {
         assertTrue(prefs.setWeeklyProgramMode(HifzPrefs.WeeklyProgram.RECOMMENDED));
         assertEquals(HifzPrefs.WeeklyProgram.CLASSIC,prefs.weeklyProgramFor(today.minusDays(1)));
         assertEquals(HifzPrefs.WeeklyProgram.RECOMMENDED,prefs.weeklyProgramFor(today));
-        assertEquals(4,prefs.itqanDaysPerWeek());
+        assertEquals(3,prefs.itqanDaysPerWeek());
         assertEquals(3,prefs.learningDaysPerWeek());
         HifzPrefs afterRestart=new HifzPrefs(disk);
         assertEquals(HifzPrefs.WeeklyProgram.RECOMMENDED,afterRestart.weeklyProgramMode());
