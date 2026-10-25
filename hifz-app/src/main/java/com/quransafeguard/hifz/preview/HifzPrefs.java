@@ -3077,7 +3077,7 @@ public final class HifzPrefs {
      */
     String frozenConsolidationSnapshot(ConsolidationCycleEngine.Family family,
                                       String cycleId) {
-        String raw=p.getString(consolidationStateKey(family),"");
+        String raw=p.getString(consolidationStateKeyForCycle(family,cycleId),"");
         if(raw==null||raw.isEmpty())return "";
         try {
             JSONObject root=new JSONObject(raw);
@@ -3255,6 +3255,44 @@ public final class HifzPrefs {
         }
     }
 
+
+    /** The Sunday finale owns a different frozen slot from the evening protocol. */
+    private static String consolidationFinalStateKey(ConsolidationCycleEngine.Family family) {
+        return consolidationStateKey(family) + "FinalV1";
+    }
+
+    private static boolean isFinalCycleId(String cycleId) {
+        return cycleId != null && (cycleId.startsWith("learning-final-")
+            || cycleId.startsWith("stabilization-final-"));
+    }
+
+    /** Atomic, byte-preserving migration for legacy final snapshots in the weekday slot. */
+    private void migrateLegacyFinalSlot(ConsolidationCycleEngine.Family family) {
+        String weekdayKey = consolidationStateKey(family);
+        String raw = p.getString(weekdayKey, "");
+        if (raw == null || raw.isEmpty()) return;
+        try {
+            if (!isFinalCycleId(new JSONObject(raw).optString("cycleId", ""))) return;
+        } catch (Exception malformed) {
+            return; // Corruption is not permission to remove user data.
+        }
+        String finalKey = consolidationFinalStateKey(family);
+        String existing = p.getString(finalKey, "");
+        if (existing != null && !existing.isEmpty() && !existing.equals(raw))
+            throw new IllegalStateException("Two incompatible Sunday finale snapshots");
+        SharedPreferences.Editor editor = p.edit();
+        if (existing == null || existing.isEmpty()) editor.putString(finalKey, raw);
+        if (!editor.remove(weekdayKey).commit())
+            throw new IllegalStateException("Unable to migrate Sunday finale snapshot");
+    }
+
+    private String consolidationStateKeyForCycle(ConsolidationCycleEngine.Family family,
+                                                 String cycleId) {
+        migrateLegacyFinalSlot(family);
+        return isFinalCycleId(cycleId)
+            ? consolidationFinalStateKey(family) : consolidationStateKey(family);
+    }
+
     /**
      * Audit #2: upgrade an OPEN session saved before sourceSnapshot existed.
      * Match its frozen physical blocks to an EXACT prefix of the same week's
@@ -3349,7 +3387,7 @@ public final class HifzPrefs {
             }
             root.put("units", units);
             return p.edit()
-                .putString(consolidationStateKey(cycle.family()), root.toString())
+                .putString(consolidationStateKeyForCycle(cycle.family(),cycle.cycleId()), root.toString())
                 .commit();
         } catch (Exception error) {
             throw new IllegalStateException("Unable to persist Consolidation session", error);
@@ -3359,8 +3397,14 @@ public final class HifzPrefs {
     /** Restore the exact frozen OPEN grouped session after process recreation; corruption fails closed. */
     ConsolidationCycleEngine.Session restoreConsolidationSession(
             ConsolidationCycleEngine engine, ConsolidationCycleEngine.Family family) {
+        return restoreConsolidationSession(engine,family,null);
+    }
+
+    ConsolidationCycleEngine.Session restoreConsolidationSession(
+            ConsolidationCycleEngine engine, ConsolidationCycleEngine.Family family,
+            String cycleId) {
         if (engine == null) throw new IllegalArgumentException("Consolidation engine required");
-        String raw = p.getString(consolidationStateKey(family), null);
+        String raw = p.getString(consolidationStateKeyForCycle(family,cycleId), null);
         if (raw == null || raw.trim().isEmpty()) return null;
         try {
             JSONObject root = new JSONObject(raw);
@@ -3420,7 +3464,11 @@ public final class HifzPrefs {
      * its place, rather than silently finishing out a session that can no longer see it.
      */
     boolean discardConsolidationSession(ConsolidationCycleEngine.Family family) {
-        return p.edit().remove(consolidationStateKey(family)).commit();
+        return discardConsolidationSession(family,null);
+    }
+
+    boolean discardConsolidationSession(ConsolidationCycleEngine.Family family,String cycleId) {
+        return p.edit().remove(consolidationStateKeyForCycle(family,cycleId)).commit();
     }
 
     /**
@@ -3516,7 +3564,7 @@ public final class HifzPrefs {
                 .putBoolean("anchoringQueueInitialized", true).putInt("anchoringQueueIndex", nextIndex)
                 .putString("lastRecentSabqiReviewDate", date).putString("lastRecentSabqiReviewLabel", label)
                 .putString(snowballUnitsKey(ConsolidationCycleEngine.Family.STABILIZATION), "[]")
-                .remove(consolidationStateKey(ConsolidationCycleEngine.Family.STABILIZATION));
+                .remove(consolidationFinalStateKey(ConsolidationCycleEngine.Family.STABILIZATION));
             return editor.commit();
         }
     }
@@ -3602,7 +3650,7 @@ public final class HifzPrefs {
                 .putString("lastLearningConsolidationDate", date)
                 .putString("lastLearningConsolidationLabel", label)
                 .putString(snowballUnitsKey(ConsolidationCycleEngine.Family.LEARNING), "[]")
-                .remove(consolidationStateKey(ConsolidationCycleEngine.Family.LEARNING));
+                .remove(consolidationFinalStateKey(ConsolidationCycleEngine.Family.LEARNING));
             return editor.commit();
         }
     }

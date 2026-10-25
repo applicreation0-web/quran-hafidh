@@ -529,7 +529,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                                      String cycleIdPrefix, String displayName, String emptyMessage,
                                      Runnable onValidate) {
         String today = sessionDate.toString();
-        consolidationSession = prefs.restoreConsolidationSession(consolidationEngine, family);
+        consolidationSession = prefs.restoreConsolidationSession(consolidationEngine, family,cycleIdPrefix+today);
         if (consolidationSession != null
                 && !consolidationSession.cycle().cycleId().equals(cycleIdPrefix+today)) {
             // Cross-midnight or another final/evening session: NEVER attribute
@@ -544,7 +544,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             // frozen open at a smaller size (e.g. Wednesday's 2 units) — reusing it as-is would
             // silently finish out the old, now-incomplete unit set and never review the new block
             // this week. Abandon its unfinished progress and fall through to rebuild fresh below.
-            prefs.discardConsolidationSession(family);
+            prefs.discardConsolidationSession(family,cycleIdPrefix+today);
             consolidationSession = null;
         }
         if (consolidationSession == null) {
