@@ -9,15 +9,9 @@ import java.nio.file.Paths;
 
 import static org.junit.Assert.assertTrue;
 
-/**
- * Reported directly: a strict-acquired-only reader stayed empty despite Réglages showing a real
- * "Plages acquises" range (2:1→2:74) — traced to a real bootstrap gap. ensureSchema seeds
- * itqanRanges (the range-level "Plages acquises" the user sees) but leaves
- * v6AcquiredCreditLineIds (the per-line credit every strict-acquired-only reader actually checks —
- * entryIsFullyStabilizedOrAcquired, ETA math) empty, since computing owned physical lines needs
- * GeometryRepository, real I/O the SharedPreferences-only constructor never does.
- * reconcileV6AcquiredBootstrap backfills it once real geometry is available, touching only a line
- * still in its pristine NONE state.
+/** Protect current persisted V6 credit from synthetic bootstrap/backfill.
+ * Historical initialization change 68ddc537 is reviewed separately, read-only.
+ * These tests cannot authorize changes to initializations or migrations.
  */
 public final class V6AcquiredBootstrapSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -28,9 +22,10 @@ public final class V6AcquiredBootstrapSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void bootstrapSeedsItqanRangesButLeavesAcquiredCreditEmpty() throws Exception {
+    @Test public void freshBootstrapKeepsPhysicalCreditEmptyAndNeverAssumesAcquiredRanges() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue(prefs.contains(".putString(\"itqanRanges\", defaultItqanRangesJson())"));
+        assertTrue(prefs.contains(".putString(\"itqanRanges\", \"[]\")"));
+        assertTrue(prefs.contains(".putBoolean(\"v6AcquiredBootstrapSeeded\", true)"));
         assertTrue(prefs.contains(".putString(\"v6AcquiredCreditLineIds\", \"[]\")"));
     }
 

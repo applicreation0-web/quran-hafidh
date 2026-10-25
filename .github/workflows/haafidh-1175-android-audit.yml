@@ -62,6 +62,16 @@ jobs:
           bash scripts/guard_frozen_hifz_engines.sh
           python3 scripts/verify_atlas_only_purity.py
           python3 scripts/verify_contractual_ui_icons.py
+      - name: Prepare missing public legacy test fixture (never a runtime asset)
+        run: |
+          fixture="$RUNNER_TEMP/legacy-bridge-fixture"
+          index=hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java
+          words=hifz-app/src/main/word-source/quran-ws-v1.1.2
+          python3 scripts/build_ibn_kathir_amorce_review.py "$index" "$words" scripts/data/quran-uthmani-tanzil.txt "$fixture/raw.json"
+          python3 scripts/audit_ibn_kathir_exact_hafs_qcf.py "$index" "$words" "$fixture/exact.json"
+          python3 scripts/gate_ibn_kathir_amorce_approvals.py "$fixture/raw.json" "$fixture/exact.json" "$fixture/gate.json"
+          python3 scripts/audit_ibn_kathir_j2.py "$fixture/raw.json" "$fixture/exact.json" "$fixture/gate.json" "$fixture/j2"
+          echo "IK_J2_REVIEW_PATH=$fixture/j2/ik-j2-review.json" >> "$GITHUB_ENV"
       - name: Complete JVM and source contracts
         run: gradle --no-daemon --continue :hifz-core:test :safeguard-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
       - name: Export public JVM replay runtime

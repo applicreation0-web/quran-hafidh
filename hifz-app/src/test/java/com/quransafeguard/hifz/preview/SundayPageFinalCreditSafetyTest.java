@@ -38,7 +38,7 @@ public final class SundayPageFinalCreditSafetyTest {
         }
         return engine.openSession(cycle, "exact-pages");
     }
-    @Test public void oneTwoAndFourPageFinalsCreditExactlyOnceOnlyAfterAllThreePasses() {
+    @Test public void oneTwoAndFourPageFinalsCreditExactlyOnceOnlyAfterAllThreePasses() throws Exception {
         for (ConsolidationCycleEngine.Family family : ConsolidationCycleEngine.Family.values()) {
             for (int pageCount : new int[]{1, 2, 4}) {
                 InMemoryPrefs disk = EarnedEveningProtocolRegressionTest.disk();
