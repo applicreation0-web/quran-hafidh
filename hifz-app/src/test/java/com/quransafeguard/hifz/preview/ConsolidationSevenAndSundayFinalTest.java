@@ -79,7 +79,7 @@ public final class ConsolidationSevenAndSundayFinalTest {
         String main=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String dashboard=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(main.contains("if(recommendedSunday(date))"));
-        assertTrue(main.contains("if(!learningFinalResolved(date))return HifzSessionActivity.LEARNING_FINAL"));
+        assertTrue(main.contains("if(!learningFinalResolved(date))return HifzSessionActivity.LEARNING_FINAL;"));
         assertTrue(main.contains("!consolidationFinalResolved(date)")); 
         assertFalse(main.contains("if(!modeComplete(date,HifzSessionActivity.ITQAN))return HifzSessionActivity.ITQAN;"));
         assertTrue(main.contains("if(recommendedSunday(today)){"));
