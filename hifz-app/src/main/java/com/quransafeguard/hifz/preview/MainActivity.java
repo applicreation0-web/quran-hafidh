@@ -980,7 +980,7 @@ public final class MainActivity extends android.app.Activity {
     private String todaySummary(String mode) {
         if(HifzSessionActivity.SABQI.equals(mode))return "Apprentissage";
         if(HifzSessionActivity.ITQAN.equals(mode))return prefs.itqanEntretienActive()
-            ? "Itqān · Entretien" : "Itqān · Consolidation";
+            ? "Entretien · Itqān" : "Stabilisation · Itqān";
         if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode))return "Revue apprentissage";
         if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode))return "Révision active";
         if(HifzSessionActivity.MURAJAAH.equals(mode))return "Révision passive";
@@ -1233,7 +1233,7 @@ public final class MainActivity extends android.app.Activity {
     static String readableScheduleTitle(String raw, boolean postNas) {
         if(raw==null||raw.trim().isEmpty()||"—".equals(raw.trim()))return "Aucune séance";
         String value=stripDone(raw);
-        if(value.startsWith("Stabilisation"))return postNas?"Itqān · Entretien":"Itqān · Consolidation";
+        if(value.startsWith("Stabilisation"))return postNas?"Entretien · Itqān":"Stabilisation · Itqān";
         if(value.startsWith("Apprentissage"))return "Apprentissage · Sabaq";
         if(value.contains("Finale Renforcement Sabqi"))return "Finale · Sabqi";
         if(value.contains("Finale Consolidation Itqān"))return "Finale · Itqān";
