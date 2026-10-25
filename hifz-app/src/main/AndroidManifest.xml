@@ -4,8 +4,8 @@
     <application
         android:name=".HifzRecoveryApplication"
         android:allowBackup="false"
-        android:icon="@drawable/ic_quran_hifz_logo"
-        android:roundIcon="@drawable/ic_quran_hifz_logo"
+        android:icon="@drawable/ic_quran_hifz_header"
+        android:roundIcon="@drawable/ic_quran_hifz_header"
         android:label="Quran Haafidh"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
