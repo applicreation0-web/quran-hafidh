@@ -138,6 +138,9 @@ final class Ui {
      * Values remain live TextViews (settings and progress summaries still update in-place). */
     static TextView menuSubline(Context context, String value) {
         TextView secondary = text(context, value == null ? "" : value, 15f, false);
+        // 10-inch BOOX typography must remain readable at arm's length.
+        if (context.getResources().getConfiguration().smallestScreenWidthDp >= 600)
+            secondary.setTextSize(18f);
         secondary.setTypeface(Typeface.create("serif", Typeface.NORMAL));
         secondary.setTextColor(MUTED);
         secondary.setLineSpacing(0f, 1.0f);
@@ -155,6 +158,8 @@ final class Ui {
         LinearLayout copy = column(context);
         copy.setPadding(dp(context, 4), dp(context, 2), dp(context, 4), dp(context, 2));
         TextView name = bookText(context, label, 17f, true);
+        if (context.getResources().getConfiguration().smallestScreenWidthDp >= 600)
+            name.setTextSize(21f);
         name.setMaxLines(2);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         copy.addView(name);
