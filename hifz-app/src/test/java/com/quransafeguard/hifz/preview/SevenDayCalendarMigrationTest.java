@@ -6,18 +6,20 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class SevenDayCalendarMigrationTest {
- @Test public void manualAlwaysAllocatesAllSevenDaysAndSundayItqan() {
+ @Test public void manualAllocatesSixOrdinaryDaysPlusSundayFinales() {
    for(int n=0;n<=6;n++) {
      int learning=0,stabilization=0;
      for(DayOfWeek day:DayOfWeek.values()) {
        CadenceAction c=WeeklyProgramPolicy.actionFor(day,HifzPrefs.WeeklyProgram.MANUAL_SEVEN,n);
        if(c==CadenceAction.LEARNING)learning++;
        if(c==CadenceAction.STABILIZATION)stabilization++;
-       assertNotEquals("No spare revision-only day in new programme",CadenceAction.REVISION,c);
-       if(day==DayOfWeek.SUNDAY)assertEquals(CadenceAction.STABILIZATION,c);
+       if(day==DayOfWeek.SUNDAY)
+         assertEquals("Sunday is finals only",CadenceAction.REVISION,c);
+       else
+         assertNotEquals("Weekday must have an ordinary lesson",CadenceAction.REVISION,c);
      }
      assertEquals(n,learning);
-     assertEquals(7-n,stabilization);
+     assertEquals(6-n,stabilization);
    }
  }
  @Test public void existingProgressionPreservedAndMigrationStartsAtMonday() {
@@ -39,12 +41,12 @@ public final class SevenDayCalendarMigrationTest {
    reloaded.ensureSevenDayProgramme(sunday,false);
    assertEquals(HifzPrefs.WeeklyProgram.RECOMMENDED,reloaded.weeklyProgramFor(sunday.plusDays(1)));
  }
- @Test public void freshInstallStartsSevenDaysImmediately() {
+ @Test public void freshInstallUsesSixOrdinaryDaysPlusSundayFinales() {
    InMemoryPrefs db=new InMemoryPrefs();
    HifzPrefs prefs=new HifzPrefs(db);
    LocalDate sunday=LocalDate.of(2026,10,11);
    prefs.ensureSevenDayProgramme(sunday,true);
    assertEquals(HifzPrefs.WeeklyProgram.RECOMMENDED,prefs.weeklyProgramFor(sunday));
-   assertEquals(CadenceAction.STABILIZATION,WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY,prefs.weeklyProgramFor(sunday),3));
+   assertEquals(CadenceAction.REVISION,WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY,prefs.weeklyProgramFor(sunday),3));
  }
 }
