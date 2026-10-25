@@ -349,6 +349,8 @@ public final class MainActivity extends android.app.Activity {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            // One accessible label belongs to the complete tile, not the decorative image.
+            icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             icon.setPadding(0, 0, 0, 0);
             tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
