@@ -20,6 +20,9 @@ public final class SundayFinalLectureMaskSourceContractTest {
         assertTrue(activity.contains("WordGeometryRepository.shared(this).pageLandmarkBoxes(currentPage)"));
         assertTrue(activity.contains("mushaf.showFreeActivePreparedPage(currentPage, pageLines, landmarks, anchors, ready);"));
         assertTrue(activity.contains("sundayFinalAnchorUnavailable = !ready;"));
+        assertTrue(activity.contains("sundayFinalMaskedPageReady = false;"));
+        assertTrue(activity.contains("sundayFinalMaskedPageReady = !sundayFinalAnchorUnavailable;"));
+        assertTrue(activity.contains("sundayFinalAnchorUnavailable || !sundayFinalMaskedPageReady"));
         assertTrue(activity.contains("if (isSundayFinalPageRepetition() && currentMask == 100 && sundayFinalAnchorUnavailable)"));
         assertFalse(activity.contains("applySundayFinalAnchors()"));
     }

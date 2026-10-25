@@ -615,8 +615,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int position = consolidationSession.nextUnitIndex();
         int[] vector = consolidationSession.stageVectorAt(position);
         int target = vector[consolidationSession.stage()];
-        if (isSundayFinalPageRepetition() && currentMask == 100 && sundayFinalAnchorUnavailable) {
-            progress.setText("Ancrages QCF indisponibles · validation masquée suspendue.");
+        if (isSundayFinalPageRepetition() && currentMask == 100
+                && (sundayFinalAnchorUnavailable || !sundayFinalMaskedPageReady)) {
+            progress.setText(sundayFinalAnchorUnavailable
+                ? "Amorces QCF indisponibles · validation masquée suspendue."
+                : "Masque en cours de chargement · répétition indisponible.");
             return;
         }
         progress.setText("Répétition " + consolidationSession.donePerStage() + "/" + target
@@ -625,8 +628,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void completeGroupedCycleRep() {
-        if (isSundayFinalPageRepetition() && currentMask == 100 && sundayFinalAnchorUnavailable) {
-            onError("Amorces QCF exactes indisponibles : répétition masquée non validée.");
+        if (isSundayFinalPageRepetition() && currentMask == 100
+                && (sundayFinalAnchorUnavailable || !sundayFinalMaskedPageReady)) {
+            onError("Masque non prêt : répétition masquée non validée.");
             return;
         }
         if (!takeRepLock() || consolidationSession == null || consolidationSession.readyToClose()) return;
@@ -1868,6 +1872,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     /** A Sunday finale must never count a visible pass as the required masked recall. */
     private boolean sundayFinalAnchorUnavailable;
+    /** Set only by MushafView's generation-checked pageShown after atomic mask paint. */
+    private boolean sundayFinalMaskedPageReady;
 
     private boolean isSundayFinalPageRepetition() {
         return consolidationSession != null && !consolidationSession.readyToClose()
@@ -1909,6 +1915,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ready = false;
         }
         sundayFinalAnchorUnavailable = !ready;
+        sundayFinalMaskedPageReady = false;
         // Never show the Arabic glyphs unmasked and then paint the mask over
         // them: BOOX retains the momentary frame as E-Ink ghosting.
         mushaf.showFreeActivePreparedPage(currentPage, pageLines, landmarks, anchors, ready);
@@ -2100,6 +2107,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onPageShown(int page){
         currentPage=page;
         annotationOverlay.setPage(page);
+        if (isSundayFinalPageRepetition() && currentMask == 100 && page == unitFirstPage) {
+            // This callback happens only after the prepared QCF word-hole layer
+            // exists; an unloaded/visible frame must not earn a masked pass.
+            sundayFinalMaskedPageReady = !sundayFinalAnchorUnavailable;
+            updateGroupedCycleRepAction();
+        }
         if(isMurajaahMode()&&!sessionCompleted){
             if(MURAJAAH_ACTIVE.equals(mode)){
                 currentLineIds=applyActiveLandmarks(page);
