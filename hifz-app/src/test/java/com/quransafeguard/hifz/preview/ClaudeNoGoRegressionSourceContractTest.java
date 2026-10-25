@@ -229,22 +229,21 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             prefs.contains("for (String unitId : session.unitIds()) {"));
     }
 
-    @Test public void sundaysFinalReviewUsesTheExtendedEightWeekSnowballNotJustThisWeek() throws Exception {
+    @Test public void newSundayFinalsUseRealPagesAndPreserveLegacyEightWeekReview() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        String stabilizationFinal = method(prefs,
-            "List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today) {", "}");
-        assertTrue("Sunday's Stabilisation final review must delegate to the extended 8-week snowball",
-            stabilizationFinal.contains("extendedSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today)"));
-        String learningFinal = method(prefs,
-            "List<ConsolidationCycleEngine.Unit> learningSnowballFinalUnits(LocalDate today) {", "}");
-        assertTrue("Sunday's Apprentissage final review must delegate to the extended 8-week snowball",
-            learningFinal.contains("extendedSnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today)"));
-        String extended = method(prefs,
-            "private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(", "\n    }");
-        assertTrue("The extended Sunday pass must read each accumulated block at ×3, not ×10",
-            extended.contains("ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED"));
-        assertTrue("The extended Sunday pass must span an 8-week cumulative window",
+        String legacy = method(prefs, "private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(", "\n    }");
+        assertTrue("Legacy OPEN finals still have their source for byte-exact restore",
+            legacy.contains("ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED"));
+        assertTrue("Unacquired historical physical blocks must not silently disappear",
             prefs.contains("SNOWBALL_EXTENDED_WEEKS = 8"));
+        String projected = method(prefs, "private List<ConsolidationCycleEngine.Unit> sundayFinalPageUnits(",
+            "List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today, GeometryRepository geometry)");
+        assertTrue(projected.contains("SundayFinalPagePolicy.physicalPageUnits(inputs, positions)"));
+        assertTrue(projected.contains("ConsolidationCycleEngine.Protocol.SUNDAY_PAGE"));
+        assertFalse("Only source history may contain a continuous pass; the new page units must not",
+            projected.contains("encodeContinuousUnit("));
+        assertTrue(prefs.contains("return sundayFinalPageUnits(ConsolidationCycleEngine.Family.STABILIZATION, today, geometry);"));
+        assertTrue(prefs.contains("return sundayFinalPageUnits(ConsolidationCycleEngine.Family.LEARNING, today, geometry);"));
     }
 
     /**
@@ -331,9 +330,9 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     @Test public void snowballExtendedProtocolIsFullyWiredIntoTheConsolidationEngine() throws Exception {
         String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
         assertTrue("Protocol enum must declare SNOWBALL_EXTENDED",
-            engine.contains("SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS }"));
+            engine.contains("SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SUNDAY_PAGE }"));
         assertTrue("maxUnitsFor must give SNOWBALL_EXTENDED enough headroom for up to 8 weeks of blocks",
-            engine.contains("if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;"));
+            engine.contains("if (protocol == Protocol.SNOWBALL_EXTENDED || protocol == Protocol.SUNDAY_PAGE) return 30;"));
         String stageVector = method(engine,
             "static int[] stageVector(Protocol protocol, int groupSize, int position) {",
             "private static int[] normalizeProgress(");

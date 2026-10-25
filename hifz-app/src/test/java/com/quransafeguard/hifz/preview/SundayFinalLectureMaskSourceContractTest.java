@@ -31,6 +31,8 @@ public final class SundayFinalLectureMaskSourceContractTest {
         String implementation=activity.substring(start,end);
         assertFalse(implementation.contains("semanticPassages"));
         assertFalse(implementation.contains("new WordBox"));
-        assertTrue(implementation.contains("currentLineIds"));
+        assertTrue(implementation.contains("geometry.lineIdsOnPage(currentPage)"));
+        assertFalse("Sunday mask setup must not alter exact due-line credits",
+            implementation.contains("currentLineIds ="));
     }
 }
