@@ -675,6 +675,10 @@ public final class MainActivity extends android.app.Activity {
         if(prefs.unfinishedConsolidationSessionDate(
                 ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null)
             return HifzSessionActivity.CONSOLIDATION_FINAL;
+        // The maintenance tile must lead to the hizb ×3, not a non-existent
+        // post-An-Nās Consolidation finale. Existing pre-An-Nās OPEN finals
+        // were checked above and always retain their original date/protocol.
+        if(prefs.itqanEntretienActive())return HifzSessionActivity.ITQAN;
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         return today.getDayOfWeek()==DayOfWeek.SUNDAY && !prefs.itqanEntretienActive()
                 && !consolidationFinalResolved(today)
