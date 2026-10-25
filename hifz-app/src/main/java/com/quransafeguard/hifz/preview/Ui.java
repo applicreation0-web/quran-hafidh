@@ -134,24 +134,34 @@ final class Ui {
             : PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine";
     }
 
-    /** Liseuse-style setting: label on the left, current value/action on the right. */
+    /** Shared BOOX menu hierarchy: bold sans title, concise serif secondary line.
+     * Values remain live TextViews (settings and progress summaries still update in-place). */
+    static TextView menuSubline(Context context, String value) {
+        TextView secondary = text(context, value == null ? "" : value, 15f, false);
+        secondary.setTypeface(Typeface.create("serif", Typeface.NORMAL));
+        secondary.setTextColor(MUTED);
+        secondary.setLineSpacing(0f, 1.0f);
+        secondary.setMaxLines(2);
+        secondary.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        return secondary;
+    }
+
+    /** Two-level menu row. A genuine second line replaces the squeezed right column.
+     * Keep the clickable row at least 56dp and its arrow separate from text. */
     static LinearLayout settingRow(Context context, String label, String value, View.OnClickListener listener) {
         LinearLayout row = row(context);
-        row.setPadding(dp(context, 2), dp(context, 7), dp(context, 2), dp(context, 7));
+        row.setPadding(dp(context, 2), dp(context, 6), dp(context, 2), dp(context, 6));
         row.setMinimumHeight(dp(context, 56));
-        // Device report (phone): a long value ("Stabilisation · bloc 1/3 · p. 515 …") took the
-        // whole width and squeezed the label into one letter-column ("Auj/our/d'h/ui"). The label
-        // keeps its natural width (up to half the screen); the value takes the rest and wraps.
-        TextView name = text(context, label, 17f, true);
-        name.setPadding(dp(context, 4), 0, dp(context, 6), 0);
-        name.setMaxWidth(context.getResources().getDisplayMetrics().widthPixels / 2);
-        row.addView(name, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView current = text(context, value == null ? "" : value, 16f, false);
-        current.setTextColor(MUTED);
-        current.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        current.setMaxLines(3);
-        row.addView(current, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        LinearLayout copy = column(context);
+        copy.setPadding(dp(context, 4), dp(context, 2), dp(context, 4), dp(context, 2));
+        TextView name = bookText(context, label, 17f, true);
+        name.setMaxLines(2);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        copy.addView(name);
+        TextView current = menuSubline(context, value);
+        current.setPadding(0, dp(context, 2), 0, 0);
+        copy.addView(current);
+        row.addView(copy, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         if (listener != null) {
             android.widget.ImageView chevron = new android.widget.ImageView(context);
             chevron.setImageResource(R.drawable.ic_ui_next);
@@ -166,9 +176,17 @@ final class Ui {
         return row;
     }
 
+    /** Supports compact Hifz legacy rows as well as two-level Settings menu rows. */
     static TextView settingValue(LinearLayout row) {
-        if (row == null || row.getChildCount() < 2 || !(row.getChildAt(1) instanceof TextView)) return null;
-        return (TextView) row.getChildAt(1);
+        if (row == null) return null;
+        if (row.getChildCount() > 1 && row.getChildAt(1) instanceof TextView)
+            return (TextView) row.getChildAt(1);
+        if (row.getChildCount() > 0 && row.getChildAt(0) instanceof LinearLayout) {
+            LinearLayout copy = (LinearLayout) row.getChildAt(0);
+            if (copy.getChildCount() > 1 && copy.getChildAt(1) instanceof TextView)
+                return (TextView) copy.getChildAt(1);
+        }
+        return null;
     }
 
     static View divider(Context context) {
