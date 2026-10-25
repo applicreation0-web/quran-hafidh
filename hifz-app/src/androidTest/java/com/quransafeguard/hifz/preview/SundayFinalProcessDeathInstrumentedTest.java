@@ -16,7 +16,8 @@ public final class SundayFinalProcessDeathInstrumentedTest {
         assertTrue(raw.edit().clear().commit()); assertTrue(gate.edit().clear().commit());
         HifzPrefs prefs = new HifzPrefs(c);
         ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
-        String unit = ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList("p1-l01","p1-l02"));
+        String unit = ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+            GeometryRepository.get(c).lineIdsOnPage(1).subList(0, 2));
         for (ConsolidationCycleEngine.Family family : ConsolidationCycleEngine.Family.values()) {
             String stem = family == ConsolidationCycleEngine.Family.LEARNING ? "learning" : "stabilization";
             for (boolean finale : new boolean[]{false,true}) {
