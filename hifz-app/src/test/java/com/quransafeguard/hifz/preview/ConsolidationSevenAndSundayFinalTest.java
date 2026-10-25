@@ -72,17 +72,18 @@ public final class ConsolidationSevenAndSundayFinalTest {
         } catch(IllegalArgumentException expected){}
     }
 
-    @Test public void sundayRecommendedIsItqanPlusTwoFinalsNeverReview() throws Exception {
-        assertEquals(com.quransafeguard.hifz.core.CadenceAction.STABILIZATION,
+    @Test public void sundayRecommendedIsFinalsOnlyNeverOrdinaryItqanOrReview() throws Exception {
+        assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY,
                 HifzPrefs.WeeklyProgram.RECOMMENDED,3));
         String main=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String dashboard=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(main.contains("if(recommendedSunday(date))"));
         assertTrue(main.contains("if(!learningFinalResolved(date))return HifzSessionActivity.LEARNING_FINAL"));
-        assertTrue(main.contains("if(!consolidationFinalResolved(date))return HifzSessionActivity.CONSOLIDATION_FINAL"));
+        assertTrue(main.contains("!consolidationFinalResolved(date)")); 
+        assertFalse(main.contains("if(!modeComplete(date,HifzSessionActivity.ITQAN))return HifzSessionActivity.ITQAN;"));
         assertTrue(main.contains("if(recommendedSunday(today)){"));
-        assertTrue(main.contains("return out; // Absolutely no active/passive revisions on Sunday."));
+        assertTrue(main.contains("return out; // No active/passive reviews or ordinary Itqan on Sunday."));
         assertTrue(dashboard.contains("Finale Renforcement Sabqi"));
         assertTrue(dashboard.contains("Finale Consolidation Itqān"));
     }
