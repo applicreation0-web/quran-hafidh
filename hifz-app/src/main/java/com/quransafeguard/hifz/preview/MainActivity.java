@@ -356,6 +356,7 @@ public final class MainActivity extends android.app.Activity {
         if (wideBoox()) title.setTextSize(23f);
         title.setGravity(Gravity.CENTER);
         title.setMaxLines(1);
+        title.setPadding(0, Ui.dp(this, 4), 0, 0);
         tile.addView(title);
         tile.setContentDescription(role);
         tile.setClickable(true);
