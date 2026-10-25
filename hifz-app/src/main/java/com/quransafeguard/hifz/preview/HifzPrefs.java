@@ -3886,7 +3886,7 @@ public final class HifzPrefs {
         }
     }
 
-    /** The recommended Sunday adds a fourth Itqan day; classic remains identical. */
+    /** Sunday is reserved for finales; this setting counts Mon–Sat ordinary days only. */
     /** Suggested times are reminders for the learner, never session locks. */
     public String suggestedMorningTime() {
         return suggestedTime("hifzSuggestedMorningHHmmV1","05:30");
@@ -3913,9 +3913,7 @@ public final class HifzPrefs {
 
     public int itqanDaysPerWeek() {
         WeeklyProgram mode=weeklyProgramMode();
-        return mode==WeeklyProgram.RECOMMENDED?4
-            :mode==WeeklyProgram.MANUAL_SEVEN?7-learningDaysPerWeek()
-            :6-learningDaysPerWeek(); // historical only
+        return 6-learningDaysPerWeek(); // six ordinary days; no Sunday Itqān lesson
     }
 
     /**
