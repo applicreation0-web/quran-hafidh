@@ -733,6 +733,31 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText(prefs.lastLearningConsolidationLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastLearningConsolidationLabel()));
             return;
         }
+        // A known frozen Saturday evening session MUST be closed first.
+        // Otherwise SundayFinalPagePolicy would see only the earlier receipts
+        // and could close a 10/15-line partial final as though the week had ended.
+        // Do not modify learned lines or synthesize missing repetition receipts.
+        String overdue=prefs.unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.LEARNING,"learning-");
+        String existingFinal=prefs.unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.LEARNING,"learning-final-");
+        if(overdue!=null && existingFinal==null
+                && !LocalDate.parse(overdue).isAfter(sessionDate)) {
+            sessionCompleted=false;
+            program.setText("Finale Sabqi · "+today+" · en attente");
+            progress.setText("Les lignes sont Apprises. Reprendre le Renforcement du "
+                +overdue+" avant la finale ; aucun apprentissage à recommencer.");
+            actions.removeAllViews();
+            addRoundAction("↻","Reprendre Renforcement",
+                v -> {
+                    Intent intent=new Intent(this,HifzSessionActivity.class)
+                        .putExtra(EXTRA_MODE,LEARNING_CONSOLIDATION)
+                        .putExtra(EXTRA_SCHEDULED_DATE,overdue);
+                    startActivity(intent);
+                    finish();
+                });
+            return;
+        }
         renderGroupedCycle(prefs.learningSnowballFinalUnits(sessionDate, geometry), ConsolidationCycleEngine.Family.LEARNING,
             "learning-final-", "Renforcement", "Aucune boule de neige à finaliser cette semaine.",
             this::validateLearningFinalReview);
