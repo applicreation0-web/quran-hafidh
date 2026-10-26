@@ -30,7 +30,9 @@ def verify(path, lower=False):
     # UiAutomator enumerates visible nodes, so a small Pixel AVD must scroll:
     # never require all six large BOOX tiles to fit one physical viewport.
     names=[n.attrib.get("text","") for n in parse(path)]
-    expected=["Renforcement","Consolidation"] if lower else ["Parcours Hifz","Apprendre","Stabiliser"]
+    # Lower viewport on a small Pixel may clip the first tile title while its subtitle remains visible.
+    # Verify the live approved hierarchy, not an off-screen title or obsolete subtitle.
+    expected=["Révision cumulative Sabqi","Consolidation","Révision cumulative Itqān","Révision active"] if lower else ["Parcours Hifz","Apprendre","Stabiliser"]
     if any(label not in names for label in expected):
         raise SystemExit("Not the approved "+("lower" if lower else "upper")+" Parcours screenshot: "+repr(names[:60]))
     print("PASS: "+("lower" if lower else "upper")+" BOOX icon viewport matches the six-mode source contract")
