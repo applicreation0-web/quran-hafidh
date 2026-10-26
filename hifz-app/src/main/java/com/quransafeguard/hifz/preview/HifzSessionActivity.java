@@ -873,6 +873,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private PostFinalRecallStore.Review readyPostFinalRecall(String family){
+        postFinalStore.repairLegacyPendingFamilyPlans(
+            geometry,prefs.progressionSnapshotV6().acquired);
         return postFinalStore.nextReadyFor(family,
             prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
     }
@@ -905,6 +907,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void renderPostFinalRecall(){
+        postFinalStore.repairLegacyPendingFamilyPlans(
+            geometry,prefs.progressionSnapshotV6().acquired);
         currentPostFinalReview=requestedPostFinalFamily==null
             ?postFinalStore.nextReady(prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate())
             :readyPostFinalRecall(requestedPostFinalFamily);
