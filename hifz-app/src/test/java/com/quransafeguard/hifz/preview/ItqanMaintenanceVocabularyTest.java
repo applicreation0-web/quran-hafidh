@@ -50,9 +50,9 @@ public final class ItqanMaintenanceVocabularyTest {
                 file=java.nio.file.Paths.get("hifz-app").resolve(file);
             String src=java.nio.file.Files.readString(file);
             assertFalse("Old visible capitalized wording in "+f,
-                src.contains("\\\"Boule de neige"));
+                src.contains("\"Boule de neige"));
             assertFalse("Old visible lower-case wording in "+f,
-                src.contains("\\\"boule de neige"));
+                src.contains("\"boule de neige"));
         }
     }
 
