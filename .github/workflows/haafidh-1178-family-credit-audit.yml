@@ -8,6 +8,7 @@ on:
       - 'scripts/audit_haafidh_1176.py'
       - 'scripts/verify_1178_family_invariants.py'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/PostFinalCumulativePolicy.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/PostFinalRecallStore.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/PostFinalFamilyCreditLedger.java'
       - '.github/workflows/haafidh-1178-family-credit-audit.yml'
       - 'hifz-app/build.gradle.kts'
