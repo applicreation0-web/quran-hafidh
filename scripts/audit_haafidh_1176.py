@@ -48,7 +48,7 @@ def main():
         if literal not in main_java:
             findings.append(dict(level="ERROR",kind="missing_boox_semantic_contract",literal=literal))
     gradle=(ROOT/"hifz-app/build.gradle.kts").read_text(encoding="utf-8")
-    for literal in ['versionCode = 45','versionName = "1.17.6"']:
+    for literal in ['versionCode = 45','versionName = "1.17.7"']:
         if literal not in gradle:
             findings.append(dict(level="ERROR",kind="invalid_release_version",literal=literal))
     # Post-final review MUST NOT masquerade as complete when new functional delivery is absent.
