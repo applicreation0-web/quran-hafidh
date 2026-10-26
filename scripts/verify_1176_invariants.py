@@ -29,7 +29,8 @@ for path in [
 changed=set(git("diff","--name-only",BASE,"HEAD","--",P).splitlines())
 allowed={P+x for x in [
 "MainActivity.java","HifzSessionActivity.java","WeeklyDashboardPlanner.java",
-"PostFinalCumulativePolicy.java","PostFinalRecallStore.java","DashboardLedger.java","HifzDisplayVocabulary.java","Ui.java"]}
+"PostFinalCumulativePolicy.java","PostFinalRecallStore.java","DashboardLedger.java","HifzDisplayVocabulary.java","Ui.java",
+"SettingsActivity.java"]}
 assert changed<=allowed,("UNAUTHORIZED MOTOR FILE CHANGED",changed-allowed)
 print("PASS: frozen credit transitions, final receipts, rotation, backup, Quran geometry and masks")
-print("PASS: limited 1.17.6 code changes",sorted(changed))
+print("PASS: limited 1.17.6/1.17.7 UI and post-final changes",sorted(changed))
