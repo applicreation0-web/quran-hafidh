@@ -2842,6 +2842,9 @@ public final class HifzPrefs {
         return earned;
     }
 
+    private static final String POST_NAS_WEEK_ANCHOR="postNasMaintainedWeekAnchorV1";
+    private static final String POST_NAS_WEEK_UNITS="postNasMaintainedHizbsV1";
+    private static final String POST_NAS_WEEK_DONE="postNasConsolidationCompletedWeekSnapshotV1";
     private static final int SNOWBALL_EXTENDED_WEEKS = 4; // historical acquired material rotates to ordinary review; unacquired never expires
 
     private static LocalDate mondayOf(LocalDate date) {
@@ -2854,6 +2857,52 @@ public final class HifzPrefs {
      * discarded rather than carried forward or allowed to grow past the configured weekly day
      * count for this family (learningDaysPerWeek/itqanDaysPerWeek).
      */
+
+    /** Completed Maintien hizbs, pinned to their actual calendar week. */
+    private JSONArray postNasMaintainedHizbs(LocalDate date) {
+        if(!mondayOf(date).toString().equals(p.getString(POST_NAS_WEEK_ANCHOR,"")))
+            return new JSONArray();
+        try { return new JSONArray(p.getString(POST_NAS_WEEK_UNITS,"[]")); }
+        catch(Exception invalid) { throw new IllegalStateException("Invalid saved Maintien history",invalid); }
+    }
+
+    /** Once after the last planned Itqan day, normally Saturday; not a Sunday finale. */
+    private boolean postNasConsolidationDay(LocalDate date) {
+        if(date.getDayOfWeek()==java.time.DayOfWeek.SUNDAY)return false;
+        for(LocalDate next=date.plusDays(1);next.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY;next=next.plusDays(1)){
+            if(WeeklyProgramPolicy.actionFor(next.getDayOfWeek(),weeklyProgramFor(next),
+                    learningDaysPerWeek())==CadenceAction.STABILIZATION)return false;
+        }
+        return true;
+    }
+
+    private String postNasConsolidationSnapshot(LocalDate date) {
+        JSONArray units=postNasMaintainedHizbs(date);
+        return units.length()==0?"":mondayOf(date).toString()+"|"+units.toString();
+    }
+
+    private boolean postNasConsolidationPending(LocalDate date) {
+        String snapshot=postNasConsolidationSnapshot(date);
+        return postNasConsolidationDay(date)&&!snapshot.isEmpty()
+            && !snapshot.equals(p.getString(POST_NAS_WEEK_DONE,""));
+    }
+
+    private List<ConsolidationCycleEngine.Unit> postNasConsolidationUnits(LocalDate date) {
+        if(!postNasConsolidationPending(date))return Collections.emptyList();
+        JSONArray hizbs=postNasMaintainedHizbs(date);
+        ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
+        for(int i=0;i<hizbs.length();i++) {
+            String id=hizbs.optString(i,"");
+            if(id.isEmpty())throw new IllegalStateException("Empty maintained hizb");
+            units.add(new ConsolidationCycleEngine.Unit(id,
+                ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED));
+        }
+        if(units.size()>ConsolidationCycleEngine.maxUnitsFor(
+                ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED))
+            throw new IllegalStateException("More than six Maintien hizbs in a week");
+        return Collections.unmodifiableList(units);
+    }
+
     private JSONArray rolledSnowballUnits(ConsolidationCycleEngine.Family family, LocalDate today) {
         String weekAnchor = mondayOf(today).toString();
         if (!weekAnchor.equals(p.getString(snowballAnchorKey(family), ""))) return new JSONArray();
