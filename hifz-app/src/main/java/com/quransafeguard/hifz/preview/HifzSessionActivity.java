@@ -577,9 +577,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentSelection = geometry.versesOnLines(currentLineIds);
         // The page itself is one complete review unit: first fully visible, then twice
         // fully masked with exact anchors. Legacy OPEN grouped cycles are unchanged.
-        boolean sundayPage = consolidationSession.cycle().units().get(position).protocol()
-            == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;
-        currentMask = sundayPage && consolidationSession.donePerStage() > 0 ? 100 : 0;
+        ConsolidationCycleEngine.Protocol protocol=consolidationSession.cycle().units().get(position).protocol();
+        boolean sundayPage=protocol==ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;
+        boolean maskedMaintien=protocol==ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED;
+        currentMask = maskedMaintien || (sundayPage && consolidationSession.donePerStage()>0) ? 100 : 0;
         // A grouped-cycle unit is a frozen physical-line window, never a freshly reconstructed
         // verse range. showCurrent() applies the same exact-line reading focus as Sabqi/Itqān,
         // clipped to these persisted line ids, without changing the unit or progression logic.
@@ -636,7 +637,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Mardi/Jeudi/Samedi soir: ×10 par unité, cumulatif dans la semaine ; ne graduate rien. */
+    /** Historic evening snowball or one continuous weekly post-Nas masked Maintien sequence. */
     private void renderConsolidationCycle() {
         String today = sessionDate.toString();
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,sessionDate)) {
@@ -1909,9 +1910,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private boolean isSundayFinalPageRepetition() {
         return consolidationSession != null && !consolidationSession.readyToClose()
-            && (LEARNING_FINAL.equals(mode) || CONSOLIDATION_FINAL.equals(mode))
-            && consolidationSession.cycle().units().get(consolidationSession.nextUnitIndex())
-                .protocol() == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;
+            && ((LEARNING_FINAL.equals(mode) || CONSOLIDATION_FINAL.equals(mode))
+                && consolidationSession.cycle().units().get(consolidationSession.nextUnitIndex())
+                    .protocol() == ConsolidationCycleEngine.Protocol.SUNDAY_PAGE
+                || RECENT_SABQI_REVIEW.equals(mode)
+                && consolidationSession.cycle().units().get(consolidationSession.nextUnitIndex())
+                    .protocol() == ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED);
     }
 
     /**
@@ -2139,7 +2143,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onPageShown(int page){
         currentPage=page;
         annotationOverlay.setPage(page);
-        if (isSundayFinalPageRepetition() && currentMask == 100 && page == unitFirstPage) {
+        if (isSundayFinalPageRepetition() && currentMask == 100 && page == currentPage) {
             // This callback happens only after the prepared QCF word-hole layer
             // exists; an unloaded/visible frame must not earn a masked pass.
             sundayFinalMaskedPageReady = !sundayFinalAnchorUnavailable;
