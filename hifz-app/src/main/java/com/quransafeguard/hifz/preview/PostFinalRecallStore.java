@@ -196,7 +196,11 @@ final class PostFinalRecallStore {
         if(!SABQI.equals(family)&&!ITQAN.equals(family))
             throw new IllegalArgumentException("Expected final family");
         JSONArray queue=read();
-        for(int i=queue.length()-1;i>=0;i--){
+        Recap mostRecentlyFinished=null;
+        // Same FIFO order as nextReadyFor(): after several Sundays, the recap
+        // must describe the exact reading that its Reprendre action will open.
+        // A later READY entry cannot conceal an earlier unfinished reading.
+        for(int i=0;i<queue.length();i++){
             JSONObject item=queue.optJSONObject(i);
             if(!family.equals(item.optString("family")))continue;
             String status=item.optString("status");
@@ -212,10 +216,12 @@ final class PostFinalRecallStore {
             if(completed<0||completed>pages.length())
                 throw new IllegalStateException("Invalid saved recap cursor");
             boolean done="DONE".equals(status);
-            return new Recap(family,date,done?pages.length():completed,
+            Recap result=new Recap(family,date,done?pages.length():completed,
                 pages.length(),item.optInt("previous",0),done);
+            if(!done)return result;
+            mostRecentlyFinished=result;
         }
-        return null;
+        return mostRecentlyFinished;
     }
 
     /** Selection only. A PREPARED entry is not usable unless its finale was actually validated. */
