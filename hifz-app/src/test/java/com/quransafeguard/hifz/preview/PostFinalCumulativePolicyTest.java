@@ -36,7 +36,7 @@ public final class PostFinalCumulativePolicyTest {
             Arrays.asList(line(122,1),line(122,2),line(123,1)));
         assertEquals(4,pages.size());
         assertEquals(Arrays.asList("p120-l0","p120-l4"),pages.get(0).lineIds);
-        assertEquals(Arrays.asList("p122-l1","p122-l2"),pages.get(2).lineIds);
+        assertEquals(Arrays.asList("p122-l1","p122-l2","p122-l3"),pages.get(2).lineIds);
         assertEquals(123,pages.get(3).mushafPage);
         assertEquals(pages.size(),new HashSet<Integer>(Arrays.asList(
             pages.get(0).mushafPage,pages.get(1).mushafPage,pages.get(2).mushafPage,pages.get(3).mushafPage)).size());
