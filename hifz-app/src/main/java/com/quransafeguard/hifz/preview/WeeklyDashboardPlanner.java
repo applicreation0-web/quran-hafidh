@@ -52,6 +52,15 @@ final class WeeklyDashboardPlanner {
         return Collections.unmodifiableList(out);
     }
 
+    /** A failed forecast is not permission to hide the calendar or invent any sessions. */
+    static List<Row> fallbackWeek(LocalDate today){
+        ArrayList<Row> rows=new ArrayList<>();
+        for(LocalDate date:window(today))
+            rows.add(new Row(date,day(date,today),
+                "Matin · détails à vérifier","Soir · détails à vérifier","Projection à vérifier"));
+        return Collections.unmodifiableList(rows);
+    }
+
     /** Display-only: the three canonical recommended Apprentissage days of each week.
      * Never advances a cursor or infers that a missed day was completed. */
     static String learningSessionCue(java.time.DayOfWeek day,HifzPrefs.WeeklyProgram program){
@@ -92,6 +101,7 @@ final class WeeklyDashboardPlanner {
                 out.add(new Row(date,day(date,today),"—","—","Parcours non démarré"));
                 continue;
             }
+            try {
             CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),prefs.learningDaysPerWeek());
             String morning="—",evening="—",state="À faire";
             switch(action){
@@ -242,6 +252,13 @@ final class WeeklyDashboardPlanner {
                 }
             }
             out.add(new Row(date,day(date,today),morning,evening,state));
+            } catch(RuntimeException invalidForecast){
+                // One problematic historical OPEN state or future unit never kills
+                // all seven dates. No advancement, credit, or synthetic completion.
+                out.add(new Row(date,day(date,today),
+                    "Matin · détails à vérifier","Soir · détails à vérifier",
+                    "Projection à vérifier"));
+            }
         }
         return out;
     }
