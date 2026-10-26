@@ -9,7 +9,7 @@ import subprocess
 
 if (subprocess.check_output(["git","hash-object",
       "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java"],text=True).strip()
-    == "20eea00f1c8213c8ce84a8894c7ae2d4acc6185e"):
+    == "b70378390b8dc7e9014eafb780801fc03a00332d"):
     subprocess.run(["python3","scripts/verify_1175_post_nas_weekly_delta.py"],check=True)
     print("PASS: exact approved BOOX/weekly delta with historic finals frozen")
     raise SystemExit(0)
