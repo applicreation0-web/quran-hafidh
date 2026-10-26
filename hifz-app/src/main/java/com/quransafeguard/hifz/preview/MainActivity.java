@@ -222,8 +222,15 @@ public final class MainActivity extends android.app.Activity {
                 prefs.currentAnchoringEntry(loaded);
                 // Rebase only old 1.17.7 pending post-final plans whose previous
                 // pages came from global Acquis. No Hifz credits are changed.
-                postFinalStore.repairLegacyPendingFamilyPlans(
-                    loaded,prefs.progressionSnapshotV6().acquired);
+                try {
+                    postFinalStore.repairLegacyPendingFamilyPlans(
+                        loaded,prefs.progressionSnapshotV6().acquired);
+                } catch(RuntimeException incompleteLegacyProof) {
+                    // Optional recall repair may fail closed; it must never
+                    // disable the core Hifz dashboard or alter acquired credits.
+                    android.util.Log.e("QuranHifz","Legacy post-final recall needs proof",
+                        incompleteLegacyProof);
+                }
                 // Historical missing cumulative readings are not recreated at
                 // startup. Only separately prepared future readings are resumed.
                 geometry = loaded;
