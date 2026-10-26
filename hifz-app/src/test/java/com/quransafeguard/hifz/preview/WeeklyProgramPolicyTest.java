@@ -37,6 +37,28 @@ public final class WeeklyProgramPolicyTest {
         assertEquals(0,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.SUNDAY));
     }
 
+
+    @Test public void eightWeeksAfterOctober26KeepExactCadenceAndSundayBoundary(){
+        java.time.LocalDate first=java.time.LocalDate.of(2026,10,26);
+        for(int week=0;week<8;week++){
+            java.time.LocalDate monday=first.plusWeeks(week);
+            for(int d=0;d<7;d++){
+                java.time.LocalDate day=monday.plusDays(d);
+                com.quransafeguard.hifz.core.CadenceAction actual=
+                    WeeklyProgramPolicy.actionFor(day.getDayOfWeek(),
+                        HifzPrefs.WeeklyProgram.RECOMMENDED,3);
+                com.quransafeguard.hifz.core.CadenceAction expected=d==6
+                    ?com.quransafeguard.hifz.core.CadenceAction.REVISION
+                    :(d%2==0?com.quransafeguard.hifz.core.CadenceAction.LEARNING
+                        :com.quransafeguard.hifz.core.CadenceAction.STABILIZATION);
+                assertEquals("Invalid future day "+day,expected,actual);
+                assertEquals("Sunday never gets Itqan ordinary units",d==6?0:
+                    (d==1?8:(d==3||d==5?7:0)),
+                    WeeklyProgramPolicy.recommendedItqanTargetLines(day.getDayOfWeek()));
+            }
+            assertEquals(java.time.DayOfWeek.SUNDAY,monday.plusDays(6).getDayOfWeek());
+        }
+    }
     @Test public void recommendedLearningThreeOfThreeIsCalendarOnlyAndRestartsOnMonday(){
         LocalDate monday=LocalDate.of(2026,10,19);
         for(int week=0;week<4;week++){

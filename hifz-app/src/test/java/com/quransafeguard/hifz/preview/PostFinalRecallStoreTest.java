@@ -72,6 +72,42 @@ public final class PostFinalRecallStoreTest {
             disk.disk.containsKey("v6AcquiredCreditLineIds"));
     }
 
+
+    @Test public void fourConsecutiveSundayReadingsKeepTheirOwnDatesAndResumeInOrder(){
+        InMemoryPrefs disk=new InMemoryPrefs();
+        PostFinalRecallStore queue=new PostFinalRecallStore(disk);
+        for(int w=0;w<4;w++){
+            String date=java.time.LocalDate.of(2026,11,1).plusWeeks(w).toString();
+            for(String family:new String[]{PostFinalRecallStore.SABQI,PostFinalRecallStore.ITQAN}){
+                queue.prepare(family,date,plan());
+                assertTrue(queue.markReady(family,date));
+            }
+        }
+        String latest="2026-11-22";
+        for(String family:new String[]{PostFinalRecallStore.SABQI,PostFinalRecallStore.ITQAN}){
+            PostFinalRecallStore.Recap first=queue.recapFor(family,latest,latest);
+            assertNotNull(first);
+            assertEquals("2026-11-01",first.date);
+            assertEquals(0,first.completedPages);
+            PostFinalRecallStore.Review due=queue.nextReadyFor(family,latest,latest);
+            assertNotNull(due);
+            assertEquals(first.date,due.date);
+            assertTrue(queue.advance(due,latest,latest));
+            queue=new PostFinalRecallStore(disk); // restart between reviews
+            assertEquals(1,queue.recapFor(family,latest,latest).completedPages);
+            for(int i=1;i<3;i++){
+                due=queue.nextReadyFor(family,latest,latest);
+                assertEquals("2026-11-01",due.date);
+                assertTrue(queue.advance(due,latest,latest));
+            }
+            assertEquals("2026-11-08",queue.recapFor(family,latest,latest).date);
+            assertEquals("2026-11-08",queue.nextReadyFor(family,latest,latest).date);
+        }
+        assertEquals("2026-11-08",queue.recapFor(PostFinalRecallStore.SABQI,latest,latest).date);
+        assertEquals("2026-11-08",queue.recapFor(PostFinalRecallStore.ITQAN,latest,latest).date);
+        assertFalse("No preview or recap may write acquired credits",
+            disk.disk.containsKey("v6AcquiredCreditLineIds"));
+    }
     @Test public void pendingSabqiCannotHideAnIndependentCompletedItqanRecall(){
         InMemoryPrefs disk=new InMemoryPrefs();
         PostFinalRecallStore store=new PostFinalRecallStore(disk);

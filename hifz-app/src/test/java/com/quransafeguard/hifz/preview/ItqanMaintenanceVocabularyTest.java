@@ -37,4 +37,23 @@ public final class ItqanMaintenanceVocabularyTest {
         assertTrue(regime.contains("return ItqanMaintenancePolicy.regimeFor(maintenanceForNewSession(p));"));
         assertTrue(regime.contains("if (stamped != null) return stamped;"));
     }
+    @Test public void oldSnowballTermsAreOnlyCompatibilityInputNotVisibleSubtitles() throws Exception {
+        assertEquals("Renforcement · révision cumulative",
+            HifzDisplayVocabulary.canonicalize("Renforcement · boule de neige"));
+        assertEquals("Consolidation · Révision cumulative",
+            HifzDisplayVocabulary.canonicalize("Consolidation · Boule de neige"));
+        String dir="src/main/java/com/quransafeguard/hifz/preview/";
+        for(String f:new String[]{"MainActivity.java","HifzSessionActivity.java",
+                "WeeklyDashboardPlanner.java","SettingsActivity.java","DashboardLedger.java"}){
+            java.nio.file.Path file=java.nio.file.Paths.get(dir+f);
+            if(!java.nio.file.Files.exists(file))
+                file=java.nio.file.Paths.get("hifz-app").resolve(file);
+            String src=java.nio.file.Files.readString(file);
+            assertFalse("Old visible capitalized wording in "+f,
+                src.contains("\\\"Boule de neige"));
+            assertFalse("Old visible lower-case wording in "+f,
+                src.contains("\\\"boule de neige"));
+        }
+    }
+
 }

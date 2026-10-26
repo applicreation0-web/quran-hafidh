@@ -48,6 +48,42 @@ public final class PostFinalRecallInstrumentedTest {
         }finally{assertTrue(raw.edit().clear().commit());}
     }
 
+
+    @Test public void fourFutureSundayProjectionsDoNotInventValidatedFinales()
+            throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            new HifzPrefs(c);
+            assertTrue(raw.edit().putString("programStartDate","2026-09-21")
+                .putBoolean("sevenDayProgrammeMigratedV1",true)
+                .putString("weeklyProgramTransitionsV1",
+                    "[{\\\"from\\\":\\\"2026-10-23\\\",\\\"mode\\\":\\\"RECOMMENDED\\\"}]")
+                .commit());
+            HifzPrefs prefs=new HifzPrefs(c);
+            GeometryRepository geometry=GeometryRepository.get(c);
+            DashboardLedger ledger=new DashboardLedger(c);
+            HifzSpeedStore speed=new HifzSpeedStore(c);
+            for(int w=0;w<4;w++){
+                java.time.LocalDate monday=java.time.LocalDate.of(2026,10,26).plusWeeks(w);
+                List<WeeklyDashboardPlanner.Row> rows=new WeeklyDashboardPlanner(
+                    prefs,geometry,ledger,speed).week(monday);
+                assertEquals(7,rows.size());
+                assertEquals(monday.plusDays(6),rows.get(6).date);
+                assertTrue(rows.get(6).morning.contains("Finale Sabqi"));
+                assertTrue(rows.get(6).evening.contains("Finale Itqān"));
+                assertFalse("No synthetic Sunday Sabqi validation "+monday,
+                    rows.get(6).morning.contains("✓ Finale"));
+                assertFalse("No synthetic Sunday Itqan validation "+monday,
+                    rows.get(6).evening.contains("✓ Finale"));
+                assertFalse("Sunday cannot count as validated without final receipts",
+                    "Validé".equals(rows.get(6).state));
+                assertFalse(rows.get(6).morning.contains("Révision active"));
+                assertFalse(rows.get(6).morning.contains("Révision passive"));
+            }
+        }finally{assertTrue(raw.edit().clear().commit());}
+    }
     @Test public void corruptFrozenItqanCannotEraseRealMondayCalendarOrSevenDates()
             throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
