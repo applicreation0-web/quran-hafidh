@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 /** Quran Hifz personal home. No Safeguard/blocking API is linked here. */
 public final class MainActivity extends android.app.Activity {
     private HifzPrefs prefs;
+    private PostFinalRecallStore postFinalStore;
     private HifzSpeedStore speedStore;
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
@@ -62,6 +63,7 @@ public final class MainActivity extends android.app.Activity {
         super.onCreate(state);
         SemanticPassageRepository.preloadAsync(this);
         prefs = new HifzPrefs(this);
+        postFinalStore = new PostFinalRecallStore(this);
         speedStore = new HifzSpeedStore(this);
         ledger = new DashboardLedger(this);
 
@@ -907,7 +909,9 @@ public final class MainActivity extends android.app.Activity {
         }
         // Non-crediting cumulative recall survives day changes and process death.
         // It never replaces an unfinished original Sunday finale.
-        PostFinalRecallStore.Review recall=new PostFinalRecallStore(this).nextReady(
+        // A detached legacy test/navigation shell has no Android Context;
+        // the historical finals must not depend on this optional read-only queue.
+        PostFinalRecallStore.Review recall=postFinalStore==null?null:postFinalStore.nextReady(
             prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
         if(recall!=null && !LocalDate.parse(recall.date).isAfter(today))
             addToday(out,"Lecture cumulative "+(PostFinalRecallStore.SABQI.equals(recall.family)?"Sabqi":"Itqān")
