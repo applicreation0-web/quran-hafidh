@@ -210,7 +210,8 @@ final class PostFinalRecallStore {
         JSONArray queue=read();
         boolean needsMigration=false;
         for(int i=0;i<queue.length();i++){
-            JSONObject item=queue.getJSONObject(i);
+            JSONObject item=queue.optJSONObject(i);
+            if(item==null)throw new IllegalStateException("Invalid legacy queue entry");
             String state=item.optString("status","");
             if(!"DONE".equals(state)&&!"PROVENANCE_REVIEW".equals(state)
                     &&item.optInt("familySourceVersion",0)!=1){
@@ -315,7 +316,8 @@ final class PostFinalRecallStore {
             throw new IllegalArgumentException("Expected final family");
         JSONArray queue=read();
         for(int i=0;i<queue.length();i++){
-            JSONObject item=queue.getJSONObject(i);
+            JSONObject item=queue.optJSONObject(i);
+            if(item==null)throw new IllegalStateException("Invalid legacy queue entry");
             if(family.equals(item.optString("family"))
                     &&"PROVENANCE_REVIEW".equals(item.optString("status")))return true;
         }
