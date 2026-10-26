@@ -1,0 +1,151 @@
+name: Quran Haafidh 1.17.8 family-isolated post-final Hifz complete audit
+on:
+  push:
+    branches:
+      - fix/haafidh-1178-family-postfinal-20261026
+    paths:
+      - 'hifz-app/src/test/**'
+      - 'scripts/audit_haafidh_1176.py'
+      - 'scripts/verify_1176_invariants.py'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/PostFinalCumulativePolicy.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/PostFinalFamilyCreditLedger.java'
+      - '.github/workflows/haafidh-1178-family-credit-audit.yml'
+      - 'hifz-app/build.gradle.kts'
+      - 'hifz-app/src/androidTest/**'
+      - 'scripts/export_jvm_audit_runtime.init.gradle'
+      - 'scripts/run_1175_process_death_audit.sh'
+      - '.github/workflows/haafidh-1177-boox-week-recall-audit.yml'
+      - 'scripts/boox_emulator_parcours.py'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
+      - 'hifz-app/src/main/res/drawable/ic_haafidh_*.xml'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzDisplayVocabulary.java'
+      - 'scripts/verify_authorized_hifz_session_delta.py'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyBilan.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/WeeklyBilanTest.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/MorningEveningRevisionContractTest.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java'
+      - 'scripts/verify_authorized_1175_final_state_delta.py'
+      - 'scripts/verify_1175_post_nas_weekly_delta.py'
+      - 'scripts/verify_authorized_hifz_session_delta.py'
+      - 'scripts/verify_authorized_program_preferences_delta.py'
+      - 'scripts/verify_authorized_consolidation_delta.py'
+      - 'scripts/verify_1175_open_session_safety_delta.py'
+      - 'scripts/verify_1175_open_session_safety_delta.py'
+      - 'scripts/verify_authorized_program_preferences_delta.py'
+      - 'scripts/verify_authorized_hifz_session_delta.py'
+      - 'scripts/verify_authorized_program_preferences_delta.py'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzBacklog.java'
+      - 'hifz-app/src/main/res/drawable/ic_palace_*.xml'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/BooxFlowStroke.java'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/WeeklyProgramPolicyTest.java'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-boox-family-1178-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  instrumentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: SDK and 604 original QCF pages
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Baseline freeze, UI vocabulary, dead code inventory and icons
+        run: |
+          python3 scripts/verify_1176_invariants.py
+          python3 scripts/audit_haafidh_1176.py --strict --report hifz-app/build/1176-audit/static.json
+          python3 scripts/verify_atlas_only_purity.py
+          python3 scripts/verify_contractual_ui_icons.py
+          python3 scripts/verify_j6_icon_roles.py
+      - name: Stress scenarios 180/365/548 days and post-final 20-page boundary
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest --tests '*LongHorizonHifzPersistenceStressTest' --tests '*PostFinalCumulativePolicyTest' --tests '*PostFinal1176HorizonStressTest' --tests '*PostFinalRecallStoreTest' --tests '*PostFinalFamilyCreditLedgerTest'
+      - name: Prepare missing public legacy test fixture (never a runtime asset)
+        run: |
+          fixture="$RUNNER_TEMP/legacy-bridge-fixture"
+          index=hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java
+          words=hifz-app/src/main/word-source/quran-ws-v1.1.2
+          python3 scripts/build_ibn_kathir_amorce_review.py "$index" "$words" scripts/data/quran-uthmani-tanzil.txt "$fixture/raw.json"
+          python3 scripts/audit_ibn_kathir_exact_hafs_qcf.py "$index" "$words" "$fixture/exact.json"
+          python3 scripts/gate_ibn_kathir_amorce_approvals.py "$fixture/raw.json" "$fixture/exact.json" "$fixture/gate.json"
+          python3 scripts/audit_ibn_kathir_j2.py "$fixture/raw.json" "$fixture/exact.json" "$fixture/gate.json" "$fixture/j2"
+          echo "IK_J2_REVIEW_PATH=$fixture/j2/ik-j2-review.json" >> "$GITHUB_ENV"
+      - name: Complete JVM and source contracts
+        run: gradle --no-daemon --continue :hifz-core:test :safeguard-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Export public JVM replay runtime
+        if: always()
+        run: gradle --no-daemon -I scripts/export_jvm_audit_runtime.init.gradle :hifz-app:exportJvmAuditRuntime
+      - name: KVM for emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Real Android mask, QCF, migration, persistence
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayMondayResumeInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalMaskReadinessInstrumentedTest,com.quransafeguard.hifz.preview.PostFinalRecallInstrumentedTest,com.quransafeguard.hifz.preview.PhoneProgrammeMigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzUiLayoutInstrumentedTest,com.quransafeguard.hifz.preview.MapQcfLifecycleInstrumentedTest
+            bash scripts/run_1175_process_death_audit.sh
+            mkdir -p hifz-app/build/boox-audit
+            adb shell am start -n com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity
+            sleep 3
+            adb exec-out screencap -p > hifz-app/build/boox-audit/home-portrait-android-emulator.png
+            test -s hifz-app/build/boox-audit/home-portrait-android-emulator.png
+            # Dynamic target: the BOOX icon rail now scales with available width.
+            # Never use obsolete hard-coded coordinates for visual evidence.
+            adb shell uiautomator dump /sdcard/haafidh-ui.xml >/dev/null
+            adb pull /sdcard/haafidh-ui.xml "$RUNNER_TEMP/haafidh-ui.xml" >/dev/null
+            python3 scripts/boox_emulator_parcours.py tap "$RUNNER_TEMP/haafidh-ui.xml"
+            adb exec-out screencap -p > hifz-app/build/boox-audit/parcours-portrait-android-emulator.png
+            test -s hifz-app/build/boox-audit/parcours-portrait-android-emulator.png
+            # Confirm the screenshot is really Parcours and not a stale coordinate target.
+            adb shell uiautomator dump /sdcard/haafidh-parcours.xml >/dev/null
+            adb pull /sdcard/haafidh-parcours.xml "$RUNNER_TEMP/haafidh-parcours.xml" >/dev/null
+            python3 scripts/boox_emulator_parcours.py verify "$RUNNER_TEMP/haafidh-parcours.xml"
+            # The maximised Hifz icons need vertical scrolling on the smaller Pixel emulator.
+            adb shell input swipe 250 740 250 240 600
+            sleep 2
+            adb exec-out screencap -p > hifz-app/build/boox-audit/parcours-lower-icons-android-emulator.png
+            test -s hifz-app/build/boox-audit/parcours-lower-icons-android-emulator.png
+            adb shell uiautomator dump /sdcard/haafidh-parcours-lower.xml >/dev/null
+            adb pull /sdcard/haafidh-parcours-lower.xml "$RUNNER_TEMP/haafidh-parcours-lower.xml" >/dev/null
+            python3 scripts/boox_emulator_parcours.py verify-lower "$RUNNER_TEMP/haafidh-parcours-lower.xml"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-boox-1178-family-android-audit
+          path: |
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            hifz-app/build/reports/
+            hifz-app/build/boox-audit/
+            hifz-app/build/test-results/
+            hifz-core/build/test-results/
+            safeguard-core/build/test-results/
+            hifz-app/build/jvm-audit-runtime/
+            hifz-app/build/1176-audit/
+          retention-days: 14
