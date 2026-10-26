@@ -181,6 +181,68 @@ public final class EightWeekSkippedSessionReplayTest {
         assertFalse(disk.disk.containsKey("v6AcquiredCreditLineIds"));
     }
 
+    @Test public void eightMissedSundaysStillExposeTwentyFourEarnedUnacquiredBlocks()
+            throws Exception {
+        InMemoryPrefs disk=new InMemoryPrefs();
+        org.json.JSONArray weeks=new org.json.JSONArray();
+        org.json.JSONArray earned=new org.json.JSONArray();
+        for(int week=0;week<8;week++){
+            LocalDate monday=START.plusWeeks(week);
+            org.json.JSONArray units=new org.json.JSONArray();
+            for(int block=0;block<3;block++){
+                String id=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+                    Collections.singletonList("future-"+week+"-"+block));
+                units.put(id);earned.put(id);
+            }
+            weeks.put(new org.json.JSONObject().put("week",monday.toString())
+                .put("units",units));
+        }
+        disk.disk.put("learningSnowball8WeekHistory",weeks.toString());
+        disk.disk.put("v6LearningEarnedEveningUnitsV1",earned.toString());
+        HifzPrefs prefs=new HifzPrefs(disk);
+        List<ConsolidationCycleEngine.Unit> eligible=prefs.learningSnowballFinalUnits(
+            START.plusWeeks(7).plusDays(6));
+        assertEquals("Eight missed Sundays: all 24 earned units remain eligible, plus continuous",25,eligible.size());
+        for(int i=0;i<24;i++){
+            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED,
+                eligible.get(i).protocol());
+            assertEquals(earned.getString(i),eligible.get(i).id());
+        }
+    }
+
+    @Test public void ninthAndTenthMissedSundayOverflowWaitsForTheNextFinalWithoutLoss()
+            throws Exception {
+        InMemoryPrefs disk=new InMemoryPrefs();
+        org.json.JSONArray weeks=new org.json.JSONArray();
+        org.json.JSONArray earned=new org.json.JSONArray();
+        for(int week=0;week<10;week++){
+            org.json.JSONArray units=new org.json.JSONArray();
+            for(int block=0;block<3;block++){
+                String id=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+                    Collections.singletonList("future-"+week+"-"+block));
+                units.put(id);earned.put(id);
+            }
+            weeks.put(new org.json.JSONObject().put("week",START.plusWeeks(week).toString())
+                .put("units",units));
+        }
+        disk.disk.put("learningSnowball8WeekHistory",weeks.toString());
+        disk.disk.put("v6LearningEarnedEveningUnitsV1",earned.toString());
+        HifzPrefs prefs=new HifzPrefs(disk);
+        List<ConsolidationCycleEngine.Unit> first=prefs.learningSnowballFinalUnits(
+            START.plusWeeks(9).plusDays(6));
+        assertEquals("29 physical units plus a continuous recap",30,first.size());
+        assertEquals(earned.getString(28),first.get(28).id());
+        assertNotEquals("30th unit must not be silently credited",
+            earned.getString(29),first.get(28).id());
+        org.json.JSONArray acquired=new org.json.JSONArray();
+        for(int i=0;i<29;i++)acquired.put("future-"+(i/3)+"-"+(i%3));
+        disk.disk.put("v6AcquiredCreditLineIds",acquired.toString());
+        List<ConsolidationCycleEngine.Unit> next=new HifzPrefs(disk)
+            .learningSnowballFinalUnits(START.plusWeeks(10).plusDays(6));
+        assertEquals(1,next.size());
+        assertEquals(earned.getString(29),next.get(0).id());
+    }
+
     @Test public void unfinishedFrozenSundayRetainsItsOwnThreePassProtocol(){
         ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
         ConsolidationCycleEngine.Cycle cycle=engine.startCycle("learning-final-2026-11-01",
