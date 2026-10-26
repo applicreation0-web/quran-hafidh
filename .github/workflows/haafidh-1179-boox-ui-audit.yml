@@ -1,0 +1,92 @@
+name: Quran Haafidh 1.17.9 family-isolated post-final Hifz complete audit
+on:
+  push:
+    branches:
+      - work/haafidh-1179-boox-ui-20261026
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-boox-ui-1179-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  instrumentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: SDK and 604 original QCF pages
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Baseline freeze, UI vocabulary, dead code inventory and icons
+        run: |
+          python3 scripts/verify_1178_family_invariants.py
+          python3 scripts/audit_haafidh_1176.py --strict --report hifz-app/build/1176-audit/static.json
+          python3 scripts/verify_atlas_only_purity.py
+          python3 scripts/verify_contractual_ui_icons.py
+          python3 scripts/verify_j6_icon_roles.py
+      - name: Stress scenarios 180/365/548 days and post-final 20-page boundary
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest --tests '*LongHorizonHifzPersistenceStressTest' --tests '*PostFinalCumulativePolicyTest' --tests '*PostFinal1176HorizonStressTest' --tests '*PostFinalRecallStoreTest' --tests '*PostFinalFamilyCreditLedgerTest'
+      - name: Prepare missing public legacy test fixture (never a runtime asset)
+        run: |
+          fixture="$RUNNER_TEMP/legacy-bridge-fixture"
+          index=hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java
+          words=hifz-app/src/main/word-source/quran-ws-v1.1.2
+          python3 scripts/build_ibn_kathir_amorce_review.py "$index" "$words" scripts/data/quran-uthmani-tanzil.txt "$fixture/raw.json"
+          python3 scripts/audit_ibn_kathir_exact_hafs_qcf.py "$index" "$words" "$fixture/exact.json"
+          python3 scripts/gate_ibn_kathir_amorce_approvals.py "$fixture/raw.json" "$fixture/exact.json" "$fixture/gate.json"
+          python3 scripts/audit_ibn_kathir_j2.py "$fixture/raw.json" "$fixture/exact.json" "$fixture/gate.json" "$fixture/j2"
+          echo "IK_J2_REVIEW_PATH=$fixture/j2/ik-j2-review.json" >> "$GITHUB_ENV"
+      - name: Complete JVM and source contracts
+        run: gradle --no-daemon --continue :hifz-core:test :safeguard-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Debug candidate (isolated package, no official signing or private assets)
+        run: gradle --no-daemon :hifz-app:assembleDebug
+      - name: Export public JVM replay runtime
+        if: always()
+        run: gradle --no-daemon -I scripts/export_jvm_audit_runtime.init.gradle :hifz-app:exportJvmAuditRuntime
+      - name: KVM for emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Real Android mask, QCF, migration, persistence
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.AyahThemesReviewDisplayInstrumentedTest#independentTitlesLeaveFullMaskAndHistoricalHolesExactlyUnchanged,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayMondayResumeInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalMaskReadinessInstrumentedTest,com.quransafeguard.hifz.preview.PostFinalRecallInstrumentedTest,com.quransafeguard.hifz.preview.PhoneProgrammeMigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzUiLayoutInstrumentedTest,com.quransafeguard.hifz.preview.Calendar1179InstrumentedTest,com.quransafeguard.hifz.preview.MapQcfLifecycleInstrumentedTest
+            bash scripts/run_1175_process_death_audit.sh
+            python3 scripts/capture_1179_ui.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-boox-1179-ui-android-audit
+          path: |
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            hifz-app/build/reports/
+            hifz-app/build/boox-audit/
+            hifz-app/build/test-results/
+            hifz-core/build/test-results/
+            safeguard-core/build/test-results/
+            hifz-app/build/jvm-audit-runtime/
+            hifz-app/build/1176-audit/
+            hifz-app/build/outputs/apk/debug/
+          retention-days: 14

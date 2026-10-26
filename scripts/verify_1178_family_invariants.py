@@ -46,7 +46,7 @@ for path in [
     assert git("rev-parse",BASE+":"+path).strip()==git("hash-object",path).strip(),("FROZEN FILE MODIFIED",path)
 changed=set(git("diff","--name-only",BASE,"HEAD","--",P).splitlines())
 allowed={P+x for x in [
-"MainActivity.java","HifzSessionActivity.java","WeeklyDashboardPlanner.java",
+"MainActivity.java","CalendarPresentation.java","HifzSessionActivity.java","WeeklyDashboardPlanner.java",
 "PostFinalCumulativePolicy.java","PostFinalRecallStore.java","PostFinalFamilyCreditLedger.java","DashboardLedger.java","HifzDisplayVocabulary.java","Ui.java",
 "SettingsActivity.java"]}
 allowed.add(P+"HifzPrefs.java") # exact reconstruction enforced above

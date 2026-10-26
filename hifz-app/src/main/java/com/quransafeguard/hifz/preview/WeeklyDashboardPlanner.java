@@ -73,7 +73,12 @@ final class WeeklyDashboardPlanner {
         }
     }
 
-    List<Row> week(LocalDate today){
+    List<Row> week(LocalDate today){return week(today,today);}
+
+    /** Selection does not become the real clock. Advance forecasts from today, never saved state. */
+    List<Row> week(LocalDate today,LocalDate first){
+        if(first.plusDays(6).isBefore(today))return Collections.emptyList();
+        if(first.isAfter(today.plusDays(365)))return fallbackWeek(first);
         ArrayList<Row> out=new ArrayList<>();
         // Treat each read-only forecast as independent. A damaged old Itqān
         // cursor must not prevent actual Sabqi and revision receipts showing.
@@ -122,7 +127,9 @@ final class WeeklyDashboardPlanner {
             android.util.Log.e("QuranHifz","Weekly frozen Itqan snapshot unavailable",problem);
         }
 
-        for(LocalDate date:window(today)){
+        ArrayList<LocalDate> projectionDates=new ArrayList<>();
+        for(LocalDate date=today;!date.isAfter(first.plusDays(6));date=date.plusDays(1))projectionDates.add(date);
+        for(LocalDate date:projectionDates){
             if(date.isBefore(prefs.programStartDate())){
                 out.add(new Row(date,day(date,today),"—","—","Parcours non démarré"));
                 continue;
@@ -308,7 +315,9 @@ final class WeeklyDashboardPlanner {
                     "Projection à vérifier"));
             }
         }
-        return out;
+        ArrayList<Row> visible=new ArrayList<>();
+        for(Row row:out)if(!row.date.isBefore(first)&&!row.date.isAfter(first.plusDays(6)))visible.add(row);
+        return visible;
     }
 
     private Projection projectMurajaah(VerseRef cursor,EligibleCorpus corpus,int minutes){
