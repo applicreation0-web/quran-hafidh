@@ -49,6 +49,7 @@ public final class MainActivity extends android.app.Activity {
     private final List<View> geometryActions = new ArrayList<>();
     private LinearLayout itqanCard;
     private LinearLayout consolidationCard;
+    private TextView todayHeading;
     private ScrollView homeScroll;
     private ScrollView parcoursScroll;
     private TextView backlogHomeRow;
@@ -267,9 +268,9 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout line = Ui.column(this);
         line.setPadding(Ui.dp(this, 18), Ui.dp(this, 10), Ui.dp(this, 18), Ui.dp(this, 10));
         // Typographic reading surface, not a bordered card.
-        TextView label = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
-        if (wideBoox()) label.setTextSize(22f);
-        line.addView(label);
+        todayHeading = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
+        if (wideBoox()) todayHeading.setTextSize(22f);
+        line.addView(todayHeading);
         TextView value = Ui.bookText(this, "…", 23f, true);
         if (wideBoox()) value.setTextSize(30f);
         value.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
@@ -394,9 +395,14 @@ public final class MainActivity extends android.app.Activity {
         // Intrinsic drawable size is only 24dp; explicit bounds keep it legible on BOOX.
         Drawable architectural = getDrawable(icon).mutate();
         architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp));
-        name.setCompoundDrawables(null, architectural, null, null);
-        name.setCompoundDrawablePadding(Ui.dp(this, 6));
         tile.addView(name);
+        ImageView iconView = new ImageView(this);
+        iconView.setImageDrawable(architectural);
+        iconView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        iconView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams iconLayout = new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp));
+        iconLayout.topMargin = Ui.dp(this, 6);
+        tile.addView(iconView, iconLayout);
         // The real target/verse range is on the selected day, not crammed into a 1/3-width cell.
         TextView cue = Ui.text(this, state, 15f, false);
         cue.setVisibility(View.GONE);
@@ -421,12 +427,12 @@ public final class MainActivity extends android.app.Activity {
     /** Clear, stable vocabulary: the selected-day panel carries all actual verse limits. */
     private static String pathSubtitle(String label) {
         switch (label) {
-            case "Apprentissage": return "Sabaq · nouvelle leçon";
-            case "Renforcement": return "Sabqi · révision récente";
-            case "Stabilisation": return "Fixation Itqān";
-            case "Consolidation": return "Cumul Itqān";
-            case "Révision active": return "Sans texte";
-            case "Révision passive": return "Avec texte";
+            case "Apprentissage": return "Nouvelle leçon";
+            case "Renforcement": return "Révision cumulative Sabqi";
+            case "Stabilisation": return "Répétitions approfondies";
+            case "Consolidation": return "Révision cumulative Itqān";
+            case "Révision active": return "Texte masqué";
+            case "Révision passive": return "Texte visible";
             default: return "";
         }
     }
@@ -446,7 +452,7 @@ public final class MainActivity extends android.app.Activity {
                 && todayAction.getChildAt(3) instanceof TextView) {
             TextView action = (TextView) todayAction.getChildAt(3);
             action.setText(text.startsWith("Consolidation · état") ? "VÉRIFIER  ›"
-                : "VOIR LES SÉANCES  ›");
+                : text.contains("à reprendre") ? "VOIR LES SÉANCES  ›" : "CONTINUER  ›");
         }
         setTodayEnabled(enabled);
     }
@@ -484,14 +490,21 @@ public final class MainActivity extends android.app.Activity {
     /** Only change text; retain the original fixed pictogram and click destination. */
     private void refreshItqanCardVocabulary() {
         if(consolidationCard==null || prefs==null) return;
-        boolean afterNas=prefs.itqanEntretienActive();
-        String label=afterNas?"Maintien":"Consolidation";
-        String subtitle=afterNas?"Itqān · Maintien de la maîtrise":"Itqān · Consolidation";
+        boolean afterNas=prefs.itqanPostNasMaintenance();
+        // Child order: title, pictogram, invisible cue, subtitle.
+        if(itqanCard!=null){
+            if(itqanCard.getChildAt(0) instanceof TextView)
+                ((TextView)itqanCard.getChildAt(0)).setText(afterNas?"Maintien":"Stabiliser");
+            if(itqanCard.getChildCount()>3 && itqanCard.getChildAt(3) instanceof TextView)
+                ((TextView)itqanCard.getChildAt(3)).setText(afterNas?"Un hizb · trois répétitions":"Répétitions approfondies");
+            itqanCard.setContentDescription(afterNas?"Maintien · Un hizb, trois répétitions":"Stabiliser · Répétitions approfondies");
+        }
         if(consolidationCard.getChildAt(0) instanceof TextView)
-            ((TextView)consolidationCard.getChildAt(0)).setText(label);
-        if(consolidationCard.getChildCount()>2 && consolidationCard.getChildAt(2) instanceof TextView)
-            ((TextView)consolidationCard.getChildAt(2)).setText(subtitle);
-        consolidationCard.setContentDescription(label+" · "+subtitle);
+            ((TextView)consolidationCard.getChildAt(0)).setText("Consolidation");
+        String subtitle=afterNas?"Maintiens de la semaine · masqués":"Révision cumulative Itqān";
+        if(consolidationCard.getChildCount()>3 && consolidationCard.getChildAt(3) instanceof TextView)
+            ((TextView)consolidationCard.getChildAt(3)).setText(subtitle);
+        consolidationCard.setContentDescription("Consolidation · "+subtitle);
     }
 
     private void refreshAll() { refreshItqanCardVocabulary(); refreshBacklog(); refreshQuickAccessCadenceGating(); refreshDashboard(); refreshToday(); refreshRecentSabqiAdvisory(); refreshStabilizationPosition(); }
@@ -678,7 +691,7 @@ public final class MainActivity extends android.app.Activity {
         // The maintenance tile must lead to the hizb ×3, not a non-existent
         // post-An-Nās Consolidation finale. Existing pre-An-Nās OPEN finals
         // were checked above and always retain their original date/protocol.
-        if(prefs.itqanPostNasMaintenance())return HifzSessionActivity.ITQAN;
+        if(prefs.itqanPostNasMaintenance())return HifzSessionActivity.RECENT_SABQI_REVIEW;
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         return today.getDayOfWeek()==DayOfWeek.SUNDAY && !prefs.itqanPostNasMaintenance()
                 && !consolidationFinalResolved(today)
@@ -1016,26 +1029,57 @@ public final class MainActivity extends android.app.Activity {
                 ("Détails disponibles".equals(essential) || "Terminée".equals(essential)
                     ? "" : "\n"+essential);
         }
+        android.widget.ArrayAdapter<String> adapter=new android.widget.ArrayAdapter<String>(
+            this,android.R.layout.simple_list_item_1,items) {
+            @Override public View getView(int position,View convertView,android.view.ViewGroup parent) {
+                TextView line=(TextView)super.getView(position,convertView,parent);
+                TodaySession session=sessions.get(position);
+                int icon=HifzSessionActivity.LEARNING_FINAL.equals(session.mode)
+                    ?R.drawable.ic_hifz_final_sabqi
+                    :HifzSessionActivity.CONSOLIDATION_FINAL.equals(session.mode)
+                    ?R.drawable.ic_hifz_final_itqan:0;
+                if(icon!=0) {
+                    Drawable picture=getDrawable(icon).mutate();
+                    picture.setBounds(0,0,Ui.dp(MainActivity.this,40),Ui.dp(MainActivity.this,40));
+                    line.setCompoundDrawablesRelative(picture,null,null,null);
+                    line.setCompoundDrawablePadding(Ui.dp(MainActivity.this,12));
+                } else line.setCompoundDrawablesRelative(null,null,null,null);
+                line.setPadding(Ui.dp(MainActivity.this,16),Ui.dp(MainActivity.this,12),Ui.dp(MainActivity.this,12),Ui.dp(MainActivity.this,12));
+                line.setMinHeight(Ui.dp(MainActivity.this,64));
+                return line;
+            }
+        };
         new android.app.AlertDialog.Builder(this)
             .setTitle("Aujourd’hui · Choisir une séance")
-            .setItems(items,(dialog,which)->{
-                TodaySession s=sessions.get(which);
-                openMode(s.mode,s.scheduled);
-            })
-            .show();
+            .setAdapter(adapter,(dialog,which)->{
+                TodaySession session=sessions.get(which);
+                openMode(session.mode,session.scheduled);
+            }).show();
     }
 
     private void refreshToday() {
         GeometryRepository g=geometry;
         if(g==null){setToday("…",todayAction.isEnabled());return;}
         LocalDate current=HifzClock.today();
+        if(todayHeading!=null) {
+            String day=current.format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM",java.util.Locale.FRANCE));
+            todayHeading.setText("AUJOURD’HUI · "+day.toUpperCase(java.util.Locale.FRANCE));
+        }
         // A past OPEN finale/renforcement outranks the new day's timetable.
         // Do not redirect the learner into Settings because an old due-day
         // cadence cannot be reconstructed after midnight.
-        if(!unfinishedWeekendSessions(current).isEmpty()) {
-            setToday("Reprendre les séances ouvertes · voir les finales",true);
-            if(todayObjective!=null)
-                todayObjective.setText("Sabqi / Itqān · reprendre les dates originales, sans perte d'acquis");
+        List<TodaySession> prior=unfinishedWeekendSessions(current);
+        if(!prior.isEmpty()) {
+            setToday(prior.size()==1?"Séance à reprendre":"Séances à reprendre",true);
+            if(todayObjective!=null) {
+                java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();
+                for(TodaySession item:prior) {
+                    if(HifzSessionActivity.LEARNING_FINAL.equals(item.mode))names.add("Finale Sabqi");
+                    else if(HifzSessionActivity.CONSOLIDATION_FINAL.equals(item.mode))names.add("Finale Itqān");
+                    else names.add("Renforcement Sabqi");
+                }
+                todayObjective.setText(android.text.TextUtils.join(" · ",names)+" · dates conservées");
+            }
             return;
         }
         if(current.isBefore(prefs.programStartDate())){
