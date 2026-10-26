@@ -318,8 +318,15 @@ final class PostFinalRecallStore {
         for(int i=0;i<queue.length();i++){
             JSONObject item=queue.optJSONObject(i);
             if(item==null)throw new IllegalStateException("Invalid legacy queue entry");
-            if(family.equals(item.optString("family"))
-                    &&"PROVENANCE_REVIEW".equals(item.optString("status")))return true;
+            if(!family.equals(item.optString("family")))continue;
+            String status=item.optString("status");
+            if("PROVENANCE_REVIEW".equals(status))return true;
+            if(item.optInt("familySourceVersion",0)!=1
+                    &&("READY".equals(status)
+                    ||("PREPARED".equals(status)&&item.optString("date").equals(
+                        prefs.getString(SABQI.equals(family)
+                            ?"lastLearningConsolidationDate":"lastRecentSabqiReviewDate","")))))
+                return true;
         }
         return false;
     }
@@ -350,6 +357,10 @@ final class PostFinalRecallStore {
             if(!family.equals(item.optString("family")))continue;
             String status=item.optString("status");
             String date=item.optString("date");
+            // A legacy 1.17.7 pending plan may contain pages from the
+            // opposite family. Only repaired/family-pinned pending plans are
+            // reportable; DONE snapshots stay as historical receipts.
+            if(!"DONE".equals(status)&&item.optInt("familySourceVersion",0)!=1)continue;
             // PREPARED alone is not proof that the Sunday final was validated.
             String last=family.equals(SABQI)?completedSabqiDate:completedItqanDate;
             if(!"DONE".equals(status)&&!"READY".equals(status)
@@ -388,6 +399,9 @@ final class PostFinalRecallStore {
                 throw new IllegalStateException("Invalid final family");
             if(targetFamily!=null&&!targetFamily.equals(family))continue;
             String status=item.optString("status");
+            // Migration failure cannot allow a mixed-family legacy plan to
+            // reappear through any direct activity or today's next-action path.
+            if(item.optInt("familySourceVersion",0)!=1)continue;
             boolean committed=family.equals(SABQI)?date.equals(completedSabqiDate):date.equals(completedItqanDate);
             if("DONE".equals(status))continue;
             if(!"READY".equals(status)&&(!"PREPARED".equals(status)||!committed))continue;
