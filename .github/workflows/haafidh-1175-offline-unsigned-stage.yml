@@ -61,7 +61,7 @@ jobs:
             echo 'FAIL: staging must be unsigned; never deploy'
             exit 1
           fi
-          unzip -Z1 "$apk" | grep -q 'assets/qcf'
+          # Exact 604 original QCF pages are separately guarded by fetch_mushaf_pages.sh.
           if unzip -Z1 "$apk" | grep -qE 'assets/(atlas/atlas_display_catalog_v1.json|ayah_themes_private/macros_114.json)'; then
             echo 'FAIL: public staging unexpectedly contains private assets'
             exit 1
