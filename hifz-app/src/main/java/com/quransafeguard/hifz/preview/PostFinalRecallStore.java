@@ -178,6 +178,46 @@ final class PostFinalRecallStore {
         }
     }
 
+
+    /** Read-only summary for the weekly recap. Never creates a new reading or credit. */
+    static final class Recap {
+        final String family,date;
+        final int completedPages,totalPages,previousPages;
+        final boolean finished;
+        Recap(String family,String date,int completedPages,int totalPages,
+              int previousPages,boolean finished){
+            this.family=family;this.date=date;this.completedPages=completedPages;
+            this.totalPages=totalPages;this.previousPages=previousPages;
+            this.finished=finished;
+        }
+    }
+
+    Recap recapFor(String family,String completedSabqiDate,String completedItqanDate){
+        if(!SABQI.equals(family)&&!ITQAN.equals(family))
+            throw new IllegalArgumentException("Expected final family");
+        JSONArray queue=read();
+        for(int i=queue.length()-1;i>=0;i--){
+            JSONObject item=queue.optJSONObject(i);
+            if(!family.equals(item.optString("family")))continue;
+            String status=item.optString("status");
+            String date=item.optString("date");
+            // PREPARED alone is not proof that the Sunday final was validated.
+            String last=family.equals(SABQI)?completedSabqiDate:completedItqanDate;
+            if(!"DONE".equals(status)&&!"READY".equals(status)
+                    &&!("PREPARED".equals(status)&&date.equals(last)))continue;
+            JSONArray pages=item.optJSONArray("pages");
+            if(pages==null||pages.length()<1)
+                throw new IllegalStateException("Invalid saved recap pages");
+            int completed=item.optInt("position",-1);
+            if(completed<0||completed>pages.length())
+                throw new IllegalStateException("Invalid saved recap cursor");
+            boolean done="DONE".equals(status);
+            return new Recap(family,date,done?pages.length():completed,
+                pages.length(),item.optInt("previous",0),done);
+        }
+        return null;
+    }
+
     /** Selection only. A PREPARED entry is not usable unless its finale was actually validated. */
     Review nextReady(String completedSabqiDate,String completedItqanDate){
         return findReady(null,completedSabqiDate,completedItqanDate);
