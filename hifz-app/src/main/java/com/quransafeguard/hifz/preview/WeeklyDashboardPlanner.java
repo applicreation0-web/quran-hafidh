@@ -231,16 +231,32 @@ final class WeeklyDashboardPlanner {
                 case REVISION:{
                     DashboardLedger.Record learningFinal=ledger.find(date,HifzSessionActivity.LEARNING_FINAL);
                     DashboardLedger.Record consolidationFinal=ledger.find(date,HifzSessionActivity.CONSOLIDATION_FINAL);
-                    boolean learningDone=learningFinal!=null||prefs.learningSnowballFinalUnits(date).isEmpty();
+                    boolean learningDone=learningFinal!=null
+                        ||date.toString().equals(prefs.lastLearningConsolidationDate());
+                    // A future Sunday without weekday receipts is not a completed
+                    // finale. Empty due material may mean simply "not yet learned".
+                    boolean learningDue=!prefs.learningSnowballFinalUnits(date).isEmpty();
                     // In post-An-Nās maintenance no new Itqān finale exists.
                     // A pre-existing frozen first-regime OPEN finale may still resume.
                     boolean oldItqanFinal=prefs.unfinishedConsolidationSessionDate(
                         ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null;
                     boolean itqanFinalDue=!prefs.itqanPostNasMaintenance()||oldItqanFinal;
-                    boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
-                    morning=learningDone?"✓ Finale Sabqi":"Finale Renforcement Sabqi · ×3";
-                    evening=!itqanFinalDue?"—":consolidationDone?"✓ Finale Itqān":"Finale Itqān · ×3";
-                    state=(learningDone&&(!itqanFinalDue||consolidationDone))?"Validé":learningDone?"Soir à faire":"À faire";
+                    boolean consolidationDone=consolidationFinal!=null
+                        ||date.toString().equals(prefs.lastRecentSabqiReviewDate());
+                    boolean consolidationDue=itqanFinalDue
+                        &&!prefs.stabilizationSnowballFinalUnits(date).isEmpty();
+                    morning=learningDone?"✓ Finale Sabqi"
+                        :learningDue?"Finale Sabqi · par page ×3"
+                        :date.isAfter(today)?"Finale Sabqi · à prévoir selon les acquis"
+                        :"Finale Sabqi · aucun passage admissible";
+                    evening=!itqanFinalDue?"—":consolidationDone?"✓ Finale Itqān"
+                        :consolidationDue?"Finale Itqān · par page ×3"
+                        :date.isAfter(today)?"Finale Itqān · à prévoir selon les acquis"
+                        :"Finale Itqān · aucun passage admissible";
+                    state=learningDone&&(!itqanFinalDue||consolidationDone)?"Validé"
+                        :learningDone?"Soir à faire"
+                        :!learningDue&&!consolidationDue&&!date.isAfter(today)?"Aucune finale à valider"
+                        :"À faire";
                     // Sunday cannot consume a passive cursor or schedule any general revisions.
                     break;
                 }
