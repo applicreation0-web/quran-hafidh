@@ -83,7 +83,7 @@ public final class PassiveApprisAndSundayContractTest {
         assertTrue(main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY)"));
         assertTrue(main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
         assertTrue(planner.contains("// Sunday cannot consume a passive cursor or schedule any general revisions."));
-        assertTrue(main.contains("Finale Renforcement Sabqi · matin"));
-        assertTrue(main.contains("Finale Consolidation Itqān · soir"));
+        assertTrue(main.contains("Finale Sabqi · matin"));
+        assertTrue(main.contains("Finale Itqān · soir"));
     }
 }
