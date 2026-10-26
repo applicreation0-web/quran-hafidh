@@ -17,7 +17,7 @@ import static org.junit.Assert.*;
 
 /** Actual Android Activity: masked post-final queue, restart and unchanged Acquis/final states. */
 public final class PostFinalRecallInstrumentedTest {
-    @Test public void committedOctoberItqanWithoutPreparedQueueRecoversOnlyEarnedFamilyPages()
+    @Test public void committedOctoberItqanWithoutPreparedQueueRecoversAllEligibleAcquis()
             throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
         SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
@@ -50,8 +50,8 @@ public final class PostFinalRecallInstrumentedTest {
             PostFinalRecallStore.Review review=queue.nextReady("","2026-10-25");
             assertNotNull(review);
             assertEquals(522,review.page);
-            assertEquals(2,review.total);
-            assertEquals(1,review.previousCount);
+            assertEquals(3,review.total); // 522, 12 (previous Acquis), 523 (just validated)
+            assertEquals(2,review.previousCount);
             assertFalse("No duplicate queue entry after repeated startup",
                 queue.recoverCommittedFromHistory(PostFinalRecallStore.ITQAN,
                     "2026-10-25",acquired,geometry));
