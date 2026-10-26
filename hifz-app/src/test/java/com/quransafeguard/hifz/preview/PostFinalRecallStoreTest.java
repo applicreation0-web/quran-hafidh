@@ -38,6 +38,26 @@ public final class PostFinalRecallStoreTest {
         assertNull(resumed.nextReady("2026-10-25",""));
         assertFalse(pref.disk.containsKey("v6AcquiredCreditLineIds"));
     }
+    @Test public void pendingSabqiCannotHideAnIndependentCompletedItqanRecall(){
+        InMemoryPrefs disk=new InMemoryPrefs();
+        PostFinalRecallStore store=new PostFinalRecallStore(disk);
+        store.prepare(PostFinalRecallStore.SABQI,"2026-10-18",plan());
+        store.prepare(PostFinalRecallStore.ITQAN,"2026-10-25",plan());
+        assertTrue(store.markReady(PostFinalRecallStore.SABQI,"2026-10-18"));
+        assertTrue(store.markReady(PostFinalRecallStore.ITQAN,"2026-10-25"));
+        assertEquals(PostFinalRecallStore.SABQI,store.nextReady("2026-10-18","2026-10-25").family);
+        PostFinalRecallStore.Review itqan=store.nextReadyFor(PostFinalRecallStore.ITQAN,"2026-10-18","2026-10-25");
+        assertNotNull("Itqan cannot be hidden behind older Sabqi",itqan);
+        assertEquals(PostFinalRecallStore.ITQAN,itqan.family);
+        assertEquals(2,itqan.previousCount);
+        assertEquals(3,itqan.total);
+        assertEquals(PostFinalRecallStore.SABQI,
+            store.nextReadyFor(PostFinalRecallStore.SABQI,"2026-10-18","2026-10-25").family);
+        assertTrue(store.advance(itqan,"2026-10-18","2026-10-25"));
+        assertEquals(1,store.nextReadyFor(PostFinalRecallStore.ITQAN,"2026-10-18","2026-10-25").position);
+        assertEquals(0,store.nextReadyFor(PostFinalRecallStore.SABQI,"2026-10-18","2026-10-25").position);
+    }
+
     @Test public void independentItqanFinalAndHistoricalOpenRemainFrozen() throws Exception {
         InMemoryPrefs prefs=new InMemoryPrefs();
         PostFinalRecallStore store=new PostFinalRecallStore(prefs);
