@@ -81,6 +81,31 @@ public final class EightWeekSkippedSessionReplayTest {
         assertEquals(46,completed.size()); // three skips minus one exact dated makeup
     }
 
+    @Test public void oldestDueIsWorkedFirstForFiftySixDatesNotLaterUnscheduledCredits(){
+        Set<LocalDate> misses=new HashSet<>(Arrays.asList(
+            LocalDate.parse("2026-11-03"),LocalDate.parse("2026-11-06"),
+            LocalDate.parse("2026-11-21")));
+        Set<LocalDate> sabqi=new HashSet<>(),itqan=new HashSet<>();
+        for(int i=0;i<56;i++){
+            LocalDate day=START.plusDays(i);
+            if(day.getDayOfWeek().getValue()==7)continue;
+            List<HifzBacklog.Due> debt=HifzBacklog.calculate(
+                START,START,day,sabqi,itqan,this::action);
+            if(misses.contains(day))continue;
+            HifzBacklog.Due oldest=HifzBacklog.first(debt);
+            assertNotNull(oldest);
+            assertFalse("Future receipt is forbidden",oldest.date.isAfter(day));
+            Set<LocalDate> target=HifzSessionActivity.SABQI.equals(oldest.mode)
+                ?sabqi:itqan;
+            assertTrue("Cannot validate an ordinary lesson twice",target.add(oldest.date));
+        }
+        List<HifzBacklog.Due> pending=HifzBacklog.calculate(
+            START,START,START.plusDays(55),sabqi,itqan,this::action);
+        assertEquals(3,pending.size());
+        assertEquals(LocalDate.parse("2026-12-17"),pending.get(0).date);
+        assertEquals(45,sabqi.size()+itqan.size());
+    }
+
     @Test public void twoWeeksCompletelyMissedRetainTwelveDatedLessonsAtWeekEight(){
         Set<LocalDate> absent=new HashSet<>();
         for(int day=14;day<28;day++)absent.add(START.plusDays(day));
