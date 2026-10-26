@@ -873,8 +873,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private PostFinalRecallStore.Review readyPostFinalRecall(String family){
-        postFinalStore.repairLegacyPendingFamilyPlans(
-            geometry,prefs.progressionSnapshotV6().acquired);
+        try {
+            postFinalStore.repairLegacyPendingFamilyPlans(
+                geometry,prefs.progressionSnapshotV6().acquired);
+        } catch(RuntimeException unverifiedLegacy) {
+            // Optional non-crediting recall must not break a completed Sunday
+            // final; leave the historical queue and Acquis unchanged.
+            android.util.Log.e("QuranHifz","Post-final family proof unavailable",
+                unverifiedLegacy);
+            return null;
+        }
         return postFinalStore.nextReadyFor(family,
             prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
     }
@@ -907,8 +915,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void renderPostFinalRecall(){
-        postFinalStore.repairLegacyPendingFamilyPlans(
-            geometry,prefs.progressionSnapshotV6().acquired);
+        try {
+            postFinalStore.repairLegacyPendingFamilyPlans(
+                geometry,prefs.progressionSnapshotV6().acquired);
+        } catch(RuntimeException unverifiedLegacy) {
+            android.util.Log.e("QuranHifz","Post-final family proof unavailable",
+                unverifiedLegacy);
+            sessionCompleted=true;
+            program.setText("Lecture cumulative · provenance à vérifier");
+            progress.setText("Ancien plan conservé ; impossible de prouver toutes ses pages. Aucune acquisition modifiée.");
+            return;
+        }
         currentPostFinalReview=requestedPostFinalFamily==null
             ?postFinalStore.nextReady(prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate())
             :readyPostFinalRecall(requestedPostFinalFamily);
