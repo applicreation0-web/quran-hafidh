@@ -23,11 +23,11 @@ public final class PostFinalCumulativePolicyTest {
         for(int count:new int[]{0,1,19,20,21,50}) {
             List<PostFinalCumulativePolicy.Page> pages=PostFinalCumulativePolicy.plan(
                 prior(count),Arrays.asList(line(350,0),line(351,1)));
-            assertEquals(Math.min(count,20)+2,pages.size());
+            assertEquals(Math.min(count+2,20),pages.size());
             assertEquals(350,pages.get(pages.size()-2).mushafPage);
             assertEquals(351,pages.get(pages.size()-1).mushafPage);
             assertTrue(pages.get(pages.size()-1).fromCurrentFinal);
-            if(count>20)assertEquals(100+count-19,pages.get(0).mushafPage);
+            if(count>18)assertEquals(100+count-17,pages.get(0).mushafPage);
         }
     }
     @Test public void partialPagesDoNotInventMissingLinesOrDuplicateWeeklyPage() {
