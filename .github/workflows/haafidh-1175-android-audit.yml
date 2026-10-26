@@ -25,6 +25,11 @@ on:
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java'
       - 'scripts/verify_authorized_1175_final_state_delta.py'
+      - 'scripts/verify_1175_post_nas_weekly_delta.py'
+      - 'scripts/verify_authorized_hifz_session_delta.py'
+      - 'scripts/verify_authorized_program_preferences_delta.py'
+      - 'scripts/verify_authorized_consolidation_delta.py'
+      - 'scripts/verify_1175_open_session_safety_delta.py'
       - 'scripts/verify_1175_open_session_safety_delta.py'
       - 'scripts/verify_authorized_program_preferences_delta.py'
       - 'scripts/verify_authorized_hifz_session_delta.py'
@@ -64,6 +69,7 @@ jobs:
       - name: Frozen Hifz, Atlas and icon contracts
         run: |
           bash scripts/guard_frozen_hifz_engines.sh
+          python3 scripts/verify_1175_post_nas_weekly_delta.py
           python3 scripts/verify_atlas_only_purity.py
           python3 scripts/verify_contractual_ui_icons.py
           python3 scripts/verify_j6_icon_roles.py
