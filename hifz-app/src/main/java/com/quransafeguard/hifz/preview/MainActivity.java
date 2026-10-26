@@ -1515,7 +1515,9 @@ public final class MainActivity extends android.app.Activity {
             String t=part.trim();
             if(t.matches("séance \\d+/\\d+") || t.matches("\\d+ lignes?")
                 || t.matches("\\d+ pages?") || t.matches("\\d+ min")
-                || t.matches("×\\d+")) essentials.add(t);
+                || t.matches("×\\d+") || t.equals("à prévoir selon les acquis")
+                || t.equals("aucun passage admissible")
+                || t.equals("par page ×3")) essentials.add(t);
         }
         if(essentials.isEmpty())return raw.startsWith("✓")?"Terminée":"Détails disponibles";
         return String.join(" · ",essentials);
