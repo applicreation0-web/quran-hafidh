@@ -35,6 +35,8 @@ public final class PhoneProgrammeSourceContractTest {
         assertTrue(regime.contains("if(\"ENTRETIEN\".equals(programme))return reached;"));
         assertTrue(regime.contains("if(\"CONSOLIDATION\".equals(programme))return reached;"));
         assertTrue(regime.contains("if (stamped != null) return stamped;"));
-        assertTrue(source("SettingsActivity.java").contains("new android.app.DatePickerDialog(this,"));
+        assertTrue(source("SettingsActivity.java").contains("Bascule automatique ; séances déjà ouvertes préservées."));
+        assertFalse("No misleading dated Itqan switch remains",
+            source("SettingsActivity.java").contains("new android.app.DatePickerDialog(this,"));
     }
 }

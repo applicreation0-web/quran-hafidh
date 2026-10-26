@@ -44,7 +44,9 @@ public final class MaintenanceCoverageWiringSourceContractTest {
             planner.contains("HifzSchedule.MAINTENANCE_MINUTES"));
         assertTrue(planner.contains("private int maintenanceMinutes(){"));
         assertTrue(planner.contains("HifzSpeedStore speedStore"));
-        assertTrue(planner.contains("final int revisionMinutes=maintenanceMinutes();"));
+        assertTrue("Dynamic duration is guarded per independent projection",
+            planner.contains("duration=maintenanceMinutes();")
+                && planner.contains("final int revisionMinutes=duration;"));
         assertFalse(planner.contains("HifzSchedule.ACTIVE_REVIEW_MINUTES"));
     }
 

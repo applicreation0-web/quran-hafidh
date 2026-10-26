@@ -25,15 +25,16 @@ public final class ItqanMaintenanceVocabularyTest {
         assertEquals("Consolidation · Révision cumulative",
             HifzDisplayVocabulary.canonicalize("Consolidation · Boule de neige"));
     }
-    @Test public void settingsChoicesAndDatedSummariesUseApprovedTitles() throws Exception {
+    @Test public void settingsFollowPhysicalAnNasWithoutAFalseDatedSwitch() throws Exception {
         java.nio.file.Path path=java.nio.file.Paths.get("src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         if(!java.nio.file.Files.exists(path))path=java.nio.file.Paths.get("hifz-app").resolve(path);
         String source=java.nio.file.Files.readString(path);
-        String programme=source.substring(source.indexOf("private String itqanProgrammeSummary()"),source.indexOf("private void chooseItqanProgramme()"));
-        assertTrue("Physical completion must govern the current programme summary",
-            programme.contains("if(prefs.itqanPostNasMaintenance())return \"Itqān · Maintien de la maîtrise · 1 hizb ×3\";"));
-        assertFalse("Visible Itqan summaries must not revive Entretien",programme.contains("\"Entretien"));
-        assertTrue(source.contains("\"Itqān · Consolidation · protocole approfondi\""));
-        assertTrue(source.contains("\"Itqān · Maintien de la maîtrise · 1 hizb ×3\""));
+        assertTrue("BOOX must identify the automatic physical regime change",
+            source.contains("Bascule automatique ; séances déjà ouvertes préservées."));
+        assertFalse("No ineffective user-scheduled Itqan change",source.contains("chooseItqanProgramme()"));
+        assertFalse("Do not display a programme date picker",source.contains("Choisir la date"));
+        String regime=java.nio.file.Files.readString(path.resolveSibling("ItqanRegimeStore.java"));
+        assertTrue(regime.contains("return ItqanMaintenancePolicy.regimeFor(maintenanceForNewSession(p));"));
+        assertTrue(regime.contains("if (stamped != null) return stamped;"));
     }
 }

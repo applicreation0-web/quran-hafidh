@@ -73,7 +73,7 @@ public final class MorningEveningRevisionContractTest {
         assertTrue(settings.contains("Position Révision passive : "));
         assertTrue(settings.contains("Soir : Apprentissage ou Stabilisation"));
         assertTrue(selector.contains("\"Révision passive · \" + maintenanceCue"));
-        assertTrue(settings.contains("Itqān · Maintien de la maîtrise · 1 hizb ×3"));
+        assertTrue(settings.contains("Bascule automatique ; séances déjà ouvertes préservées."));
         assertFalse(settings.contains("Vitesse · Entretien"));
         assertFalse(selector.contains("Entretien"));
     }

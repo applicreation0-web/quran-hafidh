@@ -19,7 +19,9 @@ public final class WeeklyItqanCursorWiringSourceContractTest {
 
     @Test public void weeklyPlannerUsesLiveRotationAndDoesNotRestartLegacyQueue() throws Exception {
         String planner = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue(planner.contains("ItqanWeeklyForecast itqanForecast=new ItqanWeeklyForecast("));
+        assertTrue("An invalid Itqan forecast must leave the seven-day rail intact",
+            planner.contains("ItqanWeeklyForecast itqanForecast=null;"));
+        assertTrue(planner.contains("itqanForecast=new ItqanWeeklyForecast("));
         assertTrue(planner.contains("prefs.itqanRotationState(),currentItqan,prefs.itqanBlockIndex()"));
         assertTrue(planner.contains("prefs.cachedUnitsInLeg(leg,sabqiFrontier,geometry,"));
         assertTrue(planner.contains("itqanForecast.completedBlock(blocks);"));
