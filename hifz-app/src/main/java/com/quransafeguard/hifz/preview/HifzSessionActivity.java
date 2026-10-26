@@ -812,6 +812,95 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
+
+    /** Capture exact acquired-before and current-final lines without changing credit engines. */
+    private void preparePostFinalRecall(String family){
+        if(consolidationSession==null)return;
+        try {
+            java.util.HashMap<String,GeometryRepository.LineMeta> byId=new java.util.HashMap<>();
+            for(int i=0;i<geometry.lineCount();i++){GeometryRepository.LineMeta line=geometry.line(i);byId.put(line.id,line);}
+            List<GeometryRepository.LineMeta> prior=new ArrayList<>();
+            for(String id:prefs.progressionSnapshotV6().acquired){
+                GeometryRepository.LineMeta line=byId.get(id);
+                if(line==null)throw new IllegalStateException("Missing acquired line geometry");
+                prior.add(line);
+            }
+            java.util.LinkedHashSet<String> frozen=new java.util.LinkedHashSet<>();
+            List<ConsolidationCycleEngine.Unit> units=consolidationSession.cycle().units();
+            for(int i=0;i<units.size();i++){
+                ConsolidationCycleEngine.Unit unit=units.get(i);
+                if(i==units.size()-1&&units.size()>1
+                        &&unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED)continue;
+                frozen.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id()));
+            }
+            List<GeometryRepository.LineMeta> current=new ArrayList<>();
+            for(String id:frozen){
+                GeometryRepository.LineMeta line=byId.get(id);
+                if(line==null)throw new IllegalStateException("Missing final line geometry");
+                current.add(line);
+            }
+            postFinalStore.prepare(family,sessionDate.toString(),PostFinalCumulativePolicy.plan(prior,current));
+        }catch(RuntimeException unavailable){
+            android.util.Log.e("QuranHifz","Post-final optional snapshot unavailable",unavailable);
+            onError("Lecture cumulative indisponible ; la finale reste indépendante.");
+        }
+    }
+
+    private void offerPostFinalRecall(){
+        PostFinalRecallStore.Review ready=postFinalStore.nextReady(
+            prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
+        if(ready!=null)addRoundAction("↻","Lecture cumulative",v->
+            startActivity(new Intent(this,HifzSessionActivity.class).putExtra(EXTRA_MODE,POST_FINAL_RECALL)));
+    }
+
+    private void renderPostFinalRecall(){
+        currentPostFinalReview=postFinalStore.nextReady(
+            prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
+        if(currentPostFinalReview==null){
+            sessionCompleted=true;
+            program.setText("Lecture cumulative · terminée");
+            progress.setText("Une récitation masquée par page effectuée.");
+            return;
+        }
+        PostFinalRecallStore.Review review=currentPostFinalReview;
+        if(!geometry.lineIdsOnPage(review.page).containsAll(review.lines))
+            throw new IllegalStateException("Invalid physical QCF recall lines");
+        for(GeometryRepository.LineMeta line:geometry.linesForExactIds(review.lines))
+            if(line.page!=review.page)throw new IllegalStateException("Cross-page recall");
+        unitFirstPage=unitLastPage=currentPage=review.page;
+        currentLineIds=new ArrayList<>(review.lines);
+        currentSelection=geometry.versesOnLines(currentLineIds);
+        currentMask=100;sessionCompleted=false;
+        program.setText("Lecture cumulative "+(PostFinalRecallStore.SABQI.equals(review.family)?"Sabqi":"Itqān")
+            +" · page "+(review.position+1)+"/"+review.total);
+        progress.setText("20 pages précédentes maximum + semaine validée · 1 fois masquée");
+        showCurrent();
+        updatePostFinalRecallAction();
+    }
+
+    private void updatePostFinalRecallAction(){
+        actions.removeAllViews();
+        if(currentPostFinalReview==null||sessionCompleted)return;
+        if(sundayFinalAnchorUnavailable||!sundayFinalMaskedPageReady
+                ||currentPage!=currentPostFinalReview.page){
+            progress.setText(sundayFinalAnchorUnavailable
+                ?"Amorces QCF indisponibles : passage suspendu."
+                :"Chargement du masque 100 % avant validation.");
+            return;
+        }
+        progress.setText("Page "+(currentPostFinalReview.position+1)+"/"
+            +currentPostFinalReview.total+" · 100 % masquée · un passage");
+        addRoundAction("↻","Page récitée",v->{
+            if(!sundayFinalMaskedPageReady||sundayFinalAnchorUnavailable||currentPostFinalReview==null
+                    ||currentPage!=currentPostFinalReview.page)return;
+            if(!postFinalStore.advance(currentPostFinalReview,prefs.lastLearningConsolidationDate(),
+                    prefs.lastRecentSabqiReviewDate())){
+                onError("Récitation non sauvegardée ; rouvrir cette page.");return;
+            }
+            sundayFinalMaskedPageReady=false;renderMode();
+        });
+    }
+
     /** Commit a timed session whose foreground clock reached its limit before process death. */
     private boolean completeExpiredTimedSession() {
         if (!isTimedMode() || !PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes())) return false;
