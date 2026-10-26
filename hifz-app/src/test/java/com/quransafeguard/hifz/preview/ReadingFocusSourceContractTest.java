@@ -60,10 +60,13 @@ public final class ReadingFocusSourceContractTest {
         assertTrue(focusModes.contains("CONSOLIDATION_FINAL.equals(mode)"));
         assertTrue(focusModes.contains("LEARNING_FINAL.equals(mode)"));
         String grouped = method(session, "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
-        assertTrue("Only Sunday physical-page finals become masked on repetitions 2 and 3",
-            grouped.contains("currentMask = sundayPage && consolidationSession.donePerStage() > 0 ? 100 : 0;"));
-        assertTrue("legacy ordinary or frozen grouped sessions retain their visible protocol",
-            grouped.contains("== ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;"));
+        assertTrue("Sunday finale pages retain visible pass 1 and masked passes 2 and 3",
+            grouped.contains("sundayPage && consolidationSession.donePerStage()>0"));
+        assertTrue("Every completed post-Nas Maintien hizb is recalled once, masked 100%",
+            grouped.contains("boolean maskedMaintien=protocol==ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED;")
+                && grouped.contains("currentMask = maskedMaintien ||"));
+        assertTrue("legacy ordinary and frozen grouped sessions keep their protocols",
+            grouped.contains("boolean sundayPage=protocol==ConsolidationCycleEngine.Protocol.SUNDAY_PAGE;"));
         assertTrue("frozen physical units remain the only source of their exact reading zone",
             grouped.contains("ConsolidationPhysicalUnitPolicy.decodeLineUnit"));
         assertFalse("grouped sessions must not repurpose Itqan's fractionation state",
