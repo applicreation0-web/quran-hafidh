@@ -716,7 +716,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         String today = sessionDate.toString();
         if (today.equals(prefs.lastRecentSabqiReviewDate())) {
             sessionCompleted = true;
-            program.setText("Consolidation · séance validée");
+            program.setText("Finale Itqān · validée");
             progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));
             offerPostFinalRecall(PostFinalRecallStore.ITQAN);
             return;
@@ -733,7 +733,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         renderGroupedCycle(prefs.stabilizationSnowballFinalUnits(sessionDate, geometry), ConsolidationCycleEngine.Family.STABILIZATION,
-            "stabilization-final-", "Consolidation", "Aucun passage admissible à la finale cette semaine.",
+            "stabilization-final-", "Finale Itqān", "Aucun passage admissible à la finale cette semaine.",
             this::validateConsolidationFinalReview);
     }
 
@@ -765,7 +765,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         String today = sessionDate.toString();
         if (today.equals(prefs.lastLearningConsolidationDate())) {
             sessionCompleted = true;
-            program.setText("Renforcement · séance validée");
+            program.setText("Finale Sabqi · validée");
             progress.setText(prefs.lastLearningConsolidationLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastLearningConsolidationLabel()));
             offerPostFinalRecall(PostFinalRecallStore.SABQI);
             return;
@@ -796,7 +796,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         renderGroupedCycle(prefs.learningSnowballFinalUnits(sessionDate, geometry), ConsolidationCycleEngine.Family.LEARNING,
-            "learning-final-", "Renforcement", "Aucun passage admissible à la finale cette semaine.",
+            "learning-final-", "Finale Sabqi", "Aucun passage admissible à la finale cette semaine.",
             this::validateLearningFinalReview);
     }
 
