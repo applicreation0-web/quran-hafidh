@@ -82,7 +82,8 @@ final class PostFinalRecallStore {
      * This never reopens a final, edits Acquis or credits any additional line.
      *
      * Refuse incomplete/corrupt evidence rather than invent an entire week.
-     * Other families' acquired pages are deliberately excluded.
+     * Prior Acquis follow the same globally persisted acquisition order as
+     * preparePostFinalRecall; only the just-validated cohort is family-specific.
      */
     boolean recoverCommittedFromHistory(String family,String date,Set<String>acquired,
                                         GeometryRepository geometry) {
@@ -114,7 +115,6 @@ final class PostFinalRecallStore {
             return false;
         }
         LocalDate monday=sunday.minusDays(6);
-        LinkedHashSet<String> priorIds=new LinkedHashSet<>();
         LinkedHashSet<String> currentIds=new LinkedHashSet<>();
         boolean foundCurrentWeek=false;
         try {
@@ -122,20 +122,18 @@ final class PostFinalRecallStore {
                 JSONObject week=weeks.optJSONObject(i);
                 if(week==null)return false;
                 LocalDate weekDate=LocalDate.parse(week.getString("week"));
-                if(weekDate.isAfter(monday))continue; // not evidence for this final
+                if(!weekDate.equals(monday))continue;
+                // Historical weekly receipts identify this final's family-specific
+                // source. Older Acquis are taken from the canonical progression
+                // snapshot, as in the normal pre-final preparation path.
+                foundCurrentWeek=true;
                 JSONArray units=week.getJSONArray("units");
-                boolean isCurrent=weekDate.equals(monday);
-                if(isCurrent)foundCurrentWeek=true;
                 for(int j=0;j<units.length();j++){
                     for(String id:ConsolidationPhysicalUnitPolicy.decodeLineUnit(units.getString(j))) {
-                        if(isCurrent) {
-                            // A completed date alone does not make incomplete
-                            // source lines acquired. Refuse partial reconstruction.
-                            if(!acquired.contains(id))return false;
-                            currentIds.add(id);
-                        } else if(acquired.contains(id)) {
-                            priorIds.add(id);
-                        }
+                        // A completed date alone does not make incomplete
+                        // source lines acquired. Refuse partial reconstruction.
+                        if(!acquired.contains(id))return false;
+                        currentIds.add(id);
                     }
                 }
             }
@@ -144,7 +142,11 @@ final class PostFinalRecallStore {
             return false;
         }
         if(!foundCurrentWeek||currentIds.isEmpty())return false;
-        priorIds.removeAll(currentIds); // one physical line, one occurrence
+        // Match the original post-final contract: up to the 20 most recently
+        // credited PREVIOUS pages across the persisted Acquis, plus this week's
+        // exact physical pages. No synthetic lines or second credit.
+        LinkedHashSet<String> priorIds=new LinkedHashSet<>(acquired);
+        priorIds.removeAll(currentIds);
         try {
             // The geometry map is canonical, but the historical family/week
             // order determines which eligible 20 *pages* are most recent.
