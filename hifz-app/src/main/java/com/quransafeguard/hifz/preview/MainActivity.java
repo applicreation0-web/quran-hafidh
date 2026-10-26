@@ -1325,8 +1325,12 @@ public final class MainActivity extends android.app.Activity {
             PostFinalRecallStore.Recap sabqi=postFinalRecap(PostFinalRecallStore.SABQI);
             PostFinalRecallStore.Recap itqan=postFinalRecap(PostFinalRecallStore.ITQAN);
             return "LECTURES CUMULATIVES · RÉCAPITULATIF ›"
-                +"\n"+postFinalRecapLine("Sabqi",sabqi)
-                +"\n"+postFinalRecapLine("Itqān",itqan);
+                +"\n"+(postFinalStore.hasBlockedLegacyFamily(PostFinalRecallStore.SABQI)
+                    ?"Sabqi · ancienne lecture 1.17.7 à vérifier"
+                    :postFinalRecapLine("Sabqi",sabqi))
+                +"\n"+(postFinalStore.hasBlockedLegacyFamily(PostFinalRecallStore.ITQAN)
+                    ?"Itqān · ancienne lecture 1.17.7 à vérifier"
+                    :postFinalRecapLine("Itqān",itqan));
         }catch(RuntimeException unavailable){
             android.util.Log.w("QuranHifz","Post-final recap unavailable",unavailable);
             return "LECTURES CUMULATIVES · RÉCAPITULATIF ›"
