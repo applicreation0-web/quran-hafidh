@@ -653,7 +653,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                     :"Disponible après le dernier Maintien de la semaine.");
             } else {
                 program.setText("Consolidation · séance validée");
-                progress.setText("Boule de neige du soir terminée.");
+                progress.setText("Révision cumulative du soir terminée.");
             }
             return;
         }
@@ -681,7 +681,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,sessionDate)) {
             sessionCompleted = true;
             program.setText("Renforcement · séance validée");
-            progress.setText("Boule de neige du soir terminée.");
+            progress.setText("Révision cumulative du soir terminée.");
             return;
         }
         renderGroupedCycle(prefs.learningConsolidationUnits(sessionDate), ConsolidationCycleEngine.Family.LEARNING,
@@ -723,7 +723,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         renderGroupedCycle(prefs.stabilizationSnowballFinalUnits(sessionDate, geometry), ConsolidationCycleEngine.Family.STABILIZATION,
-            "stabilization-final-", "Consolidation", "Aucune boule de neige à finaliser cette semaine.",
+            "stabilization-final-", "Consolidation", "Aucun passage admissible à la finale cette semaine.",
             this::validateConsolidationFinalReview);
     }
 
@@ -782,7 +782,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         renderGroupedCycle(prefs.learningSnowballFinalUnits(sessionDate, geometry), ConsolidationCycleEngine.Family.LEARNING,
-            "learning-final-", "Renforcement", "Aucune boule de neige à finaliser cette semaine.",
+            "learning-final-", "Renforcement", "Aucun passage admissible à la finale cette semaine.",
             this::validateLearningFinalReview);
     }
 
