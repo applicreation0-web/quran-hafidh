@@ -57,7 +57,11 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String complete = method(prefs, "boolean entryIsFullyStabilizedOrAcquired", "public AnchoringQueue.Entry currentAnchoringEntry");
         String render = method(session, "private void renderItqan()", "private String itqanProgramLabel()");
         assertTrue(complete.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
-        assertTrue(render.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
+        assertTrue(render.contains("prefs.ordinaryItqanLineIds(savedStart,savedEnd,geometry)"));
+        assertTrue(render.contains("prefs.ordinaryItqanLineIds(entryStart, entryEnd, geometry)"));
+        String adapter=method(prefs,"List<String> ordinaryItqanLineIds", "/** Read-only position");
+        assertTrue(adapter.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry)"));
+        assertTrue(adapter.contains("owned.subList(at,owned.size())"));
     }
 
     @Test public void manualRangeEditInvalidatesFrozenConsolidationSession() throws Exception {

@@ -89,11 +89,13 @@ public final class PreBoox074SourceContractTest {
         assertTrue(stabilization.contains("Physical Mushaf line crosses surah boundary"));
         assertTrue(session.contains("StabilizationHalfPagePolicy.planPage"));
         for (String text : new String[]{main, weekly}) {
-            assertTrue(text.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
+            assertTrue(text.contains("prefs.ordinaryItqanLineIds(start,end,geometry)"));
             assertTrue(text.contains("StabilizationHalfPagePolicy.planPage"));
             assertFalse(text.contains("fractionatedBlockLength(unit.size()"));
             assertFalse(text.contains("fractionatedBlockStart(unit.size()"));
         }
+        String prefs=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue(prefs.contains("List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry)"));
         assertFalse(session.contains("fractionatedBlockLength(unit.size()"));
         assertFalse(session.contains("fractionatedBlockStart(unit.size()"));
     }

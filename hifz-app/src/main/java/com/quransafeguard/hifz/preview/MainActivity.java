@@ -895,8 +895,8 @@ public final class MainActivity extends android.app.Activity {
         // The learning final may have been BLOCKED before it could open. Give
         // access to the actual preceding Sunday rather than silently dropping
         // the ungraduated lines on Monday. Do not create a new Itqan final here.
-        LocalDate sunday=today.minusDays(today.getDayOfWeek().getValue()%7);
-        if(sunday.isBefore(today) && !sunday.isBefore(prefs.programStartDate())
+        LocalDate sunday=prefs.pendingLearningFinalDate(today);
+        if(sunday!=null && sunday.isBefore(today) && !sunday.isBefore(prefs.programStartDate())
                 && !sunday.toString().equals(prefs.lastLearningConsolidationDate())
                 && !prefs.learningSnowballFinalUnits(sunday).isEmpty()) {
             addToday(out,"Finale Sabqi du "+sunday+" · matin",
@@ -1085,7 +1085,7 @@ public final class MainActivity extends android.app.Activity {
         VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
         ItqanRegimeStore.UnitPlan plan=prefs.itqanUnitPlan(entry);
         int reps=ItqanMaintenancePolicy.totalReps(plan.regime,plan.protocol);
-        List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+        List<String> owned=prefs.ordinaryItqanLineIds(start,end,geometry);
         if(plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE){
             java.util.LinkedHashSet<Integer> pages=new java.util.LinkedHashSet<>();
             for(GeometryRepository.LineMeta line:geometry.linesForExactIds(owned))pages.add(line.page);

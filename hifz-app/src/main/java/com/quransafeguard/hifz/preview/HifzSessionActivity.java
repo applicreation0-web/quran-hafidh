@@ -884,7 +884,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         if(savedMatchesCurrentEntry){
             List<VerseRef> verses=geometry.versesForRange(savedStart,savedEnd);
-            List<String> lineIds=CorpusLinePolicy.ownedLineIdsForRangeOnPage(savedStart,savedEnd,geometry);
+            List<String> lineIds=prefs.ordinaryItqanLineIds(savedStart,savedEnd,geometry);
             List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(lineIds);
             unitFirstPage = physicalLines.get(0).page;
             unitLastPage = physicalLines.get(physicalLines.size() - 1).page;
@@ -895,7 +895,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         } else {
             VerseRef entryStart = GeometryRepository.parseVerse(anchoringEntry.start);
             VerseRef entryEnd = GeometryRepository.parseVerse(anchoringEntry.end);
-            List<String> lineIds = CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart, entryEnd, geometry);
+            List<String> lineIds = prefs.ordinaryItqanLineIds(entryStart, entryEnd, geometry);
             List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(lineIds);
             unitFirstPage = physicalLines.get(0).page;
             unitLastPage = physicalLines.get(physicalLines.size() - 1).page;

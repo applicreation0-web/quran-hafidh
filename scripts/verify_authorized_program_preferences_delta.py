@@ -16,6 +16,7 @@ CURRENT_SHA="066d2685a920b50877a6cd62cb6ad023337e16f4"
 if subprocess.check_output(["git","hash-object",PATH],text=True).strip() in (
     "a44257e4ebd7735d51ce90286b6a9f1eb40a2879",
     "adb4bd412edda4ee2ddeb64778eb570ff5c4fea2",
+    "3c8a9b63c3f8835b57ea80a2059539d50469d1fe",
 ):
     subprocess.run(["python3","scripts/verify_authorized_1175_final_state_delta.py"],check=True)
     print("PASS: exact reviewed 1.17.5 Sunday finale persistence migration")

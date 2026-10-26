@@ -147,7 +147,9 @@ final class WeeklyDashboardPlanner {
                         int reps=itqanForecast.isInitialUnit()
                             ?ItqanMaintenancePolicy.totalReps(plan)
                             :ItqanMaintenancePolicy.totalReps(plan.regime,plan.protocol);
-                        List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+                        List<String> owned=itqanForecast.isInitialUnit()
+                            ?prefs.ordinaryItqanLineIds(start,end,geometry)
+                            :CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
                         boolean postNas=plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
                         List<StabilizationHalfPagePolicy.Unit> planned=postNas||owned.isEmpty()
                             ?Collections.<StabilizationHalfPagePolicy.Unit>emptyList()

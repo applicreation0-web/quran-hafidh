@@ -28,6 +28,7 @@ if subprocess.check_output(["git","hash-object",PATH],text=True).strip() in (
     "872b66aec2666097ce144a51c9bb2c093dc8e0d5",
     "02932ebc0fdfa3d28b1ebdead816b5e5c08f41a9",
     "1f4debc76e246b16be7054814317f1cc565161b5",
+    "9812dd7c9135f8dbb1ff77ca88e06bed14929585",
 ):
     subprocess.run(["python3","scripts/verify_authorized_1175_final_state_delta.py"],check=True)
     print("PASS: byte-pinned 1.17.5 Sunday finale session routing")

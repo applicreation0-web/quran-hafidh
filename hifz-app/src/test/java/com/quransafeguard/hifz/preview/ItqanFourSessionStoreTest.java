@@ -195,11 +195,16 @@ public final class ItqanFourSessionStoreTest {
    assertEquals(expectedNext,db.getString("itqanFourNextPhysicalLineIdV1",""));
    assertEquals("The plan was closed after full V6 credit",
         "",db.getString(ItqanFourSessionStore.KEY,""));
-   ItqanFourSessionSnapshot resumed=new HifzPrefs(db).openOrResumeFrozenItqan(
-       geo,day.plusDays(1));
-   assertNotNull("A fresh window follows the credited QCF line",resumed);
-   assertEquals(expectedNext,
-       resumed.plan.sessions.get(0).blocks.get(0).lineIds.get(0));
+   db.disk.put("sabqiStart","2:1");
+   db.disk.put("sabqiEnd","48:29");
+   HifzPrefs resumed=new HifzPrefs(db);
+   AnchoringQueue.Entry ordinary=resumed.currentAnchoringEntry(geo);
+   assertNotNull("The ordinary engine follows the legacy window",ordinary);
+   List<String> actual=CorpusLinePolicy.ownedLineIdsForRangeOnPage(
+       GeometryRepository.parseVerse(ordinary.start),GeometryRepository.parseVerse(ordinary.end),geo);
+   assertEquals("No physical line may be skipped by the actual ordinary picker",
+       expectedNext,actual.get(0));
+   assertNull("No new four-date window may be created",resumed.frozenItqanSnapshot(geo));
  }
  @Test public void cleanOpeningPinsExactlyThePreviewedPhysicalWindowAndSurvivesReboot() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();seedV6(db);
@@ -217,6 +222,48 @@ public final class ItqanFourSessionStoreTest {
    assertEquals(opened.encode(),new HifzPrefs(db).openOrResumeFrozenItqan(
        geo,day.plusDays(1)).encode());
    assertEquals("Restart must never reopen/repartition the same window",committed,db.commits);
+ }
+ @Test public void ordinaryBridgeKeepsContinuationAndFollowingUnitAcrossQcfBoundaries() {
+   for(int page:new int[]{518,520,521,522,523,540,562,599,602}) {
+     FaultInjectingPrefs db=new FaultInjectingPrefs();seedV6(db);
+     ItqanFourSessionSnapshot original=sample(db,page);
+     assertTrue(ItqanFourSessionStore.open(db,original,geo));
+     LocalDate day=LocalDate.of(2026,10,13);
+     while(ItqanFourSessionStore.read(db,geo)!=null) {
+       ItqanFourSessionSnapshot ready=completeRepetitions(db);
+       assertTrue(new HifzPrefs(db).completeFrozenItqanSubblockV6(ready,geo,day.toString(),"V1 bridge"));
+       ItqanFourSessionSnapshot next=ItqanFourSessionStore.read(db,geo);
+       if(next!=null&&next.sessionIndex>ready.sessionIndex)day=day.plusDays(1);
+     }
+     db.disk.put("sabqiStart","2:1");db.disk.put("sabqiEnd","48:29");
+     HifzPrefs prefs=new HifzPrefs(db);
+     HifzPrefs.ProgressionSnapshot before=prefs.progressionSnapshotV6();
+     String expected=db.getString("itqanFourNextPhysicalLineIdV1","");
+     AnchoringQueue.Entry entry=prefs.currentAnchoringEntry(geo);
+     List<String> ids=prefs.ordinaryItqanLineIds(GeometryRepository.parseVerse(entry.start),
+         GeometryRepository.parseVerse(entry.end),geo);
+     assertEquals("First physical line after page "+page,expected,ids.get(0));
+     assertTrue("Already stabilized V1 lines cannot be repeated",Collections.disjoint(before.stabilized,ids));
+     assertEquals(before.stabilized,new HifzPrefs(db).progressionSnapshotV6().stabilized);
+     assertEquals(before.acquired,new HifzPrefs(db).progressionSnapshotV6().acquired);
+     assertEquals(ids,new HifzPrefs(db).ordinaryItqanLineIds(GeometryRepository.parseVerse(entry.start),
+         GeometryRepository.parseVerse(entry.end),geo));
+     assertNull(prefs.frozenItqanSnapshot(geo));
+     assertTrue(prefs.completeStabilizationBlockV6(ids,1,true,
+         GeometryRepository.parseVerse(entry.start),GeometryRepository.parseVerse(entry.end),
+         GeometryRepository.parseVerse(entry.end),day.plusDays(1).toString(),"ordinary boundary",Collections.emptyList()));
+     LinkedHashSet<String> stable=new LinkedHashSet<>(before.stabilized);stable.addAll(ids);
+     assertEquals(stable,new HifzPrefs(db).progressionSnapshotV6().stabilized);
+     assertEquals(before.acquired,new HifzPrefs(db).progressionSnapshotV6().acquired);
+     int nextIndex=geo.linesForExactIds(ids).get(ids.size()-1).globalIndex+1;
+     if(!prefs.itqanPostNasMaintenance()) {
+       AnchoringQueue.Entry following=new HifzPrefs(db).currentAnchoringEntry(geo);
+       List<String> followingIds=prefs.ordinaryItqanLineIds(GeometryRepository.parseVerse(following.start),
+           GeometryRepository.parseVerse(following.end),geo);
+       assertEquals("No gap after compatibility remainder page "+page,geo.line(nextIndex).id,followingIds.get(0));
+       assertTrue(Collections.disjoint(ids,followingIds));
+     }
+   }
  }
  @Test public void legacyOpenBlocksNeverStartNewFourDatePlanOrResetRotation() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();seedV6(db);

@@ -88,4 +88,41 @@ public final class SundayMondayResumeInstrumentedTest {
         assertTrue("Sunday OPEN Itqān finale must remain accessible",itqan);
         assertEquals("Preview cannot write credits, snapshots or dates",before,raw.getAll());
     }
+
+    @Test public void unstartedSabqiFinalRetainsItsSundayAfterAnotherWeek() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        HifzPrefs prefs=new HifzPrefs(context);
+        raw.edit().putString("v6AcquiredCreditLineIds","[]").commit();
+        // Use the production physical-unit codec, not a hand-written encoding.
+        String unit=ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList("16:0","16:1"));
+        raw.edit().putString("learningSnowball8WeekHistory",new org.json.JSONArray().put(
+            new org.json.JSONObject().put("week","2026-10-19").put("units",new org.json.JSONArray().put(unit))).toString()).commit();
+        Map<String,?> before=raw.getAll();
+        for(String day:new String[]{"2026-10-26","2026-11-02","2026-11-09"})
+            assertEquals(LocalDate.of(2026,10,25),new HifzPrefs(context)
+                .pendingLearningFinalDate(LocalDate.parse(day)));
+        assertEquals(before,raw.getAll());
+    }
+
+    @Test public void ordinaryItqanUsesExactV1PhysicalCursorAfterPreferencesReopen() {
+        Context context=ApplicationProvider.getApplicationContext();
+        raw.edit().putInt("schema",6).putString("v6LearnedLineIds","[]")
+            .putString("v6StabilizedLineIds","[]").putString("v6AcquiredCreditLineIds","[]")
+            .putString("v6QuarantineLineIds","[]").putString("v6LegacyPartialAcquiredLineIds","[]")
+            .putString("sabqiStart","2:1").putString("sabqiEnd","48:29")
+            .putString("itqanFourNextPhysicalLineIdV1","522:0")
+            .putString(ItqanRegimeStore.LEG,ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS.name())
+            .putString(ItqanRegimeStore.CURSOR,"51:31")
+            .putBoolean(ItqanRegimeStore.INITIAL_TAIL_COMPLETED,false).commit();
+        GeometryRepository geometry=GeometryRepository.get(ApplicationProvider.getApplicationContext());
+        for(int reopen=0;reopen<2;reopen++) {
+            HifzPrefs prefs=new HifzPrefs(context);
+            AnchoringQueue.Entry entry=prefs.currentAnchoringEntry(geometry);
+            assertEquals("522:0",prefs.ordinaryItqanLineIds(GeometryRepository.parseVerse(entry.start),
+                GeometryRepository.parseVerse(entry.end),geometry).get(0));
+            assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
+            assertNull(prefs.frozenItqanSnapshot(geometry));
+            assertEquals("51:31",raw.getString(ItqanRegimeStore.CURSOR,""));
+        }
+    }
 }

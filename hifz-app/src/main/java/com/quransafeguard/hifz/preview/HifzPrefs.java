@@ -2608,6 +2608,8 @@ public final class HifzPrefs {
             }
         }
 
+        AnchoringQueue.Entry remainder=legacyFourDateRemainder(geometry);
+        if(remainder!=null)return remainder;
         ItqanRotationPolicy.State original = itqanRotationState();
         ItqanRotationPolicy.State state = original;
         VerseRef sabqiFrontier = currentSabqiPosition(geometry);
@@ -2623,6 +2625,42 @@ public final class HifzPrefs {
             throw new IllegalStateException("Unable to persist Itqān rotation state");
         }
         return selected;
+    }
+
+    /** Compatibility at the exact V1 -> ordinary boundary only. Keep the
+     * remainder of the containing historical unit instead of rounding up to
+     * the next unit's start. No cursor, credit or protocol is written here. */
+    private AnchoringQueue.Entry legacyFourDateRemainder(GeometryRepository geometry) {
+        String id=p.getString("itqanFourNextPhysicalLineIdV1","");
+        if(id.isEmpty()||itqanPostNasMaintenance())return null;
+        GeometryRepository.LineMeta first=geometry.linesForExactIds(Collections.singletonList(id)).get(0);
+        if(first.globalIndex==0)return null;
+        GeometryRepository.LineMeta previous=geometry.line(first.globalIndex-1);
+        VerseRef expected=com.quransafeguard.hifz.core.QuranCanon.INSTANCE.next(
+            previous.verses.get(previous.verses.size()-1));
+        ItqanRotationPolicy.State state=itqanRotationState();
+        if(state.leg!=ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
+                ||expected==null||!state.cursor.equals(expected))return null;
+        VerseRef owner=CorpusLinePolicy.ownerVerse(first);
+        for(AnchoringQueue.Entry unit:cachedUnitsInLeg(state.leg,currentSabqiPosition(geometry),
+                geometry,ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS)) {
+            VerseRef start=GeometryRepository.parseVerse(unit.start),end=GeometryRepository.parseVerse(unit.end);
+            if(owner.compareTo(start)>=0&&owner.compareTo(end)<=0)
+                return new AnchoringQueue.Entry(owner.toString(),unit.end,unit.origin,unit.protocol,unit.failures);
+        }
+        throw new IllegalStateException("Unresolved legacy physical Itqan boundary");
+    }
+
+    /** A V1 page can end inside a verse. Keep only its still-due physical
+     * continuation when rendering/restoring the ordinary compatibility unit. */
+    List<String> ordinaryItqanLineIds(VerseRef start,VerseRef end,GeometryRepository geometry) {
+        List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+        AnchoringQueue.Entry remainder=legacyFourDateRemainder(geometry);
+        if(remainder==null||!remainder.start.equals(start.toString())||!remainder.end.equals(end.toString()))return owned;
+        String first=p.getString("itqanFourNextPhysicalLineIdV1","");
+        int at=owned.indexOf(first);
+        if(at<0)throw new IllegalStateException("Lost legacy physical Itqan continuation");
+        return Collections.unmodifiableList(new ArrayList<>(owned.subList(at,owned.size())));
     }
 
     /** Read-only position of the current Stabilisation unit in the whole rotation (TAIL then FRONT). */
@@ -3107,6 +3145,29 @@ public final class HifzPrefs {
      */
     List<ConsolidationCycleEngine.Unit> learningSnowballFinalUnits(LocalDate today) {
         return extendedSnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today);
+    }
+
+    /** Navigation date only: retain the earliest ungraduated week's Sunday,
+     * even when the final was blocked before an OPEN snapshot could exist. */
+    LocalDate pendingLearningFinalDate(LocalDate today) {
+        JSONArray history;
+        try { history=new JSONArray(p.getString(snowballHistoryKey(ConsolidationCycleEngine.Family.LEARNING),"[]")); }
+        catch(Exception invalid){throw new IllegalStateException("Invalid learning final history",invalid);}
+        Set<String> acquired=v6LineIdSet("v6AcquiredCreditLineIds");
+        LocalDate completed=safeDate(lastLearningConsolidationDate(),null);
+        LocalDate oldest=null;
+        for(int i=0;i<history.length();i++) {
+            JSONObject week=history.optJSONObject(i);
+            if(week==null||weekFullyAcquired(week,acquired))continue;
+            LocalDate monday=safeDate(week.optString("week"),null);
+            if(monday==null)continue;
+            LocalDate sunday=monday.plusDays(6);
+            // A capacity-limited earlier final may leave genuine source
+            // history pending. Its already-closed date cannot be reopened.
+            if(completed!=null&&!sunday.isAfter(completed))sunday=completed.plusWeeks(1);
+            if(!sunday.isAfter(today)&&(oldest==null||sunday.isBefore(oldest)))oldest=sunday;
+        }
+        return oldest;
     }
 
     public String lastLearningSnowballEveningDate() { return p.getString("lastLearningSnowballEveningDate", ""); }

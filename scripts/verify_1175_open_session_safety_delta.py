@@ -13,6 +13,8 @@ for file, start, end in [
     path = ROOT + file
     old = subprocess.check_output(['git','show',BASE+':'+path],text=True)
     new = Path(path).read_text()
+    from verify_1175_v1_bridge_delta import canonical
+    new = canonical(file, new)
     if file == 'HifzSessionActivity.java':
         # Calendar routing only: prevent creation of a new four-session Itqān
         # window while preserving exact existing OPEN V1 snapshots. This is
