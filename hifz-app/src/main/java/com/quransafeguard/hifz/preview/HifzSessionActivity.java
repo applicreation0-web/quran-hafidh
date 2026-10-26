@@ -588,8 +588,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         program.setText(sundayPage
             ? displayName + " · page " + unitFirstPage + " · " + currentLineIds.size()
                 + " lignes · " + (position + 1) + "/" + consolidationSession.sessionGroupSize()
-            : displayName + " · " + currentLineIds.size() + " lignes · unité "
-                + (position + 1) + "/" + consolidationSession.sessionGroupSize());
+            : maskedMaintien
+                ? "Consolidation Itqān · hizb " + (position + 1) + "/"
+                    + consolidationSession.sessionGroupSize() + " · un passage masqué"
+                : displayName + " · " + currentLineIds.size() + " lignes · unité "
+                    + (position + 1) + "/" + consolidationSession.sessionGroupSize());
         showCurrent();
         updateGroupedCycleRepAction();
     }
