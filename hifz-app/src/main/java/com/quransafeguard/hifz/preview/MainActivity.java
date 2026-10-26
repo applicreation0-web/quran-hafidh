@@ -220,18 +220,8 @@ public final class MainActivity extends android.app.Activity {
                 prefs.repairStraddlingAcquiredVerses(loaded);
                 prefs.releaseRevisionCursorsFromFatiha();
                 prefs.currentAnchoringEntry(loaded);
-                // Restore an already-credited historical Sunday reading only
-                // when exact family-specific physical history is still available.
-                // Never repeat a final or recreate acquired credits.
-                try {
-                    java.util.Set<String> acquired=prefs.progressionSnapshotV6().acquired;
-                    postFinalStore.recoverCommittedFromHistory(PostFinalRecallStore.SABQI,
-                        prefs.lastLearningConsolidationDate(),acquired,loaded);
-                    postFinalStore.recoverCommittedFromHistory(PostFinalRecallStore.ITQAN,
-                        prefs.lastRecentSabqiReviewDate(),acquired,loaded);
-                } catch(RuntimeException unavailable) {
-                    android.util.Log.w("QuranHifz","Post-final history recovery unavailable",unavailable);
-                }
+                // Historical missing cumulative readings are not recreated at
+                // startup. Only separately prepared future readings are resumed.
                 geometry = loaded;
                 runOnUiThread(() -> {
                     setTodayEnabled(true);
@@ -1301,6 +1291,91 @@ public final class MainActivity extends android.app.Activity {
             .setPositiveButton("Fermer",null).show());
         dashboard.addView(Ui.divider(this));
         dashboard.addView(weeklyBalance);
+        // Separate optional, non-crediting follow-up from the verified Hifz
+        // attendance totals. This never reopens an already validated finale.
+        TextView recallRecap=Ui.bookText(this,postFinalRecapPreview(),16f,true);
+        if(wideBoox())recallRecap.setTextSize(19f);
+        recallRecap.setPadding(Ui.dp(this,6),Ui.dp(this,14),
+            Ui.dp(this,6),Ui.dp(this,14));
+        recallRecap.setContentDescription("Récapitulatif des lectures cumulatives");
+        recallRecap.setClickable(true);
+        recallRecap.setFocusable(true);
+        recallRecap.setOnClickListener(v->showPostFinalRecap());
+        dashboard.addView(recallRecap);
+    }
+
+    private PostFinalRecallStore.Recap postFinalRecap(String family){
+        return postFinalStore.recapFor(family,
+            prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
+    }
+
+    private static String postFinalRecapLine(String label,PostFinalRecallStore.Recap recap){
+        if(recap==null)return label+" · aucune lecture en attente";
+        if(recap.finished)return label+" · terminée · "+recap.totalPages+" pages";
+        return label+" · "+recap.completedPages+"/"+recap.totalPages
+            +" pages lues · "+(recap.totalPages-recap.completedPages)+" restantes";
+    }
+
+    private String postFinalRecapPreview(){
+        try {
+            PostFinalRecallStore.Recap sabqi=postFinalRecap(PostFinalRecallStore.SABQI);
+            PostFinalRecallStore.Recap itqan=postFinalRecap(PostFinalRecallStore.ITQAN);
+            return "LECTURES CUMULATIVES · RÉCAPITULATIF ›"
+                +"\n"+postFinalRecapLine("Sabqi",sabqi)
+                +"\n"+postFinalRecapLine("Itqān",itqan);
+        }catch(RuntimeException unavailable){
+            android.util.Log.w("QuranHifz","Post-final recap unavailable",unavailable);
+            return "LECTURES CUMULATIVES · RÉCAPITULATIF ›"
+                +"\nLecture des états à vérifier (acquis conservés)";
+        }
+    }
+
+    /** Read-only recap: only a saved READY review may be launched. */
+    private void showPostFinalRecap(){
+        final PostFinalRecallStore.Recap sabqi,itqan;
+        try {
+            sabqi=postFinalRecap(PostFinalRecallStore.SABQI);
+            itqan=postFinalRecap(PostFinalRecallStore.ITQAN);
+        }catch(RuntimeException unavailable){
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Lectures cumulatives")
+                .setMessage("État des lectures à vérifier ; aucune finale n’est modifiée.")
+                .setPositiveButton("Fermer",null).show();
+            return;
+        }
+        java.util.ArrayList<String> options=new java.util.ArrayList<>();
+        java.util.ArrayList<String> families=new java.util.ArrayList<>();
+        for(String family:new String[]{PostFinalRecallStore.SABQI,PostFinalRecallStore.ITQAN}){
+            PostFinalRecallStore.Recap recap=PostFinalRecallStore.SABQI.equals(family)?sabqi:itqan;
+            if(recap==null||recap.finished)continue;
+            PostFinalRecallStore.Review ready=postFinalStore.nextReadyFor(family,
+                prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
+            if(ready==null)continue;
+            String title=PostFinalRecallStore.SABQI.equals(family)?"Sabqi":"Itqān";
+            options.add(title+" · "+recap.completedPages+"/"+recap.totalPages
+                +" pages · reprendre la lecture masquée");
+            families.add(family);
+        }
+        String detail=postFinalRecapLine("Sabqi",sabqi)+"\n"
+            +postFinalRecapLine("Itqān",itqan)
+            +"\n\nChaque lecture : jusqu’aux 20 pages précédemment acquises"
+            +" + celles de la finale validée ; une récitation masquée par page,"
+            +" sans crédit supplémentaire.";
+        if(options.isEmpty()){
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Lectures cumulatives · récapitulatif")
+                .setMessage(detail).setPositiveButton("Fermer",null).show();
+        }else{
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Lectures cumulatives · récapitulatif")
+                .setMessage(detail)
+                .setItems(options.toArray(new String[0]),(dialog,index)->{
+                    startActivity(new Intent(this,HifzSessionActivity.class)
+                        .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.POST_FINAL_RECALL)
+                        .putExtra(HifzSessionActivity.EXTRA_POST_FINAL_FAMILY,families.get(index)));
+                })
+                .setNegativeButton("Fermer",null).show();
+        }
     }
 
     private void renderSelectedWeekDay() {
