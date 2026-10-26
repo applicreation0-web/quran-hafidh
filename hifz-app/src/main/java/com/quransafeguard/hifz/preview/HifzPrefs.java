@@ -3043,6 +3043,7 @@ public final class HifzPrefs {
      * Already persisted OPEN sessions keep their frozen protocol vectors in restore.
      */
     List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
+        if(itqanPostNasMaintenance())return postNasConsolidationUnits(today);
         JSONArray source=rolledSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION,today);
         if(source.length()==0)return Collections.emptyList();
         Set<String> earned=earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
@@ -3297,6 +3298,9 @@ public final class HifzPrefs {
 
     boolean snowballEveningPending(ConsolidationCycleEngine.Family family,LocalDate date) {
         if(family==null||date==null)throw new IllegalArgumentException("evening review required");
+        if(family==ConsolidationCycleEngine.Family.STABILIZATION && itqanPostNasMaintenance()
+                && frozenConsolidationSnapshot(family,"stabilization-"+date).isEmpty())
+            return postNasConsolidationPending(date);
         String marker=family==ConsolidationCycleEngine.Family.LEARNING
             ?lastLearningSnowballEveningDate():lastStabilizationSnowballEveningDate();
         if(date.toString().equals(marker))return false;
@@ -3317,6 +3321,22 @@ public final class HifzPrefs {
             ?"learning-":"stabilization-")+date;
         if(completed==null||completed.cycle()==null||!id.equals(completed.cycle().cycleId()))
             throw new IllegalStateException("Evening receipt date mismatch");
+        // The post-Nas consolidation earns NO Acquis and has no Sunday finale.
+        // Its proof is one masked pass per completed hizb, with its exact frozen snapshot.
+        if(family==ConsolidationCycleEngine.Family.STABILIZATION
+                && !completed.cycle().units().isEmpty()
+                && completed.cycle().units().get(0).protocol()==ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED) {
+            for(ConsolidationCycleEngine.Unit unit:completed.cycle().units())
+                if(unit.protocol()!=ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED)
+                    throw new IllegalStateException("Mixed Maintenance weekly protocols");
+            synchronized(V6_STATE_LOCK) {
+                String snapshot=postNasConsolidationSnapshot(day);
+                if(snapshot.isEmpty()||!postNasConsolidationPending(day))return false;
+                return p.edit().putString(POST_NAS_WEEK_DONE,snapshot)
+                    .putString("lastStabilizationSnowballEveningDate",date)
+                    .remove(consolidationStateKey(family)).commit();
+            }
+        }
         List<String> justEarned=earnedFromClosedEvening(completed,family);
         synchronized(V6_STATE_LOCK) {
             if(!snowballEveningPending(family,day))return false;
