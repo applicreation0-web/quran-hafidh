@@ -5,6 +5,11 @@ on:
       - work/haafidh-1176-full-audit-20261026
     paths:
       - '.github/workflows/haafidh-1176-offline-unsigned-stage.yml'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/PostFinalCumulativePolicy.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/PostFinalRecallStore.java'
+      - 'hifz-app/build.gradle.kts'
   workflow_dispatch:
 permissions:
   contents: read
