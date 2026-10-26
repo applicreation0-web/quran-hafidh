@@ -1368,7 +1368,6 @@ public final class MainActivity extends android.app.Activity {
         }else{
             new android.app.AlertDialog.Builder(this)
                 .setTitle("Lectures cumulatives · récapitulatif")
-                .setMessage(detail)
                 .setItems(options.toArray(new String[0]),(dialog,index)->{
                     startActivity(new Intent(this,HifzSessionActivity.class)
                         .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.POST_FINAL_RECALL)
