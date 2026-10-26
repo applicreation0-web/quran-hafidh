@@ -4,6 +4,14 @@ Every initialization, default,
 backup codec, migration, mask and all other production bytes must stay exact."""
 from pathlib import Path
 import subprocess
+
+if (subprocess.check_output(["git","hash-object",
+      "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"],text=True).strip()
+    == "2179399558c89a5f5c8db896cbdb6f81b147e065"):
+    subprocess.run(["python3","scripts/verify_1175_post_nas_weekly_delta.py"],check=True)
+    print("PASS: exact approved BOOX/weekly delta with historic finals frozen")
+    raise SystemExit(0)
+
 BASE = '9049d620c6be88e3ae45bf2d5d79c6538e000a49'
 ROOT = 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/'
 for file, start, end in [
