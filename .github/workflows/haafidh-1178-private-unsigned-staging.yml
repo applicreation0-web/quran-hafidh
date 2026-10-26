@@ -5,6 +5,8 @@ on:
       - fix/haafidh-1178-family-postfinal-20261026
     paths:
       - '.github/workflows/haafidh-1178-private-unsigned-staging.yml'
+      - 'scripts/audit_haafidh_1176.py'
+      - 'hifz-app/build.gradle.kts'
   workflow_dispatch:
 permissions:
   contents: read
