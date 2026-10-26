@@ -26,8 +26,7 @@ public final class ConsolidationCycleEngineTest {
         open=engine.recordRepetition(open);
         assertEquals(1,open.nextUnitIndex());
         assertFalse(open.readyToClose());
-        open=engine.restoreOpenSession(open.cycle().openSession()?
-            engine.closeSession(open).cycle():cycle,"weekly-masked",
+        open=engine.restoreOpenSession(engine.closeSession(open).cycle(),"weekly-masked",
             3,open.stage(),open.nextUnitIndex(),open.donePerStage());
         assertEquals(1,open.nextUnitIndex());
         open=engine.recordRepetition(open);
