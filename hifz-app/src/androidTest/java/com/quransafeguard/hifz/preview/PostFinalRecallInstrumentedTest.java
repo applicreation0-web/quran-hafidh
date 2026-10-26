@@ -28,7 +28,7 @@ public final class PostFinalRecallInstrumentedTest {
                 .putString("programStartDate","2026-09-21")
                 .putBoolean("sevenDayProgrammeMigratedV1",true)
                 .putString("weeklyProgramTransitionsV1",
-                    "[{\\\"from\\\":\\\"2026-10-23\\\",\\\"mode\\\":\\\"RECOMMENDED\\\"}]")
+                    "[{\"from\":\"2026-10-23\",\"mode\":\"RECOMMENDED\"}]")
                 .commit());
             HifzPrefs prefs=new HifzPrefs(c);
             List<WeeklyDashboardPlanner.Row> days=new WeeklyDashboardPlanner(
@@ -59,7 +59,7 @@ public final class PostFinalRecallInstrumentedTest {
             assertTrue(raw.edit().putString("programStartDate","2026-09-21")
                 .putBoolean("sevenDayProgrammeMigratedV1",true)
                 .putString("weeklyProgramTransitionsV1",
-                    "[{\\\"from\\\":\\\"2026-10-23\\\",\\\"mode\\\":\\\"RECOMMENDED\\\"}]")
+                    "[{\"from\":\"2026-10-23\",\"mode\":\"RECOMMENDED\"}]")
                 .commit());
             HifzPrefs prefs=new HifzPrefs(c);
             GeometryRepository geometry=GeometryRepository.get(c);
