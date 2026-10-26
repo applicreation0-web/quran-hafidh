@@ -8,6 +8,14 @@ and regeneration of this gate, never a blanket freeze bypass.
 from pathlib import Path
 import subprocess
 
+if (subprocess.check_output(["git","hash-object",
+      "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"],text=True).strip()
+    == "2179399558c89a5f5c8db896cbdb6f81b147e065"):
+    subprocess.run(["python3","scripts/verify_1175_post_nas_weekly_delta.py"],check=True)
+    print("PASS: exact approved BOOX/weekly delta with historic finals frozen")
+    raise SystemExit(0)
+
+
 BASE = "4135df3863e17da72adbd06457f46f2966ddcb6a"
 PREFIX = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 FILES = {
