@@ -199,6 +199,7 @@ public final class EightWeekSkippedSessionReplayTest {
         }
         disk.disk.put("learningSnowball8WeekHistory",weeks.toString());
         disk.disk.put("v6LearningEarnedEveningUnitsV1",earned.toString());
+        disk.disk.put("v6AcquiredCreditLineIds","[]");
         HifzPrefs prefs=new HifzPrefs(disk);
         List<ConsolidationCycleEngine.Unit> eligible=prefs.learningSnowballFinalUnits(
             START.plusWeeks(7).plusDays(6));
@@ -227,6 +228,7 @@ public final class EightWeekSkippedSessionReplayTest {
         }
         disk.disk.put("learningSnowball8WeekHistory",weeks.toString());
         disk.disk.put("v6LearningEarnedEveningUnitsV1",earned.toString());
+        disk.disk.put("v6AcquiredCreditLineIds","[]");
         HifzPrefs prefs=new HifzPrefs(disk);
         List<ConsolidationCycleEngine.Unit> first=prefs.learningSnowballFinalUnits(
             START.plusWeeks(9).plusDays(6));
