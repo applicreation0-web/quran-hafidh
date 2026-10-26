@@ -8,7 +8,9 @@ final class HifzDisplayVocabulary {
         if (label == null || label.isEmpty()) return label;
         // Reserve the new Itqān label before translating historical "Entretien"
         // (which originally meant passive review), then restore it verbatim.
-        String scoped=label.replace("Finale Sabqi","__FINAL_SABQI__")
+        String scoped=label.replace("Finale Renforcement Sabqi","__FINAL_SABQI__")
+            .replace("Finale Consolidation Itqān","__FINAL_ITQAN__")
+            .replace("Finale Sabqi","__FINAL_SABQI__")
             .replace("Finale Itqān","__FINAL_ITQAN__")
             .replace("Itqān · Entretien","__ITQAN_MAINTENANCE__")
             .replace("Entretien · Itqān","__ITQAN_MAINTENANCE_REVERSED__")
