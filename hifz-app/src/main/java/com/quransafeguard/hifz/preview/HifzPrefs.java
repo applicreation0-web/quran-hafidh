@@ -461,13 +461,6 @@ public final class HifzPrefs {
         }
     }
 
-    /** Read-only family-specific provenance, never the global Acquis pool. */
-    List<String> postFinalPreviouslyAcquiredLineIds(ConsolidationCycleEngine.Family family) {
-        requireSchema6ProgressionState();
-        return PostFinalFamilyCreditLedger.previouslyAcquired(
-            p,family,v6LineIdSet("v6AcquiredCreditLineIds"));
-    }
-
     public ProgressionSnapshot progressionSnapshotV6() {
         requireSchema6ProgressionState();
         return new ProgressionSnapshot(
@@ -3773,7 +3766,6 @@ public final class HifzPrefs {
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
             LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-            LinkedHashSet<String> acquiredBeforeFinal = new LinkedHashSet<>(acquired);
             // No Acquis without the verified weekday protocol receipt.
             LinkedHashSet<String> paid=earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
             for(String unitId:physicalUnitIds(session)){
@@ -3843,17 +3835,10 @@ public final class HifzPrefs {
                 }
             }
 
-            ArrayList<String> finalLineIdsForHistory = new ArrayList<>();
-            for(String unitId:physicalUnitIds(session))
-                finalLineIdsForHistory.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId));
-            String familyCreditHistory = PostFinalFamilyCreditLedger.afterFinal(
-                p,ConsolidationCycleEngine.Family.STABILIZATION,
-                acquiredBeforeFinal,acquired,finalLineIdsForHistory);
             SharedPreferences.Editor editor = p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
-                .putString(PostFinalFamilyCreditLedger.key(ConsolidationCycleEngine.Family.STABILIZATION), familyCreditHistory)
                 .putString("unconsolidatedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(pending)))
                 .putString("forcedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(forced)))
                 .putString("anchoringQueue", anchoringQueueJson(keptQueue))
@@ -3886,7 +3871,6 @@ public final class HifzPrefs {
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
             LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-            LinkedHashSet<String> acquiredBeforeFinal = new LinkedHashSet<>(acquired);
             // No Acquis without the verified weekday protocol receipt.
             LinkedHashSet<String> paid=earnedEveningUnits(ConsolidationCycleEngine.Family.LEARNING);
             for(String unitId:physicalUnitIds(session)){
@@ -3944,16 +3928,9 @@ public final class HifzPrefs {
                 forced = subtractCoverage(forced, verse, verse);
             }
 
-            ArrayList<String> finalLineIdsForHistory = new ArrayList<>();
-            for(String unitId:physicalUnitIds(session))
-                finalLineIdsForHistory.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId));
-            String familyCreditHistory = PostFinalFamilyCreditLedger.afterFinal(
-                p,ConsolidationCycleEngine.Family.LEARNING,
-                acquiredBeforeFinal,acquired,finalLineIdsForHistory);
             SharedPreferences.Editor editor = p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
-                .putString(PostFinalFamilyCreditLedger.key(ConsolidationCycleEngine.Family.LEARNING), familyCreditHistory)
                 .putString("recentSabqi", recentJson(remaining))
                 .putString("promotedRanges", rangesJson(sortRangesPreservingBoundaries(allPromoted)))
                 .putString("unconsolidatedPromotedRanges", rangesJson(pending))
