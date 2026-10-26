@@ -45,7 +45,12 @@ final class PostFinalCumulativePolicy {
         if(current.isEmpty())throw new IllegalArgumentException("At least one validated page required");
         for(GeometryRepository.LineMeta line:previouslyAcquired) {
             if(line==null||line.id==null||line.id.isEmpty())throw new IllegalArgumentException("Invalid acquired line");
-            if(current.containsKey(line.page))continue; // current page must not appear twice
+            if(current.containsKey(line.page)) {
+                // One physical page can contain old Acquis and this week’s newly validated lines.
+                // Keep all eligible lines, but render that page only once in the current group.
+                current.get(line.page).putIfAbsent(line.id,line);
+                continue;
+            }
             previous.computeIfAbsent(line.page,k->new LinkedHashMap<>()).put(line.id,line);
         }
         ArrayList<Integer> priorOrder=new ArrayList<>(previous.keySet());
