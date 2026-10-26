@@ -64,7 +64,7 @@ public final class PhoneProgrammeMigrationInstrumentedTest {
     @Test public void phoneTodayPreviewExcludesTechnicalCoordinatesAndNeverOpensMushaf() {
         String raw="Stabilisation · séance 1/4 · 7 lignes · 1 bloc · p. 515 l. 9–15 · 4 ← 1 الحجرات · ×40 · ✓ Finale Renforcement Sabqi";
         assertEquals("Itqān · Consolidation",MainActivity.readableScheduleTitle(raw,false));
-        assertEquals("Itqān · Entretien",MainActivity.readableScheduleTitle(raw,true));
+        assertEquals("Itqān · Maintien de la maîtrise",MainActivity.readableScheduleTitle(raw,true));
         String compact=MainActivity.readableScheduleEssentials(raw);
         assertTrue(compact.contains("7 lignes"));
         assertTrue(compact.contains("séance 1/4"));
