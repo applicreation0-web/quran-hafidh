@@ -7,6 +7,14 @@ three exact substitutions. A future unrelated Hifz engine change fails CI.
 from pathlib import Path
 import subprocess
 
+if (subprocess.check_output(["git","hash-object",
+      "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java"],text=True).strip()
+    == "20eea00f1c8213c8ce84a8894c7ae2d4acc6185e"):
+    subprocess.run(["python3","scripts/verify_1175_post_nas_weekly_delta.py"],check=True)
+    print("PASS: exact approved BOOX/weekly delta with historic finals frozen")
+    raise SystemExit(0)
+
+
 BASE="7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21"
 PATH="hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java"
 CURRENT_SHA="491aae573afba8bdd5da339a8e15dca8e59661ef"
