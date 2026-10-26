@@ -198,8 +198,11 @@ public final class MainActivity extends android.app.Activity {
         dashboardTitle = Ui.bookText(this, "Cette semaine", 20, true);
         if (wideBoox()) dashboardTitle.setTextSize(24f);
         dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
-        dashboardTitle.setOnClickListener(v -> chooseWeeklyProgram());
-        dashboardTitle.setContentDescription("Choisir le programme hebdomadaire");
+        dashboardTitle.setOnClickListener(v -> {
+            if(weekRows.isEmpty()) refreshDashboard();
+            parcoursScroll.post(() -> parcoursScroll.smoothScrollTo(0,dashboardTitle.getTop()));
+        });
+        dashboardTitle.setContentDescription("Voir le calendrier sur sept jours");
         path.addView(dashboardTitle);
         dashboard = Ui.column(this);
         dashboard.setPadding(0, 0, 0, 0);
@@ -911,12 +914,17 @@ public final class MainActivity extends android.app.Activity {
         // It never replaces an unfinished original Sunday finale.
         // A detached legacy test/navigation shell has no Android Context;
         // the historical finals must not depend on this optional read-only queue.
-        PostFinalRecallStore.Review recall=postFinalStore==null?null:postFinalStore.nextReady(
-            prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
-        if(recall!=null && !LocalDate.parse(recall.date).isAfter(today))
-            addToday(out,"Lecture cumulative "+(PostFinalRecallStore.SABQI.equals(recall.family)?"Sabqi":"Itqān")
+        if(postFinalStore!=null)for(String family:new String[]{
+                PostFinalRecallStore.SABQI,PostFinalRecallStore.ITQAN}){
+            PostFinalRecallStore.Review recall=postFinalStore.nextReadyFor(family,
+                prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
+            if(recall==null||LocalDate.parse(recall.date).isAfter(today))continue;
+            out.add(new TodaySession("Lecture cumulative "
+                +(PostFinalRecallStore.SABQI.equals(family)?"Sabqi":"Itqān")
                 +" · "+(recall.position+1)+"/"+recall.total+" · masquée",
-                HifzSessionActivity.POST_FINAL_RECALL,LocalDate.parse(recall.date),false,null);
+                HifzSessionActivity.POST_FINAL_RECALL,LocalDate.parse(recall.date),
+                false,false,family));
+        }
         // The learning final may have been BLOCKED before it could open. Give
         // access to the actual preceding Sunday rather than silently dropping
         // the ungraduated lines on Monday. Do not create a new Itqan final here.
@@ -933,8 +941,13 @@ public final class MainActivity extends android.app.Activity {
     /** One session expected today, as the "Aujourd’hui" window lists it. */
     static final class TodaySession {
         final String label; final String mode; final LocalDate scheduled; final boolean done; final boolean next;
+        final String postFinalFamily;
         TodaySession(String label,String mode,LocalDate scheduled,boolean done,boolean next){
+            this(label,mode,scheduled,done,next,null);
+        }
+        TodaySession(String label,String mode,LocalDate scheduled,boolean done,boolean next,String postFinalFamily){
             this.label=label;this.mode=mode;this.scheduled=scheduled;this.done=done;this.next=next;
+            this.postFinalFamily=postFinalFamily;
         }
     }
 
@@ -1065,7 +1078,12 @@ public final class MainActivity extends android.app.Activity {
             .setTitle("Aujourd’hui · Choisir une séance")
             .setAdapter(adapter,(dialog,which)->{
                 TodaySession session=sessions.get(which);
-                openMode(session.mode,session.scheduled);
+                if(HifzSessionActivity.POST_FINAL_RECALL.equals(session.mode)
+                        && session.postFinalFamily!=null)
+                    startActivity(new Intent(this,HifzSessionActivity.class)
+                        .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.POST_FINAL_RECALL)
+                        .putExtra(HifzSessionActivity.EXTRA_POST_FINAL_FAMILY,session.postFinalFamily));
+                else openMode(session.mode,session.scheduled);
             }).show();
     }
 
@@ -1088,7 +1106,9 @@ public final class MainActivity extends android.app.Activity {
                 for(TodaySession item:prior) {
                     if(HifzSessionActivity.LEARNING_FINAL.equals(item.mode))names.add("Finale Sabqi");
                     else if(HifzSessionActivity.CONSOLIDATION_FINAL.equals(item.mode))names.add("Finale Itqān");
-                    else if(HifzSessionActivity.POST_FINAL_RECALL.equals(item.mode))names.add("Lecture cumulative masquée");
+                    else if(HifzSessionActivity.POST_FINAL_RECALL.equals(item.mode))
+                        names.add("Lecture cumulative "+(PostFinalRecallStore.ITQAN.equals(item.postFinalFamily)
+                            ?"Itqān":"Sabqi")+" masquée");
                     else names.add("Renforcement Sabqi");
                 }
                 todayObjective.setText(android.text.TextUtils.join(" · ",names)+" · dates conservées");
@@ -1222,9 +1242,18 @@ public final class MainActivity extends android.app.Activity {
         } catch (RuntimeException error) {
             todayRow = null;
             weekRows = new ArrayList<>();
-            TextView unavailable = Ui.bookText(this, "Semaine indisponible", 18f, false);
-            dashboard.addView(unavailable);
-            return;
+            // The real weekly projection can fail for one historical OPEN finale
+            // or an unusually disjoint revision cursor. Never hide all seven dates.
+            // The fallback is purely navigational; it credits and schedules nothing.
+            android.util.Log.e("QuranHifz","Read-only weekly projection failed",error);
+            rows = new ArrayList<>();
+            for(LocalDate date:WeeklyDashboardPlanner.window(HifzClock.today())){
+                String day=WeeklyDashboardPlanner.day(date,HifzClock.today());
+                rows.add(new WeeklyDashboardPlanner.Row(date,day,
+                    "Matin · détails à vérifier","Soir · détails à vérifier",
+                    "Projection à vérifier"));
+            }
+            todayRow = rows.get(0);
         }
         weekRows = rows;
         LocalDate todayDate = HifzClock.today();
