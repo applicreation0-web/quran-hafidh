@@ -957,12 +957,12 @@ public final class MainActivity extends android.app.Activity {
         if(recommendedSunday(today)){
             // No seventh ordinary Itqan lesson on Sunday.
             if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
-                addToday(out,"Finale Renforcement Sabqi · matin",HifzSessionActivity.LEARNING_FINAL,
+                addToday(out,"Finale Sabqi · matin",HifzSessionActivity.LEARNING_FINAL,
                     today,learningFinalResolved(today),nextMode);
             if(!prefs.itqanPostNasMaintenance()
                     && (!prefs.stabilizationSnowballFinalUnits(today).isEmpty()
                         || todayStr.equals(prefs.lastRecentSabqiReviewDate())))
-                addToday(out,"Finale Consolidation Itqān · soir",HifzSessionActivity.CONSOLIDATION_FINAL,
+                addToday(out,"Finale Itqān · soir",HifzSessionActivity.CONSOLIDATION_FINAL,
                     today,consolidationFinalResolved(today),nextMode);
             return out; // No active/passive reviews or ordinary Itqan on Sunday.
         }
@@ -970,20 +970,20 @@ public final class MainActivity extends android.app.Activity {
             case LEARNING:
                 addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Apprentissage",HifzSessionActivity.SABQI,today,modeComplete(today,HifzSessionActivity.SABQI),nextMode);
                 if(!prefs.learningConsolidationUnits(today).isEmpty())
-                    addToday(out,"Renforcement · boule de neige du soir",HifzSessionActivity.LEARNING_CONSOLIDATION,today,!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,today),nextMode);
+                    addToday(out,"Renforcement · révision cumulative du soir",HifzSessionActivity.LEARNING_CONSOLIDATION,today,!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,today),nextMode);
                 break;
             case STABILIZATION:
                 addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Stabilisation",HifzSessionActivity.ITQAN,today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
                 if(!prefs.stabilizedConsolidationUnits(today).isEmpty())
-                    addToday(out,"Consolidation · boule de neige du soir",HifzSessionActivity.RECENT_SABQI_REVIEW,today,!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today),nextMode);
+                    addToday(out,"Consolidation · révision cumulative du soir",HifzSessionActivity.RECENT_SABQI_REVIEW,today,!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today),nextMode);
                 break;
             case REVISION:
                 if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
-                    addToday(out,"Renforcement · révision finale ×3",HifzSessionActivity.LEARNING_FINAL,today,learningFinalResolved(today),nextMode);
+                    addToday(out,"Finale Sabqi · révision par page ×3",HifzSessionActivity.LEARNING_FINAL,today,learningFinalResolved(today),nextMode);
                 if(!prefs.itqanPostNasMaintenance()
                         && (!prefs.stabilizationSnowballFinalUnits(today).isEmpty()
                             || todayStr.equals(prefs.lastRecentSabqiReviewDate())))
-                    addToday(out,"Consolidation · révision finale ×3",HifzSessionActivity.CONSOLIDATION_FINAL,today,consolidationFinalResolved(today),nextMode);
+                    addToday(out,"Finale Itqān · révision par page ×3",HifzSessionActivity.CONSOLIDATION_FINAL,today,consolidationFinalResolved(today),nextMode);
                 break;
             default:break;
         }
