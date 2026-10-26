@@ -18,6 +18,8 @@ public final class ItqanMaintenanceVocabularyTest {
     @Test public void oldFinaleNamesAndSnowballNeverLeakIntoUserLabels() {
         assertEquals("Finale Sabqi",HifzDisplayVocabulary.canonicalize("Finale Sabqi"));
         assertEquals("Finale Itqān",HifzDisplayVocabulary.canonicalize("Finale Itqān"));
+        assertEquals("Finale Sabqi",HifzDisplayVocabulary.canonicalize("Finale Renforcement Sabqi"));
+        assertEquals("Finale Itqān",HifzDisplayVocabulary.canonicalize("Finale Consolidation Itqān"));
         assertEquals("Renforcement · révision cumulative",
             HifzDisplayVocabulary.canonicalize("Renforcement · boule de neige"));
         assertEquals("Consolidation · Révision cumulative",
