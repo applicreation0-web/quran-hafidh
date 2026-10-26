@@ -38,7 +38,7 @@ public final class PostFinalRecallStoreTest {
         assertNull(resumed.nextReady("2026-10-25",""));
         assertFalse(pref.disk.containsKey("v6AcquiredCreditLineIds"));
     }
-    @Test public void independentItqanFinalAndHistoricalOpenRemainFrozen(){
+    @Test public void independentItqanFinalAndHistoricalOpenRemainFrozen() throws Exception {
         InMemoryPrefs prefs=new InMemoryPrefs();
         PostFinalRecallStore store=new PostFinalRecallStore(prefs);
         store.prepare(PostFinalRecallStore.ITQAN,"2026-10-19",plan());
