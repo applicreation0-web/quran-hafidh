@@ -78,7 +78,7 @@ public final class EightWeekSkippedSessionReplayTest {
         assertEquals(2,pending(completed,START.plusDays(55)).size());
         assertEquals(LocalDate.parse("2026-11-06"),
             HifzBacklog.first(pending(completed,START.plusDays(55))).date);
-        assertEquals(47,completed.size()); // no fabricated catchup for other lessons
+        assertEquals(46,completed.size()); // three skips minus one exact dated makeup
     }
 
     @Test public void twoWeeksCompletelyMissedRetainTwelveDatedLessonsAtWeekEight(){
