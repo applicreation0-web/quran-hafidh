@@ -82,8 +82,8 @@ final class PostFinalRecallStore {
      * This never reopens a final, edits Acquis or credits any additional line.
      *
      * Refuse incomplete/corrupt evidence rather than invent an entire week.
-     * Prior Acquis follow the same globally persisted acquisition order as
-     * preparePostFinalRecall; only the just-validated cohort is family-specific.
+     * Both prior and final Acquis are family-specific. Never infer prior
+     * pages from the global acquired-credit array.
      */
     boolean recoverCommittedFromHistory(String family,String date,Set<String>acquired,
                                         GeometryRepository geometry) {
@@ -142,10 +142,16 @@ final class PostFinalRecallStore {
             return false;
         }
         if(!foundCurrentWeek||currentIds.isEmpty())return false;
-        // Match the original post-final contract: up to the 20 most recently
-        // credited PREVIOUS pages across the persisted Acquis, plus this week's
-        // exact physical pages. No synthetic lines or second credit.
-        LinkedHashSet<String> priorIds=new LinkedHashSet<>(acquired);
+        // Historical recovery must obey the SAME family-only source rule as
+        // new post-final preparation; global Acquis can contain the other track.
+        ConsolidationCycleEngine.Family provenance=SABQI.equals(family)
+            ?ConsolidationCycleEngine.Family.LEARNING
+            :ConsolidationCycleEngine.Family.STABILIZATION;
+        LinkedHashSet<String> priorIds;
+        try {
+            priorIds=new LinkedHashSet<>(PostFinalFamilyCreditLedger.previouslyAcquired(
+                prefs,provenance,acquired));
+        } catch(RuntimeException unavailable) {return false;}
         priorIds.removeAll(currentIds);
         try {
             // The geometry map is canonical, but the historical family/week
