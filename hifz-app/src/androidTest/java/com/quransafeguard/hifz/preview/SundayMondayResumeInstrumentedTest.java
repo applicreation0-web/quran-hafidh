@@ -52,13 +52,27 @@ public final class SundayMondayResumeInstrumentedTest {
             "stabilization-final-2026-10-25",ConsolidationCycleEngine.Family.STABILIZATION,
             ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED)));
         Map<String,?> before=raw.getAll();
-        MainActivity shell=new MainActivity();
-        Field field=MainActivity.class.getDeclaredField("prefs");
-        field.setAccessible(true);field.set(shell,prefs);
-        Method resume=MainActivity.class.getDeclaredMethod("unfinishedWeekendSessions",LocalDate.class);
-        resume.setAccessible(true);
-        List<MainActivity.TodaySession> monday=(List<MainActivity.TodaySession>)
-            resume.invoke(shell,LocalDate.of(2026,10,26));
+        // Activity creation requires Android's main Looper, even for a
+        // reflection-only UI navigation test. Do not bypass that invariant.
+        final java.util.concurrent.atomic.AtomicReference<List<MainActivity.TodaySession>>
+            restored=new java.util.concurrent.atomic.AtomicReference<>();
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+            .runOnMainSync(() -> {
+                try {
+                    MainActivity shell=new MainActivity();
+                    Field field=MainActivity.class.getDeclaredField("prefs");
+                    field.setAccessible(true);field.set(shell,prefs);
+                    Method resume=MainActivity.class.getDeclaredMethod(
+                        "unfinishedWeekendSessions",LocalDate.class);
+                    resume.setAccessible(true);
+                    restored.set((List<MainActivity.TodaySession>)resume.invoke(
+                        shell,LocalDate.of(2026,10,26)));
+                } catch(ReflectiveOperationException error) {
+                    throw new AssertionError("Cannot inspect original-date OPEN recovery",error);
+                }
+            });
+        List<MainActivity.TodaySession> monday=restored.get();
+        assertNotNull("Monday navigation result must be visible",monday);
         boolean sabqi=false,itqan=false;
         for(MainActivity.TodaySession row:monday) {
             if(row.mode.equals(HifzSessionActivity.LEARNING_CONSOLIDATION)) {
