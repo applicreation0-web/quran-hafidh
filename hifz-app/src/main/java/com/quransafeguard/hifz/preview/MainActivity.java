@@ -905,6 +905,14 @@ public final class MainActivity extends android.app.Activity {
                 addToday(out,"Reprendre finale Itqān du "+dated+" · soir",
                     HifzSessionActivity.CONSOLIDATION_FINAL,dated,false,null);
         }
+        // Non-crediting cumulative recall survives day changes and process death.
+        // It never replaces an unfinished original Sunday finale.
+        PostFinalRecallStore.Review recall=new PostFinalRecallStore(this).nextReady(
+            prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
+        if(recall!=null && !LocalDate.parse(recall.date).isAfter(today))
+            addToday(out,"Lecture cumulative "+(PostFinalRecallStore.SABQI.equals(recall.family)?"Sabqi":"Itqān")
+                +" · "+(recall.position+1)+"/"+recall.total+" · masquée",
+                HifzSessionActivity.POST_FINAL_RECALL,LocalDate.parse(recall.date),false,null);
         // The learning final may have been BLOCKED before it could open. Give
         // access to the actual preceding Sunday rather than silently dropping
         // the ungraduated lines on Monday. Do not create a new Itqan final here.
@@ -1076,6 +1084,7 @@ public final class MainActivity extends android.app.Activity {
                 for(TodaySession item:prior) {
                     if(HifzSessionActivity.LEARNING_FINAL.equals(item.mode))names.add("Finale Sabqi");
                     else if(HifzSessionActivity.CONSOLIDATION_FINAL.equals(item.mode))names.add("Finale Itqān");
+                    else if(HifzSessionActivity.POST_FINAL_RECALL.equals(item.mode))names.add("Lecture cumulative masquée");
                     else names.add("Renforcement Sabqi");
                 }
                 todayObjective.setText(android.text.TextUtils.join(" · ",names)+" · dates conservées");
