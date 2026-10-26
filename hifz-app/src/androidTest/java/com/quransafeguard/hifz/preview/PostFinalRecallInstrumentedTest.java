@@ -14,6 +14,51 @@ import static org.junit.Assert.*;
 
 /** Actual Android Activity: masked post-final queue, restart and unchanged Acquis/final states. */
 public final class PostFinalRecallInstrumentedTest {
+    @Test public void booxTodayMenuPreservesBothSabqiAndItqanPendingRecallEntries() throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            new HifzPrefs(c); // prepare valid V6 defaults without invented credits
+            PostFinalRecallStore queue=new PostFinalRecallStore(c);
+            GeometryRepository geometry=GeometryRepository.get(c);
+            queue.prepare(PostFinalRecallStore.SABQI,"2026-10-18",PostFinalCumulativePolicy.plan(
+                geometry.linesForExactIds(geometry.lineIdsOnPage(16)),
+                geometry.linesForExactIds(geometry.lineIdsOnPage(17))));
+            queue.prepare(PostFinalRecallStore.ITQAN,"2026-10-25",PostFinalCumulativePolicy.plan(
+                geometry.linesForExactIds(geometry.lineIdsOnPage(523)),
+                geometry.linesForExactIds(geometry.lineIdsOnPage(524))));
+            assertTrue(queue.markReady(PostFinalRecallStore.SABQI,"2026-10-18"));
+            assertTrue(queue.markReady(PostFinalRecallStore.ITQAN,"2026-10-25"));
+            assertTrue(raw.edit().putString("lastLearningConsolidationDate","2026-10-18")
+                .putString("lastRecentSabqiReviewDate","2026-10-25").commit());
+            try(ActivityScenario<MainActivity> screen=ActivityScenario.launch(MainActivity.class)){
+                screen.onActivity(activity->{
+                    try{
+                        Field method=MainActivity.class.getDeclaredField("postFinalStore");
+                        method.setAccessible(true);
+                        assertNotNull(method.get(activity));
+                        java.lang.reflect.Method pending=MainActivity.class.getDeclaredMethod(
+                            "unfinishedWeekendSessions",java.time.LocalDate.class);
+                        pending.setAccessible(true);
+                        @SuppressWarnings("unchecked")
+                        List<Object> sessions=(List<Object>)pending.invoke(activity,java.time.LocalDate.of(2026,10,26));
+                        int sabqi=0,itqan=0;
+                        for(Object row:sessions){
+                            Field family=row.getClass().getDeclaredField("postFinalFamily");
+                            family.setAccessible(true);
+                            Object value=family.get(row);
+                            if(PostFinalRecallStore.SABQI.equals(value))sabqi++;
+                            if(PostFinalRecallStore.ITQAN.equals(value))itqan++;
+                        }
+                        assertEquals("Both recalls must appear, even when Sabqi was first",1,sabqi);
+                        assertEquals("Completed Itqan masked recall must never be hidden",1,itqan);
+                    }catch(ReflectiveOperationException e){throw new AssertionError(e);}
+                });
+            }
+        }finally{assertTrue(raw.edit().clear().commit());}
+    }
+
     @Test public void maskedPagesResumeWithoutReopeningTheSabqiFinalOrTouchingCredits() throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
         SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
