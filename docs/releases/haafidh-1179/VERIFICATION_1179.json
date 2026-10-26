@@ -1,0 +1,32 @@
+{
+  "base": "ae68ee1a46e195e9da1068aed981f3363869a4e0",
+  "head": "60f79057446fb9dae32ea0967593350a56fa7710",
+  "branch": "work/haafidh-1179-boox-ui-20261026",
+  "version": "1.17.9",
+  "version_code": 47,
+  "ci_run": 40413003551,
+  "artifact_id": 12693569089,
+  "artifact_sha256": "d5ae37a450071bb2e2d6c937de15473a01b33bed40f11c9c49601ac2a511a4a8",
+  "xml_counts": {
+    "JVM": [
+      926,
+      0,
+      0,
+      0,
+      190
+    ],
+    "Android": [
+      55,
+      0,
+      0,
+      0,
+      1
+    ]
+  },
+  "external_process_death_phases_passed": 4,
+  "unchanged_runtime_files": 234,
+  "physical_boox_tested": false,
+  "compatible_update_apk_delivered": false,
+  "official_published": false,
+  "verdict": "NO-GO official release; GO software for private candidate finalization"
+}
