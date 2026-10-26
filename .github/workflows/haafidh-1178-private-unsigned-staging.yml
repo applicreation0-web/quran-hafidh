@@ -80,6 +80,13 @@ jobs:
           print('PASS: no private files inside unfinalized build')
           PY
           cp "$apk" artifact/QURAN_HAAFIDH_1178_PUBLIC_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          test -s "$sdk/lib/apksigner.jar"
+          test -x "$sdk/zipalign"
+          test -s "$sdk/lib64/libc++.so"
+          cp "$sdk/lib/apksigner.jar" artifact/apksigner.jar
+          cp "$sdk/zipalign" artifact/zipalign
+          cp "$sdk/lib64/libc++.so" artifact/libc++.so
           git rev-parse HEAD > artifact/SOURCE_SHA.txt
           cat > artifact/READ_ME_FIRST.txt <<'TXT'
           DO NOT INSTALL OR DISTRIBUTE THIS APK AS AN APPLICATION.
