@@ -185,7 +185,9 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
                     boolean snowballDone=snowballActual!=null || (date.equals(today)
                         && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date));
-                    evening=snowballDone?"✓ Consolidation":"Consolidation · boule de neige";
+                    evening=snowballDone?"✓ Consolidation":prefs.itqanPostNasMaintenance()
+                        ? "Consolidation · maintiens de la semaine · ×1 masqué"
+                        : "Consolidation · boule de neige";
                     state=morningDone&&snowballDone?"Validé":morningDone?"Soir à faire":"À faire";
                     break;
                 }
