@@ -1,0 +1,81 @@
+name: Quran Haafidh 1.17.5 certificate-checked APK v2 metadata signer (no APK or Atlas data)
+on:
+  push:
+    branches:
+      - fix/haafidh-1175-finals-monday-20261025
+    paths:
+      - signing-input/signed_data_1175.b64
+permissions:
+  contents: read
+jobs:
+  v2-offline-metadata-sign-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Restore historical official certificate key in isolated runner only
+        env:
+          HIFZ_KEYSTORE_BASE64: ${{ secrets.HIFZ_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "${HIFZ_KEYSTORE_BASE64:-}"
+          printf '%s' "$HIFZ_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/official.jks"
+          chmod 600 "$RUNNER_TEMP/official.jks"
+      - name: Verify historical cert SHA256 and sign ONLY APK v2 metadata
+        env:
+          HIFZ_KEYSTORE_PASSWORD: ${{ secrets.HIFZ_KEYSTORE_PASSWORD }}
+          HIFZ_KEY_ALIAS: ${{ secrets.HIFZ_KEY_ALIAS }}
+          HIFZ_KEY_PASSWORD: ${{ secrets.HIFZ_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/Sign1175V2Data.java" <<'JAVA'
+          import java.nio.file.*;
+          import java.security.*;
+          import java.security.cert.Certificate;
+          import java.util.Base64;
+          public class Sign1175V2Data {
+            static String hex(byte[] b){
+              StringBuilder s=new StringBuilder();
+              for(byte v:b)s.append(String.format("%02x",v&255));
+              return s.toString();
+            }
+            public static void main(String[] args)throws Exception {
+              byte[] input=Base64.getMimeDecoder().decode(Files.readString(Path.of(args[0])).trim());
+              if(input.length<1200||input.length>3500)throw new SecurityException("Only APKv2 signedData accepted");
+              KeyStore store=KeyStore.getInstance(Path.of(args[1]).toFile(),
+                  System.getenv("HIFZ_KEYSTORE_PASSWORD").toCharArray());
+              String alias=System.getenv("HIFZ_KEY_ALIAS");
+              Certificate cert=store.getCertificate(alias);
+              if(cert==null)throw new SecurityException("No official certificate");
+              String actual=hex(MessageDigest.getInstance("SHA-256").digest(cert.getEncoded()));
+              if(!actual.equals("66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14"))
+                throw new SecurityException("Non-official certificate; abort");
+              Signature signer=Signature.getInstance("SHA256withRSA");
+              signer.initSign((PrivateKey)store.getKey(alias,
+                  System.getenv("HIFZ_KEY_PASSWORD").toCharArray()));
+              signer.update(input);
+              byte[] signature=signer.sign();
+              Signature verifier=Signature.getInstance("SHA256withRSA");
+              verifier.initVerify(cert);verifier.update(input);
+              if(!verifier.verify(signature))throw new SecurityException("Invalid local signature");
+              Files.writeString(Path.of(args[2]),Base64.getEncoder().encodeToString(signature)+"\n");
+              System.out.println("CERT_OK="+actual);
+              System.out.println("SIGNED_DATA_SHA256="+hex(MessageDigest.getInstance("SHA-256").digest(input)));
+              System.out.println("SIGNATURE_SHA256="+hex(MessageDigest.getInstance("SHA-256").digest(signature)));
+              System.out.println("PASS: signature only; GitHub never received the private APK/assets");
+            }
+          }
+          JAVA
+          javac "$RUNNER_TEMP/Sign1175V2Data.java"
+          java -cp "$RUNNER_TEMP" Sign1175V2Data signing-input/signed_data_1175.b64 "$RUNNER_TEMP/official.jks" "$RUNNER_TEMP/signature_1175.b64"
+          shred -fu "$RUNNER_TEMP/official.jks" || rm -f "$RUNNER_TEMP/official.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-1175-official-v2-signature-only
+          path: ${{ runner.temp }}/signature_1175.b64
+          retention-days: 1
+          if-no-files-found: error
