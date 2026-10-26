@@ -29,6 +29,27 @@ import static org.junit.Assert.assertTrue;
  * canonical KFQC Madani line geometry and on a real (in-memory) SharedPreferences store.
  */
 public final class ItqanPostNasMaintenanceTest {
+    @Test public void datedProgrammeCannotReturnNewSessionsToFirstRegimeAfterNas() {
+        InMemoryPrefs db=new InMemoryPrefs();
+        db.disk.put(ItqanRegimeStore.INITIAL_TAIL_COMPLETED,true);
+        db.disk.put("itqanProgrammeChoiceV1","CONSOLIDATION");
+        db.disk.put("itqanProgrammeStartsOnV1","2026-01-01");
+        Map<String,?> before=db.getAll();
+        ItqanRegimeStore.UnitPlan plan=ItqanRegimeStore.resolvePlan(db,"51:31","51:60",AnchoringQueue.ItqanProtocol.FULL);
+        assertEquals(ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE,plan.regime);
+        assertEquals(3,ItqanMaintenancePolicy.totalReps(plan));
+        assertEquals(before,db.getAll());
+    }
+
+    @Test public void directFinalEntryChecksPhysicalNasLatchBeforeCreatingAnyCycle() throws Exception {
+        Path path=Paths.get("src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        if(!Files.exists(path))path=Paths.get("hifz-app").resolve(path);
+        String source=Files.readString(path);
+        String render=source.substring(source.indexOf("private void renderConsolidationFinalReview()"),source.indexOf("private void validateConsolidationFinalReview()"));
+        assertTrue(render.indexOf("prefs.itqanPostNasMaintenance()")>=0);
+        assertTrue(render.indexOf("prefs.itqanPostNasMaintenance()")<render.indexOf("renderGroupedCycle("));
+        assertTrue(render.contains("\"stabilization-final-\""));
+    }
     private static GeometryRepository geometry;
 
     @BeforeClass public static void loadCanonicalGeometry() throws Exception {

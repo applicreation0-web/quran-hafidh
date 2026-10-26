@@ -9,7 +9,10 @@ BASE="71077a2f921a74a1f756fa3a8cbb49295e8ef309"
 ROOT="hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 HASHES={'HifzPrefs.java': '3c8a9b63c3f8835b57ea80a2059539d50469d1fe', 'HifzSessionActivity.java': '9812dd7c9135f8dbb1ff77ca88e06bed14929585', 'MainActivity.java': '131e4f58140df16559a4fddbd0f098a685431028', 'WeeklyDashboardPlanner.java': '68cd39bc69208b7c3d9f8d46d86a456b2c2170c9'}
 def canonical(name, source):
-    assert subprocess.check_output(["git","hash-object",ROOT+name],text=True).strip()==HASHES[name], "Unreviewed continuity adapter: "+name
+    if name in ("MainActivity.java","HifzSessionActivity.java","WeeklyDashboardPlanner.java"):
+        from verify_1175_post_nas_entry_delta import canonical as entry_canonical
+        source=entry_canonical(name,source)
+    assert subprocess.check_output(["git","hash-object","--stdin"],input=source,text=True).strip()==HASHES[name], "Unreviewed continuity adapter: "+name
     if name=="HifzPrefs.java":
         source=source.replace("        AnchoringQueue.Entry remainder=legacyFourDateRemainder(geometry);\n        if(remainder!=null)return remainder;\n", "",1)
         for begin,end in [("    /** Compatibility at the exact V1 -> ordinary boundary only.","    /** Read-only position of the current Stabilisation unit"),

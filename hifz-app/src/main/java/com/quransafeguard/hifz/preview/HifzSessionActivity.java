@@ -699,6 +699,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));
             return;
         }
+        // The physical An-Nas latch forbids every NEW final, including a
+        // stale/direct intent or an explicit programme choice. A real OPEN
+        // first-regime final still restores its original protocol and date.
+        if(prefs.itqanPostNasMaintenance()
+                && prefs.unfinishedConsolidationSessionDate(
+                    ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")==null) {
+            sessionCompleted=true;
+            program.setText("Itqān · Maintien de la maîtrise");
+            progress.setText("Aucune nouvelle finale Itqān. Reprendre la séance ordinaire d’un hizb ×3.");
+            return;
+        }
         renderGroupedCycle(prefs.stabilizationSnowballFinalUnits(sessionDate, geometry), ConsolidationCycleEngine.Family.STABILIZATION,
             "stabilization-final-", "Consolidation", "Aucune boule de neige à finaliser cette semaine.",
             this::validateConsolidationFinalReview);

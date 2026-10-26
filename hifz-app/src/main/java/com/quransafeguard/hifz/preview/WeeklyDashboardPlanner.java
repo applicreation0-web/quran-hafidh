@@ -197,7 +197,7 @@ final class WeeklyDashboardPlanner {
                     // A pre-existing frozen first-regime OPEN finale may still resume.
                     boolean oldItqanFinal=prefs.unfinishedConsolidationSessionDate(
                         ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null;
-                    boolean itqanFinalDue=!prefs.itqanEntretienActive()||oldItqanFinal;
+                    boolean itqanFinalDue=!prefs.itqanPostNasMaintenance()||oldItqanFinal;
                     boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
                     morning=learningDone?"✓ Finale Renforcement Sabqi":"Finale Renforcement Sabqi · ×3";
                     evening=!itqanFinalDue?"—":consolidationDone?"✓ Finale Consolidation Itqān":"Finale Consolidation Itqān · ×3";

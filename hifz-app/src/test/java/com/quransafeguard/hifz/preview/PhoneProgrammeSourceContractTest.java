@@ -33,7 +33,7 @@ public final class PhoneProgrammeSourceContractTest {
         assertTrue(prefs.contains("scheduleItqanProgramme(String programme,LocalDate from)"));
         assertTrue(prefs.contains("from.isBefore(HifzClock.today())"));
         assertTrue(regime.contains("if(\"ENTRETIEN\".equals(programme))return reached;"));
-        assertTrue(regime.contains("if(\"CONSOLIDATION\".equals(programme))return false;"));
+        assertTrue(regime.contains("if(\"CONSOLIDATION\".equals(programme))return reached;"));
         assertTrue(regime.contains("if (stamped != null) return stamped;"));
         assertTrue(source("SettingsActivity.java").contains("new android.app.DatePickerDialog(this,"));
     }

@@ -51,6 +51,7 @@ public final class SundayMondayResumeInstrumentedTest {
         assertTrue(prefs.persistConsolidationSession(frozen(
             "stabilization-final-2026-10-25",ConsolidationCycleEngine.Family.STABILIZATION,
             ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED)));
+        assertTrue(raw.edit().putBoolean(ItqanRegimeStore.INITIAL_TAIL_COMPLETED,true).commit());
         Map<String,?> before=raw.getAll();
         // Activity creation requires Android's main Looper, even for a
         // reflection-only UI navigation test. Do not bypass that invariant.
@@ -123,6 +124,35 @@ public final class SundayMondayResumeInstrumentedTest {
             assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
             assertNull(prefs.frozenItqanSnapshot(geometry));
             assertEquals("51:31",raw.getString(ItqanRegimeStore.CURSOR,""));
+        }
+    }
+
+    @Test public void directIntentCannotCreateNewPostNasFinalDespiteEligibleReceipts() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        List<String> ids=GeometryRepository.get(context).lineIdsOnPage(523).subList(0,2);
+        String unit=ConsolidationPhysicalUnitPolicy.encodeLineUnit(ids);
+        assertTrue(raw.edit().putInt("schema",6)
+            .putString("v6LearnedLineIds","[]").putString("v6AcquiredCreditLineIds","[]")
+            .putString("v6StabilizedLineIds",new org.json.JSONArray(ids).toString())
+            .putString("v6QuarantineLineIds","[]").putString("v6LegacyPartialAcquiredLineIds","[]")
+            .putBoolean(ItqanRegimeStore.INITIAL_TAIL_COMPLETED,true)
+            .putString("itqanProgrammeChoiceV1","CONSOLIDATION")
+            .putString("itqanProgrammeStartsOnV1","2026-01-01")
+            .putString("v6StabilizationEarnedEveningUnitsV1",new org.json.JSONArray().put(unit).toString())
+            .putString("stabilizationSnowball8WeekHistory",new org.json.JSONArray().put(
+                new org.json.JSONObject().put("week","2026-10-19").put("units",new org.json.JSONArray().put(unit))).toString())
+            .commit());
+        assertFalse(new HifzPrefs(context).stabilizationSnowballFinalUnits(LocalDate.of(2026,10,25)).isEmpty());
+        android.content.Intent intent=new android.content.Intent(context,HifzSessionActivity.class)
+            .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.CONSOLIDATION_FINAL)
+            .putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,"2026-10-25");
+        try(androidx.test.core.app.ActivityScenario<HifzSessionActivity> scenario=
+                androidx.test.core.app.ActivityScenario.launch(intent)) {
+            scenario.onActivity(activity->{
+                assertFalse(raw.contains("v6ConsolidationStabilizationStateFinalV1"));
+                assertTrue(new HifzPrefs(context).progressionSnapshotV6().acquired.isEmpty());
+                assertEquals(new java.util.LinkedHashSet<>(ids),new HifzPrefs(context).progressionSnapshotV6().stabilized);
+            });
         }
     }
 }

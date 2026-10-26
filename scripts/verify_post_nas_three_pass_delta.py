@@ -11,7 +11,7 @@ BASE="ecbe005a79e5d89e77b9e9ac6968e6916cc8bdb8"
 PREFIX="hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 PINS={
     "ItqanMaintenancePolicy.java":"05c9dfaec00b7d67b3ab3aa8763337294da62935",
-    "ItqanRegimeStore.java":"bf9f44a95fdbaeccdb80a7239372743f4eaf7225",
+    "ItqanRegimeStore.java":"75c8aaacdceec9c4b8a591b84b7d1493aa15d515",
     "ItqanBalancedMaskSchedule.java":"4ed14f4f2559977405a7d23d61cac080302d8b06",
 }
 def git(*args):
@@ -19,6 +19,9 @@ def git(*args):
 for filename,pin in PINS.items():
     target=PREFIX+filename
     assert Path(target).is_file(),f"Missing Itqan policy: {target}"
+    if filename=="ItqanRegimeStore.java":
+        from verify_1175_post_nas_entry_delta import canonical
+        canonical(filename,Path(target).read_text())
     assert git("hash-object",target)==pin,f"UNREVIEWED post-An-Nas change: {target}"
 
 # Under no circumstances may the user request alter the storage writer or

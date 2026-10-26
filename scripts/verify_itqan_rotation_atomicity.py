@@ -4,7 +4,9 @@ import subprocess
 from pathlib import Path
 path="hifz-app/src/main/java/com/quransafeguard/hifz/preview/ItqanRegimeStore.java"
 source=Path(path).read_text(encoding="utf-8")
-expected="bf9f44a95fdbaeccdb80a7239372743f4eaf7225"
+from verify_1175_post_nas_entry_delta import canonical
+canonical("ItqanRegimeStore.java",source)
+expected="75c8aaacdceec9c4b8a591b84b7d1493aa15d515"
 previous=subprocess.check_output(["git","show",
     "ecbe005a79e5d89e77b9e9ac6968e6916cc8bdb8:"+path],text=True)
 old_enum="    enum MaskProfile { LEGACY_15_5_5_5_10, BALANCED_20_5_5_5_5 }"

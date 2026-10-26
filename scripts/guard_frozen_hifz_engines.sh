@@ -110,10 +110,11 @@ while IFS= read -r file; do
       fi
       ;;
     "$APP_ROOT/HifzDisplayVocabulary.java")
-      if [[ "$(git hash-object "$file")" != "f7219f9949eab732ecf1143e9b6266f1b4efc1bc" ]]; then
+      if [[ "$(git hash-object "$file")" != "d30c6cfc475a95497660f1f2167c0b0635e91c10" ]]; then
         echo "::error file=$file::Display vocabulary differs from reviewed Révision passive labels."
         bad=1
       else
+        python3 scripts/verify_1175_labels_delta.py || bad=1
         echo "EXACT USER-APPROVED ITQAN/REVISION LABEL BOUNDARY: $file"
       fi
       ;;

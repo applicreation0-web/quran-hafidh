@@ -178,7 +178,7 @@ public final class SettingsActivity extends android.app.Activity {
         addGlossaryTerm(about,"Sabqi (سبقي) · révision récente",
             "Reprise rapprochée des passages récemment mémorisés. Dans Haafidh : Renforcement ; distinct de la nouvelle leçon.");
         addGlossaryTerm(about,"Itqān (إتقان) · maîtrise",
-            "Précision et fluidité de la récitation. Dans Haafidh : Stabilisation et Consolidation avant An-Nās ; Entretien Itqān après An-Nās.");
+            "Précision et fluidité de la récitation. Dans Haafidh : Consolidation, puis Maintien de la maîtrise après l’arrivée à An-Nās.");
         addGlossaryTerm(about,"Murājaʿah (مراجعة) · révision",
             "Maintien des passages déjà mémorisés. Haafidh distingue révision active (texte masqué) et révision passive (texte visible).");
         addGlossaryTerm(about,"Manzil · révision ancienne",
@@ -378,24 +378,31 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private String itqanProgrammeSummary() {
+        if(prefs.itqanPostNasMaintenance())return "Itqān · Maintien de la maîtrise · 1 hizb ×3";
         String mode=prefs.itqanProgrammeChoice();
         LocalDate from=prefs.itqanProgrammeStartDate();
         if("AUTO".equals(mode))return (prefs.itqanEntretienActive()
             ? "Itqān · Maintien de la maîtrise" : "Itqān · Consolidation")+" · automatique";
         if("ENTRETIEN".equals(mode) && !prefs.itqanPostNasMaintenance())
-            return "Entretien · en attente d’An-Nās · dès le "+from;
+            return "Itqān · Maintien de la maîtrise · en attente de fin de parcours · dès le "+from;
         if(from!=null && from.isAfter(HifzClock.today()))
-            return ("ENTRETIEN".equals(mode)?"Entretien · hizb ×3":"Consolidation · approfondie")
+            return ("ENTRETIEN".equals(mode)?"Itqān · Maintien de la maîtrise · hizb ×3":"Itqān · Consolidation · approfondie")
                 +" · programmé dès le "+from;
-        return ("ENTRETIEN".equals(mode)?"Entretien · hizb ×3":"Consolidation · approfondie")
+        return ("ENTRETIEN".equals(mode)?"Itqān · Maintien de la maîtrise · hizb ×3":"Itqān · Consolidation · approfondie")
             +" · actif depuis le "+from;
     }
 
     /** Explicit programme and effective date; does not rewrite existing Hifz sessions. */
     private void chooseItqanProgramme() {
+        if(prefs.itqanPostNasMaintenance()) {
+            new AlertDialog.Builder(this).setTitle("Itqān · Maintien de la maîtrise")
+                .setMessage("1 hizb réel par séance : deux lectures visibles et une récitation masquée avec amorces. Les séances déjà ouvertes conservent leur protocole.")
+                .setPositiveButton("Fermer",null).show();
+            return;
+        }
         String[] choices={
-            "Consolidation · protocole approfondi (avant An-Nās)",
-            "Entretien · 1 hizb ×3 (après An-Nās)"
+            "Itqān · Consolidation · protocole approfondi",
+            "Itqān · Maintien de la maîtrise · 1 hizb ×3"
         };
         int[] selected={"ENTRETIEN".equals(prefs.itqanProgrammeChoice())?1:0};
         new AlertDialog.Builder(this).setTitle("Quel programme Itqān souhaitez-vous ?")
@@ -410,7 +417,7 @@ public final class SettingsActivity extends android.app.Activity {
                         LocalDate from=LocalDate.of(year,month+1,day);
                         String selectedMode=selected[0]==0?"CONSOLIDATION":"ENTRETIEN";
                         String caution=selected[0]==1 && !prefs.itqanPostNasMaintenance()
-                            ? "\nEntretien commencera au plus tôt après l'arrivée effective à An-Nās."
+                            ? "\nLe maintien commencera au plus tôt après l'arrivée effective à An-Nās."
                             : "";
                         new AlertDialog.Builder(this).setTitle("Confirmer le programme")
                             .setMessage(choices[selected[0]]+"\nÀ partir du "+from+

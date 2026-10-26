@@ -678,9 +678,9 @@ public final class MainActivity extends android.app.Activity {
         // The maintenance tile must lead to the hizb ×3, not a non-existent
         // post-An-Nās Consolidation finale. Existing pre-An-Nās OPEN finals
         // were checked above and always retain their original date/protocol.
-        if(prefs.itqanEntretienActive())return HifzSessionActivity.ITQAN;
+        if(prefs.itqanPostNasMaintenance())return HifzSessionActivity.ITQAN;
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
-        return today.getDayOfWeek()==DayOfWeek.SUNDAY && !prefs.itqanEntretienActive()
+        return today.getDayOfWeek()==DayOfWeek.SUNDAY && !prefs.itqanPostNasMaintenance()
                 && !consolidationFinalResolved(today)
             ? HifzSessionActivity.CONSOLIDATION_FINAL : HifzSessionActivity.RECENT_SABQI_REVIEW;
     }
@@ -702,7 +702,7 @@ public final class MainActivity extends android.app.Activity {
             // not keep Monday's six-day calendar in backlog forever.
             return !date.equals(HifzClock.today())
                 || (learningFinalResolved(date)
-                    && (prefs.itqanEntretienActive() || consolidationFinalResolved(date)));
+                    && (prefs.itqanPostNasMaintenance() || consolidationFinalResolved(date)));
         }
         CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek());
         switch(action){
@@ -711,7 +711,7 @@ public final class MainActivity extends android.app.Activity {
             case REVISION:
                 if(!date.equals(HifzClock.today()))return true;
                 return learningFinalResolved(date)
-                    && (prefs.itqanEntretienActive() || consolidationFinalResolved(date));
+                    && (prefs.itqanPostNasMaintenance() || consolidationFinalResolved(date));
             default:return false;
         }
     }
@@ -786,7 +786,7 @@ public final class MainActivity extends android.app.Activity {
             // Older Sunday finals are resumed via their original OPEN snapshots.
             if(!isToday)return null;
             if(!learningFinalResolved(date))return HifzSessionActivity.LEARNING_FINAL;
-            if(!prefs.itqanEntretienActive() && !consolidationFinalResolved(date))
+            if(!prefs.itqanPostNasMaintenance() && !consolidationFinalResolved(date))
                 return HifzSessionActivity.CONSOLIDATION_FINAL;
             return null;
         }
@@ -800,7 +800,7 @@ public final class MainActivity extends android.app.Activity {
             case REVISION:
                 if(!isToday)return null;
                 if(!learningFinalResolved(today))return HifzSessionActivity.LEARNING_FINAL;
-                if(!prefs.itqanEntretienActive() && !consolidationFinalResolved(today))
+                if(!prefs.itqanPostNasMaintenance() && !consolidationFinalResolved(today))
                     return HifzSessionActivity.CONSOLIDATION_FINAL;
                 return null; // No active/passive review on Sunday in EITHER programme.
             default:return null;
@@ -946,7 +946,7 @@ public final class MainActivity extends android.app.Activity {
             if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
                 addToday(out,"Finale Renforcement Sabqi · matin",HifzSessionActivity.LEARNING_FINAL,
                     today,learningFinalResolved(today),nextMode);
-            if(!prefs.itqanEntretienActive()
+            if(!prefs.itqanPostNasMaintenance()
                     && (!prefs.stabilizationSnowballFinalUnits(today).isEmpty()
                         || todayStr.equals(prefs.lastRecentSabqiReviewDate())))
                 addToday(out,"Finale Consolidation Itqān · soir",HifzSessionActivity.CONSOLIDATION_FINAL,
@@ -967,7 +967,7 @@ public final class MainActivity extends android.app.Activity {
             case REVISION:
                 if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
                     addToday(out,"Renforcement · révision finale ×3",HifzSessionActivity.LEARNING_FINAL,today,learningFinalResolved(today),nextMode);
-                if(!prefs.itqanEntretienActive()
+                if(!prefs.itqanPostNasMaintenance()
                         && (!prefs.stabilizationSnowballFinalUnits(today).isEmpty()
                             || todayStr.equals(prefs.lastRecentSabqiReviewDate())))
                     addToday(out,"Consolidation · révision finale ×3",HifzSessionActivity.CONSOLIDATION_FINAL,today,consolidationFinalResolved(today),nextMode);
@@ -1107,7 +1107,7 @@ public final class MainActivity extends android.app.Activity {
         boolean learning=!prefs.learningSnowballFinalUnits(HifzClock.today()).isEmpty();
         boolean historicalItqanFinal=prefs.unfinishedConsolidationSessionDate(
             ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null;
-        boolean stabilization=(!prefs.itqanEntretienActive() || historicalItqanFinal)
+        boolean stabilization=(!prefs.itqanPostNasMaintenance() || historicalItqanFinal)
             && !prefs.stabilizationSnowballFinalUnits(HifzClock.today()).isEmpty();
         if(!learning && !stabilization) {
             recentSabqiAdvisory.setText("");

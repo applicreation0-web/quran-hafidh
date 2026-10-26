@@ -98,7 +98,7 @@ final class ItqanRegimeStore {
         try { start=LocalDate.parse(startRaw); }
         catch(RuntimeException invalid){return reached;}
         if(HifzClock.today().isBefore(start))return reached;
-        if("CONSOLIDATION".equals(programme))return false;
+        if("CONSOLIDATION".equals(programme))return reached;
         if("ENTRETIEN".equals(programme))return reached;
         return reached;
     }
