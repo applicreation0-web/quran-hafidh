@@ -830,8 +830,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         try {
             java.util.HashMap<String,GeometryRepository.LineMeta> byId=new java.util.HashMap<>();
             for(int i=0;i<geometry.lineCount();i++){GeometryRepository.LineMeta line=geometry.line(i);byId.put(line.id,line);}
+            ConsolidationCycleEngine.Family sourceFamily =
+                PostFinalRecallStore.SABQI.equals(family)
+                    ? ConsolidationCycleEngine.Family.LEARNING
+                    : PostFinalRecallStore.ITQAN.equals(family)
+                        ? ConsolidationCycleEngine.Family.STABILIZATION
+                        : null;
+            if(sourceFamily==null || consolidationSession.cycle().family()!=sourceFamily)
+                throw new IllegalStateException("Post-final family's source does not match validated finale");
             List<GeometryRepository.LineMeta> prior=new ArrayList<>();
-            for(String id:prefs.progressionSnapshotV6().acquired){
+            for(String id:prefs.postFinalPreviouslyAcquiredLineIds(sourceFamily)){
                 GeometryRepository.LineMeta line=byId.get(id);
                 if(line==null)throw new IllegalStateException("Missing acquired line geometry");
                 prior.add(line);
