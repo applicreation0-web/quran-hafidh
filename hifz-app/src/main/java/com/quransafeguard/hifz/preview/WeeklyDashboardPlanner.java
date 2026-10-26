@@ -245,9 +245,13 @@ final class WeeklyDashboardPlanner {
                     boolean learningDue=!prefs.learningSnowballFinalUnits(date).isEmpty();
                     // In post-An-Nās maintenance no new Itqān finale exists.
                     // A pre-existing frozen first-regime OPEN finale may still resume.
-                    boolean oldItqanFinal=prefs.unfinishedConsolidationSessionDate(
-                        ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null;
-                    boolean itqanFinalDue=!prefs.itqanPostNasMaintenance()||oldItqanFinal;
+                    String frozenFinalDate=prefs.unfinishedConsolidationSessionDate(
+                        ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-");
+                    boolean oldItqanFinal=date.toString().equals(frozenFinalDate);
+                    boolean projectedPostNas=itqanForecast!=null
+                        ?itqanForecast.regime()==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+                        :prefs.itqanPostNasMaintenance();
+                    boolean itqanFinalDue=!projectedPostNas||oldItqanFinal;
                     boolean consolidationDone=consolidationFinal!=null
                         ||date.toString().equals(prefs.lastRecentSabqiReviewDate());
                     boolean consolidationDue=itqanFinalDue

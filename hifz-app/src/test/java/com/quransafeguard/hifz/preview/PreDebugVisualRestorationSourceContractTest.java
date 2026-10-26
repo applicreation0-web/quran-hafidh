@@ -49,7 +49,7 @@ public final class PreDebugVisualRestorationSourceContractTest {
             && home.contains("icon.setImageResource(drawable);")
             && home.contains("int drawable = largeIconFor(role);")
             && !home.contains("icon.setColorFilter(Ui.INK);")
-            && home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 54))")
+            && home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 42))")
             && home.contains("booxIconDp(2, 112)"));
     }
 

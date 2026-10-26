@@ -36,4 +36,23 @@ public final class CalendarPresentationTest {
         assertEquals(LocalDate.of(2027,1,4),CalendarPresentation.monday(LocalDate.of(2027,1,8)));
         assertEquals(LocalDate.of(2026,12,28),CalendarPresentation.monday(LocalDate.of(2027,1,1)));
     }
+    @Test public void completionRequiresReceiptAndNoMaterialIsExcluded(){
+        WeeklyDashboardPlanner.Row row=new WeeklyDashboardPlanner.Row(today,"Lun","Révision active · 8 min + Révision passive · 8 min","Apprentissage · 5 lignes + ✓ Renforcement","À faire");
+        CalendarPresentation.Day day=CalendarPresentation.verifiedDay(row,today,java.util.Collections.emptySet(),
+            java.util.Collections.singleton(HifzSessionActivity.LEARNING_CONSOLIDATION),java.util.Collections.emptySet(),true);
+        assertEquals(3,day.activities.size());assertEquals(0,day.completed);assertEquals("À faire",day.state);
+    }
+    @Test public void knownPastReceiptsAreCompleteAndOpenFinalKeepsDate(){
+        LocalDate sunday=today.minusDays(1);
+        WeeklyDashboardPlanner.Row row=new WeeklyDashboardPlanner.Row(sunday,"Dim","Finale Sabqi · état enregistré","Finale Itqān · état enregistré","Historique");
+        java.util.Set<String> receipts=new java.util.HashSet<>(java.util.Arrays.asList(HifzSessionActivity.LEARNING_FINAL,HifzSessionActivity.CONSOLIDATION_FINAL));
+        assertEquals("Terminé",CalendarPresentation.verifiedDay(row,today,receipts,java.util.Collections.emptySet(),java.util.Collections.emptySet(),true).state);
+        CalendarPresentation.Day open=CalendarPresentation.verifiedDay(row,today,java.util.Collections.emptySet(),java.util.Collections.emptySet(),java.util.Collections.singleton(HifzSessionActivity.LEARNING_FINAL),false);
+        assertEquals(sunday,open.date);assertEquals("En cours",open.state);
+    }
+    @Test public void repetitionPlusIsNotAnActivitySeparator(){
+        String raw="✓ Stabilisation · 2 lectures + 1 avec ancrages · ×3 + Consolidation · ×1 masqué";
+        CalendarPresentation.Day day=CalendarPresentation.day(new WeeklyDashboardPlanner.Row(today,"Lun","—",raw,"À faire"),today);
+        assertEquals(2,day.activities.size());assertTrue(day.activities.get(0).detail.contains("2 lectures + 1 avec ancrages"));
+    }
 }

@@ -36,11 +36,29 @@ final class CalendarPresentation {
             :row.date.isAfter(today)?"À venir":row.date.isBefore(today)?"En attente":"À faire";
         return new Day(row.date,out,done,state);
     }
+    /** Authoritative receipts override decorative legacy checkmarks; OPEN is not a receipt. */
+    static Day verifiedDay(WeeklyDashboardPlanner.Row row,LocalDate today,
+            java.util.Set<String> receipts,java.util.Set<String> absent,
+            java.util.Set<String> open,boolean historyKnown){
+        Day parsed=day(row,today);ArrayList<Activity> out=new ArrayList<>();int done=0;
+        for(Activity activity:parsed.activities){
+            if(absent.contains(activity.mode)&&!receipts.contains(activity.mode)&&!open.contains(activity.mode))continue;
+            boolean completed=receipts.contains(activity.mode);
+            out.add(new Activity(activity.title,activity.detail,activity.mode,activity.period,completed));
+            if(completed)done++;
+        }
+        String state=!open.isEmpty()?"En cours":!historyKnown?"En attente"
+            :out.isEmpty()?"Aucune séance":done==out.size()?"Terminé"
+            :done>0?"Partiellement terminé":row.date.isAfter(today)?"À venir"
+            :row.date.isBefore(today)?"En attente":"À faire";
+        return new Day(row.date,out,done,state);
+    }
+
     private static void append(List<Activity> out,String raw,String period){
         if(raw==null||raw.trim().isEmpty()||"—".equals(raw))return;
         // The planner's literal separator denotes independent activities, never validations.
         for(String item:raw.replace(" · ✓ Finale Sabqi"," + ✓ Finale Sabqi")
-                .replace(" · Finale Sabqi"," + Finale Sabqi").split(" \\+ ")){
+                .replace(" · Finale Sabqi"," + Finale Sabqi").split(" \\+ (?=✓? ?(?:Révision active|Révision passive|Apprentissage|Stabilisation|Maintien|Renforcement|Consolidation|Finale Sabqi|Finale Itqān))")){
             if(item.contains("aucun passage admissible")||item.contains("aucune unité à stabiliser")
                     ||item.contains("fenêtre terminée"))continue;
             boolean done=item.startsWith("✓ ");
