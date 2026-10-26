@@ -108,7 +108,7 @@ final class WeeklyDashboardPlanner {
                     }
                     boolean snowballDone=snowballActual!=null || (date.equals(today)
                         && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,date));
-                    evening=snowballDone?"✓ Renforcement":"Renforcement · boule de neige";
+                    evening=snowballDone?"✓ Renforcement":"Renforcement · révision cumulative";
                     boolean lessonDone=morningActual!=null;
                     state=lessonDone&&snowballDone?"Validé":lessonDone?"Soir à faire":"À faire";
                     break;
@@ -174,8 +174,8 @@ final class WeeklyDashboardPlanner {
                             (date.equals(today)&&prefs.learningSnowballFinalUnits(date).isEmpty());
                         boolean stabilizationDone=stabilizationFinal!=null ||
                             (date.equals(today)&&prefs.stabilizationSnowballFinalUnits(date).isEmpty());
-                        morning+=" · "+(learningDone?"✓ Finale Renforcement Sabqi":"Finale Renforcement Sabqi");
-                        evening=stabilizationDone?"✓ Finale Consolidation Itqān":"Finale Consolidation Itqān uniquement";
+                        morning+=" · "+(learningDone?"✓ Finale Sabqi":"Finale Sabqi");
+                        evening=stabilizationDone?"✓ Finale Itqān":"Finale Itqān uniquement";
                         state=morningDone&&learningDone&&stabilizationDone?"Validé":
                             morningDone&&learningDone?"Soir à faire":"À faire";
                         // Sunday must NEVER forecast active/passive revision or consume
@@ -187,7 +187,7 @@ final class WeeklyDashboardPlanner {
                         && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date));
                     evening=snowballDone?"✓ Consolidation":prefs.itqanPostNasMaintenance()
                         ? "Consolidation · maintiens de la semaine · ×1 masqué"
-                        : "Consolidation · boule de neige";
+                        : "Consolidation · révision cumulative";
                     state=morningDone&&snowballDone?"Validé":morningDone?"Soir à faire":"À faire";
                     break;
                 }
@@ -201,8 +201,8 @@ final class WeeklyDashboardPlanner {
                         ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null;
                     boolean itqanFinalDue=!prefs.itqanPostNasMaintenance()||oldItqanFinal;
                     boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
-                    morning=learningDone?"✓ Finale Renforcement Sabqi":"Finale Renforcement Sabqi · ×3";
-                    evening=!itqanFinalDue?"—":consolidationDone?"✓ Finale Consolidation Itqān":"Finale Consolidation Itqān · ×3";
+                    morning=learningDone?"✓ Finale Sabqi":"Finale Renforcement Sabqi · ×3";
+                    evening=!itqanFinalDue?"—":consolidationDone?"✓ Finale Itqān":"Finale Itqān · ×3";
                     state=(learningDone&&(!itqanFinalDue||consolidationDone))?"Validé":learningDone?"Soir à faire":"À faire";
                     // Sunday cannot consume a passive cursor or schedule any general revisions.
                     break;
