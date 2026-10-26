@@ -39,6 +39,15 @@ public final class WeeklyDashboardBooxRecoveryTest {
         assertTrue(main.contains("Voir le calendrier sur sept jours"));
         assertTrue(main.contains("WeeklyDashboardPlanner.window(HifzClock.today())"));
     }
+    @Test public void futureSundayCalendarExplainsPendingVersusNotRequiredFinales() {
+        assertEquals("à prévoir selon les acquis",
+            MainActivity.readableScheduleEssentials("Finale Sabqi · à prévoir selon les acquis"));
+        assertEquals("aucun passage admissible",
+            MainActivity.readableScheduleEssentials("Finale Itqān · aucun passage admissible"));
+        assertEquals("par page ×3",
+            MainActivity.readableScheduleEssentials("Finale Sabqi · par page ×3"));
+    }
+
     @Test public void bothFamiliesOfferedSeparatelyAfterSuccessfulFinalCredit() throws Exception {
         String session=source("HifzSessionActivity.java");
         assertTrue(session.contains("promptPostFinalRecall(PostFinalRecallStore.ITQAN)"));
