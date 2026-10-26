@@ -1937,6 +1937,17 @@ public final class HifzPrefs {
                 e.putString("v6StabilizedLineIds", lineIdsJson(stabilized));
                 for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             }
+            // Collect every successfully completed hizb, including reinforcement laps
+            // that earn zero new Stabilised credits; never infer work from future plans.
+            LocalDate maintainedOn=safeDate(date,HifzClock.today());
+            JSONArray maintained=postNasMaintainedHizbs(maintainedOn);
+            String unit=ConsolidationPhysicalUnitPolicy.encodeLineUnit(lineIds);
+            boolean alreadyRecorded=false;
+            for(int i=0;i<maintained.length();i++)
+                if(unit.equals(maintained.optString(i)))alreadyRecorded=true;
+            if(!alreadyRecorded)maintained.put(unit);
+            e.putString(POST_NAS_WEEK_ANCHOR,mondayOf(maintainedOn).toString());
+            e.putString(POST_NAS_WEEK_UNITS,maintained.toString());
             if (nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return appendFinalItqanRotation(e,true,unitEnd).commit();
         }
