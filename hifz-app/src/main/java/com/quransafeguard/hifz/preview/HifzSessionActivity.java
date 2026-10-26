@@ -870,8 +870,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void offerPostFinalRecall(String family){
         PostFinalRecallStore.Review ready=readyPostFinalRecall(family);
-        if(ready!=null)addRoundAction("↻","Lecture cumulative masquée · "
-            +(PostFinalRecallStore.ITQAN.equals(family)?"Itqān":"Sabqi"),
+        if(ready!=null)addRoundAction("↻","Lecture cumulative",
             v->launchPostFinalRecall(family));
     }
 
