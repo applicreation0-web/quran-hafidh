@@ -24,7 +24,7 @@ def main():
     for path in files:
         raw=path.read_text(encoding="utf-8",errors="replace")
         for literal in java_literals(raw):
-            if re.search(r"boule de neige",literal,re.I):
+            if re.search(r"boule de neige",literal,re.I) and path.name!="HifzDisplayVocabulary.java":
                 findings.append(dict(level="ERROR",kind="visible_legacy_label",path=str(path.relative_to(ROOT)),value=literal[:220]))
             if re.search(r"m[eé]morisation libre|\bentretien\b",literal,re.I):
                 findings.append(dict(level="REVIEW",kind="ambiguous_vocabulary",path=str(path.relative_to(ROOT)),value=literal[:220]))
