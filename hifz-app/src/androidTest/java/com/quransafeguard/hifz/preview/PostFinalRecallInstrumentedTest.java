@@ -10,10 +10,78 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashSet;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import static org.junit.Assert.*;
 
 /** Actual Android Activity: masked post-final queue, restart and unchanged Acquis/final states. */
 public final class PostFinalRecallInstrumentedTest {
+    @Test public void committedOctoberItqanWithoutPreparedQueueRecoversOnlyEarnedFamilyPages()
+            throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            new HifzPrefs(c);
+            GeometryRepository geometry=GeometryRepository.get(c);
+            List<String> prior=geometry.lineIdsOnPage(522);
+            List<String> current=geometry.lineIdsOnPage(523);
+            List<String> otherFamily=geometry.lineIdsOnPage(12);
+            LinkedHashSet<String> acquired=new LinkedHashSet<>();
+            acquired.addAll(prior);acquired.addAll(current);acquired.addAll(otherFamily);
+            JSONArray history=new JSONArray();
+            history.put(new JSONObject().put("week","2026-10-12").put("units",
+                new JSONArray().put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(prior))));
+            history.put(new JSONObject().put("week","2026-10-19").put("units",
+                new JSONArray().put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(current))));
+            JSONArray acquiredJson=new JSONArray();
+            for(String id:acquired)acquiredJson.put(id);
+            assertTrue(raw.edit()
+                .putString("stabilizationSnowball8WeekHistory",history.toString())
+                .putString("lastRecentSabqiReviewDate","2026-10-25")
+                .putString("v6AcquiredCreditLineIds",acquiredJson.toString())
+                .commit());
+            String beforeAcquired=raw.getString("v6AcquiredCreditLineIds","");
+            String beforeFinal=raw.getString("v6ConsolidationStabilizationStateFinalV1","");
+            PostFinalRecallStore queue=new PostFinalRecallStore(c);
+            assertTrue(queue.recoverCommittedFromHistory(PostFinalRecallStore.ITQAN,
+                "2026-10-25",acquired,geometry));
+            PostFinalRecallStore.Review review=queue.nextReady("","2026-10-25");
+            assertNotNull(review);
+            assertEquals(522,review.page);
+            assertEquals(2,review.total);
+            assertEquals(1,review.previousCount);
+            assertFalse("No duplicate queue entry after repeated startup",
+                queue.recoverCommittedFromHistory(PostFinalRecallStore.ITQAN,
+                    "2026-10-25",acquired,geometry));
+            assertEquals(beforeAcquired,raw.getString("v6AcquiredCreditLineIds",""));
+            assertEquals(beforeFinal,raw.getString("v6ConsolidationStabilizationStateFinalV1",""));
+        }finally{assertTrue(raw.edit().clear().commit());}
+    }
+
+    @Test public void legacyRecoveryRejectsUnacquiredHistoricalWeekWithoutInventingCredit()
+            throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            new HifzPrefs(c);
+            GeometryRepository geometry=GeometryRepository.get(c);
+            JSONArray weeks=new JSONArray().put(new JSONObject().put("week","2026-10-19")
+                .put("units",new JSONArray().put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+                    geometry.lineIdsOnPage(523)))));
+            assertTrue(raw.edit().putString("stabilizationSnowball8WeekHistory",weeks.toString())
+                .putString("lastRecentSabqiReviewDate","2026-10-25").commit());
+            PostFinalRecallStore queue=new PostFinalRecallStore(c);
+            assertFalse(queue.recoverCommittedFromHistory(PostFinalRecallStore.ITQAN,
+                "2026-10-25",new LinkedHashSet<>(),geometry));
+            assertNull(queue.nextReady("","2026-10-25"));
+            assertEquals("No historical acquisition should be invented",0,
+                new JSONArray(raw.getString("v6AcquiredCreditLineIds","[]")).length());
+        }finally{assertTrue(raw.edit().clear().commit());}
+    }
+
     @Test public void booxTodayMenuPreservesBothSabqiAndItqanPendingRecallEntries() throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
         SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
