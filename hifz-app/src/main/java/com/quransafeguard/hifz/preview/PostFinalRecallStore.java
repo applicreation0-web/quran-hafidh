@@ -73,12 +73,22 @@ final class PostFinalRecallStore {
     }
     /** Selection only. A PREPARED entry is not usable unless its finale was actually validated. */
     Review nextReady(String completedSabqiDate,String completedItqanDate){
+        return findReady(null,completedSabqiDate,completedItqanDate);
+    }
+    /** A pending Sabqi review must never hide an Itqan review, and vice versa. */
+    Review nextReadyFor(String family,String completedSabqiDate,String completedItqanDate){
+        if(!SABQI.equals(family)&&!ITQAN.equals(family))
+            throw new IllegalArgumentException("Expected final family");
+        return findReady(family,completedSabqiDate,completedItqanDate);
+    }
+    private Review findReady(String targetFamily,String completedSabqiDate,String completedItqanDate){
         JSONArray queue=read();
         for(int i=0;i<queue.length();i++){
             JSONObject item=queue.optJSONObject(i);
             String family=item.optString("family"), date=item.optString("date");
             if(!SABQI.equals(family)&&!ITQAN.equals(family))
                 throw new IllegalStateException("Invalid final family");
+            if(targetFamily!=null&&!targetFamily.equals(family))continue;
             String status=item.optString("status");
             boolean committed=family.equals(SABQI)?date.equals(completedSabqiDate):date.equals(completedItqanDate);
             if("DONE".equals(status))continue;
