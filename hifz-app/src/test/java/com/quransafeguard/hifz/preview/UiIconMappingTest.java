@@ -47,6 +47,8 @@ public final class UiIconMappingTest {
             {"Retirer une répétition", R.drawable.ic_ui_delete},
             {"Ajouter une répétition", R.drawable.ic_ui_add},
             {"Répétition", R.drawable.ic_ui_repeat},
+            {"Lecture cumulative", R.drawable.ic_ui_revision},
+            {"Page récitée", R.drawable.ic_ui_validate},
             {"Répéter le verset", R.drawable.ic_ui_repeat},
             {"Réessayer", R.drawable.ic_ui_repeat},
             {"Reprendre", R.drawable.ic_ui_resume},
