@@ -17,6 +17,30 @@ import static org.junit.Assert.*;
 
 /** Actual Android Activity: masked post-final queue, restart and unchanged Acquis/final states. */
 public final class PostFinalRecallInstrumentedTest {
+    @Test public void corruptFrozenItqanCannotEraseRealMondayCalendarOrSevenDates()
+            throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            HifzPrefs prefs=new HifzPrefs(c);
+            GeometryRepository geometry=GeometryRepository.get(c);
+            // Make both Itqan sources fail before row rendering. They must
+            // remain OPEN/unmodified; independent Monday Sabqi still projects.
+            String malformed="{unparseable frozen private session}";
+            assertTrue(raw.edit().putString(ItqanFourSessionStore.KEY,malformed).commit());
+            List<WeeklyDashboardPlanner.Row> days=new WeeklyDashboardPlanner(
+                prefs,geometry,new DashboardLedger(c),new HifzSpeedStore(c))
+                .week(java.time.LocalDate.of(2026,10,26));
+            assertEquals(7,days.size());
+            assertEquals(java.time.LocalDate.of(2026,10,26),days.get(0).date);
+            assertEquals(java.time.LocalDate.of(2026,11,1),days.get(6).date);
+            assertTrue("Actual Monday learning details must survive broken Itqan",
+                days.get(0).evening.contains("Apprentissage"));
+            assertEquals(malformed,raw.getString(ItqanFourSessionStore.KEY,""));
+        }finally{assertTrue(raw.edit().clear().commit());}
+    }
+
     @Test public void committedOctoberItqanWithoutPreparedQueueRecoversAllEligibleAcquis()
             throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
