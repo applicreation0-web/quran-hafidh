@@ -12,9 +12,9 @@ BASE="bb9483d3d1338d0a69d4a680913400de3c6100e6"
 ROOT="hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
 PINS={
     "HifzPrefs.java":("3c8a9b63c3f8835b57ea80a2059539d50469d1fe","2179399558c89a5f5c8db896cbdb6f81b147e065"),
-    "HifzSessionActivity.java":("521ba4db317b18e696e34a340dbdf11147682ea6","20eea00f1c8213c8ce84a8894c7ae2d4acc6185e"),
+    "HifzSessionActivity.java":("521ba4db317b18e696e34a340dbdf11147682ea6","b70378390b8dc7e9014eafb780801fc03a00332d"),
     "ConsolidationCycleEngine.java":("f5836c553436494249febf9415be9f966f060197","40b871eabb0b9dde10dd2e4e2a8ee1bca2fdd45c"),
-    "MainActivity.java":("8e329bb967da7d69bf92d99f24aad98d88376e69","792d78924d87abd839b0cfb3830b1a9061db4a5b"),
+    "MainActivity.java":("8e329bb967da7d69bf92d99f24aad98d88376e69","750e7411c4628e9135628e415ccf3589d2a0d81e"),
     "WeeklyDashboardPlanner.java":("8f004d4d08de7aa8f0307e826d91f3e4217dde10","659cff9d702474081fdd21df1d25e4b3dc88d924"),
 }
 def git(*args):
