@@ -149,9 +149,58 @@ public final class SundayMondayResumeInstrumentedTest {
         try(androidx.test.core.app.ActivityScenario<HifzSessionActivity> scenario=
                 androidx.test.core.app.ActivityScenario.launch(intent)) {
             scenario.onActivity(activity->{
+                try {
+                    Field program=HifzSessionActivity.class.getDeclaredField("program");program.setAccessible(true);
+                    assertEquals("Itqān · Maintien de la maîtrise",((android.widget.TextView)program.get(activity)).getText().toString());
+                }catch(ReflectiveOperationException error){throw new AssertionError(error);}
                 assertFalse(raw.contains("v6ConsolidationStabilizationStateFinalV1"));
                 assertTrue(new HifzPrefs(context).progressionSnapshotV6().acquired.isEmpty());
                 assertEquals(new java.util.LinkedHashSet<>(ids),new HifzPrefs(context).progressionSnapshotV6().stabilized);
+            });
+        }
+    }
+
+    @Test public void learnedFifteenLinesOfferSaturdayResumeWithoutOpeningTenLineFinal() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        List<String> page=GeometryRepository.get(context).lineIdsOnPage(16);
+        org.json.JSONArray source=new org.json.JSONArray();
+        ConsolidationCycleEngine.Cycle cycle=null;
+        for(int i=0;i<3;i++) {
+            String unit=ConsolidationPhysicalUnitPolicy.encodeLineUnit(page.subList(i*5,i*5+5));
+            source.put(unit);
+            ConsolidationCycleEngine.Unit block=new ConsolidationCycleEngine.Unit(unit,ConsolidationCycleEngine.Protocol.SNOWBALL);
+            cycle=cycle==null?engine.startCycle("learning-2026-10-24",ConsolidationCycleEngine.Family.LEARNING,block):engine.addUnit(cycle,block);
+        }
+        cycle=engine.addUnit(cycle,new ConsolidationCycleEngine.Unit(
+            ConsolidationPhysicalUnitPolicy.encodeLineUnit(page),ConsolidationCycleEngine.Protocol.SNOWBALL));
+        assertTrue(raw.edit().putInt("schema",6).putString("v6LearnedLineIds",new org.json.JSONArray(page).toString())
+            .putString("v6StabilizedLineIds","[]").putString("v6AcquiredCreditLineIds","[]")
+            .putString("v6QuarantineLineIds","[]").putString("v6LegacyPartialAcquiredLineIds","[]")
+            .putString("learningSnowballWeekAnchor","2026-10-19").putString("learningSnowballUnitIds",source.toString())
+            .putString("v6LearningEarnedEveningUnitsV1",new org.json.JSONArray().put(source.getString(0)).put(source.getString(1)).toString())
+            .putString("learningSnowball8WeekHistory",new org.json.JSONArray().put(new org.json.JSONObject()
+                .put("week","2026-10-19").put("units",source)).toString()).commit());
+        assertTrue(new HifzPrefs(context).persistConsolidationSession(engine.openSession(cycle,"Saturday-frozen")));
+        String frozen=raw.getString("v6ConsolidationLearningState","");
+        android.content.Intent intent=new android.content.Intent(context,HifzSessionActivity.class)
+            .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.LEARNING_FINAL)
+            .putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,"2026-10-25");
+        try(androidx.test.core.app.ActivityScenario<HifzSessionActivity> scenario=
+                androidx.test.core.app.ActivityScenario.launch(intent)) {
+            scenario.onActivity(activity->{
+                try {
+                    Field field=HifzSessionActivity.class.getDeclaredField("progress");field.setAccessible(true);
+                    String explanation=((android.widget.TextView)field.get(activity)).getText().toString();
+                    assertTrue(explanation.contains("Apprises"));assertTrue(explanation.contains("2026-10-24"));
+                    field=HifzSessionActivity.class.getDeclaredField("actions");field.setAccessible(true);
+                    android.widget.LinearLayout actions=(android.widget.LinearLayout)field.get(activity);
+                    android.view.ViewGroup action=(android.view.ViewGroup)actions.getChildAt(0);
+                    assertEquals("Reprendre",action.getChildAt(0).getContentDescription().toString());
+                    assertFalse(raw.contains("v6ConsolidationLearningStateFinalV1"));
+                    assertEquals(frozen,raw.getString("v6ConsolidationLearningState",""));
+                    assertEquals(new java.util.LinkedHashSet<>(page),new HifzPrefs(context).progressionSnapshotV6().learned);
+                    assertTrue(new HifzPrefs(context).progressionSnapshotV6().acquired.isEmpty());
+                }catch(ReflectiveOperationException error){throw new AssertionError(error);}
             });
         }
     }

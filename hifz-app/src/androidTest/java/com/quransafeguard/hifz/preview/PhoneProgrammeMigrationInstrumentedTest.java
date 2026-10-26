@@ -43,7 +43,7 @@ public final class PhoneProgrammeMigrationInstrumentedTest {
         assertEquals(before,raw.getString("v6AcquiredCreditLineIds",""));
     }
 
-    @Test public void deepAndMaintenanceCanBeSelectedOnlyForNewUnstampedUnits() {
+    @Test public void datedChoiceCannotReverseThePhysicalNasMilestone() {
         HifzPrefs prefs=new HifzPrefs(context);
         assertFalse(prefs.itqanEntretienActive());
         // A date cannot pretend that the physical An-Nās latch was reached.
@@ -53,7 +53,10 @@ public final class PhoneProgrammeMigrationInstrumentedTest {
         assertTrue(raw.edit().putBoolean(ItqanRegimeStore.INITIAL_TAIL_COMPLETED,true).commit());
         assertTrue(prefs.itqanEntretienActive());
         assertTrue(prefs.scheduleItqanProgramme("CONSOLIDATION",HifzClock.today()));
-        assertFalse(prefs.itqanEntretienActive());
+        assertTrue("A stored choice cannot undo the actual An-Nas milestone",prefs.itqanEntretienActive());
+        ItqanRegimeStore.UnitPlan plan=ItqanRegimeStore.resolvePlan(raw,"51:31","51:60",AnchoringQueue.ItqanProtocol.FULL);
+        assertEquals(ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE,plan.regime);
+        assertEquals(3,ItqanMaintenancePolicy.totalReps(plan));
         assertTrue(prefs.scheduleItqanProgramme("ENTRETIEN",HifzClock.today()));
         assertTrue(prefs.itqanEntretienActive());
         // No change to the physical completion latch.

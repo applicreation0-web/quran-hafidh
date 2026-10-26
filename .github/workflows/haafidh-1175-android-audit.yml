@@ -66,6 +66,7 @@ jobs:
           bash scripts/guard_frozen_hifz_engines.sh
           python3 scripts/verify_atlas_only_purity.py
           python3 scripts/verify_contractual_ui_icons.py
+          python3 scripts/verify_j6_icon_roles.py
       - name: Prepare missing public legacy test fixture (never a runtime asset)
         run: |
           fixture="$RUNNER_TEMP/legacy-bridge-fixture"

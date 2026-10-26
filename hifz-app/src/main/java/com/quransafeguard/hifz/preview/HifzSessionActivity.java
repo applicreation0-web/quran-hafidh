@@ -759,7 +759,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText("Les lignes sont Apprises. Reprendre le Renforcement du "
                 +overdue+" avant la finale ; aucun apprentissage à recommencer.");
             actions.removeAllViews();
-            addRoundAction("↻","Reprendre Renforcement",
+            addRoundAction("↻","Reprendre",
                 v -> {
                     Intent intent=new Intent(this,HifzSessionActivity.class)
                         .putExtra(EXTRA_MODE,LEARNING_CONSOLIDATION)
