@@ -839,7 +839,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if(sourceFamily==null || consolidationSession.cycle().family()!=sourceFamily)
                 throw new IllegalStateException("Post-final family's source does not match validated finale");
             List<GeometryRepository.LineMeta> prior=new ArrayList<>();
-            for(String id:prefs.postFinalPreviouslyAcquiredLineIds(sourceFamily)){
+            for(String id:postFinalStore.previouslyAcquired(family,
+                    prefs.progressionSnapshotV6().acquired)){
                 GeometryRepository.LineMeta line=byId.get(id);
                 if(line==null)throw new IllegalStateException("Missing acquired line geometry");
                 prior.add(line);
