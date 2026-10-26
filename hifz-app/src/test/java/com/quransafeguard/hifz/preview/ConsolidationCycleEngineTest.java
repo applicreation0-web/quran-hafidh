@@ -11,6 +11,37 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public final class ConsolidationCycleEngineTest {
+    @Test public void postNasWeeklyMaintiensAreOneMaskedPassEachWithNoExtraFinal() {
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle=engine.startCycle("stabilization-2026-11-07",
+            ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("hizb-one",ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED));
+        cycle=engine.addUnit(cycle,new ConsolidationCycleEngine.Unit("hizb-two",
+            ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED));
+        cycle=engine.addUnit(cycle,new ConsolidationCycleEngine.Unit("hizb-three",
+            ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED));
+        ConsolidationCycleEngine.Session open=engine.openSession(cycle,"weekly-masked");
+        assertArrayEquals(new int[]{1,0,0,0,0},open.stageVectorAt(0));
+        assertEquals(0,open.nextUnitIndex());
+        open=engine.recordRepetition(open);
+        assertEquals(1,open.nextUnitIndex());
+        assertFalse(open.readyToClose());
+        open=engine.restoreOpenSession(open.cycle().openSession()?
+            engine.closeSession(open).cycle():cycle,"weekly-masked",
+            3,open.stage(),open.nextUnitIndex(),open.donePerStage());
+        assertEquals(1,open.nextUnitIndex());
+        open=engine.recordRepetition(open);
+        open=engine.recordRepetition(open);
+        assertTrue(open.readyToClose());
+        assertEquals(3,open.sessionGroupSize());
+        try{
+            engine.startCycle("wrong-family",ConsolidationCycleEngine.Family.LEARNING,
+                new ConsolidationCycleEngine.Unit("hizb",
+                    ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED));
+            fail("Weekly Itqan protocol must not enter Sabqi");
+        }catch(IllegalArgumentException expected){}
+    }
+
     @Test public void exactQuotaAndStageVectorsAreFrozenForGroupSize() {
         assertPlan(ConsolidationCycleEngine.Protocol.LEARNING37, 1,
             new int[][]{{15,5,5,5,7}});
