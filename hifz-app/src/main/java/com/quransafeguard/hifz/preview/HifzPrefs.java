@@ -1193,8 +1193,15 @@ public final class HifzPrefs {
         if(appris.isEmpty())return murajaahCorpus();
         LinkedHashSet<String> eligible=new LinkedHashSet<>(appris);
         eligible.addAll(v6LineIdSet("v6AcquiredCreditLineIds"));
+        // Persisted learning order may cross sourahs or resume an older page.
+        // Geometry requires physical order; canonicalize only this read view.
+        ArrayList<String> physicalAppris=new ArrayList<>();
+        for(int i=0;i<geometry.lineCount();i++)
+            if(appris.contains(geometry.line(i).id))physicalAppris.add(geometry.line(i).id);
+        if(physicalAppris.size()!=appris.size())
+            throw new IllegalStateException("Unknown learned physical line id");
         java.util.HashSet<VerseRef> touching=new java.util.HashSet<>(geometry.versesOnLines(
-            new ArrayList<>(appris)));
+            physicalAppris));
         ArrayList<VerseRef> newlyEligible=new ArrayList<>();
         for(VerseRef verse:geometry.allVersesFullyCredited(eligible))
             if(touching.contains(verse))newlyEligible.add(verse);

@@ -53,6 +53,23 @@ public final class PassiveApprisAndSundayContractTest {
         assertEquals("Passive corpus query must be read-only",before,disk.disk);
     }
 
+    @Test public void passiveCorpusAcceptsChronologicalLearnedIdsWithoutReorderingSavedProgress() throws Exception {
+        GeometryRepository g=geometry();
+        InMemoryPrefs disk=new InMemoryPrefs();
+        disk.disk.put("itqanRanges","[{\"start\":\"1:1\",\"end\":\"1:7\"}]");
+        ArrayList<String> ordered=new ArrayList<>(g.lineIdsOnPage(16));
+        ordered.addAll(g.lineIdsOnPage(520));
+        disk.disk.put("v6LearnedLineIds",new org.json.JSONArray(ordered).toString());
+        disk.disk.put("v6AcquiredCreditLineIds","[]");
+        HifzPrefs prefs=new HifzPrefs(disk);
+        Object expected=prefs.murajaahCorpus(g).getRanges();
+        Collections.reverse(ordered);
+        disk.disk.put("v6LearnedLineIds",new org.json.JSONArray(ordered).toString());
+        Map<String,?> before=disk.getAll();
+        assertEquals(expected,new HifzPrefs(disk).murajaahCorpus(g).getRanges());
+        assertEquals("Read-time canonical order must never rewrite persisted state",before,disk.getAll());
+    }
+
     @Test public void editableSuggestedHoursPersistWithoutRewritingProgression() {
         InMemoryPrefs disk=new InMemoryPrefs();
         HifzPrefs pref=new HifzPrefs(disk);

@@ -17,6 +17,59 @@ import static org.junit.Assert.*;
 
 /** Actual Android Activity: masked post-final queue, restart and unchanged Acquis/final states. */
 public final class PostFinalRecallInstrumentedTest {
+    @Test public void passiveCorpusReadsChronologicalLearnedLinesWithoutChangingAndroidPreferences() throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            HifzPrefs prefs=new HifzPrefs(c);
+            GeometryRepository geometry=GeometryRepository.get(c);
+            ArrayList<String> lines=new ArrayList<>(geometry.lineIdsOnPage(16));
+            lines.addAll(geometry.lineIdsOnPage(520));
+            assertTrue(raw.edit().putString("v6LearnedLineIds",new JSONArray(lines).toString()).commit());
+            Object expected=prefs.murajaahCorpus(geometry).getRanges();
+            java.util.Collections.reverse(lines);
+            assertTrue(raw.edit().putString("v6LearnedLineIds",new JSONArray(lines).toString()).commit());
+            Map<String,?> before=raw.getAll();
+            assertEquals(expected,new HifzPrefs(c).murajaahCorpus(geometry).getRanges());
+            assertEquals(before,raw.getAll());
+        } finally {assertTrue(raw.edit().clear().commit());}
+    }
+
+    @Test public void unprovenLegacyRecallShowsReviewStateOnActualActivityWithoutCreditChange() throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            new HifzPrefs(c);
+            GeometryRepository geometry=GeometryRepository.get(c);
+            JSONObject page=new JSONObject().put("page",12).put("current",true)
+                .put("lines",new JSONArray(geometry.lineIdsOnPage(12)));
+            JSONObject legacy=new JSONObject().put("family",PostFinalRecallStore.ITQAN)
+                .put("date","2026-10-25").put("status","READY").put("position",0)
+                .put("previous",0).put("pages",new JSONArray().put(page));
+            assertTrue(raw.edit().putString(PostFinalRecallStore.KEY,new JSONArray().put(legacy).toString()).commit());
+            String acquired=raw.getString("v6AcquiredCreditLineIds","");
+            Intent intent=new Intent(c,HifzSessionActivity.class)
+                .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.POST_FINAL_RECALL)
+                .putExtra(HifzSessionActivity.EXTRA_POST_FINAL_FAMILY,PostFinalRecallStore.ITQAN);
+            try(ActivityScenario<HifzSessionActivity> screen=ActivityScenario.launch(intent)) {
+                screen.onActivity(activity->{
+                    try {
+                        Field field=HifzSessionActivity.class.getDeclaredField("program");field.setAccessible(true);
+                        assertTrue(((android.widget.TextView)field.get(activity)).getText().toString().contains("provenance à vérifier"));
+                        field=HifzSessionActivity.class.getDeclaredField("currentPostFinalReview");field.setAccessible(true);
+                        assertNull(field.get(activity));
+                    } catch(ReflectiveOperationException e) {throw new AssertionError(e);}
+                });
+            }
+            assertEquals(acquired,raw.getString("v6AcquiredCreditLineIds",""));
+            JSONObject saved=new JSONArray(raw.getString(PostFinalRecallStore.KEY,"[]")).getJSONObject(0);
+            assertEquals("PROVENANCE_REVIEW",saved.getString("status"));
+            assertEquals(legacy.getJSONArray("pages").toString(),saved.getJSONArray("pages").toString());
+        } finally {assertTrue(raw.edit().clear().commit());}
+    }
+
     @Test public void migratedUserCadenceShowsSevenActualDayDetailsWithoutFallback()
             throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
