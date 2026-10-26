@@ -715,6 +715,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionCompleted = true;
             program.setText("Consolidation · séance validée");
             progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));
+            offerPostFinalRecall();
             return;
         }
         // The physical An-Nas latch forbids every NEW final, including a
@@ -737,6 +738,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
         speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
         String label = "Consolidation · " + physicalUnitCount(consolidationSession) + " unité(s) · Acquis";
+        preparePostFinalRecall(PostFinalRecallStore.ITQAN);
         boolean closed;
         try { closed=prefs.completeConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label); }
         catch(IllegalStateException missingEvening) {
@@ -747,6 +749,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             onError("Impossible d’enregistrer la Consolidation.");
             return;
         }
+        postFinalStore.markReady(PostFinalRecallStore.ITQAN,sessionDate.toString());
         consolidationSession = consolidationEngine.closeSession(consolidationSession);
         closeClockForCompletedSession();
         mushaf.cycleCompleted();
@@ -760,6 +763,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionCompleted = true;
             program.setText("Renforcement · séance validée");
             progress.setText(prefs.lastLearningConsolidationLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastLearningConsolidationLabel()));
+            offerPostFinalRecall();
             return;
         }
         // A known frozen Saturday evening session MUST be closed first.
@@ -796,6 +800,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
         speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
         String label = "Renforcement · " + physicalUnitCount(consolidationSession) + " unité(s) · Acquis";
+        preparePostFinalRecall(PostFinalRecallStore.SABQI);
         boolean closed;
         try { closed=prefs.completeLearningConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label); }
         catch(IllegalStateException missingEvening) {
@@ -806,6 +811,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             onError("Impossible d’enregistrer le Renforcement.");
             return;
         }
+        postFinalStore.markReady(PostFinalRecallStore.SABQI,sessionDate.toString());
         consolidationSession = consolidationEngine.closeSession(consolidationSession);
         closeClockForCompletedSession();
         mushaf.cycleCompleted();
