@@ -119,13 +119,13 @@ def signed_certificate(apk: Path, apksigner: Path) -> str:
 
 def verify_upgrade_path(previous: Path, staging: Path,
                         aapt: Path, apksigner: Path) -> str:
-    """Fail before signing unless a real v1.17.1 APK can be upgraded in place.
+    """Fail before signing unless a real v1.17.6 APK can be upgraded in place.
 
     A reference APK's signature proves the expected Android identity; the BOOX
     device must still be checked before its actual in-place installation.
     """
     if not previous.is_file() or not zipfile.is_zipfile(previous):
-        die("real signed 1.17.1 reference APK required for an in-place update")
+        die("real signed 1.17.6 reference APK required for an in-place update")
     old_id, old_code, old_name = parse_apk_package(previous, aapt)
     if (old_id, old_code, old_name) != (
         APP_ID, PREVIOUS_VERSION_CODE, PREVIOUS_VERSION_NAME
@@ -183,7 +183,7 @@ def main() -> None:
     parser.add_argument("--build-tools", type=Path, required=True,
                         help="Android SDK build-tools/36.0.0 directory")
     parser.add_argument("--reference-1176-apk", type=Path, required=True,
-                        help="actual signed private 1.17.1 APK matching the BOOX installation")
+                        help="actual signed official 1.17.6 APK matching the BOOX installation")
     parser.add_argument("--keystore", type=Path, required=True)
     parser.add_argument("--alias", required=True)
     parser.add_argument("--output", type=Path, required=True)
