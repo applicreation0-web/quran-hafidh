@@ -299,6 +299,19 @@ final class PostFinalRecallStore {
         return changed;
     }
 
+    /** Distinguish an old unverifiable reading from a successfully completed one. */
+    boolean hasBlockedLegacyFamily(String family) {
+        if(!SABQI.equals(family)&&!ITQAN.equals(family))
+            throw new IllegalArgumentException("Expected final family");
+        JSONArray queue=read();
+        for(int i=0;i<queue.length();i++){
+            JSONObject item=queue.getJSONObject(i);
+            if(family.equals(item.optString("family"))
+                    &&"PROVENANCE_REVIEW".equals(item.optString("status")))return true;
+        }
+        return false;
+    }
+
     /** Read-only summary for the weekly recap. Never creates a new reading or credit. */
     static final class Recap {
         final String family,date;
