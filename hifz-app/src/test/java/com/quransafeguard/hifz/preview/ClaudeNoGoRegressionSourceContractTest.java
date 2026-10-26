@@ -334,9 +334,11 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     @Test public void snowballExtendedProtocolIsFullyWiredIntoTheConsolidationEngine() throws Exception {
         String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
         assertTrue("Protocol enum must declare SNOWBALL_EXTENDED",
-            engine.contains("SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SUNDAY_PAGE }"));
-        assertTrue("maxUnitsFor must give SNOWBALL_EXTENDED enough headroom for up to 8 weeks of blocks",
+            engine.contains("SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SUNDAY_PAGE, POST_NAS_WEEKLY_MASKED }"));
+        assertTrue("maxUnitsFor must give SNOWBALL_EXTENDED enough headroom for historic finals",
             engine.contains("if (protocol == Protocol.SNOWBALL_EXTENDED || protocol == Protocol.SUNDAY_PAGE) return 30;"));
+        assertTrue("Post-Nas weekly Maintien cannot overflow six completed hizbs",
+            engine.contains("if (protocol == Protocol.POST_NAS_WEEKLY_MASKED) return 6;"));
         String stageVector = method(engine,
             "static int[] stageVector(Protocol protocol, int groupSize, int position) {",
             "private static int[] normalizeProgress(");
