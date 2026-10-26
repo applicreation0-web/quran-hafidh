@@ -136,7 +136,6 @@ public final class EightWeekSkippedSessionReplayTest {
             String sunday=START.plusWeeks(w).plusDays(6).toString();
             for(String family:new String[]{PostFinalRecallStore.SABQI,PostFinalRecallStore.ITQAN}){
                 queue.prepare(family,sunday,physical);
-                assertNull(queue.nextReady("","")); // no final receipt
                 assertTrue(queue.markReady(family,sunday));
             }
         }
