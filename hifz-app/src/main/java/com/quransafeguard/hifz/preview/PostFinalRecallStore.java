@@ -208,6 +208,16 @@ final class PostFinalRecallStore {
         if(geometry==null||acquired==null)
             throw new IllegalArgumentException("Geometry and acquired proof required");
         JSONArray queue=read();
+        boolean needsMigration=false;
+        for(int i=0;i<queue.length();i++){
+            JSONObject item=queue.getJSONObject(i);
+            String state=item.optString("status","");
+            if(!"DONE".equals(state)&&!"PROVENANCE_REVIEW".equals(state)
+                    &&item.optInt("familySourceVersion",0)!=1){
+                needsMigration=true;break;
+            }
+        }
+        if(!needsMigration)return 0; // no 604-page geometry scan on ordinary BOOX navigation
         java.util.HashMap<String,GeometryRepository.LineMeta> geometryById=new java.util.HashMap<>();
         for(int i=0;i<geometry.lineCount();i++){
             GeometryRepository.LineMeta meta=geometry.line(i);
