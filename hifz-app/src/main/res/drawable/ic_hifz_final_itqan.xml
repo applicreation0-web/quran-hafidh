@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Layered Itqan pages and the same finish pennant, visually distinct from Sabqi. -->
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M3,7.5 L10,5.5 L16,7.5 L16,19 L10,17 L3,19 Z M3,11 L10,9 L16,11 M3,14.5 L10,12.5 L16,14.5 M10,5.5 L10,17 M18,3 L18,17 M18,3 L22,4.5 L18,6.5 Z" />
+</vector>
