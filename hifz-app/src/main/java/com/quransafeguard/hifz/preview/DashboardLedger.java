@@ -68,8 +68,8 @@ final class DashboardLedger {
         display=captureOne(display,completed,prefs.lastSabqiDate(),HifzSessionActivity.SABQI,prefs.lastSabqiLabel(),today);
         display=captureOne(display,completed,prefs.lastSabqiTodayReviewDate(),HifzSessionActivity.SABQI_TODAY_REVIEW,prefs.lastSabqiTodayReviewLabel(),today);
         display=captureOne(display,completed,prefs.lastItqanDate(),HifzSessionActivity.ITQAN,prefs.lastItqanLabel(),today);
-        display=captureOne(display,completed,prefs.lastStabilizationSnowballEveningDate(),HifzSessionActivity.RECENT_SABQI_REVIEW,"Consolidation · boule de neige",today);
-        display=captureOne(display,completed,prefs.lastLearningSnowballEveningDate(),HifzSessionActivity.LEARNING_CONSOLIDATION,"Renforcement · boule de neige",today);
+        display=captureOne(display,completed,prefs.lastStabilizationSnowballEveningDate(),HifzSessionActivity.RECENT_SABQI_REVIEW,"Consolidation · révision cumulative",today);
+        display=captureOne(display,completed,prefs.lastLearningSnowballEveningDate(),HifzSessionActivity.LEARNING_CONSOLIDATION,"Renforcement · révision cumulative",today);
         display=captureOne(display,completed,prefs.lastRecentSabqiReviewDate(),HifzSessionActivity.CONSOLIDATION_FINAL,prefs.lastRecentSabqiReviewLabel(),today);
         display=captureOne(display,completed,prefs.lastLearningConsolidationDate(),HifzSessionActivity.LEARNING_FINAL,prefs.lastLearningConsolidationLabel(),today);
         display=captureOne(display,completed,prefs.lastMurajaahDate(),HifzSessionActivity.MURAJAAH,prefs.lastMurajaahLabel(),today);
