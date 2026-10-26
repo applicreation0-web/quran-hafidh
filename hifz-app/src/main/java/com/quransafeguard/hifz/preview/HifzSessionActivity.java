@@ -37,6 +37,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     public static final String LEARNING_CONSOLIDATION = "LEARNING_CONSOLIDATION";
     public static final String CONSOLIDATION_FINAL = "CONSOLIDATION_FINAL";
     public static final String LEARNING_FINAL = "LEARNING_FINAL";
+    public static final String POST_FINAL_RECALL = "POST_FINAL_RECALL";
     public static final String MURAJAAH = "MURAJAAH";
     public static final String MURAJAAH_ACTIVE = "MURAJAAH_ACTIVE";
 
@@ -101,6 +102,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private LocalDate sessionDate;
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
+    private PostFinalRecallStore postFinalStore;
+    private PostFinalRecallStore.Review currentPostFinalReview;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -108,8 +111,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (!SABQI.equals(mode) && !SABQI_TODAY_REVIEW.equals(mode) && !ITQAN.equals(mode)
                 && !RECENT_SABQI_REVIEW.equals(mode) && !LEARNING_CONSOLIDATION.equals(mode)
                 && !CONSOLIDATION_FINAL.equals(mode) && !LEARNING_FINAL.equals(mode)
+                && !POST_FINAL_RECALL.equals(mode)
                 && !MURAJAAH.equals(mode) && !MURAJAAH_ACTIVE.equals(mode)) mode = SABQI;
         prefs = new HifzPrefs(this);
+        postFinalStore = new PostFinalRecallStore(this);
         String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
             ? prefs.sabqiTodayReviewDate()
             : "";
@@ -300,6 +305,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             else if (LEARNING_CONSOLIDATION.equals(mode)) renderLearningConsolidationCycle();
             else if (CONSOLIDATION_FINAL.equals(mode)) renderConsolidationFinalReview();
             else if (LEARNING_FINAL.equals(mode)) renderLearningFinalReview();
+            else if (POST_FINAL_RECALL.equals(mode)) renderPostFinalRecall();
             else if (MURAJAAH_ACTIVE.equals(mode)) renderMurajaahActive();
             else renderMurajaah();
         } catch (RuntimeException error) {
@@ -1899,7 +1905,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 activePageLandmarks,activePageAmorces,activeAyahThemesReady);
             return;
         }
-        if (isSundayFinalPageRepetition()) {
+        if (isSundayFinalPageRepetition() || POST_FINAL_RECALL.equals(mode)) {
             if (currentMask == 100) {
                 showSundayFinalLectureMaskPage();
                 return;
@@ -2021,7 +2027,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Fail open on active-recall pages with incomplete QCF landmark/cue geometry too. */
     private int displayedMask() {
         if (ITQAN.equals(mode) && itqanAnchorFailOpen) return 0;
-        if (isSundayFinalPageRepetition() && sundayFinalAnchorUnavailable) return 0;
+        if ((isSundayFinalPageRepetition()||POST_FINAL_RECALL.equals(mode)) && sundayFinalAnchorUnavailable) return 0;
         if (MURAJAAH_ACTIVE.equals(mode) && currentMask > 0
                 && !activeAyahThemesReady) return 0;
         return currentMask;
@@ -2031,7 +2037,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int target=Math.max(1,Math.min(604,currentPage+delta));
         boolean limited=SABQI.equals(mode)||SABQI_TODAY_REVIEW.equals(mode)||ITQAN.equals(mode)
             ||RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
-            ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
+            ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode)
+            ||POST_FINAL_RECALL.equals(mode);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
         if(target==currentPage)return;closeAudio();currentPage=target;
         if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=applyActiveLandmarks(currentPage);
@@ -2143,6 +2150,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (LEARNING_CONSOLIDATION.equals(mode)) return "Renforcement";
         if (CONSOLIDATION_FINAL.equals(mode)) return "Consolidation";
         if (LEARNING_FINAL.equals(mode)) return "Renforcement";
+        if (POST_FINAL_RECALL.equals(mode)) return "Lecture cumulative masquée";
         if (MURAJAAH_ACTIVE.equals(mode)) return "Révision active";
         return "Révision";
     }
@@ -2154,11 +2162,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onPageShown(int page){
         currentPage=page;
         annotationOverlay.setPage(page);
-        if (isSundayFinalPageRepetition() && currentMask == 100 && page == currentPage) {
+        if ((isSundayFinalPageRepetition() && currentMask == 100)
+                || (POST_FINAL_RECALL.equals(mode) && currentPostFinalReview != null
+                    && page == currentPostFinalReview.page && currentMask == 100)) {
             // This callback happens only after the prepared QCF word-hole layer
             // exists; an unloaded/visible frame must not earn a masked pass.
             sundayFinalMaskedPageReady = !sundayFinalAnchorUnavailable;
-            updateGroupedCycleRepAction();
+            if(POST_FINAL_RECALL.equals(mode))updatePostFinalRecallAction();
+            else updateGroupedCycleRepAction();
         }
         if(isMurajaahMode()&&!sessionCompleted){
             if(MURAJAAH_ACTIVE.equals(mode)){
