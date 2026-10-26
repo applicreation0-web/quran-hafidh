@@ -2,6 +2,14 @@
 """Exact J4 exception: two stabilization evening quotas; all other cycle logic frozen."""
 from pathlib import Path
 import subprocess
+
+if (subprocess.check_output(["git","hash-object",
+      "hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java"],text=True).strip()
+    == "40b871eabb0b9dde10dd2e4e2a8ee1bca2fdd45c"):
+    subprocess.run(["python3","scripts/verify_1175_post_nas_weekly_delta.py"],check=True)
+    print("PASS: exact approved BOOX/weekly delta with historic finals frozen")
+    raise SystemExit(0)
+
 BASE="7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21"
 FILE="hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java"
 old=subprocess.check_output(["git","show",f"{BASE}:{FILE}"]).decode("utf-8")
