@@ -220,6 +220,18 @@ public final class MainActivity extends android.app.Activity {
                 prefs.repairStraddlingAcquiredVerses(loaded);
                 prefs.releaseRevisionCursorsFromFatiha();
                 prefs.currentAnchoringEntry(loaded);
+                // Restore an already-credited historical Sunday reading only
+                // when exact family-specific physical history is still available.
+                // Never repeat a final or recreate acquired credits.
+                try {
+                    java.util.Set<String> acquired=prefs.progressionSnapshotV6().acquired;
+                    postFinalStore.recoverCommittedFromHistory(PostFinalRecallStore.SABQI,
+                        prefs.lastLearningConsolidationDate(),acquired,loaded);
+                    postFinalStore.recoverCommittedFromHistory(PostFinalRecallStore.ITQAN,
+                        prefs.lastRecentSabqiReviewDate(),acquired,loaded);
+                } catch(RuntimeException unavailable) {
+                    android.util.Log.w("QuranHifz","Post-final history recovery unavailable",unavailable);
+                }
                 geometry = loaded;
                 runOnUiThread(() -> {
                     setTodayEnabled(true);
