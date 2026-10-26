@@ -8,7 +8,9 @@ final class HifzDisplayVocabulary {
         if (label == null || label.isEmpty()) return label;
         // Reserve the new Itqān label before translating historical "Entretien"
         // (which originally meant passive review), then restore it verbatim.
-        String scoped=label.replace("Itqān · Entretien","__ITQAN_MAINTENANCE__")
+        String scoped=label.replace("Finale Sabqi","__FINAL_SABQI__")
+            .replace("Finale Itqān","__FINAL_ITQAN__")
+            .replace("Itqān · Entretien","__ITQAN_MAINTENANCE__")
             .replace("Entretien · Itqān","__ITQAN_MAINTENANCE_REVERSED__")
             .replace("Itqān · Maintien de la maîtrise","__ITQAN_MAINTENANCE__")
             .replace("Itqān · Consolidation","__ITQAN_CONSOLIDATION__");
@@ -28,8 +30,12 @@ final class HifzDisplayVocabulary {
   .replace("Entretien", "Révision passive")
   .replace("Murājaʿah", "Révision")
   .replace("Murajaah", "Révision")
+  .replace("Boule de neige", "Révision cumulative")
+  .replace("boule de neige", "révision cumulative")
   .replace("__ITQAN_MAINTENANCE__", "Itqān · Maintien de la maîtrise")
   .replace("__ITQAN_MAINTENANCE_REVERSED__", "Itqān · Maintien de la maîtrise")
-  .replace("__ITQAN_CONSOLIDATION__", "Itqān · Consolidation");
+  .replace("__ITQAN_CONSOLIDATION__", "Itqān · Consolidation")
+  .replace("__FINAL_SABQI__", "Finale Sabqi")
+  .replace("__FINAL_ITQAN__", "Finale Itqān");
     }
 }
