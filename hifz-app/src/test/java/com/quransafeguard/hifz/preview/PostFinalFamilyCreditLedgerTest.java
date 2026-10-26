@@ -13,37 +13,51 @@ import java.util.List;
 import java.util.Set;
 import static org.junit.Assert.*;
 
-/** Strict 1.17.8 invariant: twenty RECENT family pages, no global Acquis bleed. */
+/** 1.17.8 isolation: physical post-final pages come ONLY from their proven family. */
 public final class PostFinalFamilyCreditLedgerTest {
     static final ConsolidationCycleEngine.Family SABQI=ConsolidationCycleEngine.Family.LEARNING;
     static final ConsolidationCycleEngine.Family ITQAN=ConsolidationCycleEngine.Family.STABILIZATION;
-
     static GeometryRepository.LineMeta line(int page) {
         return new GeometryRepository.LineMeta(page*15,"p"+page+"-l0",page,
             Collections.<VerseRef>emptyList());
     }
     static List<GeometryRepository.LineMeta> metas(List<String> ids) {
-        ArrayList<GeometryRepository.LineMeta> out=new ArrayList<>();
+        ArrayList<GeometryRepository.LineMeta> result=new ArrayList<>();
         for(String id:ids) {
             int first=id.indexOf('-');
-            out.add(line(Integer.parseInt(id.substring(1,first))));
+            result.add(line(Integer.parseInt(id.substring(1,first))));
         }
-        return out;
+        return result;
+    }
+    static JSONObject queueEntry(String family,String date,boolean tagged,String status,String... ids)
+            throws Exception {
+        JSONArray pages=new JSONArray();
+        for(String id:ids) {
+            int page=Integer.parseInt(id.substring(1,id.indexOf('-')));
+            pages.put(new JSONObject().put("page",page).put("current",true)
+                .put("lines",new JSONArray().put(id)));
+        }
+        JSONObject entry=new JSONObject().put("family",family).put("date",date)
+            .put("status",status).put("position",0).put("previous",0)
+            .put("pages",pages);
+        if(tagged)entry.put("familySourceVersion",1);
+        return entry;
     }
 
-    @Test public void twoFamiliesAreIndependentEvenWhenGlobalAcquisIsMixed() {
+    @Test public void globalMixedAcquisCannotBleedBetweenSabqiAndItqanAcrossEightWeeks()
+            throws Exception {
         InMemoryPrefs disk=new InMemoryPrefs();
         Set<String> acquired=new LinkedHashSet<>();
+        JSONArray queue=new JSONArray();
         ArrayList<String> sabqi=new ArrayList<>(),itqan=new ArrayList<>();
         for(int p=100;p<125;p++){
             String s="p"+p+"-l0",t="p"+(p+100)+"-l0";
             acquired.add(s);acquired.add(t);sabqi.add(s);itqan.add(t);
+            String date=java.time.LocalDate.of(2026,10,25).plusWeeks(p-100).toString();
+            queue.put(queueEntry(PostFinalRecallStore.SABQI,date,true,"DONE",s));
+            queue.put(queueEntry(PostFinalRecallStore.ITQAN,date,true,"DONE",t));
         }
-        JSONArray s=new JSONArray(),t=new JSONArray();
-        for(String id:sabqi)s.put(id);
-        for(String id:itqan)t.put(id);
-        disk.disk.put(PostFinalFamilyCreditLedger.key(SABQI),s.toString());
-        disk.disk.put(PostFinalFamilyCreditLedger.key(ITQAN),t.toString());
+        disk.disk.put(PostFinalRecallStore.KEY,queue.toString());
         List<String> selectedSabqi=PostFinalFamilyCreditLedger.previouslyAcquired(disk,SABQI,acquired);
         List<String> selectedItqan=PostFinalFamilyCreditLedger.previouslyAcquired(disk,ITQAN,acquired);
         assertEquals(sabqi,selectedSabqi);
@@ -52,15 +66,15 @@ public final class PostFinalFamilyCreditLedgerTest {
             metas(selectedSabqi),Collections.singletonList(line(125)));
         List<PostFinalCumulativePolicy.Page> itqanPages=PostFinalCumulativePolicy.plan(
             metas(selectedItqan),Collections.singletonList(line(225)));
-        assertEquals(20,sabqiPages.size());
-        assertEquals(20,itqanPages.size());
+        assertEquals(20,sabqiPages.size());assertEquals(20,itqanPages.size());
         assertEquals(106,sabqiPages.get(0).mushafPage);
         assertEquals(206,itqanPages.get(0).mushafPage);
         assertEquals(125,sabqiPages.get(19).mushafPage);
         assertEquals(225,itqanPages.get(19).mushafPage);
         for(PostFinalCumulativePolicy.Page p:sabqiPages)assertTrue(p.mushafPage<200);
         for(PostFinalCumulativePolicy.Page p:itqanPages)assertTrue(p.mushafPage>=200);
-        assertEquals(acquired.size(),50); // no credit side effects
+        assertEquals(50,acquired.size()); // read-only, no fake credits
+        assertFalse(disk.disk.containsKey("v6AcquiredCreditLineIds"));
     }
 
     @Test public void oldBackupBootstrapUsesOnlyFullyAcquiredPhysicalUnitsOfRequestedFamily()
@@ -75,43 +89,46 @@ public final class PostFinalFamilyCreditLedgerTest {
         disk.disk.put("stabilizationSnowball8WeekHistory",
             new JSONArray().put(new JSONObject().put("week","2026-10-19")
                 .put("units",new JSONArray().put(t1))).toString());
-        LinkedHashSet<String> acquired=new LinkedHashSet<>(Arrays.asList(
+        Set<String> acquired=new LinkedHashSet<>(Arrays.asList(
             "p31-l0","p31-l1","p32-l0","p501-l0","p501-l1","p400-l0"));
         assertEquals(Arrays.asList("p31-l0","p31-l1"),
             PostFinalFamilyCreditLedger.previouslyAcquired(disk,SABQI,acquired));
         assertEquals(Arrays.asList("p501-l0","p501-l1"),
             PostFinalFamilyCreditLedger.previouslyAcquired(disk,ITQAN,acquired));
-        // Global p400-l0 has no Sabqi or Itqan provenance: NEVER inferred.
     }
 
-    @Test public void closingEachFamilyAtomicallyExtendsItsOwnPreviousCreditWithoutDoubleAttribution() {
+    @Test public void old1177CurrentPageCannotSmuggleOppositeFamilyAcquis()
+            throws Exception {
         InMemoryPrefs disk=new InMemoryPrefs();
-        disk.disk.put(PostFinalFamilyCreditLedger.key(SABQI),new JSONArray().put("p200-l0").toString());
-        disk.disk.put(PostFinalFamilyCreditLedger.key(ITQAN),new JSONArray().put("p400-l0").toString());
-        Set<String> before=new LinkedHashSet<>(Arrays.asList("p200-l0","p400-l0"));
-        Set<String> afterSabqi=new LinkedHashSet<>(before);afterSabqi.add("p201-l0");
-        String changedSabqi=PostFinalFamilyCreditLedger.afterFinal(disk,SABQI,before,afterSabqi,
-            Arrays.asList("p201-l0","p200-l0"));
-        disk.disk.put(PostFinalFamilyCreditLedger.key(SABQI),changedSabqi);
-        assertEquals(Arrays.asList("p200-l0","p201-l0"),
-            PostFinalFamilyCreditLedger.previouslyAcquired(disk,SABQI,afterSabqi));
+        String earned=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+            Collections.singletonList("p290-l0"));
+        disk.disk.put("learningSnowball8WeekHistory",new JSONArray()
+            .put(new JSONObject().put("week","2026-10-26")
+                .put("units",new JSONArray().put(earned))).toString());
+        JSONObject legacy=queueEntry(PostFinalRecallStore.SABQI,"2026-11-01",false,
+            "READY","p290-l0","p290-l1");
+        disk.disk.put(PostFinalRecallStore.KEY,new JSONArray().put(legacy).toString());
+        Set<String> acquired=new LinkedHashSet<>(Arrays.asList("p290-l0","p290-l1"));
+        assertEquals(Collections.singletonList("p290-l0"),
+            PostFinalFamilyCreditLedger.previouslyAcquired(disk,SABQI,acquired));
+        assertTrue(PostFinalFamilyCreditLedger.previouslyAcquired(disk,ITQAN,acquired).isEmpty());
+    }
+
+    @Test public void uncommittedPreparedReviewCannotBecomeFamilyProvenance() throws Exception {
+        InMemoryPrefs disk=new InMemoryPrefs();
+        disk.disk.put(PostFinalRecallStore.KEY,new JSONArray().put(queueEntry(
+            PostFinalRecallStore.SABQI,"2026-11-01",true,"PREPARED","p400-l0")).toString());
+        Set<String> acquired=Collections.singleton("p400-l0");
+        assertTrue(PostFinalFamilyCreditLedger.previouslyAcquired(disk,SABQI,acquired).isEmpty());
+        disk.disk.put("lastLearningConsolidationDate","2026-11-01");
         assertEquals(Collections.singletonList("p400-l0"),
-            PostFinalFamilyCreditLedger.previouslyAcquired(disk,ITQAN,afterSabqi));
-        assertEquals(before.size()+1,afterSabqi.size());
+            PostFinalFamilyCreditLedger.previouslyAcquired(disk,SABQI,acquired));
     }
 
     @Test(expected=IllegalStateException.class)
-    public void neverLabelUnacquiredLineAsFamilyCredit() {
+    public void malformedFamilyHistoryFailsClosedInsteadOfTakingAllAcquis() {
         InMemoryPrefs disk=new InMemoryPrefs();
-        PostFinalFamilyCreditLedger.afterFinal(disk,SABQI,
-            Collections.emptySet(),Collections.emptySet(),
-            Collections.singletonList("p999-l0"));
-    }
-
-    @Test(expected=IllegalStateException.class)
-    public void malformedFamilyLedgerFailsClosedInsteadOfTakingAllAcquis() {
-        InMemoryPrefs disk=new InMemoryPrefs();
-        disk.disk.put(PostFinalFamilyCreditLedger.key(ITQAN),"{oops");
+        disk.disk.put("stabilizationSnowball8WeekHistory","{bad");
         PostFinalFamilyCreditLedger.previouslyAcquired(disk,ITQAN,
             new HashSet<>(Arrays.asList("p1-l0","p2-l0")));
     }
