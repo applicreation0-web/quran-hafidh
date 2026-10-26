@@ -75,26 +75,52 @@ final class WeeklyDashboardPlanner {
 
     List<Row> week(LocalDate today){
         ArrayList<Row> out=new ArrayList<>();
-        int sabqiCursor=currentSabqiCursor();
-        VerseRef murajaahCursor=prefs.murajaahCursor();
-        EligibleCorpus murajaahCorpus=prefs.murajaahCorpus(geometry);
-        // One shared dynamic duration for active and passive; independent corpora/cursors.
-        final int revisionMinutes=maintenanceMinutes();
+        // Treat each read-only forecast as independent. A damaged old Itqān
+        // cursor must not prevent actual Sabqi and revision receipts showing.
+        int sabqiCursor=-1;
+        try { sabqiCursor=currentSabqiCursor(); }
+        catch(RuntimeException problem) {
+            android.util.Log.e("QuranHifz","Weekly Sabqi cursor unavailable",problem);
+        }
 
-        // Forecast from the SAME cursor and physical units as the live Itqān engine.
-        // The legacy anchoringQueue is not the perpetual rotation, and sorting it from
-        // position zero repeated already validated material in future calendar rows.
-        AnchoringQueue.Entry currentItqan=prefs.currentAnchoringEntry(geometry);
-        VerseRef sabqiFrontier=prefs.currentSabqiPosition(geometry);
-        ItqanWeeklyForecast itqanForecast=new ItqanWeeklyForecast(
-            prefs.itqanRotationState(),currentItqan,prefs.itqanBlockIndex(),
-            (leg,postNas)->prefs.cachedUnitsInLeg(leg,sabqiFrontier,geometry,
-                ItqanMaintenancePolicy.regimeFor(postNas)));
-        // V1 four-date windows may be displayed only when already frozen OPEN.
-        // Forecast must never present a NEW obsolete four-date plan.
-        ItqanFourSessionSnapshot frozenItqan=prefs.frozenItqanSnapshot(geometry);
-        ItqanFourSessionPolicy.Plan fourDates=frozenItqan==null?null:frozenItqan.plan;
-        int nextFourDateSlot=frozenItqan==null?0:frozenItqan.sessionIndex;
+        VerseRef murajaahCursor=null;
+        EligibleCorpus murajaahCorpus=null;
+        int duration=-1;
+        try {
+            murajaahCursor=prefs.murajaahCursor();
+            murajaahCorpus=prefs.murajaahCorpus(geometry);
+            duration=maintenanceMinutes();
+        } catch(RuntimeException problem) {
+            android.util.Log.e("QuranHifz","Weekly revision projection unavailable",problem);
+        }
+        final int revisionMinutes=duration;
+
+        // The historic OPEN snapshot and the live rotation are independent
+        // sources; neither may invalidate the other six visible dates.
+        ItqanWeeklyForecast itqanForecast=null;
+        try {
+            AnchoringQueue.Entry currentItqan=prefs.currentAnchoringEntry(geometry);
+            VerseRef sabqiFrontier=prefs.currentSabqiPosition(geometry);
+            itqanForecast=new ItqanWeeklyForecast(
+                prefs.itqanRotationState(),currentItqan,prefs.itqanBlockIndex(),
+                (leg,postNas)->prefs.cachedUnitsInLeg(leg,sabqiFrontier,geometry,
+                    ItqanMaintenancePolicy.regimeFor(postNas)));
+        } catch(RuntimeException problem) {
+            android.util.Log.e("QuranHifz","Weekly Itqan rotation projection unavailable",problem);
+        }
+
+        // Legacy V1 four-date snapshots: display only frozen OPEN history.
+        ItqanFourSessionPolicy.Plan fourDates=null;
+        int nextFourDateSlot=0;
+        try {
+            ItqanFourSessionSnapshot frozenItqan=prefs.frozenItqanSnapshot(geometry);
+            if(frozenItqan!=null){
+                fourDates=frozenItqan.plan;
+                nextFourDateSlot=frozenItqan.sessionIndex;
+            }
+        } catch(RuntimeException problem) {
+            android.util.Log.e("QuranHifz","Weekly frozen Itqan snapshot unavailable",problem);
+        }
 
         for(LocalDate date:window(today)){
             if(date.isBefore(prefs.programStartDate())){
@@ -144,6 +170,7 @@ final class WeeklyDashboardPlanner {
                         }
                     }
                     else if(fourDates!=null)morning="Stabilisation · prochaine fenêtre après validation";
+                    else if(itqanForecast==null)morning="Stabilisation · projection à vérifier";
                     else if(itqanForecast.entry()==null)morning="Stabilisation · aucune unité à stabiliser";
                     else{
                         AnchoringQueue.Entry entry=itqanForecast.entry();
@@ -223,9 +250,11 @@ final class WeeklyDashboardPlanner {
                 // Contract: morning = active + passive review; evening = Hifz lesson + snowball.
                 boolean activeDone=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE)!=null;
                 boolean passiveDone=ledger.find(date,HifzSessionActivity.MURAJAAH)!=null;
-                String active=(activeDone?"✓ ":"")+"Révision active · "+revisionMinutes+" min";
-                String passive=(passiveDone?"✓ ":"")+"Révision passive · "+revisionMinutes+" min";
-                if(!passiveDone) {
+                String durationLabel=revisionMinutes>0 ? revisionMinutes+" min" : "durée à vérifier";
+                String active=(activeDone?"✓ ":"")+"Révision active · "+durationLabel;
+                String passive=(passiveDone?"✓ ":"")+"Révision passive · "+durationLabel;
+                if(!passiveDone && murajaahCursor!=null && murajaahCorpus!=null
+                        && revisionMinutes>0) {
                     Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
                     // projectMurajaah already includes duration; display it once.
                     String range=projected.label;
@@ -234,6 +263,8 @@ final class WeeklyDashboardPlanner {
                         range=range.substring(0,range.length()-trailing.length());
                     passive+=" · "+range;
                     murajaahCursor=projected.next; // Read-only forecast, not a saved cursor.
+                } else if(!passiveDone) {
+                    passive+=" · position à vérifier";
                 }
                 if(action==CadenceAction.LEARNING || action==CadenceAction.STABILIZATION) {
                     String lesson=morning, snowball=evening;
