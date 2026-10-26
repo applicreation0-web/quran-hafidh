@@ -1,0 +1,79 @@
+name: Quran Haafidh 1.17.5 PRIVATE-CONFIG UNSIGNED STAGING ONLY — NEVER INSTALL
+on:
+  push:
+    branches:
+      - fix/haafidh-1175-finals-monday-20261025
+    paths:
+      - '.github/workflows/haafidh-1175-offline-unsigned-stage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-unsigned-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Android platform and exact Mushaf QCF pages
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Independent historical Hifz, Atlas and October 26 user fixes
+        run: |
+          bash scripts/guard_frozen_hifz_engines.sh
+          python3 scripts/verify_1175_post_nas_weekly_delta.py
+          python3 scripts/verify_atlas_only_purity.py
+          python3 scripts/verify_contractual_ui_icons.py
+          python3 scripts/verify_j6_icon_roles.py
+      - name: Release-code compile ONLY, private feature flags TRUE, no private assets
+        env:
+          AYAH_THEMES_PRIVATE_114: '1'
+          HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+        run: |
+          set -euo pipefail
+          test ! -e hifz-app/src/private114/assets/atlas/atlas_display_catalog_v1.json
+          # Deliberately omit the private-content + secret-key packaging gate
+          # ONLY FOR AN UNINSTALLABLE, UNSIGNED STAGING ZIP.
+          # The actual official package MUST pass the seven-file SHA-256 check
+          # offline and be signed with certificate fingerprint 66adc4..30e14.
+          gradle --no-daemon :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs
+      - name: Prove unsuffixed version 43 and refusal to claim official APK
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build-private114/outputs/apk/release -name '*.apk' -type f -print -quit)"
+          test -s "$apk"
+          "$ANDROID_HOME"/build-tools/36.0.0/aapt dump badging "$apk" > "$RUNNER_TEMP/badging.txt"
+          grep -q "package: name='com.quransafeguard.hifz' versionCode='43'" "$RUNNER_TEMP/badging.txt"
+          grep -q 'versionName=' "$RUNNER_TEMP/badging.txt"
+          if "$ANDROID_HOME"/build-tools/36.0.0/apksigner verify "$apk"; then
+            echo 'FAIL: staging must be unsigned; never deploy'
+            exit 1
+          fi
+          unzip -Z1 "$apk" | grep -q 'assets/qcf'
+          if unzip -Z1 "$apk" | grep -qE 'assets/(atlas/atlas_display_catalog_v1.json|ayah_themes_private/macros_114.json)'; then
+            echo 'FAIL: public staging unexpectedly contains private assets'
+            exit 1
+          fi
+          mkdir -p artifact
+          cp "$apk" artifact/haafidh-1175-private-config-INCOMPLETE-UNSIGNED.apk
+          cp "$RUNNER_TEMP/badging.txt" artifact/
+          echo 'INCOMPLETE UNSIGNED STAGING ONLY. Inject 7 hash-pinned private assets OFFLINE, then sign with exact official release cert. NEVER INSTALL THIS FILE.' > artifact/DO_NOT_INSTALL.txt
+          sha256sum artifact/*.apk > artifact/sha256sum.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-1175-incomplete-private-unsigned-offline-stage
+          path: artifact/
+          retention-days: 1
+          if-no-files-found: error
