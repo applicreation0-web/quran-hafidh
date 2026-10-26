@@ -1311,8 +1311,8 @@ public final class MainActivity extends android.app.Activity {
 
     private static String postFinalRecapLine(String label,PostFinalRecallStore.Recap recap){
         if(recap==null)return label+" · aucune lecture en attente";
-        if(recap.finished)return label+" · terminée · "+recap.totalPages+" pages";
-        return label+" · "+recap.completedPages+"/"+recap.totalPages
+        if(recap.finished)return label+" · "+recap.date+" · terminée · "+recap.totalPages+" pages";
+        return label+" · "+recap.date+" · "+recap.completedPages+"/"+recap.totalPages
             +" pages lues · "+(recap.totalPages-recap.completedPages)+" restantes";
     }
 
@@ -1352,7 +1352,7 @@ public final class MainActivity extends android.app.Activity {
                 prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
             if(ready==null)continue;
             String title=PostFinalRecallStore.SABQI.equals(family)?"Sabqi":"Itqān";
-            options.add(title+" · "+recap.completedPages+"/"+recap.totalPages
+            options.add(title+" · "+recap.date+" · "+recap.completedPages+"/"+recap.totalPages
                 +" pages · reprendre la lecture masquée");
             families.add(family);
         }
