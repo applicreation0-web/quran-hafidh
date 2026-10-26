@@ -36,7 +36,7 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
     private GeometryRepository geometry;
-    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, itqanProgrammeSetting, morningTimeSetting, eveningTimeSetting, weakVersesSetting;
+    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, morningTimeSetting, eveningTimeSetting, weakVersesSetting;
     private TextView sabqiStatus, itqanStatus, acquiredStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
     private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
     private static final DayOfWeek[] WEEKDAYS = {
@@ -77,9 +77,12 @@ public final class SettingsActivity extends android.app.Activity {
         weeklyProgramSetting=Ui.settingRow(this,"Programme",
             weeklyProgramSummary(),v->chooseWeeklyProgram());
         parcours.addView(weeklyProgramSetting);parcours.addView(Ui.divider(this));
-        itqanProgrammeSetting=Ui.settingRow(this,"Programme Itqān",
-            itqanProgrammeSummary(),v->chooseItqanProgramme());
-        parcours.addView(itqanProgrammeSetting);parcours.addView(Ui.divider(this));
+        // Informational only: the real An-Nas latch determines the regime.
+        // Never offer a false calendar switch that cannot alter that latch.
+        TextView itqanRegimeInfo=Ui.text(this,
+            "Itqān : consolidation avant An-Nās, maintien de la maîtrise après An-Nās. "
+                +"Bascule automatique ; séances déjà ouvertes préservées.",16f,false);
+        parcours.addView(itqanRegimeInfo);parcours.addView(Ui.divider(this));
         learningDaysSetting=Ui.settingRow(this,"Apprentissage / semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
         learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL
             && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
@@ -272,10 +275,6 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void refreshAll(){
         refreshWeeklyCadence();
-        if(itqanProgrammeSetting!=null) {
-            TextView chosen=Ui.settingValue(itqanProgrammeSetting);
-            if(chosen!=null)chosen.setText(itqanProgrammeSummary());
-        }
         if(acquiredStatus!=null) {
             int count=prefs.acquiredLineCountV6();
             acquiredStatus.setText(count==0?"0 ligne acquise · aucune plage initiale":
@@ -375,68 +374,6 @@ public final class SettingsActivity extends android.app.Activity {
             : prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
                 ? "Manuel · jours Sabqi : "+effectiveLearningDaysPerWeek()
                     +" · dimanche Finales" : "Historique 6 jours · migration lundi";
-    }
-
-    private String itqanProgrammeSummary() {
-        if(prefs.itqanPostNasMaintenance())return "Itqān · Maintien de la maîtrise · 1 hizb ×3";
-        String mode=prefs.itqanProgrammeChoice();
-        LocalDate from=prefs.itqanProgrammeStartDate();
-        if("AUTO".equals(mode))return (prefs.itqanEntretienActive()
-            ? "Itqān · Maintien de la maîtrise" : "Itqān · Consolidation")+" · automatique";
-        if("ENTRETIEN".equals(mode) && !prefs.itqanPostNasMaintenance())
-            return "Itqān · Maintien de la maîtrise · en attente de fin de parcours · dès le "+from;
-        if(from!=null && from.isAfter(HifzClock.today()))
-            return ("ENTRETIEN".equals(mode)?"Itqān · Maintien de la maîtrise · hizb ×3":"Itqān · Consolidation · approfondie")
-                +" · programmé dès le "+from;
-        return ("ENTRETIEN".equals(mode)?"Itqān · Maintien de la maîtrise · hizb ×3":"Itqān · Consolidation · approfondie")
-            +" · actif depuis le "+from;
-    }
-
-    /** Explicit programme and effective date; does not rewrite existing Hifz sessions. */
-    private void chooseItqanProgramme() {
-        if(prefs.itqanPostNasMaintenance()) {
-            new AlertDialog.Builder(this).setTitle("Itqān · Maintien de la maîtrise")
-                .setMessage("1 hizb réel par séance : deux lectures visibles et une récitation masquée avec amorces. Les séances déjà ouvertes conservent leur protocole.")
-                .setPositiveButton("Fermer",null).show();
-            return;
-        }
-        String[] choices={
-            "Itqān · Consolidation · protocole approfondi",
-            "Itqān · Maintien de la maîtrise · 1 hizb ×3"
-        };
-        int[] selected={"ENTRETIEN".equals(prefs.itqanProgrammeChoice())?1:0};
-        new AlertDialog.Builder(this).setTitle("Quel programme Itqān souhaitez-vous ?")
-            .setSingleChoiceItems(choices,selected[0],(dialog,index)->selected[0]=index)
-            .setNegativeButton("Annuler",null)
-            .setPositiveButton("Choisir la date",(dialog,which)->{
-                LocalDate today=HifzClock.today();
-                LocalDate scheduled=prefs.itqanProgrammeStartDate();
-                LocalDate initial=scheduled!=null&&!scheduled.isBefore(today)?scheduled:today;
-                android.app.DatePickerDialog dateDialog=new android.app.DatePickerDialog(this,
-                    (picker,year,month,day)->{
-                        LocalDate from=LocalDate.of(year,month+1,day);
-                        String selectedMode=selected[0]==0?"CONSOLIDATION":"ENTRETIEN";
-                        String caution=selected[0]==1 && !prefs.itqanPostNasMaintenance()
-                            ? "\nLe maintien commencera au plus tôt après l'arrivée effective à An-Nās."
-                            : "";
-                        new AlertDialog.Builder(this).setTitle("Confirmer le programme")
-                            .setMessage(choices[selected[0]]+"\nÀ partir du "+from+
-                                "\nLes acquis et les séances déjà commencées restent inchangés."+caution)
-                            .setNegativeButton("Annuler",null)
-                            .setPositiveButton("Enregistrer",(accept,button)->{
-                                try {
-                                    if(!prefs.scheduleItqanProgramme(selectedMode,from))
-                                        throw new IllegalStateException("Écriture impossible");
-                                    refreshAll();
-                                }catch(RuntimeException error){
-                                    Toast.makeText(this,"Programme non enregistré : "+error.getMessage(),
-                                        Toast.LENGTH_LONG).show();
-                                }
-                            }).show();
-                    },initial.getYear(),initial.getMonthValue()-1,initial.getDayOfMonth());
-                dateDialog.getDatePicker().setMinDate(System.currentTimeMillis()-86400000L);
-                dateDialog.show();
-            }).show();
     }
 
     private void chooseWeeklyProgram() {
