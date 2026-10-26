@@ -645,8 +645,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         String today = sessionDate.toString();
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,sessionDate)) {
             sessionCompleted = true;
-            program.setText("Consolidation · séance validée");
-            progress.setText("Boule de neige du soir terminée.");
+            if(prefs.itqanPostNasMaintenance()) {
+                boolean completed=sessionDate.toString().equals(prefs.lastStabilizationSnowballEveningDate());
+                program.setText(completed?"Consolidation · séance validée":"Consolidation · à venir");
+                progress.setText(completed
+                    ?"Maintiens de la semaine récités une fois avec texte masqué."
+                    :"Disponible après le dernier Maintien de la semaine.");
+            } else {
+                program.setText("Consolidation · séance validée");
+                progress.setText("Boule de neige du soir terminée.");
+            }
             return;
         }
         renderGroupedCycle(prefs.stabilizedConsolidationUnits(sessionDate), ConsolidationCycleEngine.Family.STABILIZATION,
