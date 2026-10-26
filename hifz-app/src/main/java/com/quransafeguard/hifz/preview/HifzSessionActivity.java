@@ -38,6 +38,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     public static final String CONSOLIDATION_FINAL = "CONSOLIDATION_FINAL";
     public static final String LEARNING_FINAL = "LEARNING_FINAL";
     public static final String POST_FINAL_RECALL = "POST_FINAL_RECALL";
+    public static final String EXTRA_POST_FINAL_FAMILY = "extra_post_final_family";
     public static final String MURAJAAH = "MURAJAAH";
     public static final String MURAJAAH_ACTIVE = "MURAJAAH_ACTIVE";
 
@@ -104,6 +105,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private ConsolidationCycleEngine.Session consolidationSession;
     private PostFinalRecallStore postFinalStore;
     private PostFinalRecallStore.Review currentPostFinalReview;
+    private String requestedPostFinalFamily;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -115,6 +117,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 && !MURAJAAH.equals(mode) && !MURAJAAH_ACTIVE.equals(mode)) mode = SABQI;
         prefs = new HifzPrefs(this);
         postFinalStore = new PostFinalRecallStore(this);
+        requestedPostFinalFamily=getIntent().getStringExtra(EXTRA_POST_FINAL_FAMILY);
         String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
             ? prefs.sabqiTodayReviewDate()
             : "";
@@ -715,7 +718,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionCompleted = true;
             program.setText("Consolidation · séance validée");
             progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));
-            offerPostFinalRecall();
+            offerPostFinalRecall(PostFinalRecallStore.ITQAN);
             return;
         }
         // The physical An-Nas latch forbids every NEW final, including a
@@ -754,6 +757,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         closeClockForCompletedSession();
         mushaf.cycleCompleted();
         renderMode();
+        promptPostFinalRecall(PostFinalRecallStore.ITQAN);
     }
 
     /** Dimanche matin : ×10 final de la boule de neige de la semaine — graduate vers Acquis. */
@@ -763,7 +767,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionCompleted = true;
             program.setText("Renforcement · séance validée");
             progress.setText(prefs.lastLearningConsolidationLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastLearningConsolidationLabel()));
-            offerPostFinalRecall();
+            offerPostFinalRecall(PostFinalRecallStore.SABQI);
             return;
         }
         // A known frozen Saturday evening session MUST be closed first.
@@ -816,6 +820,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         closeClockForCompletedSession();
         mushaf.cycleCompleted();
         renderMode();
+        promptPostFinalRecall(PostFinalRecallStore.SABQI);
     }
 
 
@@ -852,16 +857,49 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
     }
 
-    private void offerPostFinalRecall(){
-        PostFinalRecallStore.Review ready=postFinalStore.nextReady(
+    private void launchPostFinalRecall(String family){
+        startActivity(new Intent(this,HifzSessionActivity.class)
+            .putExtra(EXTRA_MODE,POST_FINAL_RECALL)
+            .putExtra(EXTRA_POST_FINAL_FAMILY,family));
+    }
+
+    private PostFinalRecallStore.Review readyPostFinalRecall(String family){
+        return postFinalStore.nextReadyFor(family,
             prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
-        if(ready!=null)addRoundAction("↻","Lecture cumulative",v->
-            startActivity(new Intent(this,HifzSessionActivity.class).putExtra(EXTRA_MODE,POST_FINAL_RECALL)));
+    }
+
+    private void offerPostFinalRecall(String family){
+        PostFinalRecallStore.Review ready=readyPostFinalRecall(family);
+        if(ready!=null)addRoundAction("↻","Lecture cumulative masquée · "
+            +(PostFinalRecallStore.ITQAN.equals(family)?"Itqān":"Sabqi"),
+            v->launchPostFinalRecall(family));
+    }
+
+    /** Actual final credits already committed: offer the additional one-pass recall explicitly. */
+    private void promptPostFinalRecall(String family){
+        PostFinalRecallStore.Review ready=readyPostFinalRecall(family);
+        if(ready==null){
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Finale validée · lecture cumulative à vérifier")
+                .setMessage("La finale est enregistrée, mais la lecture cumulative n’a pas été préparée. "
+                    +"Aucun crédit ne sera annulé. Conservez une sauvegarde avant toute correction.")
+                .setPositiveButton("Compris",null).show();
+            return;
+        }
+        String title=PostFinalRecallStore.ITQAN.equals(family)?"Itqān":"Sabqi";
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Finale "+title+" validée")
+            .setMessage("Lecture supplémentaire : "+ready.previousCount
+                +" page(s) précédemment acquises au maximum, plus les pages de cette finale "
+                +"("+ready.total+" pages au total). Une récitation masquée par page, sans nouveau crédit.")
+            .setPositiveButton("Commencer", (dialog,which)->launchPostFinalRecall(family))
+            .setNegativeButton("Plus tard",null).show();
     }
 
     private void renderPostFinalRecall(){
-        currentPostFinalReview=postFinalStore.nextReady(
-            prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate());
+        currentPostFinalReview=requestedPostFinalFamily==null
+            ?postFinalStore.nextReady(prefs.lastLearningConsolidationDate(),prefs.lastRecentSabqiReviewDate())
+            :readyPostFinalRecall(requestedPostFinalFamily);
         if(currentPostFinalReview==null){
             sessionCompleted=true;
             program.setText("Lecture cumulative · terminée");
