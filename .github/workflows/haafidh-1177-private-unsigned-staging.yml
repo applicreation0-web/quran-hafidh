@@ -65,3 +65,5 @@ jobs:
           path: artifact/
           retention-days: 3
           if-no-files-found: error
+
+# Release-preflight staging request 2026-10-26: publish only unsigned private-asset-free input.
