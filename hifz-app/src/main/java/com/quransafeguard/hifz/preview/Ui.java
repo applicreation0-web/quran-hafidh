@@ -332,6 +332,8 @@ final class Ui {
         if (s.equals("révision active")) return R.drawable.ic_palace_torch;
         if (s.equals("révision passive") || s.equals("entretien")) return R.drawable.ic_palace_mirror;
         if (s.equals("révision")) return R.drawable.ic_ui_revision;
+        if (s.equals("lecture cumulative")) return R.drawable.ic_ui_revision;
+        if (s.equals("page récitée")) return R.drawable.ic_ui_validate;
         if (s.contains("difficulté") || s.contains("difficulte")) return R.drawable.ic_ui_difficulty;
         if (s.equals("marquer") || s.startsWith("touchez le verset")) return R.drawable.ic_ui_difficulty;
         if (s.contains("plus d’options") || s.contains("plus d'options")) return R.drawable.ic_ui_more;
