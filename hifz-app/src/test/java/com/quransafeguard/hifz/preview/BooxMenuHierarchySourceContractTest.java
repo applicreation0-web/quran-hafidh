@@ -19,9 +19,13 @@ public final class BooxMenuHierarchySourceContractTest {
         String home = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue(home.contains("TextView subtitle = Ui.menuSubline(this, pathSubtitle(label))"));
         assertTrue(home.contains("tile.addView(subtitle)"));
+        assertTrue("The visible title must precede the large pictogram",
+            home.indexOf("tile.addView(name);") < home.indexOf("tile.addView(iconView, iconLayout);"));
+        assertTrue("Both historical finales require their own distinguishable icons",
+            home.contains("ic_hifz_final_sabqi") && home.contains("ic_hifz_final_itqan"));
         for (String shortText : new String[] {
-            "Sabaq · nouvelle leçon", "Sabqi · révision récente", "Fixation Itqān",
-            "Cumul Itqān", "Sans texte", "Avec texte"
+            "Nouvelle leçon", "Révision cumulative Sabqi", "Répétitions approfondies",
+            "Révision cumulative Itqān", "Texte masqué", "Texte visible"
         }) assertTrue(shortText, home.contains(shortText));
         assertTrue("Long stabilization state must remain available for updates",
             home.contains("cue.setVisibility(View.GONE);") && home.contains("tile.addView(cue);"));
