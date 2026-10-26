@@ -255,8 +255,9 @@ final class WeeklyDashboardPlanner {
                         :"Finale Itqān · aucun passage admissible";
                     state=learningDone&&(!itqanFinalDue||consolidationDone)?"Validé"
                         :learningDone?"Soir à faire"
-                        :!learningDue&&!consolidationDue&&!date.isAfter(today)?"Aucune finale à valider"
-                        :"À faire";
+                        :!learningDue&&!consolidationDue
+                            ?(date.isAfter(today)?"Prévision":"Aucune finale à valider")
+                            :"À faire";
                     // Sunday cannot consume a passive cursor or schedule any general revisions.
                     break;
                 }
