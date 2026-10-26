@@ -17,6 +17,37 @@ import static org.junit.Assert.*;
 
 /** Actual Android Activity: masked post-final queue, restart and unchanged Acquis/final states. */
 public final class PostFinalRecallInstrumentedTest {
+    @Test public void migratedUserCadenceShowsSevenActualDayDetailsWithoutFallback()
+            throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            new HifzPrefs(c); // real schema bootstrap
+            assertTrue(raw.edit()
+                .putString("programStartDate","2026-09-21")
+                .putBoolean("sevenDayProgrammeMigratedV1",true)
+                .putString("weeklyProgramTransitionsV1",
+                    "[{\\\"from\\\":\\\"2026-10-23\\\",\\\"mode\\\":\\\"RECOMMENDED\\\"}]")
+                .commit());
+            HifzPrefs prefs=new HifzPrefs(c);
+            List<WeeklyDashboardPlanner.Row> days=new WeeklyDashboardPlanner(
+                prefs,GeometryRepository.get(c),new DashboardLedger(c),
+                new HifzSpeedStore(c)).week(java.time.LocalDate.of(2026,10,26));
+            assertEquals(7,days.size());
+            assertEquals("Monday lesson",java.time.LocalDate.of(2026,10,26),days.get(0).date);
+            assertEquals("Sunday finals",java.time.LocalDate.of(2026,11,1),days.get(6).date);
+            assertTrue("Monday should show actual Sabqi",days.get(0).evening.contains("Apprentissage"));
+            assertTrue("Tuesday should show actual Itqan",days.get(1).evening.contains("Stabilisation"));
+            assertTrue("Sunday should show Sabqi final",days.get(6).morning.contains("Finale Sabqi"));
+            assertTrue("Sunday should show Itqan final",days.get(6).evening.contains("Finale Itqān"));
+            for(WeeklyDashboardPlanner.Row day:days){
+                assertFalse("Valid week must not degrade to placeholders: "+day.date,
+                    day.state.contains("Projection à vérifier"));
+            }
+        }finally{assertTrue(raw.edit().clear().commit());}
+    }
+
     @Test public void corruptFrozenItqanCannotEraseRealMondayCalendarOrSevenDates()
             throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
