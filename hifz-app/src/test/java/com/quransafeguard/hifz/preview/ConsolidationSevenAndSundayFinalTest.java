@@ -88,8 +88,8 @@ public final class ConsolidationSevenAndSundayFinalTest {
             main.substring(sunday,next).contains("return HifzSessionActivity.ITQAN;"));
         assertTrue(main.contains("if(recommendedSunday(today)){"));
         assertTrue(main.contains("return out; // No active/passive reviews or ordinary Itqan on Sunday."));
-        assertTrue(dashboard.contains("Finale Renforcement Sabqi"));
-        assertTrue(dashboard.contains("Finale Consolidation Itqān"));
+        assertTrue(dashboard.contains("Finale Sabqi"));
+        assertTrue(dashboard.contains("Finale Itqān"));
     }
 
     private static String read(String repoPath) throws Exception {
