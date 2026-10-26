@@ -10,13 +10,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Post-validation *non-crediting* cumulative recall: at most the last 20
- * previously-acquired pages, followed by the pages of the just-completed final.
+ * Post-validation *non-crediting* recall: the last 20 pages TOTAL of the
+ * family's earned corpus, including (and ending with) the just-validated final.
  * Never expands an eligible physical line into unearned lines on the same page.
  * Input order of acquired lines reflects their persisted acquisition order.
  */
 final class PostFinalCumulativePolicy {
-    static final int MAX_PREVIOUS_PAGES = 20;
+    static final int MAX_CUMULATIVE_PAGES = 20;
     private PostFinalCumulativePolicy() {}
 
     static final class Page {
@@ -54,14 +54,21 @@ final class PostFinalCumulativePolicy {
             previous.computeIfAbsent(line.page,k->new LinkedHashMap<>()).put(line.id,line);
         }
         ArrayList<Integer> priorOrder=new ArrayList<>(previous.keySet());
-        int first=Math.max(0,priorOrder.size()-MAX_PREVIOUS_PAGES);
+        ArrayList<Integer> currentOrder=new ArrayList<>(current.keySet());
+        // 20 latest physical pages of THIS family overall, never 20+current.
+        // In an unusually large current Sunday finale, retain its final 20 pages.
+        int newestCount=Math.min(MAX_CUMULATIVE_PAGES,currentOrder.size());
+        int historicalSlots=MAX_CUMULATIVE_PAGES-newestCount;
+        int first=Math.max(0,priorOrder.size()-historicalSlots);
         ArrayList<Page> out=new ArrayList<>();
         for(int i=first;i<priorOrder.size();i++){
             int number=priorOrder.get(i);
             out.add(toPage(number,previous.get(number),false));
         }
-        for(Map.Entry<Integer,LinkedHashMap<String,GeometryRepository.LineMeta>> e:current.entrySet())
-            out.add(toPage(e.getKey(),e.getValue(),true));
+        for(int i=currentOrder.size()-newestCount;i<currentOrder.size();i++){
+            int number=currentOrder.get(i);
+            out.add(toPage(number,current.get(number),true));
+        }
         return Collections.unmodifiableList(out);
     }
 
