@@ -6,6 +6,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.time.LocalDate;
+import java.time.DayOfWeek;
 import java.util.List;
 
 /**
@@ -71,6 +75,107 @@ final class PostFinalRecallStore {
         if(!prefs.edit().putString(KEY,queue.toString()).commit())
             throw new IllegalStateException("Unable to persist post-final plan");
     }
+    /**
+     * One-way recovery for a legacy finale that was committed before the
+     * post-final reading plan existed. The last completed final date is the
+     * credit proof; dated physical snowball history supplies eligible pages.
+     * This never reopens a final, edits Acquis or credits any additional line.
+     *
+     * Refuse incomplete/corrupt evidence rather than invent an entire week.
+     * Other families' acquired pages are deliberately excluded.
+     */
+    boolean recoverCommittedFromHistory(String family,String date,Set<String>acquired,
+                                        GeometryRepository geometry) {
+        if((!SABQI.equals(family)&&!ITQAN.equals(family))
+                ||date==null||date.isEmpty()||acquired==null||geometry==null)return false;
+        String completedKey=SABQI.equals(family)
+            ?"lastLearningConsolidationDate":"lastRecentSabqiReviewDate";
+        if(!date.equals(prefs.getString(completedKey,"")))return false;
+        LocalDate sunday;
+        try { sunday=LocalDate.parse(date); }
+        catch(RuntimeException invalid){return false;}
+        if(sunday.getDayOfWeek()!=DayOfWeek.SUNDAY
+                ||sunday.isAfter(HifzClock.today()))return false;
+
+        // Existing PREPARED, READY and DONE snapshots are authoritative.
+        JSONArray queue=read();
+        for(int i=0;i<queue.length();i++){
+            JSONObject item=queue.optJSONObject(i);
+            if(family.equals(item.optString("family"))&&date.equals(item.optString("date")))
+                return false;
+        }
+
+        String historyKey=SABQI.equals(family)
+            ?"learningSnowball8WeekHistory":"stabilizationSnowball8WeekHistory";
+        JSONArray weeks;
+        try { weeks=new JSONArray(prefs.getString(historyKey,"[]")); }
+        catch(Exception invalid) {
+            android.util.Log.w("QuranHifz","Historical post-final source invalid",invalid);
+            return false;
+        }
+        LocalDate monday=sunday.minusDays(6);
+        LinkedHashSet<String> priorIds=new LinkedHashSet<>();
+        LinkedHashSet<String> currentIds=new LinkedHashSet<>();
+        boolean foundCurrentWeek=false;
+        try {
+            for(int i=0;i<weeks.length();i++){
+                JSONObject week=weeks.optJSONObject(i);
+                if(week==null)return false;
+                LocalDate weekDate=LocalDate.parse(week.getString("week"));
+                if(weekDate.isAfter(monday))continue; // not evidence for this final
+                JSONArray units=week.getJSONArray("units");
+                boolean isCurrent=weekDate.equals(monday);
+                if(isCurrent)foundCurrentWeek=true;
+                for(int j=0;j<units.length();j++){
+                    for(String id:ConsolidationPhysicalUnitPolicy.decodeLineUnit(units.getString(j))) {
+                        if(isCurrent) {
+                            // A completed date alone does not make incomplete
+                            // source lines acquired. Refuse partial reconstruction.
+                            if(!acquired.contains(id))return false;
+                            currentIds.add(id);
+                        } else if(acquired.contains(id)) {
+                            priorIds.add(id);
+                        }
+                    }
+                }
+            }
+        }catch(Exception incomplete){
+            android.util.Log.w("QuranHifz","Historical post-final lines unavailable",incomplete);
+            return false;
+        }
+        if(!foundCurrentWeek||currentIds.isEmpty())return false;
+        priorIds.removeAll(currentIds); // one physical line, one occurrence
+        try {
+            // The geometry map is canonical, but the historical family/week
+            // order determines which eligible 20 *pages* are most recent.
+            java.util.HashMap<String,GeometryRepository.LineMeta> byId=new java.util.HashMap<>();
+            for(int i=0;i<geometry.lineCount();i++){
+                GeometryRepository.LineMeta line=geometry.line(i);
+                byId.put(line.id,line);
+            }
+            ArrayList<GeometryRepository.LineMeta> previous=new ArrayList<>();
+            ArrayList<GeometryRepository.LineMeta> current=new ArrayList<>();
+            for(String id:priorIds){
+                GeometryRepository.LineMeta meta=byId.get(id);
+                if(meta==null)return false;
+                previous.add(meta);
+            }
+            for(String id:currentIds){
+                GeometryRepository.LineMeta meta=byId.get(id);
+                if(meta==null)return false;
+                current.add(meta);
+            }
+            List<PostFinalCumulativePolicy.Page> pages=PostFinalCumulativePolicy.plan(previous,current);
+            // PREPARED persisted first; a crash before READY is still recoverable
+            // because nextReady verifies the committed historical final date.
+            prepare(family,date,pages);
+            return markReady(family,date);
+        }catch(RuntimeException unavailable){
+            android.util.Log.w("QuranHifz","Historical post-final recovery not possible",unavailable);
+            return false;
+        }
+    }
+
     /** Selection only. A PREPARED entry is not usable unless its finale was actually validated. */
     Review nextReady(String completedSabqiDate,String completedItqanDate){
         return findReady(null,completedSabqiDate,completedItqanDate);
