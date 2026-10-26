@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.quransafeguard.hifz.core.CadenceAction;
 import com.quransafeguard.hifz.core.EligibleCorpus;
 import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.QuranCanon;
@@ -3298,9 +3299,12 @@ public final class HifzPrefs {
 
     boolean snowballEveningPending(ConsolidationCycleEngine.Family family,LocalDate date) {
         if(family==null||date==null)throw new IllegalArgumentException("evening review required");
-        if(family==ConsolidationCycleEngine.Family.STABILIZATION && itqanPostNasMaintenance()
-                && frozenConsolidationSnapshot(family,"stabilization-"+date).isEmpty())
-            return postNasConsolidationPending(date);
+        if(family==ConsolidationCycleEngine.Family.STABILIZATION && itqanPostNasMaintenance()) {
+            // An old first-pass OPEN Consolidation keeps its frozen receipts.
+            String old=p.getString(consolidationStateKey(family),"");
+            if(old.isEmpty()||old.contains("POST_NAS_WEEKLY_MASKED"))
+                return postNasConsolidationPending(date);
+        }
         String marker=family==ConsolidationCycleEngine.Family.LEARNING
             ?lastLearningSnowballEveningDate():lastStabilizationSnowballEveningDate();
         if(date.toString().equals(marker))return false;
@@ -3332,6 +3336,12 @@ public final class HifzPrefs {
             synchronized(V6_STATE_LOCK) {
                 String snapshot=postNasConsolidationSnapshot(day);
                 if(snapshot.isEmpty()||!postNasConsolidationPending(day))return false;
+                JSONArray exact=postNasMaintainedHizbs(day);
+                if(exact.length()!=completed.cycle().units().size())
+                    throw new IllegalStateException("Maintien added since weekly snapshot opened");
+                for(int i=0;i<exact.length();i++)
+                    if(!exact.optString(i).equals(completed.cycle().units().get(i).id()))
+                        throw new IllegalStateException("Maintien units changed during weekly consolidation");
                 return p.edit().putString(POST_NAS_WEEK_DONE,snapshot)
                     .putString("lastStabilizationSnowballEveningDate",date)
                     .remove(consolidationStateKey(family)).commit();
