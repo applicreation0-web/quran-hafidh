@@ -24,7 +24,7 @@ public final class PostFinal1176HorizonStressTest {
                 List<GeometryRepository.LineMeta> newest=new ArrayList<>();
                 for(int p=0;p<weeklyCount;p++)newest.add(line(500+p,scenario%3));
                 List<PostFinalCumulativePolicy.Page> pages=PostFinalCumulativePolicy.plan(acquired,newest);
-                assertEquals(Math.min(20,priorCount)+weeklyCount,pages.size());
+                assertEquals(Math.min(20,priorCount+weeklyCount),pages.size());
                 String date=LocalDate.of(2026,10,26).plusDays(horizon).plusDays(scenario).toString();
                 String family=scenario%2==0?PostFinalRecallStore.SABQI:PostFinalRecallStore.ITQAN;
                 PostFinalRecallStore store=new PostFinalRecallStore(disk);
