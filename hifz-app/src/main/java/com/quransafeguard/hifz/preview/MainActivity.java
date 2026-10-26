@@ -246,6 +246,7 @@ public final class MainActivity extends android.app.Activity {
                 // startup. Only separately prepared future readings are resumed.
                 geometry = loaded;
                 runOnUiThread(() -> {
+                    if(isDestroyed()||isFinishing()||localLoader.isShutdown())return;
                     setTodayEnabled(true);
                     setGeometryActionsEnabled(true);
                     ledger.capture(prefs);
@@ -253,6 +254,7 @@ public final class MainActivity extends android.app.Activity {
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
+                    if(isDestroyed()||isFinishing())return;
                     setToday("Parcours indisponible", false);
                     setGeometryActionsEnabled(false);
                 });
@@ -1256,7 +1258,7 @@ public final class MainActivity extends android.app.Activity {
 
     /** Seven-day interactive rail, with one readable day instead of seven stacked lists. */
     private void refreshDashboard() {
-        if (dashboard == null || geometry == null) return;
+        if (dashboard == null || geometry == null || isDestroyed() || isFinishing() || localLoader.isShutdown()) return;
         if(displayedWeekStart==null)displayedWeekStart=CalendarPresentation.monday(HifzClock.today());
         final LocalDate requested=displayedWeekStart;
         final int request=++calendarRequest;
@@ -1276,7 +1278,7 @@ public final class MainActivity extends android.app.Activity {
             final List<WeeklyDashboardPlanner.Row> loaded=rows;
             final WeeklyDashboardPlanner.Row loadedToday=actualToday;
             runOnUiThread(()->{
-                if(isDestroyed()||request!=calendarRequest)return;
+                if(isDestroyed()||isFinishing()||request!=calendarRequest)return;
                 todayRow=loadedToday;renderDashboardRows(loaded);refreshToday();renderHomeOverview();
             });
         });
@@ -1783,6 +1785,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     @Override protected void onDestroy() {
+        calendarRequest++;
         localLoader.shutdownNow();
         super.onDestroy();
     }

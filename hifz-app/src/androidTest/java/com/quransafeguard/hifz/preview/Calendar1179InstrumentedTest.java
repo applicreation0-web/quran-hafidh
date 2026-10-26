@@ -43,4 +43,14 @@ public final class Calendar1179InstrumentedTest {
             }catch(Exception e){throw new AssertionError(e);}});
         }
     }
+    @Test public void closedScreenRejectsLateCalendarRefreshWithoutSubmittingWork()throws Exception{
+        java.util.concurrent.atomic.AtomicReference<MainActivity> closed=new java.util.concurrent.atomic.AtomicReference<>();
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)){
+            ready(scenario);scenario.onActivity(closed::set);
+        }
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
+            try{assertTrue(closed.get().isDestroyed());call(closed.get(),"refreshDashboard",new Class<?>[]{});}
+            catch(Exception error){throw new AssertionError("A late geometry callback must not resubmit to a closed executor",error);}
+        });
+    }
 }
