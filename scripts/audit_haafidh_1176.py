@@ -52,7 +52,7 @@ def main():
         if literal not in gradle:
             findings.append(dict(level="ERROR",kind="invalid_release_version",literal=literal))
     # Post-final review MUST NOT masquerade as complete when new functional delivery is absent.
-    has_postfinal="PostFinalMaskedReview" in allsource
+    has_postfinal="PostFinalRecallStore" in allsource and "renderPostFinalRecall()" in allsource
     findings.append(dict(level="INFO",kind="postfinal_masked_20_pages_implemented",value=has_postfinal))
     report={
         "version":"1.17.6","production_java_files":len(files),"drawable_refs":len(drawable_refs),
