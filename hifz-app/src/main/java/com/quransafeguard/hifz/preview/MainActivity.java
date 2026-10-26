@@ -220,6 +220,10 @@ public final class MainActivity extends android.app.Activity {
                 prefs.repairStraddlingAcquiredVerses(loaded);
                 prefs.releaseRevisionCursorsFromFatiha();
                 prefs.currentAnchoringEntry(loaded);
+                // Rebase only old 1.17.7 pending post-final plans whose previous
+                // pages came from global Acquis. No Hifz credits are changed.
+                postFinalStore.repairLegacyPendingFamilyPlans(
+                    loaded,prefs.progressionSnapshotV6().acquired);
                 // Historical missing cumulative readings are not recreated at
                 // startup. Only separately prepared future readings are resumed.
                 geometry = loaded;
