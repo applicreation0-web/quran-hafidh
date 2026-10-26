@@ -914,8 +914,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             :readyPostFinalRecall(requestedPostFinalFamily);
         if(currentPostFinalReview==null){
             sessionCompleted=true;
-            program.setText("Lecture cumulative · terminée");
-            progress.setText("Une récitation masquée par page effectuée.");
+            String family=requestedPostFinalFamily;
+            boolean blocked=family!=null
+                ?postFinalStore.hasBlockedLegacyFamily(family)
+                :postFinalStore.hasBlockedLegacyFamily(PostFinalRecallStore.SABQI)
+                    ||postFinalStore.hasBlockedLegacyFamily(PostFinalRecallStore.ITQAN);
+            program.setText(blocked?"Lecture cumulative · provenance à vérifier"
+                :"Lecture cumulative · terminée");
+            progress.setText(blocked
+                ?"Ancienne lecture 1.17.7 conservée mais bloquée : impossible de prouver ses pages Sabqi/Itqān. Aucun crédit modifié."
+                :"Une récitation masquée par page effectuée.");
             return;
         }
         PostFinalRecallStore.Review review=currentPostFinalReview;
@@ -929,7 +937,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask=100;sessionCompleted=false;
         program.setText("Lecture cumulative "+(PostFinalRecallStore.SABQI.equals(review.family)?"Sabqi":"Itqān")
             +" · page "+(review.position+1)+"/"+review.total);
-        progress.setText("20 pages précédentes maximum + semaine validée · 1 fois masquée");
+        progress.setText("20 dernières pages du parcours, finale comprise · 1 fois masquée");
         showCurrent();
         updatePostFinalRecallAction();
     }
