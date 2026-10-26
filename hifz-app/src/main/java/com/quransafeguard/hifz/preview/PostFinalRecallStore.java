@@ -195,6 +195,110 @@ final class PostFinalRecallStore {
     }
 
 
+    /**
+     * One-time 1.17.7 queue repair, BEFORE any pending page is displayed.
+     * That version selected preceding pages from GLOBAL Acquis and may have
+     * injected the opposite family's lines even on its current-final page.
+     * Keep the original DONE receipts, final credits and dates untouched.
+     * An unverifiable legacy plan is blocked rather than displaying wrong pages.
+     * Partial non-crediting reading progress is preserved only if its already
+     * completed physical-page prefix is identical; otherwise restart safely.
+     */
+    int repairLegacyPendingFamilyPlans(GeometryRepository geometry,Set<String> acquired) {
+        if(geometry==null||acquired==null)
+            throw new IllegalArgumentException("Geometry and acquired proof required");
+        JSONArray queue=read();
+        java.util.HashMap<String,GeometryRepository.LineMeta> geometryById=new java.util.HashMap<>();
+        for(int i=0;i<geometry.lineCount();i++){
+            GeometryRepository.LineMeta meta=geometry.line(i);
+            geometryById.put(meta.id,meta);
+        }
+        int changed=0;
+        try {
+            for(int q=0;q<queue.length();q++) {
+                JSONObject item=queue.getJSONObject(q);
+                String status=item.getString("status"),dateText=item.getString("date");
+                String family=item.getString("family");
+                if("DONE".equals(status)||item.optInt("familySourceVersion",0)==1
+                        ||"PROVENANCE_REVIEW".equals(status))continue;
+                if(!SABQI.equals(family)&&!ITQAN.equals(family))
+                    throw new IllegalStateException("Invalid legacy family");
+                String last=prefs.getString(SABQI.equals(family)
+                    ?"lastLearningConsolidationDate":"lastRecentSabqiReviewDate","");
+                boolean committed="READY".equals(status)
+                    ||("PREPARED".equals(status)&&dateText.equals(last));
+                if(!committed)continue; // Do not migrate an unfinished finale.
+                LocalDate date=LocalDate.parse(dateText);
+                ConsolidationCycleEngine.Family provenance=SABQI.equals(family)
+                    ?ConsolidationCycleEngine.Family.LEARNING
+                    :ConsolidationCycleEngine.Family.STABILIZATION;
+                // Only time-bounded physical lines belonging to this family.
+                List<String> proven=PostFinalFamilyCreditLedger.previouslyAcquired(
+                    prefs,provenance,acquired,date);
+                LinkedHashSet<String> evidence=new LinkedHashSet<>(proven);
+                LinkedHashSet<String> currentIds=new LinkedHashSet<>();
+                JSONArray oldPages=item.getJSONArray("pages");
+                for(int j=0;j<oldPages.length();j++) {
+                    JSONObject page=oldPages.getJSONObject(j);
+                    if(!page.getBoolean("current"))continue;
+                    JSONArray raw=page.getJSONArray("lines");
+                    for(int k=0;k<raw.length();k++){
+                        String id=raw.getString(k);
+                        if(evidence.contains(id)&&acquired.contains(id))currentIds.add(id);
+                    }
+                }
+                if(currentIds.isEmpty()) {
+                    // Preserve all legacy bytes and progress for manual audit;
+                    // never suggest an unproven mixed-family reading.
+                    item.put("status","PROVENANCE_REVIEW");
+                    changed++;
+                    continue;
+                }
+                ArrayList<GeometryRepository.LineMeta> prior=new ArrayList<>();
+                ArrayList<GeometryRepository.LineMeta> current=new ArrayList<>();
+                for(String id:proven){
+                    GeometryRepository.LineMeta meta=geometryById.get(id);
+                    if(meta==null)throw new IllegalStateException("Missing proven page geometry");
+                    if(currentIds.contains(id))current.add(meta);
+                    else prior.add(meta);
+                }
+                List<PostFinalCumulativePolicy.Page> corrected=PostFinalCumulativePolicy.plan(prior,current);
+                JSONArray serialized=new JSONArray();
+                int previousCount=0;
+                for(PostFinalCumulativePolicy.Page page:corrected){
+                    if(!page.fromCurrentFinal)previousCount++;
+                    JSONArray lines=new JSONArray();
+                    for(String id:page.lineIds)lines.put(id);
+                    serialized.put(new JSONObject().put("page",page.mushafPage)
+                        .put("lines",lines).put("current",page.fromCurrentFinal));
+                }
+                int oldPosition=item.getInt("position");
+                if(oldPosition<0||oldPosition>oldPages.length())
+                    throw new IllegalStateException("Invalid historical review cursor");
+                boolean samePrefix=oldPosition<=serialized.length();
+                for(int k=0;samePrefix && k<oldPosition;k++) {
+                    JSONObject old=oldPages.getJSONObject(k);
+                    JSONObject newer=serialized.getJSONObject(k);
+                    if(old.getInt("page")!=newer.getInt("page")
+                            ||!old.getJSONArray("lines").toString()
+                                .equals(newer.getJSONArray("lines").toString()))
+                        samePrefix=false;
+                }
+                item.put("pages",serialized).put("previous",previousCount)
+                    .put("familySourceVersion",1)
+                    .put("position",samePrefix?oldPosition:0)
+                    .put("legacyFamilyCorrection",true)
+                    .put("legacyResetNonCreditingReading",!samePrefix);
+                changed++;
+            }
+            if(changed>0&&!prefs.edit().putString(KEY,queue.toString()).commit())
+                throw new IllegalStateException("Unable to persist 1.17.7 family-only reading repair");
+        } catch(Exception damaged) {
+            throw new IllegalStateException("Cannot repair old cumulative reading without reliable provenance",damaged);
+        }
+        return changed;
+    }
+
     /** Read-only summary for the weekly recap. Never creates a new reading or credit. */
     static final class Recap {
         final String family,date;
