@@ -38,6 +38,40 @@ public final class PostFinalRecallStoreTest {
         assertNull(resumed.nextReady("2026-10-25",""));
         assertFalse(pref.disk.containsKey("v6AcquiredCreditLineIds"));
     }
+    @Test public void recapReadsActualPageProgressButNeverAddsHistoricalMissedWork(){
+        InMemoryPrefs disk=new InMemoryPrefs();
+        PostFinalRecallStore store=new PostFinalRecallStore(disk);
+        assertNull("Missed old final must not turn into a late reading",
+            store.recapFor(PostFinalRecallStore.ITQAN,"2026-10-18","2026-10-25"));
+        store.prepare(PostFinalRecallStore.ITQAN,"2026-11-01",plan());
+        assertNull("PREPARED alone is not a validated final",
+            store.recapFor(PostFinalRecallStore.ITQAN,"","2026-10-25"));
+        assertTrue(store.markReady(PostFinalRecallStore.ITQAN,"2026-11-01"));
+        PostFinalRecallStore.Recap pending=store.recapFor(
+            PostFinalRecallStore.ITQAN,"","2026-11-01");
+        assertNotNull(pending);
+        assertFalse(pending.finished);
+        assertEquals(3,pending.totalPages);
+        assertEquals(0,pending.completedPages);
+        assertEquals(2,pending.previousPages);
+        assertTrue(store.advance(store.nextReadyFor(PostFinalRecallStore.ITQAN,
+            "","2026-11-01"),"","2026-11-01"));
+        assertEquals(1,store.recapFor(PostFinalRecallStore.ITQAN,
+            "","2026-11-01").completedPages);
+        for(int i=1;i<3;i++){
+            PostFinalRecallStore.Review next=store.nextReadyFor(
+                PostFinalRecallStore.ITQAN,"","2026-11-01");
+            assertTrue(store.advance(next,"","2026-11-01"));
+        }
+        PostFinalRecallStore.Recap done=store.recapFor(
+            PostFinalRecallStore.ITQAN,"","2026-11-01");
+        assertTrue(done.finished);
+        assertEquals(done.totalPages,done.completedPages);
+        assertNull(store.nextReady("","2026-11-01"));
+        assertFalse("Recap is read-only: Acquis cannot change",
+            disk.disk.containsKey("v6AcquiredCreditLineIds"));
+    }
+
     @Test public void pendingSabqiCannotHideAnIndependentCompletedItqanRecall(){
         InMemoryPrefs disk=new InMemoryPrefs();
         PostFinalRecallStore store=new PostFinalRecallStore(disk);
