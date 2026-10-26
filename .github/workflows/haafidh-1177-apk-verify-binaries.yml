@@ -27,6 +27,7 @@ jobs:
           cp "$sdk/lib/apksigner.jar" "$RUNNER_TEMP/haafidh-verifier-toolbox/apksigner.jar"
           cp "$sdk/aapt" "$RUNNER_TEMP/haafidh-verifier-toolbox/aapt"
           cp "$sdk/zipalign" "$RUNNER_TEMP/haafidh-verifier-toolbox/zipalign"
+          cp "$sdk/lib64/libc++.so" "$RUNNER_TEMP/haafidh-verifier-toolbox/libc++.so"
           sha256sum "$RUNNER_TEMP"/haafidh-verifier-toolbox/* > "$RUNNER_TEMP/haafidh-verifier-toolbox/SHA256SUMS.txt"
       - uses: actions/upload-artifact@v4
         with:
