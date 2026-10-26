@@ -17,7 +17,7 @@ public final class PostNasWeeklyConsolidationTest {
         String second=ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList("p521-l01","p521-l02"));
         String third=ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList("p522-l01","p522-l02"));
         disk.disk.put("postNasMaintainedHizbsV1",new JSONArray().put(first).put(second).put(third).toString());
-        disk.disk.put("v6AcquiredCreditLineIds","[\\"p100-l01\\"]");
+        disk.disk.put("v6AcquiredCreditLineIds",new JSONArray().put("p100-l01").toString());
         LocalDate thursday=LocalDate.of(2026,10,29),saturday=LocalDate.of(2026,10,31);
         HifzPrefs prefs=new HifzPrefs(disk);
         assertTrue(prefs.itqanPostNasMaintenance());
@@ -51,7 +51,7 @@ public final class PostNasWeeklyConsolidationTest {
         assertFalse("Weekly pass cannot be credited twice",
             restarted.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,saturday));
         assertEquals("No acquired credit from an ordinary masked weekly pass",
-            "[\\"p100-l01\\"]",disk.getString("v6AcquiredCreditLineIds",""));
+            new JSONArray().put("p100-l01").toString(),disk.getString("v6AcquiredCreditLineIds",""));
         assertEquals("No new Sunday Itqan finale","",disk.getString("lastRecentSabqiReviewDate",""));
         assertFalse("A new week must never replay the previous week's Maintiens",
             restarted.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,
