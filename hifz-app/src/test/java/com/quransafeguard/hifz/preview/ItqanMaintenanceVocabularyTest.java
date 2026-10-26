@@ -15,6 +15,14 @@ public final class ItqanMaintenanceVocabularyTest {
         for(String title:new String[]{"Itqān · Maintien de la maîtrise","Itqān · Consolidation"})
             assertEquals(title,HifzDisplayVocabulary.canonicalize(title));
     }
+    @Test public void oldFinaleNamesAndSnowballNeverLeakIntoUserLabels() {
+        assertEquals("Finale Sabqi",HifzDisplayVocabulary.canonicalize("Finale Sabqi"));
+        assertEquals("Finale Itqān",HifzDisplayVocabulary.canonicalize("Finale Itqān"));
+        assertEquals("Renforcement · révision cumulative",
+            HifzDisplayVocabulary.canonicalize("Renforcement · boule de neige"));
+        assertEquals("Consolidation · Révision cumulative",
+            HifzDisplayVocabulary.canonicalize("Consolidation · Boule de neige"));
+    }
     @Test public void settingsChoicesAndDatedSummariesUseApprovedTitles() throws Exception {
         java.nio.file.Path path=java.nio.file.Paths.get("src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         if(!java.nio.file.Files.exists(path))path=java.nio.file.Paths.get("hifz-app").resolve(path);
