@@ -63,14 +63,16 @@ final class PostFinalFamilyCreditLedger {
                 LocalDate start=LocalDate.parse(week.getString("week"));
                 JSONArray units=week.getJSONArray("units");
                 ArrayList<String> verified=new ArrayList<>();
-                LinkedHashSet<String> allHistorical=new LinkedHashSet<>();
                 for(int j=0;j<units.length();j++){
                     List<String> ids=ConsolidationPhysicalUnitPolicy.decodeLineUnit(units.getString(j));
-                    allHistorical.addAll(ids);
                     // A partly acquired block is not proof of a completed finale.
                     if(acquired.containsAll(ids)) verified.addAll(ids);
                 }
-                byWeek.put(start.toString(),allHistorical);
+                // The legacy queue is not an independent witness: it may
+                // contain opposite-family global Acquis. Corroborate only
+                // complete acquired physical units, as for history itself.
+                byWeek.computeIfAbsent(start.toString(),k->new LinkedHashSet<>())
+                    .addAll(verified);
                 if(!verified.isEmpty())events.add(new Event(start.plusDays(6),0,i,verified));
             }
             JSONArray queue=new JSONArray(prefs.getString(PostFinalRecallStore.KEY,"[]"));

@@ -108,7 +108,7 @@ public final class PostFinalRecallInstrumentedTest {
         }finally{assertTrue(raw.edit().clear().commit());}
     }
 
-    @Test public void committedOctoberItqanWithoutPreparedQueueRecoversAllEligibleAcquis()
+    @Test public void committedOctoberItqanRecoveryExcludesUnprovenOtherFamilyAcquis()
             throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
         SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
@@ -141,8 +141,15 @@ public final class PostFinalRecallInstrumentedTest {
             PostFinalRecallStore.Review review=queue.nextReady("","2026-10-25");
             assertNotNull(review);
             assertEquals(522,review.page);
-            assertEquals(3,review.total); // 522, 12 (previous Acquis), 523 (just validated)
-            assertEquals(2,review.previousCount);
+            assertEquals(2,review.total); // only proven Itqan pages 522 and 523
+            assertEquals(1,review.previousCount);
+            assertTrue(queue.advance(review,"","2026-10-25"));
+            PostFinalRecallStore.Review last=queue.nextReady("","2026-10-25");
+            assertNotNull(last);
+            assertEquals(523,last.page);
+            assertFalse(last.lines.stream().anyMatch(otherFamily::contains));
+            assertTrue(queue.advance(last,"","2026-10-25"));
+            assertNull(queue.nextReady("","2026-10-25"));
             assertFalse("No duplicate queue entry after repeated startup",
                 queue.recoverCommittedFromHistory(PostFinalRecallStore.ITQAN,
                     "2026-10-25",acquired,geometry));

@@ -125,6 +125,20 @@ public final class PostFinalFamilyCreditLedgerTest {
             PostFinalFamilyCreditLedger.previouslyAcquired(disk,SABQI,acquired));
     }
 
+    @Test public void legacyQueueCannotTurnPartlyAcquiredUnitIntoFamilyProof() throws Exception {
+        InMemoryPrefs disk=new InMemoryPrefs();
+        String unit=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+            Arrays.asList("p290-l0","p290-l1"));
+        disk.disk.put("learningSnowball8WeekHistory",new JSONArray().put(
+            new JSONObject().put("week","2026-10-26")
+                .put("units",new JSONArray().put(unit))).toString());
+        disk.disk.put(PostFinalRecallStore.KEY,new JSONArray().put(queueEntry(
+            PostFinalRecallStore.SABQI,"2026-11-01",false,"READY","p290-l0")).toString());
+        assertTrue("An incomplete physical unit is not proof, even with an old queue receipt",
+            PostFinalFamilyCreditLedger.previouslyAcquired(disk,SABQI,
+                Collections.singleton("p290-l0")).isEmpty());
+    }
+
     @Test(expected=IllegalStateException.class)
     public void malformedFamilyHistoryFailsClosedInsteadOfTakingAllAcquis() {
         InMemoryPrefs disk=new InMemoryPrefs();
