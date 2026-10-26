@@ -48,6 +48,15 @@ final class PostFinalRecallStore {
             throw new IllegalStateException("Invalid persisted final follow-up queue; leave untouched",invalid);
         }
     }
+    /** Family-only credit proof; no changes to HifzPrefs or validation. */
+    List<String> previouslyAcquired(String family,Set<String> acquired) {
+        ConsolidationCycleEngine.Family provenance=SABQI.equals(family)
+            ?ConsolidationCycleEngine.Family.LEARNING
+            :ITQAN.equals(family) ?ConsolidationCycleEngine.Family.STABILIZATION:null;
+        if(provenance==null)throw new IllegalArgumentException("Post-final family required");
+        return PostFinalFamilyCreditLedger.previouslyAcquired(prefs,provenance,acquired);
+    }
+
     void prepare(String family,String date,List<PostFinalCumulativePolicy.Page> pages) {
         if((!SABQI.equals(family)&&!ITQAN.equals(family))||date==null||date.isEmpty()
                 ||pages==null||pages.isEmpty())throw new IllegalArgumentException("Invalid post-final plan");
@@ -70,6 +79,7 @@ final class PostFinalRecallStore {
         try {
             queue.put(new JSONObject().put("family",family).put("date",date)
                 .put("status","PREPARED").put("position",0).put("previous",prior)
+                .put("familySourceVersion",1)
                 .put("pages",serialized));
         }catch(Exception malformed){throw new IllegalStateException(malformed);}
         if(!prefs.edit().putString(KEY,queue.toString()).commit())
