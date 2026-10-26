@@ -46,6 +46,11 @@ final class PostFinalFamilyCreditLedger {
 
     static List<String> previouslyAcquired(SharedPreferences prefs,
             ConsolidationCycleEngine.Family family,Set<String> acquired) {
+        return previouslyAcquired(prefs,family,acquired,null);
+    }
+    /** Cut off later weeks/finals when repairing an old dated 1.17.7 reading. */
+    static List<String> previouslyAcquired(SharedPreferences prefs,
+            ConsolidationCycleEngine.Family family,Set<String> acquired,LocalDate through) {
         if(prefs==null||acquired==null)
             throw new IllegalArgumentException("Explicit family acquisition proof required");
         String familyName=queueFamily(family);
@@ -105,7 +110,8 @@ final class PostFinalFamilyCreditLedger {
         events.sort(Comparator.comparing((Event e)->e.date)
             .thenComparingInt(e->e.sourceRank).thenComparingInt(e->e.serial));
         LinkedHashSet<String> result=new LinkedHashSet<>();
-        for(Event event:events)result.addAll(event.ids);
+        for(Event event:events)
+            if(through==null||!event.date.isAfter(through))result.addAll(event.ids);
         return Collections.unmodifiableList(new ArrayList<>(result));
     }
 }
