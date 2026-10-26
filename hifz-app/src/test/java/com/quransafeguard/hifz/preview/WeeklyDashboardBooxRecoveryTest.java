@@ -10,6 +10,13 @@ import static org.junit.Assert.*;
 
 /** BOOX screenshot regression: incomplete finals must not erase seven-day navigation. */
 public final class WeeklyDashboardBooxRecoveryTest {
+    private static String source(String filename) throws Exception {
+        Path local=Path.of("src/main/java/com/quransafeguard/hifz/preview/",filename);
+        if(!Files.exists(local))
+            local=Path.of("hifz-app/src/main/java/com/quransafeguard/hifz/preview/",filename);
+        return Files.readString(local,StandardCharsets.UTF_8);
+    }
+
     @Test public void sevenDatesRemainAvailableEvenWhenForecastCannotBeBuilt() {
         LocalDate today=LocalDate.of(2026,10,26);
         List<WeeklyDashboardPlanner.Row> rows=WeeklyDashboardPlanner.fallbackWeek(today);
@@ -26,22 +33,18 @@ public final class WeeklyDashboardBooxRecoveryTest {
     }
     @Test public void mainScreenNoLongerUsesWeekHeadingForProgrammeChanges() throws Exception{
         Path source=Path.of("src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        String main=Files.readString(source,StandardCharsets.UTF_8);
+        String main=source("MainActivity.java");
         assertFalse("Heading must open calendar rather than programme picker",
             main.contains("dashboardTitle.setOnClickListener(v -> chooseWeeklyProgram())"));
         assertTrue(main.contains("Voir le calendrier sur sept jours"));
         assertTrue(main.contains("WeeklyDashboardPlanner.window(HifzClock.today())"));
     }
     @Test public void bothFamiliesOfferedSeparatelyAfterSuccessfulFinalCredit() throws Exception {
-        String session=Files.readString(Path.of(
-            "src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java"),
-            StandardCharsets.UTF_8);
+        String session=source("HifzSessionActivity.java");
         assertTrue(session.contains("promptPostFinalRecall(PostFinalRecallStore.ITQAN)"));
         assertTrue(session.contains("promptPostFinalRecall(PostFinalRecallStore.SABQI)"));
         assertTrue(session.contains("EXTRA_POST_FINAL_FAMILY"));
-        String main=Files.readString(Path.of(
-            "src/main/java/com/quransafeguard/hifz/preview/MainActivity.java"),
-            StandardCharsets.UTF_8);
+        String main=source("MainActivity.java");
         assertTrue(main.contains("postFinalStore.nextReadyFor(family"));
         assertTrue(main.contains("session.postFinalFamily"));
     }
