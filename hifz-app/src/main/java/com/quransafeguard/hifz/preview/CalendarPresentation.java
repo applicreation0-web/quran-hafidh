@@ -57,8 +57,9 @@ final class CalendarPresentation {
     private static void append(List<Activity> out,String raw,String period){
         if(raw==null||raw.trim().isEmpty()||"—".equals(raw))return;
         // The planner's literal separator denotes independent activities, never validations.
-        for(String item:raw.replace(" · ✓ Finale Sabqi"," + ✓ Finale Sabqi")
-                .replace(" · Finale Sabqi"," + Finale Sabqi").split(" \\+ (?=✓? ?(?:Révision active|Révision passive|Apprentissage|Stabilisation|Maintien|Renforcement|Consolidation|Finale Sabqi|Finale Itqān))")){
+        String combined=raw.startsWith("Finale Sabqi")||raw.startsWith("✓ Finale Sabqi")?raw:
+            raw.replace(" · ✓ Finale Sabqi"," + ✓ Finale Sabqi").replace(" · Finale Sabqi"," + Finale Sabqi");
+        for(String item:combined.split(" \\+ (?=✓? ?(?:Révision active|Révision passive|Apprentissage|Stabilisation|Maintien|Renforcement|Consolidation|Finale Sabqi|Finale Itqān))")){
             if(item.contains("aucun passage admissible")||item.contains("aucune unité à stabiliser")
                     ||item.contains("fenêtre terminée"))continue;
             boolean done=item.startsWith("✓ ");

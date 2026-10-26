@@ -8,12 +8,12 @@ def shot(name):
     (out/(name+'.png')).write_bytes(adb('exec-out','screencap','-p'))
     adb('shell','uiautomator','dump','/sdcard/ui1179.xml')
     (out/(name+'.xml')).write_bytes(adb('exec-out','cat','/sdcard/ui1179.xml'))
-def tap(text,desc=False):
+def tap(text,desc=False,prefix=False):
     adb('shell','uiautomator','dump','/sdcard/ui1179.xml')
     root=ET.fromstring(adb('exec-out','cat','/sdcard/ui1179.xml'))
     key='content-desc' if desc else 'text'
     for node in root.iter('node'):
-        if node.get(key)==text:
+        if (node.get(key,'').startswith(text) if prefix else node.get(key)==text):
             x1,y1,x2,y2=map(int,re.findall(r'\d+',node.get('bounds')))
             if y2<=y1:continue
             adb('shell','input','tap',str((x1+x2)//2),str((y1+y2)//2));time.sleep(1);return
@@ -21,14 +21,16 @@ def tap(text,desc=False):
 for name,size,density in [('compact','1080x1920','480'),('tablet','1404x1872','240')]:
     adb('shell','wm','size',size);adb('shell','wm','density',density)
     adb('shell','am','force-stop',pkg)
-    adb('shell','am','start','-n',pkg+'/com.quransafeguard.hifz.preview.MainActivity');time.sleep(5)
+    (out/(name+'-startup.txt')).write_bytes(adb('shell','am','start','-W','-n',pkg+'/com.quransafeguard.hifz.preview.MainActivity'));time.sleep(5)
     (out/(name+'-metrics.txt')).write_bytes(adb('shell','wm','size')+adb('shell','wm','density'))
     shot(name+'-accueil');tap('Parcours Hifz',True);shot(name+'-parcours')
     # Scroll to week controls on compact screens; portrait tablet should show them directly.
     if name=='compact':adb('shell','input','swipe','500','1500','500','600','250');time.sleep(1)
-    shot(name+'-calendrier');tap('›');shot(name+'-semaine-suivante');tap('Aujourd’hui')
+    shot(name+'-calendrier');tap('Activité ',True,True);shot(name+'-carte-developpee');tap('›');shot(name+'-semaine-suivante');tap('Aujourd’hui')
     tap('Mois');shot(name+'-mois');adb('shell','input','keyevent','4')
+    tap('Historique / reprises');shot(name+'-historique');adb('shell','input','keyevent','4')
     tap('Programme hebdomadaire');shot(name+'-configuration');adb('shell','input','keyevent','4')
     adb('shell','input','keyevent','4');shot(name+'-retour-accueil')
+    (out/(name+'-memory.txt')).write_bytes(adb('shell','dumpsys','meminfo',pkg))
 adb('shell','wm','size','reset');adb('shell','wm','density','reset')
 print('PASS: native compact/tablet navigation screenshots captured; physical e-ink remains untested')

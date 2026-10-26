@@ -1250,7 +1250,8 @@ public final class MainActivity extends android.app.Activity {
                         if(prefs.setWeeklyProgramMode(options[which])) refreshAll();
                         else Ui.showFatal(this,"Le programme n’a pas été enregistré.");
                     }).show();
-            }).setNegativeButton("Fermer",null).show();
+            }).setNeutralButton("Paramètres détaillés",(dialog,which)->startActivity(new Intent(this,SettingsActivity.class)))
+            .setNegativeButton("Fermer",null).show();
     }
 
     /** Seven-day interactive rail, with one readable day instead of seven stacked lists. */
@@ -1399,8 +1400,8 @@ public final class MainActivity extends android.app.Activity {
         }
         String detail=postFinalRecapLine("Sabqi",sabqi)+"\n"
             +postFinalRecapLine("Itqān",itqan)
-            +"\n\nChaque lecture : jusqu’aux 20 pages précédemment acquises"
-            +" + celles de la finale validée ; une récitation masquée par page,"
+            +"\n\nChaque lecture : jusqu’à 20 pages au total, finale comprise ;"
+            +" une récitation masquée par page,"
             +" sans crédit supplémentaire.";
         if(options.isEmpty()){
             new android.app.AlertDialog.Builder(this)
@@ -1427,6 +1428,8 @@ public final class MainActivity extends android.app.Activity {
         if(chosen==null)return;
         CalendarPresentation.Day day=verifiedCalendarDay(chosen);
         weekDayPanel.addView(Ui.bookText(this,chosen.date+" · "+day.state,19f,true));
+        if(chosen.state.contains("inconnu")||chosen.state.contains("vérifier"))
+            weekDayPanel.addView(Ui.text(this,chosen.state,15f,false));
         for(String period:new String[]{"MATIN","SOIR"}){
             String hour="MATIN".equals(period)?prefs.suggestedMorningTime():prefs.suggestedEveningTime();
             weekDayPanel.addView(Ui.bookText(this,period+" · "+hour,16f,true));
@@ -1492,12 +1495,16 @@ public final class MainActivity extends android.app.Activity {
             top.addView(image,new LinearLayout.LayoutParams(Ui.dp(this,32),Ui.dp(this,32)));}
         TextView title=Ui.bookText(this,(activity.completed?"✓ ":"")+activity.title,17f,true);
         top.addView(title,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
-        top.addView(Ui.text(this,activity.completed?"Terminée":"Détails ›",14f,false));card.addView(top);
+        String activityState=activity.completed?"Terminée":date.isAfter(HifzClock.today())?"À venir":date.isBefore(HifzClock.today())?"En attente":"À faire";
+        for(TodaySession saved:calendarOpenSessions(HifzClock.today()))
+            if(saved.scheduled.equals(date)&&saved.mode.equals(activity.mode))activityState="En cours";
+        top.addView(Ui.text(this,activityState+" ⌄",14f,false));card.addView(top);
         TextView essentials=Ui.text(this,activity.detail,15f,false);
         essentials.setMaxLines(2);essentials.setEllipsize(android.text.TextUtils.TruncateAt.END);card.addView(essentials);
         TextView details=Ui.text(this,scheduleDetail(activity.detail),16f,false);details.setVisibility(View.GONE);card.addView(details);
         TextView open=calendarControl("Ouvrir le parcours ›",v->openCalendarActivity(activity,date));
         open.setVisibility(View.GONE);card.addView(open);
+        top.setContentDescription("Activité "+activity.title+" · "+date+" · détails");
         top.setMinimumHeight(Ui.dp(this,48));top.setClickable(true);top.setFocusable(true);
         View.OnClickListener expand=v->{boolean show=details.getVisibility()!=View.VISIBLE;
             details.setVisibility(show?View.VISIBLE:View.GONE);open.setVisibility(show?View.VISIBLE:View.GONE);
@@ -1540,6 +1547,14 @@ public final class MainActivity extends android.app.Activity {
         String ordinary=prefs.unfinishedConsolidationSessionDate(ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-");
         if(ordinary!=null){LocalDate date=LocalDate.parse(ordinary);if(!date.isAfter(today))
             addToday(out,"Reprendre Consolidation Itqān du "+date,HifzSessionActivity.RECENT_SABQI_REVIEW,date,false,null);}
+        // Ordinary repetition counters have no separate date field. Resolve their original
+        // executable date through the canonical FIFO backlog, never through the selected day.
+        HifzBacklog.Due due=HifzBacklog.first(HifzBacklog.pending(prefs,ledger,today,effectiveLearningDaysPerWeek()));
+        if(due!=null){
+            int repetitions=HifzSessionActivity.SABQI.equals(due.mode)?prefs.sabqiRep():prefs.itqanRep();
+            if(repetitions>0)addToday(out,"Reprendre "+calendarModeName(due.mode)+" du "+due.date
+                +" · "+repetitions+" répétitions réalisées",due.mode,due.date,false,null);
+        }
         return out;
     }
 

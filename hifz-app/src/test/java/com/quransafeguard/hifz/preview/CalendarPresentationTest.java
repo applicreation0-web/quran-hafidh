@@ -55,4 +55,8 @@ public final class CalendarPresentationTest {
         CalendarPresentation.Day day=CalendarPresentation.day(new WeeklyDashboardPlanner.Row(today,"Lun","—",raw,"À faire"),today);
         assertEquals(2,day.activities.size());assertTrue(day.activities.get(0).detail.contains("2 lectures + 1 avec ancrages"));
     }
+    @Test public void repeatedFinalLabelInReceiptIsNotASecondActivity(){
+        CalendarPresentation.Day day=CalendarPresentation.day(new WeeklyDashboardPlanner.Row(today,"Dim","✓ Finale Sabqi · Finale Sabqi · 1 page ×3","—","Validé"),today);
+        assertEquals(1,day.activities.size());assertTrue(day.activities.get(0).detail.contains("1 page ×3"));
+    }
 }
