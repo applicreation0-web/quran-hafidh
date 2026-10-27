@@ -15,9 +15,9 @@ public final class AtlasCalendarSurfaceSourceContractTest {
         assertTrue(s.contains("canvas.drawCircle(x,y,Ui.dp(MainActivity.this,18),paint)"));
         assertFalse(s.contains("calendarOutline("));
     }
-    @Test public void surfacesAreWhiteAndDetailsRemainAccessibleWithoutCards()throws Exception{
+    @Test public void calendarHasNoPanelBackgroundAndFullDetailsStayAccessible()throws Exception{
         String s=main();assertTrue(s.contains("private LinearLayout plainColumn()"));
-        assertTrue(s.contains("column.setBackgroundColor(android.graphics.Color.WHITE)"));
+        assertTrue(s.contains("column.setBackgroundColor(android.graphics.Color.TRANSPARENT)"));
         assertTrue(s.contains("scheduleDetail(activity.detail)"));assertTrue(s.contains("openCalendarActivity(activity,date)"));
         assertTrue(s.contains("top.setOnClickListener(expand)"));
         assertTrue(s.contains("data.completed+\"/?\""));

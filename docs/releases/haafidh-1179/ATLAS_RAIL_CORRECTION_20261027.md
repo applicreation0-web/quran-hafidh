@@ -11,3 +11,5 @@ Correction native, limitée à MainActivity :
 - Historique incomplet : dénominateur inconnu `n/?`, sans total inventé.
 
 Aucun changement de planificateur, moteur, crédit, fichier de données ou icône. Les tests de l'ancienne candidate ne valent pas validation de ce nouveau commit. Les captures natives et le résultat CI courant feront foi. Aucune publication officielle.
+
+Rectificatif prioritaire utilisateur : uniquement le calendrier. Accueil, tailles des quatre icônes, six accès Hifz et leurs emplacements sont restaurés octet pour octet depuis la base1.17.8. Aucun nouvel aperçu de calendrier ou panneau de reprises n’est ajouté à Accueil. Les conteneurs du calendrier sont transparents sur le fond existant. Le contrôle verify_1179_icon_layout.py fige explicitement ce périmètre.
