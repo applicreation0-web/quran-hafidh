@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Release 1.17.9 source hygiene and E-Ink surface audit.
+"""Release 1.17.8 source hygiene and E-Ink surface audit.
 Scan production Java/Android XML, never erase historical persistence or serialized enum values.
 No internet, repo mutations, or access to secret/private assets.
 """
@@ -48,14 +48,14 @@ def main():
         if literal not in main_java:
             findings.append(dict(level="ERROR",kind="missing_boox_semantic_contract",literal=literal))
     gradle=(ROOT/"hifz-app/build.gradle.kts").read_text(encoding="utf-8")
-    for literal in ['versionCode = 47','versionName = "1.17.9"']:
+    for literal in ['versionCode = 46','versionName = "1.17.8"']:
         if literal not in gradle:
             findings.append(dict(level="ERROR",kind="invalid_release_version",literal=literal))
     # Post-final review MUST NOT masquerade as complete when new functional delivery is absent.
     has_postfinal="PostFinalRecallStore" in allsource and "renderPostFinalRecall()" in allsource
     findings.append(dict(level="INFO",kind="postfinal_masked_20_pages_implemented",value=has_postfinal))
     report={
-        "version":"1.17.9","production_java_files":len(files),"drawable_refs":len(drawable_refs),
+        "version":"1.17.8","production_java_files":len(files),"drawable_refs":len(drawable_refs),
         "drawable_resource_names":len(drawables),"counts":dict(collections.Counter(f["level"] for f in findings)),
         "findings":findings
     }

@@ -16,8 +16,8 @@ public final class PhoneProgrammeSourceContractTest {
         assertTrue(main.contains("showTodayWindow(sessions);"));
         assertTrue(main.contains("if(sessions.isEmpty()){"));
         assertFalse(main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));
-        assertTrue(main.contains("addCalendarActivity(weekDayPanel,activity,chosen.date)"));
-        assertTrue(main.contains("scheduleDetail(detail.evening)"));
+        assertTrue(main.contains("readableScheduleTitle(chosen.morning"));
+        assertTrue(main.contains("readableScheduleEssentials(chosen.evening)"));
     }
     @Test public void noFakeAcquiredRangeInFreshProfiles() throws Exception {
         String prefs=source("HifzPrefs.java");

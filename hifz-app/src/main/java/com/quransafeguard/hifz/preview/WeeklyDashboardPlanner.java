@@ -73,12 +73,7 @@ final class WeeklyDashboardPlanner {
         }
     }
 
-    List<Row> week(LocalDate today){return week(today,today);}
-
-    /** Selection does not become the real clock. Advance forecasts from today, never saved state. */
-    List<Row> week(LocalDate today,LocalDate first){
-        if(first.plusDays(6).isBefore(today))return Collections.emptyList();
-        if(first.isAfter(today.plusDays(365)))return fallbackWeek(first);
+    List<Row> week(LocalDate today){
         ArrayList<Row> out=new ArrayList<>();
         // Treat each read-only forecast as independent. A damaged old Itqān
         // cursor must not prevent actual Sabqi and revision receipts showing.
@@ -127,9 +122,7 @@ final class WeeklyDashboardPlanner {
             android.util.Log.e("QuranHifz","Weekly frozen Itqan snapshot unavailable",problem);
         }
 
-        ArrayList<LocalDate> projectionDates=new ArrayList<>();
-        for(LocalDate date=today;!date.isAfter(first.plusDays(6));date=date.plusDays(1))projectionDates.add(date);
-        for(LocalDate date:projectionDates){
+        for(LocalDate date:window(today)){
             if(date.isBefore(prefs.programStartDate())){
                 out.add(new Row(date,day(date,today),"—","—","Parcours non démarré"));
                 continue;
@@ -245,13 +238,9 @@ final class WeeklyDashboardPlanner {
                     boolean learningDue=!prefs.learningSnowballFinalUnits(date).isEmpty();
                     // In post-An-Nās maintenance no new Itqān finale exists.
                     // A pre-existing frozen first-regime OPEN finale may still resume.
-                    String frozenFinalDate=prefs.unfinishedConsolidationSessionDate(
-                        ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-");
-                    boolean oldItqanFinal=date.toString().equals(frozenFinalDate);
-                    boolean projectedPostNas=itqanForecast!=null
-                        ?itqanForecast.regime()==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
-                        :prefs.itqanPostNasMaintenance();
-                    boolean itqanFinalDue=!projectedPostNas||oldItqanFinal;
+                    boolean oldItqanFinal=prefs.unfinishedConsolidationSessionDate(
+                        ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null;
+                    boolean itqanFinalDue=!prefs.itqanPostNasMaintenance()||oldItqanFinal;
                     boolean consolidationDone=consolidationFinal!=null
                         ||date.toString().equals(prefs.lastRecentSabqiReviewDate());
                     boolean consolidationDue=itqanFinalDue
@@ -319,9 +308,7 @@ final class WeeklyDashboardPlanner {
                     "Projection à vérifier"));
             }
         }
-        ArrayList<Row> visible=new ArrayList<>();
-        for(Row row:out)if(!row.date.isBefore(first)&&!row.date.isAfter(first.plusDays(6)))visible.add(row);
-        return visible;
+        return out;
     }
 
     private Projection projectMurajaah(VerseRef cursor,EligibleCorpus corpus,int minutes){

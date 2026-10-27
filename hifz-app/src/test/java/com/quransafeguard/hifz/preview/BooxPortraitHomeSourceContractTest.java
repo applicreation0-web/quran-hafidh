@@ -48,7 +48,7 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("Ui.bookText(this, \"AUJOURD’HUI\", 17f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"…\", 23f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)"));
-        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 42))"));
+        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 54))"));
         assertTrue(home.contains("booxIconDp(2, 112)"));
         assertTrue(home.contains("primaryTile(practiceRow, \"Parcours Hifz\", \"Parcours\""));
         assertTrue(home.contains("primaryTile(practiceRow, \"Progression\", \"Progression\""));
@@ -75,9 +75,9 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today())"));
         assertTrue(home.contains("selectedWeekDate = row.date"));
         assertTrue(home.contains("renderSelectedWeekDay()"));
-        assertTrue(home.contains("rail.addView(day,lp)"));
-        assertTrue(home.contains("scheduleDetail(detail.morning)"));
-        assertTrue(home.contains("scheduleDetail(detail.evening)"));
+        assertTrue(home.contains("weekStrip.addView(day,new LinearLayout.LayoutParams(0,Ui.dp(this, 56),1f))"));
+        assertTrue(home.contains("scheduleDetail(chosen.morning)"));
+        assertTrue(home.contains("scheduleDetail(chosen.evening)"));
         assertTrue(home.contains("showRevisionSelector()"));
     }
 
@@ -97,8 +97,8 @@ public final class BooxPortraitHomeSourceContractTest {
             home.contains("\"Apprentissage\".equals(label) ? \"Apprendre\"")
                 && home.contains("\"Stabilisation\".equals(label) ? \"Stabiliser\""));
         assertTrue("Real verse boundaries must be shown rather than discarded into only modes",
-            home.contains("scheduleDetail(detail.morning)")
-                && home.contains("scheduleDetail(detail.evening)")
+            home.contains("scheduleDetail(chosen.morning)")
+                && home.contains("scheduleDetail(chosen.evening)")
                 && home.contains("return raw.replace(\" · \", "));
         assertFalse(home.contains("compactScheduleLine("));
     }

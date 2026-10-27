@@ -37,7 +37,7 @@ public final class WeeklyDashboardBooxRecoveryTest {
         assertFalse("Heading must open calendar rather than programme picker",
             main.contains("dashboardTitle.setOnClickListener(v -> chooseWeeklyProgram())"));
         assertTrue(main.contains("Voir le calendrier sur sept jours"));
-        assertTrue(main.contains("WeeklyDashboardPlanner.fallbackWeek(requested)"));
+        assertTrue(main.contains("WeeklyDashboardPlanner.window(HifzClock.today())"));
     }
     @Test public void futureSundayCalendarExplainsPendingVersusNotRequiredFinales() {
         assertEquals("à prévoir selon les acquis",
