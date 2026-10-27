@@ -136,12 +136,12 @@ public final class MainActivity extends android.app.Activity {
 
         homeCounts=Ui.bookText(this,"Chargement du programme…",17f,true);
         root.addView(homeCounts);
-        homeWeekStrip=Ui.row(this);
+        homeWeekStrip=new AtlasDayRail();
         root.addView(homeWeekStrip);
         TextView fullCalendar=calendarControl("Calendrier complet ›",v->{showParcours();
             parcoursScroll.post(()->parcoursScroll.scrollTo(0,dashboardTitle.getTop()));});
         root.addView(fullCalendar);
-        homeResumePanel=Ui.column(this);
+        homeResumePanel=plainColumn();
         root.addView(homeResumePanel);
 
         // Mémorisation ponctuelle remains an optional advanced tool, not a fifth icon.
@@ -215,10 +215,10 @@ public final class MainActivity extends android.app.Activity {
         });
         dashboardTitle.setContentDescription("Voir le calendrier sur sept jours");
         path.addView(dashboardTitle);
-        dashboard = Ui.column(this);
+        dashboard = plainColumn();
         dashboard.setPadding(0, 0, 0, 0);
-        weekStrip = Ui.row(this);
-        weekDayPanel = Ui.column(this);
+        weekStrip = new AtlasDayRail();
+        weekDayPanel = plainColumn();
         weekDayPanel.setPadding(Ui.dp(this, 6), Ui.dp(this, 14), Ui.dp(this, 6), 0);
         path.addView(dashboard);
 
@@ -276,7 +276,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private LinearLayout page() {
-        LinearLayout root = Ui.column(this);
+        LinearLayout root = plainColumn();
         root.setBackgroundColor(android.graphics.Color.WHITE);
         int side = Ui.dp(this, 16);
         root.setPadding(side, Ui.dp(this, 4), side, Ui.dp(this, 16));
@@ -297,7 +297,7 @@ public final class MainActivity extends android.app.Activity {
 
     /** One dominant BOOX-safe action, preserving the existing openToday() routing. */
     private LinearLayout todayLine() {
-        LinearLayout line = Ui.column(this);
+        LinearLayout line = plainColumn();
         line.setPadding(Ui.dp(this, 18), Ui.dp(this, 10), Ui.dp(this, 18), Ui.dp(this, 10));
         // Typographic reading surface, not a bordered card.
         todayHeading = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
@@ -371,7 +371,7 @@ public final class MainActivity extends android.app.Activity {
     /** Four equal-size home destinations in a 2×2 BOOX grid, without cards or separators. */
     private LinearLayout primaryTile(LinearLayout parent, String role, String display,
                                     View.OnClickListener listener) {
-        LinearLayout tile = Ui.column(this);
+        LinearLayout tile = plainColumn();
         tile.setPadding(Ui.dp(this, 3), Ui.dp(this, 5), Ui.dp(this, 3), Ui.dp(this, 5));
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(2, 112);
@@ -407,7 +407,7 @@ public final class MainActivity extends android.app.Activity {
     /** Borderless Hifz ribbon with frozen pictograms; child 1 remains live cue state. */
     private LinearLayout pathTile(LinearLayout parent, String label, String state,
                                  View.OnClickListener listener) {
-        LinearLayout tile = Ui.column(this);
+        LinearLayout tile = plainColumn();
         tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(2, 124);
@@ -1447,19 +1447,59 @@ public final class MainActivity extends android.app.Activity {
             showScheduleDetail(detail.date.toString(),scheduleDetail(detail.morning)+"\n\n"+scheduleDetail(detail.evening))));
     }
 
+    /** Atlas grammar: the same thin axis, 5/9dp points and 14/18dp selection rings. */
+    private final class AtlasDayRail extends LinearLayout {
+        private final android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        AtlasDayRail(){super(MainActivity.this);setOrientation(HORIZONTAL);setWillNotDraw(false);}
+        private float markerY(View child){
+            LinearLayout day=(LinearLayout)child;
+            return child.getTop()+day.getChildAt(0).getHeight()+Ui.dp(MainActivity.this,22);
+        }
+        @Override protected void onDraw(android.graphics.Canvas canvas){
+            super.onDraw(canvas);
+            int count=getChildCount();if(count==0)return;
+            View first=getChildAt(0),last=getChildAt(count-1);
+            paint.setColor(Ui.INK);paint.setStrokeWidth(Ui.dp(MainActivity.this,1));
+            paint.setStyle(android.graphics.Paint.Style.STROKE);
+            canvas.drawLine(first.getLeft()+first.getWidth()/2f,markerY(first),
+                last.getLeft()+last.getWidth()/2f,markerY(last),paint);
+            for(int i=0;i<count;i++){
+                View child=getChildAt(i);float x=child.getLeft()+child.getWidth()/2f,y=markerY(child);
+                boolean selected=child.isSelected();
+                paint.setStyle(android.graphics.Paint.Style.FILL);
+                canvas.drawCircle(x,y,Ui.dp(MainActivity.this,selected?9:5),paint);
+                if(selected){
+                    paint.setStyle(android.graphics.Paint.Style.STROKE);
+                    canvas.drawCircle(x,y,Ui.dp(MainActivity.this,14),paint);
+                    canvas.drawCircle(x,y,Ui.dp(MainActivity.this,18),paint);
+                }
+            }
+        }
+    }
+
+    private LinearLayout plainColumn(){
+        LinearLayout column=new LinearLayout(this);column.setOrientation(LinearLayout.VERTICAL);
+        column.setBackgroundColor(android.graphics.Color.WHITE);
+        return column;
+    }
+
     private void renderCalendarRail(LinearLayout rail,List<WeeklyDashboardPlanner.Row> rows,boolean home){
         rail.removeAllViews();
-        String[] initials={"L","M","M","J","V","S","D"};
+        String[] names={"Lu","Ma","Me","Je","Ve","Sa","Di"};
         for(WeeklyDashboardPlanner.Row row:rows){
             CalendarPresentation.Day data=verifiedCalendarDay(row);
             boolean selected=row.date.equals(home?HifzClock.today():selectedWeekDate);
-            String count=data.activities.isEmpty()?("En attente".equals(data.state)?"?":"—")
-                :data.completed+"/"+data.activities.size();
+            boolean unknown=(row.state.contains("inconnu")||row.state.contains("vérifier"))&&!"Terminé".equals(data.state);
+            String count=unknown?data.completed+"/?":data.activities.isEmpty()?"—":data.completed+"/"+data.activities.size();
             String symbol="Terminé".equals(data.state)?"✓":"Partiellement terminé".equals(data.state)?"◐"
-                :"En attente".equals(data.state)?"!":"À venir".equals(data.state)?"›":"À faire".equals(data.state)?"○":"—";
-            TextView day=Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1]+"\n"+row.date.getDayOfMonth()+"\n"+symbol+" "+count,14f,selected);
-            day.setGravity(Gravity.CENTER);day.setMinimumHeight(Ui.dp(this,76));
-            day.setBackground(calendarOutline(selected));
+                :"En cours".equals(data.state)?"↻":"En attente".equals(data.state)?"!":"";
+            LinearLayout day=new LinearLayout(this);day.setOrientation(LinearLayout.VERTICAL);day.setGravity(Gravity.CENTER);
+            day.setSelected(selected);
+            TextView date=Ui.bookText(this,names[row.date.getDayOfWeek().getValue()-1]+" "+row.date.getDayOfMonth(),14f,selected);
+            date.setGravity(Gravity.CENTER);date.setMinHeight(Ui.dp(this,24));day.addView(date);
+            day.addView(new View(this),new LinearLayout.LayoutParams(1,Ui.dp(this,44)));
+            TextView status=Ui.text(this,symbol+(symbol.isEmpty()?"":" ")+count,13f,selected);
+            status.setGravity(Gravity.CENTER);status.setMinHeight(Ui.dp(this,24));day.addView(status);
             day.setContentDescription(row.date+" · "+data.state+" · "+count+" activités");
             day.setClickable(true);day.setFocusable(true);
             day.setOnClickListener(v->{selectedWeekDate = row.date;
@@ -1467,15 +1507,9 @@ public final class MainActivity extends android.app.Activity {
                     parcoursScroll.post(()->parcoursScroll.scrollTo(0,dashboardTitle.getTop()));}
                 else renderSelectedWeekDay();});
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1f);
-            lp.setMargins(Ui.dp(this,1),Ui.dp(this,3),Ui.dp(this,1),Ui.dp(this,3));rail.addView(day,lp);
+            rail.addView(day,lp);
         }
-    }
-
-    private android.graphics.drawable.GradientDrawable calendarOutline(boolean selected){
-        android.graphics.drawable.GradientDrawable border=new android.graphics.drawable.GradientDrawable();
-        border.setColor(android.graphics.Color.WHITE);
-        border.setStroke(Ui.dp(this,selected?2:1),selected?Ui.INK:Ui.MUTED);
-        border.setCornerRadius(Ui.dp(this,5));return border;
+        rail.invalidate();
     }
 
     private TextView calendarControl(String label,View.OnClickListener click){
@@ -1486,23 +1520,23 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void addCalendarActivity(LinearLayout parent,CalendarPresentation.Activity activity,LocalDate date){
-        LinearLayout card=Ui.column(this);card.setPadding(Ui.dp(this,8),Ui.dp(this,5),Ui.dp(this,8),Ui.dp(this,5));
-        card.setBackground(calendarOutline(false));
+        LinearLayout card=plainColumn();card.setPadding(0,Ui.dp(this,2),0,Ui.dp(this,2));
         LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
         String role=modeTitle(activity.mode);
         int icon=largeIconFor(role);
         if(icon==0)icon=largeIconFor(activity.title.startsWith("Finale Sabqi")?"Renforcement":activity.title.startsWith("Finale Itqān")?"Consolidation":activity.title);
         if(icon!=0){ImageView image=new ImageView(this);image.setImageResource(icon);
             image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            top.addView(image,new LinearLayout.LayoutParams(Ui.dp(this,32),Ui.dp(this,32)));}
+            top.addView(image,new LinearLayout.LayoutParams(Ui.dp(this,24),Ui.dp(this,24)));}
         TextView title=Ui.bookText(this,(activity.completed?"✓ ":"")+activity.title,17f,true);
         top.addView(title,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
         String activityState=activity.completed?"Terminée":date.isAfter(HifzClock.today())?"À venir":date.isBefore(HifzClock.today())?"En attente":"À faire";
         for(TodaySession saved:calendarOpenSessions(HifzClock.today()))
             if(saved.scheduled.equals(date)&&saved.mode.equals(activity.mode))activityState="En cours";
         top.addView(Ui.text(this,activityState+" ⌄",14f,false));card.addView(top);
-        TextView essentials=Ui.text(this,activity.detail,15f,false);
-        essentials.setMaxLines(2);essentials.setEllipsize(android.text.TextUtils.TruncateAt.END);card.addView(essentials);
+        String summary=activity.detail.startsWith(activity.title)?activity.detail.substring(activity.title.length()).replaceFirst("^ · ",""):activity.detail;
+        TextView essentials=Ui.text(this,summary,15f,false);
+        essentials.setMaxLines(1);essentials.setEllipsize(android.text.TextUtils.TruncateAt.END);card.addView(essentials);
         TextView details=Ui.text(this,scheduleDetail(activity.detail),16f,false);details.setVisibility(View.GONE);card.addView(details);
         TextView open=calendarControl("Ouvrir le parcours ›",v->openCalendarActivity(activity,date));
         open.setVisibility(View.GONE);card.addView(open);
@@ -1653,8 +1687,11 @@ public final class MainActivity extends android.app.Activity {
         homeResumePanel.removeAllViews();
         List<TodaySession> pending=calendarOpenSessions(HifzClock.today());
         if(!pending.isEmpty())homeResumePanel.addView(Ui.bookText(this,"À REPRENDRE · "+pending.size(),17f,true));
-        for(TodaySession saved:pending)homeResumePanel.addView(calendarControl(saved.label+" · "+saved.scheduled+" ›",
-            v->showTodayWindow(java.util.Collections.singletonList(saved))));
+        for(TodaySession saved:pending){
+            String label=saved.label.contains(saved.scheduled.toString())?saved.label:saved.label+" · "+saved.scheduled;
+            TextView resume=calendarControl(label+" ›",v->showTodayWindow(java.util.Collections.singletonList(saved)));
+            resume.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);homeResumePanel.addView(resume);
+        }
     }
 
     @Override protected void onSaveInstanceState(Bundle state){
