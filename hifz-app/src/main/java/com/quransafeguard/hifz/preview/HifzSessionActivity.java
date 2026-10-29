@@ -96,8 +96,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private Button murajaahFinishButton;
     /** Révision active only: armed by "Marquer", the next verse tap flags/unflags it instead of moving the cursor. */
     private boolean weakMarkMode;
-    /** Pages revealed at least once during this Révision active session, for weak-spot streak decay. */
-    private final java.util.Set<Integer> activeRevealedPages = new java.util.HashSet<>();
+    /** Pages actually revealed in the current active traversal; persisted by correctionStore. */
+    private final java.util.Set<Integer> activeRevealedPages = new java.util.LinkedHashSet<>();
+    private ActiveReviewCorrectionStore correctionStore;
+    private ActiveReviewCorrectionStore.State correctionState;
     /** Reported as confusing: Révéler alone records nothing — said once per session, not on every touch. */
     private boolean revealDoesNotMarkHintShown;
     private LocalDate sessionDate;
@@ -116,6 +118,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 && !POST_FINAL_RECALL.equals(mode)
                 && !MURAJAAH.equals(mode) && !MURAJAAH_ACTIVE.equals(mode)) mode = SABQI;
         prefs = new HifzPrefs(this);
+        correctionStore = new ActiveReviewCorrectionStore(this);
         postFinalStore = new PostFinalRecallStore(this);
         requestedPostFinalFamily=getIntent().getStringExtra(EXTRA_POST_FINAL_FAMILY);
         String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
@@ -131,6 +134,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 ? capturedToday : LocalDate.parse(requestedSessionDate);
         } catch (RuntimeException invalidRecordedDate) {
             sessionDate = capturedToday;
+        }
+        if (MURAJAAH_ACTIVE.equals(mode)) {
+            // Resume an unfinished frozen corrective pass even after midnight. Corrupt state
+            // is left untouched; renderMurajaahActive will display a safe error instead.
+            try {
+                ActiveReviewCorrectionStore.State saved = correctionStore.pending();
+                if (saved != null) sessionDate = LocalDate.parse(saved.date);
+            } catch (RuntimeException malformed) {
+                android.util.Log.e("QuranHifz", "Active correction checkpoint requires recovery", malformed);
+            }
         }
         // Resume the original frozen evening/final session, including its calendar date,
         // instead of assigning yesterday's repetitions to today's new cumulative set.
@@ -1599,7 +1612,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private void renderMurajaahActive(){
         String today = sessionDate.toString();
+        correctionState = correctionStore.pending();
         if (today.equals(prefs.lastActiveMurajaahDate())) {
+            if (correctionState != null && !correctionStore.clear())
+                throw new IllegalStateException("Correction checkpoint could not be cleared");
+            correctionState = null;
             sessionCompleted = true;
             program.setText("Révision active · séance validée");
             progress.setText(prefs.lastActiveMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastActiveMurajaahLabel()));
@@ -1617,6 +1634,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
         murajaahPlan = geometry.planEligibleLines(prefs.activeMurajaahCursor(), lines, corpus);
         murajaahActualEnd = prefs.activeMurajaahActualEnd();
+        activeRevealedPages.clear();
+        activeRevealedPages.addAll(correctionStore.revealed(today, murajaahPlan.start));
+        if (correctionState != null) {
+            if (!correctionState.date.equals(today)
+                    || !correctionState.start.equals(murajaahPlan.start)
+                    || !corpus.contains(correctionState.end)
+                    || !correctionState.end.equals(murajaahActualEnd))
+                throw new IllegalStateException("Correction snapshot / active traversal mismatch");
+            murajaahActualEnd = correctionState.end;
+            clock.pause();
+            renderActiveCorrection();
+            return;
+        }
         if (murajaahActualEnd != null && !corpus.contains(murajaahActualEnd)) {
             murajaahActualEnd = null;
             prefs.setActiveMurajaahActualEnd(null);
@@ -1877,18 +1907,42 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private void completeMurajaahValidation(){
         boolean active = MURAJAAH_ACTIVE.equals(mode);
-        long elapsed = clock.elapsedMs();
+        if (active && correctionState == null) {
+            List<ActiveReviewCorrectionPlan.Page> pages = eligibleActiveCorrectionPages();
+            if (!pages.isEmpty()) {
+                if (!correctionStore.begin(sessionDate.toString(), murajaahPlan.start,
+                        murajaahActualEnd, clock.elapsedMs(), pages)) {
+                    onError("Impossible d'enregistrer la correction ; révision non validée.");
+                    return;
+                }
+                correctionState = correctionStore.pending();
+                clock.pause();
+                renderActiveCorrection();
+                return;
+            }
+        }
+        if (active && correctionState != null && !"DONE".equals(correctionState.stage)) {
+            onError("Terminez d'abord la correction des versets marqués.");
+            return;
+        }
+        long elapsed = active && correctionState != null
+            ? correctionState.activeElapsedMs : clock.elapsedMs();
         int lines = countMurajaahLinesThrough(murajaahActualEnd);
         EligibleCorpus corpus = active ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
         VerseRef next = corpus.next(murajaahActualEnd);
         if (active) {
-            advanceWeakVerseStreaksForActiveSession(corpus);
             String label = "Révision active · testé : " + QuranSurahNames.range(murajaahPlan.start, murajaahActualEnd)
                 + " · prochain curseur " + QuranSurahNames.verse(next) + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
             if (!prefs.completeActiveMurajaah(next, sessionDate.toString(), label)) {
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
             }
+            // Clear only after the real, existing Hifz validation has succeeded.
+            if (!correctionStore.clear()) {
+                onError("Révision validée, nettoyage des repères de séance à vérifier.");
+            }
+            correctionState = null;
+            activeRevealedPages.clear();
         } else {
             SpeedCalibration.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
             String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
@@ -1905,34 +1959,91 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     /**
-     * Only flagged verses actually covered by today's active pass (from murajaahPlan.start through
-     * murajaahActualEnd, walked the same way countMurajaahLinesThrough does) have their clean-recall
-     * streak touched — a flag elsewhere is left exactly as-is, since it wasn't tested today. Révéler
-     * is a whole-page reveal, not per-verse, so "clean" is evaluated at page granularity: a flagged
-     * verse whose page was never revealed this session counts one clean pass; a verse whose page WAS
-     * revealed at any point resets its streak instead, since we can't tell more precisely which verse
-     * on that page actually needed the help.
+     * Freeze only flagged verses actually covered today on pages explicitly revealed
+     * during this active pass. Does not include older flagged verses outside the traversal.
+     * Never advances the real Hifz cursor and never claims any new mastered material.
      */
-    private void advanceWeakVerseStreaksForActiveSession(EligibleCorpus corpus) {
-        List<VerseRef> weak = prefs.murajaahWeakVerses();
-        if (weak.isEmpty()) return;
-        LinkedHashSet<VerseRef> covered = new LinkedHashSet<>();
+    private List<ActiveReviewCorrectionPlan.Page> eligibleActiveCorrectionPages() {
+        if (murajaahPlan == null || murajaahActualEnd == null) return Collections.emptyList();
+        java.util.Set<Integer> pages = correctionStore.revealed(sessionDate.toString(), murajaahPlan.start);
+        if (pages.isEmpty()) return Collections.emptyList();
+        com.quransafeguard.hifz.core.EligibleCorpus corpus = prefs.activeMurajaahCorpus();
+        List<VerseRef> traversed = new ArrayList<>();
         VerseRef cursor = murajaahPlan.start;
+        boolean reachedEnd = false;
         for (int visited = 0; visited < 6236 * 20; visited++) {
-            covered.add(cursor);
-            if (cursor.equals(murajaahActualEnd)) break;
+            traversed.add(cursor);
+            if (cursor.equals(murajaahActualEnd)) { reachedEnd = true; break; }
             cursor = corpus.next(cursor);
         }
-        List<VerseRef> clean = new ArrayList<>();
-        List<VerseRef> revealed = new ArrayList<>();
-        for (VerseRef verse : weak) {
-            if (!covered.contains(verse)) continue;
-            if (activeRevealedPages.contains(geometry.pageForVerse(verse))) revealed.add(verse);
-            else clean.add(verse);
+        if (!reachedEnd) throw new IllegalStateException("Active coverage endpoint not reached");
+        return ActiveReviewCorrectionPlan.select(traversed, pages,
+            prefs.murajaahWeakVerses(), geometry::pageForVerse);
+    }
+
+    /** Keep the real QCF Mushaf, its page numbers and 15 physical lines. */
+    private void renderActiveCorrection() {
+        ActiveReviewCorrectionStore.State state = correctionState;
+        if (state == null) return;
+        if ("DONE".equals(state.stage)) {
+            completeMurajaahValidation();
+            return;
         }
-        if (!clean.isEmpty() || !revealed.isEmpty()) {
-            mushaf.setHighlightVerses(prefs.advanceWeakVerseStreaks(clean, revealed));
+        currentPage = state.page().page;
+        currentMask = "READ".equals(state.stage) ? 0 : 100;
+        currentSelection = Collections.emptyList();
+        currentLineIds = currentMask == 100
+            ? applyActiveLandmarks(currentPage) : Collections.emptyList();
+        weakMarkMode = false;
+        program.setText("Révision active · correction");
+        mushaf.setHighlightVerses("READ".equals(state.stage)
+            ? state.page().flagged : Collections.singletonList(state.verse()));
+        if ("READ".equals(state.stage)) {
+            progress.setText("Page " + (state.pageIndex + 1) + "/" + state.pages.size()
+                + " · relisez toute la page en clair");
+        } else {
+            progress.setText("Page " + (state.pageIndex + 1) + "/" + state.pages.size()
+                + " · " + QuranSurahNames.verse(state.verse())
+                + " · récitez masqué, puis confirmez");
         }
+        showCurrent();
+        actions.removeAllViews();
+        if ("READ".equals(state.stage)) {
+            actions.addView(Ui.roundAction(this, "", "Page relue", v -> {
+                if (!correctionStore.pageReread(correctionState)) {
+                    onError("Échec de sauvegarde de la page relue."); return;
+                }
+                correctionState = correctionStore.pending();
+                renderActiveCorrection();
+            }));
+        } else {
+            actions.addView(Ui.roundAction(this, "", "Réussi sans aide", v -> {
+                if (correctionState.assisted) {
+                    Toast.makeText(this, "Texte révélé : à reprendre lors d'un prochain contrôle.",
+                        Toast.LENGTH_LONG).show();
+                    return;
+                }
+                VerseRef corrected = correctionState.verse();
+                if (!prefs.clearCorrectedMurajaahVerse(corrected)) {
+                    onError("Impossible de retirer le repère ; correction non avancée."); return;
+                }
+                finishCorrectiveVerse();
+            }));
+            actions.addView(Ui.roundAction(this, "", "À reprendre", v -> finishCorrectiveVerse()));
+            LinearLayout revealAction = Ui.roundAction(this, "", "Révéler", null);
+            revealButton = (Button) revealAction.getChildAt(0);
+            configureRevealButton(revealButton);
+            actions.addView(revealAction);
+            updateRevealButton();
+        }
+    }
+
+    private void finishCorrectiveVerse() {
+        if (!correctionStore.nextTarget(correctionState)) {
+            onError("Impossible de sauvegarder le contrôle masqué."); return;
+        }
+        correctionState = correctionStore.pending();
+        renderActiveCorrection();
     }
 
     /**
@@ -2013,7 +2124,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void checkpointMurajaah(long elapsed){
-        if (!isMurajaahMode() || sessionCompleted) return;
+        if (!isMurajaahMode() || sessionCompleted || correctionState != null) return;
         if (MURAJAAH_ACTIVE.equals(mode)) {
             prefs.setActiveMurajaahActualEnd(murajaahActualEnd);
             prefs.setActiveMurajaahPage(currentPage);
@@ -2025,6 +2136,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     @Override public void onVerseTap(VerseRef verse){
         if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted) return;
+        if (MURAJAAH_ACTIVE.equals(mode) && correctionState != null) return;
         if (MURAJAAH_ACTIVE.equals(mode) && weakMarkMode) { toggleWeakVerse(verse); return; }
         EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
         if (!corpus.contains(verse)) {
@@ -2049,7 +2161,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateMurajaahActions();
     }
 
-    @Override public void onPageSwipe(int delta){goPage(delta);}
+    @Override public void onPageSwipe(int delta){if(correctionState==null)goPage(delta);}
     @Override public void onSemanticCueTap(String passageId) {
         if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
         semanticTitleDialog=null;
@@ -2068,6 +2180,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void showCurrent(){
         hasShown=true;
+        if(MURAJAAH_ACTIVE.equals(mode) && correctionState != null) {
+            if ("READ".equals(correctionState.stage)) {
+                mushaf.setMaskFollowsSelection(false);
+                mushaf.show(currentPage, Collections.emptyList(), Collections.emptyList(), 0, false);
+            } else {
+                mushaf.showFreeActivePreparedPage(currentPage,currentLineIds,
+                    activePageLandmarks,activePageAmorces,activeAyahThemesReady);
+            }
+            return;
+        }
         if(MURAJAAH_ACTIVE.equals(mode)) {
             // No old-page geometry redraw and no unmasked first frame on BOOX:
             // exact 100% SVG mask plus Quran-word holes precede the reveal.
@@ -2238,7 +2360,18 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             int action=event.getActionMasked();
             if(action==android.view.MotionEvent.ACTION_DOWN){
                 if(currentMask<=0)return false;revealedThisRep=true;
-                if(MURAJAAH_ACTIVE.equals(mode)){
+                if(MURAJAAH_ACTIVE.equals(mode) && correctionState != null) {
+                    if (!correctionStore.revealDuringControl(correctionState)) {
+                        onError("Impossible d'enregistrer l'aide pendant le contrôle.");
+                        return true;
+                    }
+                    correctionState = correctionStore.pending();
+                } else if(MURAJAAH_ACTIVE.equals(mode)){
+                    if (murajaahPlan == null || !correctionStore.recordReveal(
+                            sessionDate.toString(), murajaahPlan.start, currentPage)) {
+                        onError("Impossible d'enregistrer cette page révélée.");
+                        return true;
+                    }
                     activeRevealedPages.add(currentPage);
                     if(!revealDoesNotMarkHintShown){
                         revealDoesNotMarkHintShown=true;
@@ -2341,7 +2474,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if(POST_FINAL_RECALL.equals(mode))updatePostFinalRecallAction();
             else updateGroupedCycleRepAction();
         }
-        if(isMurajaahMode()&&!sessionCompleted){
+        if(isMurajaahMode()&&!sessionCompleted && correctionState == null){
             if(MURAJAAH_ACTIVE.equals(mode)){
                 currentLineIds=applyActiveLandmarks(page);
                 prefs.setActiveMurajaahPage(page);
@@ -2352,7 +2485,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
         semanticTitleDialog=null;
-        boolean titleTargets=isMurajaahMode() || (ITQAN.equals(mode) && currentMask==100
+        boolean titleTargets=(isMurajaahMode() && correctionState == null) || (ITQAN.equals(mode) && currentMask==100
             && itqanUnit!=null && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime,prefs.itqanRep()));
         if(titleTargets)AyahThemesReviewDisplay.apply(this,mushaf,ayahThemesTitles,page);
     }
@@ -2360,7 +2493,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         super.onResume();
         if(clock==null)return;
         clock.syncPersistedElapsed(prefs.elapsedFor(mode));
-        if(!sessionCompleted&&!awaitingValidation&&(!timedSessionLimitReached||isMurajaahMode()))clock.resume();
+        if(!sessionCompleted&&!awaitingValidation&&correctionState==null
+                &&(!timedSessionLimitReached||isMurajaahMode()))clock.resume();
     }
     @Override protected void onPause(){
         if(clock==null){super.onPause();return;}
@@ -2370,5 +2504,5 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         super.onPause();
     }
     @Override protected void onDestroy(){if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
-    @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
+    @Override public boolean onKeyDown(int code,KeyEvent e){if(correctionState!=null)return super.onKeyDown(code,e);if(clock==null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }
