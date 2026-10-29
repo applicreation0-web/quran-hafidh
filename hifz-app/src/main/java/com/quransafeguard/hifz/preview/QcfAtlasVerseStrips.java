@@ -84,11 +84,18 @@ final class QcfAtlasVerseStrips extends WebView {
         if(!m.find())return "";
         String[] view=m.group(2).trim().replace(',',' ').split("\\s+");
         if(view.length!=4)return "";
-        try{
-            if(Double.parseDouble(view[0])!=0 ||Double.parseDouble(view[1])!=0
+        double originX,originY;
+        try {
+            originX=Double.parseDouble(view[0]);
+            originY=Double.parseDouble(view[1]);
+            if(!Double.isFinite(originX)||!Double.isFinite(originY)
                 ||Double.parseDouble(view[2])!=345||Double.parseDouble(view[3])!=550)return "";
         }catch(NumberFormatException invalid){return "";}
-        String vb=String.format(Locale.ROOT,"viewBox='%.2f %.2f %.2f %.2f'",x0,y0,x1-x0,y1-y0);
+        // The first actual KFQC page has a shifted SVG viewBox. The audited word
+        // boxes are page-relative 0..345/550; translate them to the original SVG
+        // coordinate origin before cropping or adding a difference underline.
+        String vb=String.format(Locale.ROOT,"viewBox='%.2f %.2f %.2f %.2f'",
+            originX+x0,originY+y0,x1-x0,y1-y0);
         String cropped=source.substring(0,m.start())+vb+source.substring(m.end());
         // Change the intrinsic SVG aspect ratio as well; no stretched / reflowed glyphs.
         cropped=cropped.replaceFirst("width='345' height='550'",
@@ -103,7 +110,7 @@ final class QcfAtlasVerseStrips extends WebView {
             double y=Math.min(549,matching.y1+1.5);
             strokes.append(String.format(Locale.ROOT,
                 "<line x1='%.2f' y1='%.2f' x2='%.2f' y2='%.2f'/>",
-                matching.x0,y,matching.x1,y));
+                originX+matching.x0,originY+y,originX+matching.x1,originY+y));
         }
         strokes.append("</g>");
         if(!cropped.contains("</svg>"))return "";
