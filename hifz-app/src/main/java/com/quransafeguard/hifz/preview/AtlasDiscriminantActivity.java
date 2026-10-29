@@ -215,6 +215,8 @@ public final class AtlasDiscriminantActivity extends Activity {
         startActivity(intent);
     }
 
+    int getCurrentLeftPageForTest() { return currentLeftPage; }
+
     @Override protected void onSaveInstanceState(Bundle state){
         state.putInt("caseIndex",selectedIndex);
         super.onSaveInstanceState(state);
