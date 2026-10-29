@@ -1335,10 +1335,9 @@ public final class HifzPrefs {
     }
 
     /**
-     * Verses flagged during Révision active as a personal weak spot (light E-Ink-safe outline,
-     * visible in both active and passive). Global, not scoped to a corpus range: a struggle is a
-     * struggle wherever the verse sits. Phase 3 will add automatic decay after clean active
-     * recalls; for now a flag only clears by tapping the same verse again while marking.
+     * Temporary location markers for verses requiring a corrective reread and masked control.
+     * The flag is removed only after the user confirms a successful unassisted masked recall,
+     * or by explicit manual unmarking. Passive reading never clears a flag.
      */
     public List<VerseRef> murajaahWeakVerses() {
         LinkedHashSet<VerseRef> unique = new LinkedHashSet<>();
@@ -1361,12 +1360,7 @@ public final class HifzPrefs {
         if (!removed) current.add(verse);
         JSONArray array = new JSONArray();
         for (VerseRef flagged : current) array.put(flagged.toString());
-        SharedPreferences.Editor editor = p.edit().putString("murajaahWeakVerses", array.toString());
-        if (removed) {
-            java.util.Map<VerseRef, Integer> streaks = weakVerseStreaks();
-            if (streaks.remove(verse) != null) editor.putString("murajaahWeakVerseStreaks", weakVerseStreaksJson(streaks));
-        }
-        return editor.commit();
+        return p.edit().putString("murajaahWeakVerses", array.toString()).commit();
     }
 
     /**
@@ -1384,79 +1378,14 @@ public final class HifzPrefs {
         return p.edit().putString("murajaahWeakVerses", array.toString()).commit() ? added : 0;
     }
 
-    /** How many clean active recalls in a row auto-clear a weak-spot flag (see advanceWeakVerseStreaks). */
-    public static final int WEAK_VERSE_CLEAN_STREAK_TO_CLEAR = 3;
-
-    /** 0 if never attempted since being flagged (or not flagged at all); otherwise its current clean-recall count, &lt; WEAK_VERSE_CLEAN_STREAK_TO_CLEAR. */
-    public int weakVerseStreak(VerseRef verse) {
-        Integer streak = weakVerseStreaks().get(verse);
-        return streak == null ? 0 : streak;
-    }
-
-    private java.util.Map<VerseRef, Integer> weakVerseStreaks() {
-        LinkedHashMap<VerseRef, Integer> out = new LinkedHashMap<>();
-        try {
-            JSONObject object = new JSONObject(p.getString("murajaahWeakVerseStreaks", "{}"));
-            java.util.Iterator<String> keys = object.keys();
-            while (keys.hasNext()) {
-                String key = keys.next();
-                try { out.put(GeometryRepository.parseVerse(key), object.optInt(key, 0)); }
-                catch (Exception malformedEntry) { /* drop a single corrupt entry, keep the rest */ }
-            }
-        } catch (Exception malformed) {
-            return new LinkedHashMap<>();
-        }
-        return out;
-    }
-
-    private static String weakVerseStreaksJson(java.util.Map<VerseRef, Integer> streaks) {
-        JSONObject object = new JSONObject();
-        try {
-            for (java.util.Map.Entry<VerseRef, Integer> entry : streaks.entrySet()) object.put(entry.getKey().toString(), entry.getValue());
-        } catch (Exception impossible) { /* JSONObject.put(String,int) never throws */ }
-        return object.toString();
-    }
-
-    /**
-     * Advances each flagged verse's clean-active-recall streak after today's Révision active pass
-     * — a verse covered without any reveal on its page counts toward automatically clearing its
-     * flag after WEAK_VERSE_CLEAN_STREAK_TO_CLEAR such passes; a verse whose page WAS revealed
-     * resets its streak to 0 instead. Passive viewing never calls this — only active recall moves
-     * the streak, since only active tests whether the verse is actually held from memory. Returns
-     * the (possibly now smaller) set of still-flagged verses.
-     */
-    public List<VerseRef> advanceWeakVerseStreaks(java.util.Collection<VerseRef> cleanThisSession,
-                                                  java.util.Collection<VerseRef> revealedThisSession) {
-        LinkedHashSet<VerseRef> weak = new LinkedHashSet<>(murajaahWeakVerses());
-        if (weak.isEmpty()) return new ArrayList<>(weak);
-        java.util.Map<VerseRef, Integer> streaks = weakVerseStreaks();
-        boolean changed = false;
-        if (cleanThisSession != null) {
-            for (VerseRef verse : cleanThisSession) {
-                if (!weak.contains(verse)) continue;
-                changed = true;
-                int next = streaks.getOrDefault(verse, 0) + 1;
-                if (next >= WEAK_VERSE_CLEAN_STREAK_TO_CLEAR) {
-                    weak.remove(verse);
-                    streaks.remove(verse);
-                } else {
-                    streaks.put(verse, next);
-                }
-            }
-        }
-        if (revealedThisSession != null) {
-            for (VerseRef verse : revealedThisSession) {
-                if (weak.contains(verse) && streaks.remove(verse) != null) changed = true;
-            }
-        }
-        if (!changed) return new ArrayList<>(weak);
+    /** Explicitly remove one corrected marker; never toggles a previously unmarked verse ON. */
+    public boolean clearCorrectedMurajaahVerse(VerseRef verse) {
+        if (verse == null) return false;
+        LinkedHashSet<VerseRef> current = new LinkedHashSet<>(murajaahWeakVerses());
+        if (!current.remove(verse)) return true;
         JSONArray array = new JSONArray();
-        for (VerseRef verse : weak) array.put(verse.toString());
-        p.edit()
-            .putString("murajaahWeakVerses", array.toString())
-            .putString("murajaahWeakVerseStreaks", weakVerseStreaksJson(streaks))
-            .commit();
-        return new ArrayList<>(weak);
+        for (VerseRef remaining : current) array.put(remaining.toString());
+        return p.edit().putString("murajaahWeakVerses", array.toString()).commit();
     }
 
     public int sabqiLineCursor() { return p.getInt("sabqiLineCursor", -1); }
