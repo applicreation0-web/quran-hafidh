@@ -1,0 +1,76 @@
+name: Quran Haafidh — Atlas discriminant QCF pilot audit (NO RELEASE)
+on:
+  push:
+    branches:
+      - work/haafidh-atlas-discriminants-pilot-20261029
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Fetch all pinned 604 SVG pages, and Android dependencies
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Real QCF SVG viewBox static checks (no reconstructed Arabic)
+        run: |
+          python3 - <<'PY'
+          import pathlib, brotli, re
+          root=pathlib.Path("app/src/main/assets/mushaf/hafs/kfqc/svg-br")
+          files=sorted(root.glob("[0-9][0-9][0-9].svg.br"))
+          assert len(files)==604,len(files)
+          for page in [1,8,100,302,406,463,604]:
+              text=brotli.decompress((root/f"{page:03d}.svg.br").read_bytes()).decode("utf-8")
+              assert "<svg" in text and "</svg>" in text, page
+              assert re.search(r"viewBox\s*=\s*['\"]0[\s,]+0[\s,]+345[\s,]+550['\"]",text),page
+              assert "ayahPolygon" in text, page
+          print("PASS: 604 QCF assets; sampled viewBox and exact ayah polygons")
+          PY
+      - name: Pilot source, icon and QCF comparison tests
+        run: |
+          gradle --no-daemon :hifz-app:testDebugUnitTest --tests '*AtlasDiscriminantCasesTest' --tests '*AtlasDiscriminantSourceContractTest' --tests '*UiIconMappingTest'
+      - name: Full Hifz JVM and source regression gates
+        run: |
+          gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Emulator KVM permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Instrumented 2-Mushaf comparison / screenshot / no Hifz change
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest
+            mkdir -p hifz-app/build/atlas-comparison-audit
+            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
+            test -s hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: atlas-discriminant-pilot-qcf-audit-no-release
+          path: |
+            hifz-app/build/atlas-comparison-audit/
+            hifz-app/build/reports/
+            hifz-app/build/test-results/
+            hifz-app/build/outputs/androidTest-results/
+          retention-days: 14
