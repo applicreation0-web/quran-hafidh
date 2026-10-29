@@ -47,7 +47,7 @@ final class AtlasDiscriminantCases {
             "Les deux descriptions évoquent l'eau issue de la pierre. "
                 +"Le choix des verbes distingue l'abondance de l'apparition initiale.",
             "Al-Karmānī, Al-Burhān fī Mutashābih al-Qurʾān",
-            "https://quranpedia.net/note/48105",NONE,NONE),
+            "https://ablibrary.net/book_content/b/12494/74?lang=ar",NONE,NONE),
         new Entry(2,58,7,161,"Variations multiples",
             "Al-Baqarah : « entrez », puis mangez abondamment.",
             "Al-Aʿrāf : « habitez », puis mangez.",
