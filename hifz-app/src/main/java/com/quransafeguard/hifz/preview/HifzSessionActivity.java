@@ -2182,7 +2182,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         hasShown=true;
         if(MURAJAAH_ACTIVE.equals(mode) && correctionState != null) {
             if ("READ".equals(correctionState.stage)) {
-                mushaf.setMaskFollowsSelection(false);
+                // Active Mushaf has already disabled selection-clipped masking at initial boot.
                 mushaf.show(currentPage, Collections.emptyList(), Collections.emptyList(), 0, false);
             } else {
                 mushaf.showFreeActivePreparedPage(currentPage,currentLineIds,
