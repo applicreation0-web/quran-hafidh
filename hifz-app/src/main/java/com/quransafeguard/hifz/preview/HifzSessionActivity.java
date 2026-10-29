@@ -100,6 +100,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private final java.util.Set<Integer> activeRevealedPages = new java.util.LinkedHashSet<>();
     private ActiveReviewCorrectionStore correctionStore;
     private ActiveReviewCorrectionStore.State correctionState;
+    /** A verified prepared QCF mask must be on screen before any corrected flag can be cleared. */
+    private boolean correctionMaskedPageReady;
+    private Button correctionSuccessButton;
     /** Reported as confusing: Révéler alone records nothing — said once per session, not on every touch. */
     private boolean revealDoesNotMarkHintShown;
     private LocalDate sessionDate;
@@ -1642,6 +1645,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                     || !corpus.contains(correctionState.end)
                     || !correctionState.end.equals(murajaahActualEnd))
                 throw new IllegalStateException("Correction snapshot / active traversal mismatch");
+            for (ActiveReviewCorrectionPlan.Page page : correctionState.pages)
+                for (VerseRef verse : page.flagged)
+                    if (!corpus.contains(verse) || geometry.pageForVerse(verse) != page.page)
+                        throw new IllegalStateException("Corrupt correction verse/page mapping");
             murajaahActualEnd = correctionState.end;
             clock.pause();
             renderActiveCorrection();
@@ -1990,6 +1997,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         currentPage = state.page().page;
+        correctionMaskedPageReady = false;
+        correctionSuccessButton = null;
         currentMask = "READ".equals(state.stage) ? 0 : 100;
         currentSelection = Collections.emptyList();
         currentLineIds = currentMask == 100
@@ -2017,7 +2026,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 renderActiveCorrection();
             }));
         } else {
-            actions.addView(Ui.roundAction(this, "", "Réussi sans aide", v -> {
+            LinearLayout successAction = Ui.roundAction(this, "", "Réussi sans aide", v -> {
+                if (!correctionMaskedPageReady || !activeAyahThemesReady) {
+                    Toast.makeText(this, "Masquage du Mushaf non prêt : aucune réussite enregistrée.",
+                        Toast.LENGTH_LONG).show();
+                    return;
+                }
                 if (correctionState.assisted) {
                     Toast.makeText(this, "Texte révélé : à reprendre lors d'un prochain contrôle.",
                         Toast.LENGTH_LONG).show();
@@ -2028,7 +2042,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                     onError("Impossible de retirer le repère ; correction non avancée."); return;
                 }
                 finishCorrectiveVerse();
-            }));
+            });
+            correctionSuccessButton = (Button) successAction.getChildAt(0);
+            correctionSuccessButton.setEnabled(false);
+            actions.addView(successAction);
             actions.addView(Ui.roundAction(this, "", "À reprendre", v -> finishCorrectiveVerse()));
             LinearLayout revealAction = Ui.roundAction(this, "", "Révéler", null);
             revealButton = (Button) revealAction.getChildAt(0);
@@ -2366,6 +2383,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                         return true;
                     }
                     correctionState = correctionStore.pending();
+                    if (correctionSuccessButton != null) correctionSuccessButton.setEnabled(false);
                 } else if(MURAJAAH_ACTIVE.equals(mode)){
                     if (murajaahPlan == null || !correctionStore.recordReveal(
                             sessionDate.toString(), murajaahPlan.start, currentPage)) {
@@ -2482,6 +2500,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 prefs.setMurajaahPage(page);
             }
             restoreMurajaahEndpointSelectionOnCurrentPage();
+        }
+        if (MURAJAAH_ACTIVE.equals(mode) && correctionState != null
+                && "RECALL".equals(correctionState.stage)) {
+            correctionMaskedPageReady = page == correctionState.page().page
+                && activeAyahThemesReady && currentMask == 100;
+            if (correctionSuccessButton != null)
+                correctionSuccessButton.setEnabled(correctionMaskedPageReady
+                    && !correctionState.assisted);
         }
         if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
         semanticTitleDialog=null;
