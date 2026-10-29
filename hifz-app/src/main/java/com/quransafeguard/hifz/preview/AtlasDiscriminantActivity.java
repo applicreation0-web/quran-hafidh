@@ -36,6 +36,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private boolean disposed;
     private Button prev,next;
     private int currentLeftPage, currentRightPage;
+    private int leftPageStatus, rightPageStatus; // 0 pending, +1 decoded, -1 failed
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -97,10 +98,26 @@ public final class AtlasDiscriminantActivity extends Activity {
         left=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
             @Override public void onPageChosen(int page){openReader(true,page);}
             @Override public void onOpenReading(int page){openReader(true,page);}
+            @Override public void onRendered(int page,boolean success){
+                if(page!=currentLeftPage)return;
+                leftPageStatus=success?1:-1;
+                android.util.Log.i("HaafidhAtlasQCF","Left SVG "+page+" rendered="+success);
+                showRightAfterLeft();
+            }
         });
         right=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
             @Override public void onPageChosen(int page){openReader(false,page);}
             @Override public void onOpenReading(int page){openReader(false,page);}
+            @Override public void onRendered(int page,boolean success){
+                if(page!=currentRightPage)return;
+                rightPageStatus=success?1:-1;
+                android.util.Log.i("HaafidhAtlasQCF","Right SVG "+page+" rendered="+success);
+                if(leftPageStatus==1 && rightPageStatus==1 && strips!=null){
+                    AtlasDiscriminantCases.Entry entry=current();
+                    strips.show(entry.first,currentLeftPage,entry.firstWordIndices,
+                        entry.second,currentRightPage,entry.secondWordIndices);
+                }
+            }
         });
         left.setAtlasSinglePageCompact(true);
         right.setAtlasSinglePageCompact(true);
@@ -176,13 +193,15 @@ public final class AtlasDiscriminantActivity extends Activity {
 
         leftHeader.setText(QuranSurahNames.name(c.first.getSurah())+" · "+c.first+" · p."+currentLeftPage);
         rightHeader.setText(QuranSurahNames.name(c.second.getSurah())+" · "+c.second+" · p."+currentRightPage);
+        // BOOX: never decode two 600 KB original SVG pages and two crops simultaneously.
+        // Load the second page only after the first confirms a real image.onload;
+        // otherwise one failed image could hide a missing QCF resource indefinitely.
+        leftPageStatus=0;rightPageStatus=0;
+        right.setVisibility(View.INVISIBLE);
+        if(strips!=null)strips.setVisibility(View.INVISIBLE);
         // Highlight the ACTUAL ayahPolygon of the Quran, not approximated rectangles.
         left.showPages(currentLeftPage,currentLeftPage,currentLeftPage,
             c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
-        right.showPages(currentRightPage,currentRightPage,currentRightPage,
-            c.second.getSurah(),c.second.getAyah(),c.second.getAyah(),false);
-        if(strips!=null)strips.show(c.first,currentLeftPage,c.firstWordIndices,
-            c.second,currentRightPage,c.secondWordIndices);
 
         kind.setText("Différence · "+c.kind);
         leftCue.setText(c.firstCue);
@@ -192,6 +211,18 @@ public final class AtlasDiscriminantActivity extends Activity {
         next.setEnabled(selectedIndex<AtlasDiscriminantCases.PILOT.size()-1);
         rail.invalidate();
     }
+
+    private void showRightAfterLeft(){
+        if(rightPageStatus!=0)return;
+        AtlasDiscriminantCases.Entry c=current();
+        right.setVisibility(View.VISIBLE);
+        right.showPages(currentRightPage,currentRightPage,currentRightPage,
+            c.second.getSurah(),c.second.getAyah(),c.second.getAyah(),false);
+        if(strips!=null)strips.setVisibility(View.VISIBLE);
+    }
+
+    boolean qcfPagesReadyForTest(){return leftPageStatus==1&&rightPageStatus==1;}
+    int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0);}
 
     private void showExplanation(){
         AtlasDiscriminantCases.Entry c=current();
