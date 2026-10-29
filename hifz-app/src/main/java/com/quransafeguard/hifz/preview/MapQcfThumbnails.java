@@ -27,6 +27,7 @@ final class MapQcfThumbnails extends WebView {
  private int markSurah,markFirst,markLast;
  private boolean markOnlyBoundaries;
  private boolean mosaicMode;
+ private boolean atlasSinglePageCompact;
  private int mosaicFirst=-1,mosaicGeneration,fullGeneration;
  private final java.util.LinkedHashMap<Integer,String> vectorCache=
      new java.util.LinkedHashMap<Integer,String>(8,0.75f,true){
@@ -41,6 +42,11 @@ final class MapQcfThumbnails extends WebView {
  void setMosaic(boolean value) {
   if(disposed||mosaicMode==value)return;
   mosaicMode=value;mosaicFirst=-1;renderKey="";
+ }
+ /** Exact single QCF page, no Atlas unit-page pills: used in the two-way comparison. */
+ void setAtlasSinglePageCompact(boolean enabled) {
+  if(atlasSinglePageCompact==enabled)return;
+  atlasSinglePageCompact=enabled;renderKey="";
  }
  MapQcfThumbnails(Context context,Listener listener){
   super(context);this.listener=listener;
@@ -62,7 +68,9 @@ final class MapQcfThumbnails extends WebView {
   if(s<0||s>114||firstAyah<0||lastAyah<0||firstAyah>lastAyah)throw new IllegalArgumentException("QCF verse highlight range");
   if(first<1||last>604||last<first)throw new IllegalArgumentException("QCF thumbnail range");
   int chosen=Math.max(first,Math.min(last,selectedPage));
-  String key=first+":"+last+":"+chosen+":"+s+":"+firstAyah+":"+lastAyah+":"+boundariesOnly+":"+focusFirstPage+":"+focusLastPage+":"+mosaicMode;
+  if(atlasSinglePageCompact && first!=last)
+   throw new IllegalArgumentException("Compact Atlas preview must show one exact QCF page");
+  String key=first+":"+last+":"+chosen+":"+s+":"+firstAyah+":"+lastAyah+":"+boundariesOnly+":"+focusFirstPage+":"+focusLastPage+":"+mosaicMode+":"+atlasSinglePageCompact;
   if(key.equals(renderKey))return;
   renderKey=key;start=first;end=last;selected=chosen;
   if(mosaicFirst<first||mosaicFirst>last||chosen<mosaicFirst||chosen>=mosaicFirst+6)
@@ -76,7 +84,7 @@ final class MapQcfThumbnails extends WebView {
   int next=Math.max(start,Math.min(end,selected+(delta<0?-1:1)));
   if(next!=selected&&listener!=null)listener.onPageChosen(next);
  }
- private static String readSvg(Context context,int page)throws Exception{
+ static String readSvg(Context context,int page)throws Exception{
   String path=String.format(Locale.ROOT,"mushaf/hafs/kfqc/svg-br/%03d.svg.br",page);
   try(InputStream compressed=context.getAssets().open(path);
       BrotliInputStream input=new BrotliInputStream(compressed);
@@ -192,13 +200,16 @@ final class MapQcfThumbnails extends WebView {
       .append(selected).append("' onclick='readPage(").append(selected)
       .append(")'><img alt='Page ").append(selected)
       .append(" entière' onload='fit()'></div></main>");
+  if (!atlasSinglePageCompact) {
   html.append("<footer><nav aria-label='Pages de l’unité'>");
   for(int p=start;p<=end;p++){
    html.append("<button class='page ").append(p%2==0?"even":"odd").append(p>=passageFirstPage&&p<=passageLastPage?" passage":"").append("' aria-label='Page ").append(p).append(p%2==0?" paire":" impaire").append("'");
    if(p==selected)html.append(" aria-current='page'");
    html.append(" onclick='choosePage(").append(p).append(")'>").append(p).append("</button>");
   }
-  html.append("</nav></footer><script>var fullGeneration=").append(generation).append(";")
+  html.append("</nav></footer>");
+  }
+  html.append("<script>var fullGeneration=").append(generation).append(";")
       .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var img=document.querySelector('.paper img');if(!img)return;if(!src){img.alt='Page indisponible';return;}img.onload=function(){fit();requestAnimationFrame(function(){fit();requestAnimationFrame(fit);});};img.src='data:image/svg+xml;base64,'+src;}")
       .append("new ResizeObserver(()=>{fit();pills();}).observe(document.body);pills();")
       .append("window.addEventListener('load',()=>MapPages.full(").append(selected).append(",").append(generation).append("));")
