@@ -70,7 +70,7 @@ jobs:
           script: |
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest
             mkdir -p hifz-app/build/atlas-comparison-audit
-            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
+            adb pull /sdcard/Pictures/HaafidhAudit/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
             test -s hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
       - uses: actions/upload-artifact@v4
         if: always()
