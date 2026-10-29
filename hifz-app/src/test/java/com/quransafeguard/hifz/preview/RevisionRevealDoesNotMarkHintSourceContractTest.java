@@ -40,9 +40,13 @@ public final class RevisionRevealDoesNotMarkHintSourceContractTest {
 
         String configure = method(session,
             "private void configureRevealButton(Button button) {", "private boolean consumeReveal()");
-        assertTrue("the hint must live inside the active-only branch, never fire for Sabqi/Itqan's own Révéler",
-            configure.contains("if(MURAJAAH_ACTIVE.equals(mode)){\n                    activeRevealedPages.add(currentPage);\n"
-                + "                    if(!revealDoesNotMarkHintShown){"));
+        assertTrue("only normal Révision active collects revealed pages; corrective masked test is distinct",
+            configure.contains("} else if(MURAJAAH_ACTIVE.equals(mode)){")
+                && configure.contains("correctionStore.recordReveal(")
+                && configure.contains("activeRevealedPages.add(currentPage);")
+                && configure.contains("if(!revealDoesNotMarkHintShown){"));
+        assertTrue("the correction's own reveal must persist an assisted attempt",
+            configure.contains("correctionStore.revealDuringControl(correctionState)"));
         assertTrue("must flip the flag before showing it, so a second touch never repeats the toast",
             configure.contains("revealDoesNotMarkHintShown=true;"));
         assertTrue("the message must name both actions so the distinction is explicit, not just say 'nothing happened'",
