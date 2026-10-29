@@ -32,7 +32,7 @@ final class AtlasDiscriminantCases {
             "Az-Zumar : yaʿlamū (« savoir »).",
             "Le contexte précédant 39:52 évoque la prétention à un savoir. "
                 +"La différence de verbe doit être retenue avec ce contexte, non isolément.",
-            "Al-Karmānī, Al-Burhān ; Tadars (repère mémoriel)",
+            "Tadars, comparaison 777 ; Quranpedia, note 935",
             "https://tadars.com/tdbr/comparable/777",new int[]{2},new int[]{2}),
         new Entry(6,151,17,31,"Formulation et ordre",
             "Al-Anʿām : pauvreté déjà présente ; « vous, puis eux ».",
