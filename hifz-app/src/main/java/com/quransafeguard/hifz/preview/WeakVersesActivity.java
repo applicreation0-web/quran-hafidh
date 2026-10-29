@@ -15,8 +15,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Standing list of every verse currently flagged "difficile" during Révision active, with its
- * clean-recall progress toward the automatic 3-in-a-row clear. Tapping a verse opens Lecture at
+ * Standing list of every verse currently flagged "difficile" during Révision active.
+ * A flag disappears after user-confirmed unassisted masked control. Tapping a verse opens Lecture at
  * its page with it highlighted; "Démarquer" removes the flag directly, the same effect as tapping
  * it again in the Mushaf while "Marquer" is armed.
  */
@@ -53,8 +53,7 @@ public final class WeakVersesActivity extends android.app.Activity {
         root.addView(top);
 
         TextView subtitle = Ui.text(this,
-            "Versets marqués difficiles en Révision active — s’effacent après "
-                + HifzPrefs.WEAK_VERSE_CLEAN_STREAK_TO_CLEAR + " rappels propres.", 12.5f, false);
+            "Versets à corriger après la Révision active — le repère disparaît après une récitation masquée réussie.", 12.5f, false);
         subtitle.setTextColor(Ui.MUTED);
         subtitle.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 14));
         root.addView(subtitle);
@@ -98,9 +97,7 @@ public final class WeakVersesActivity extends android.app.Activity {
         Ui.weight(tapArea, 1f);
         TextView label = Ui.text(this, QuranSurahNames.name(verse.getSurah()) + " " + verse.getAyah(), 14.5f, true);
         tapArea.addView(label);
-        int streak = prefs.weakVerseStreak(verse);
-        TextView progress = Ui.text(this,
-            streak + "/" + HifzPrefs.WEAK_VERSE_CLEAN_STREAK_TO_CLEAR + " rappels propres", 12f, false);
+        TextView progress = Ui.text(this, "À corriger", 12f, false);
         progress.setTextColor(Ui.MUTED);
         tapArea.addView(progress);
         tapArea.setClickable(true);
