@@ -18,7 +18,11 @@ import java.util.Locale;
  * remain reachable through round page badges and reader-direction swipes.
  */
 final class MapQcfThumbnails extends WebView {
- interface Listener { void onPageChosen(int page); default void onOpenReading(int page){onPageChosen(page);} }
+ interface Listener {
+  void onPageChosen(int page);
+  default void onOpenReading(int page){onPageChosen(page);}
+  default void onRendered(int page, boolean success){}
+ }
  private String renderKey="";
  private volatile boolean disposed;
  private int passageFirstPage,passageLastPage;
@@ -209,8 +213,12 @@ final class MapQcfThumbnails extends WebView {
   }
   html.append("</nav></footer>");
   }
-  html.append("<script>var fullGeneration=").append(generation).append(";")
-      .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var img=document.querySelector('.paper img');if(!img)return;if(!src){img.alt='Page indisponible';return;}img.onload=function(){fit();requestAnimationFrame(function(){fit();requestAnimationFrame(fit);});};img.src='data:image/svg+xml;base64,'+src;}")
+  html.append("<script>var fullGeneration=").append(generation).append(";var currentSvgPage=").append(selected).append(";")
+      .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var img=document.querySelector('.paper img');if(!img)return;")
+      .append("if(!src){img.alt='Page indisponible';MapPages.fullStatus(currentSvgPage,gen,false);return;}")
+      .append("img.onload=function(){fit();requestAnimationFrame(function(){fit();requestAnimationFrame(fit);});MapPages.fullStatus(currentSvgPage,gen,true);};")
+      .append("img.onerror=function(){img.alt='Page QCF indisponible';MapPages.fullStatus(currentSvgPage,gen,false);};")
+      .append("img.src='data:image/svg+xml;base64,'+src;}")
       .append("new ResizeObserver(()=>{fit();pills();}).observe(document.body);pills();")
       .append("window.addEventListener('load',()=>MapPages.full(").append(selected).append(",").append(generation).append("));")
       .append("</script></body></html>");
@@ -236,7 +244,10 @@ final class MapQcfThumbnails extends WebView {
     String highlighted=highlightExactVersePolygons(cachedSvg(page),s,a,b,only);
     encoded=android.util.Base64.encodeToString(
         highlighted.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
-   }catch(Exception unavailable){encoded="";}
+   }catch(Exception unavailable){
+    android.util.Log.e("HaafidhAtlasQCF","Failed to load authentic SVG page "+page,unavailable);
+    encoded="";
+   }
    final String prepared=encoded;
    post(()->{
     if(disposed||mosaicMode||generation!=fullGeneration||page!=selected)return;
@@ -261,6 +272,12 @@ final class MapQcfThumbnails extends WebView {
    });
   }
   @JavascriptInterface public void ready(int generation){post(()->{if(!disposed&&mosaicMode&&generation==mosaicGeneration)invalidate();});}
+  @JavascriptInterface public void fullStatus(int page,int generation,boolean success){
+   post(()->{
+    if(!disposed&&!mosaicMode&&generation==fullGeneration&&page==selected&&listener!=null)
+     listener.onRendered(page,success);
+   });
+  }
   @JavascriptInterface public void shift(int delta){post(()->{if(!disposed)MapQcfThumbnails.this.shiftMosaic(delta);});}
   @JavascriptInterface public void step(int delta){post(()->MapQcfThumbnails.this.step(delta));}
   @JavascriptInterface public void choose(int page){if(page>=start&&page<=end)post(()->{if(!disposed&&page>=start&&page<=end&&listener!=null)listener.onPageChosen(page);});}
