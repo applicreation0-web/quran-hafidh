@@ -37,9 +37,9 @@ jobs:
             const p=root+String(page).padStart(3,"0")+".svg.br";
             const svg=zlib.brotliDecompressSync(fs.readFileSync(p)).toString("utf8");
             if(!svg.includes("<svg")||!svg.includes("</svg>"))throw new Error("Broken SVG "+page);
-            const vb=svg.match(/viewBox\\s*=\\s*['"]([^'"]+)['"]/);
+            const vb=svg.match(/viewBox\s*=\s*['"]([^'"]+)['"]/);
             if(!vb)throw new Error("Missing QCF viewBox "+page);
-            const dims=vb[1].trim().split(/[\\s,]+/).map(Number);
+            const dims=vb[1].trim().split(/[\s,]+/).map(Number);
             if(dims.length!==4 || !dims.every(Number.isFinite) || dims[2]!==345 || dims[3]!==550)
               throw new Error("Wrong QCF physical page dimensions "+page+": "+vb[1]);
             if(page===1 && dims[0]===0 && dims[1]===0)
