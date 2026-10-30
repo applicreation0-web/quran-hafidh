@@ -1973,7 +1973,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 // Freeze the original cursor and time. These repeated pages earn no new credit.
                 checkpointMurajaah(clock.elapsedMs());
                 if(!correctionStore.begin(sessionDate.toString(),murajaahPlan.start,
-                        murajaahActualEnd,clock.elapsedMs(),revealedPages)){
+                        murajaahActualEnd,clock.elapsedMs(),revealedPages,currentPage)){
                     onError("Impossible de sauvegarder la relecture ; révision non validée.");return;
                 }
                 correctionState=correctionStore.pending();
@@ -1995,6 +1995,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if (!prefs.completeActiveMurajaah(next, sessionDate.toString(), label)) {
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
+            }
+            // Return to the genuine pre-correction reading location; no fake cursor movement.
+            if(correctionState!=null){
+                currentPage=correctionState.originPage;
+                currentMask=100;
             }
             // State is cleared only after the existing Hifz receipt is persisted.
             if(!correctionStore.clear())
