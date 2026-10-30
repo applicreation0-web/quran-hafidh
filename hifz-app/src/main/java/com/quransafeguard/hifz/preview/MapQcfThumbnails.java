@@ -55,14 +55,14 @@ final class MapQcfThumbnails extends WebView {
  void setAtlasSinglePageCompact(boolean enabled) {
   if(atlasSinglePageCompact==enabled)return;
   atlasSinglePageCompact=enabled;renderKey="";
+  // Software-only for paired Atlas original KFQC pages, never the other Atlas
+  // maps/reader surfaces which have their own renderer/performance contracts.
+  setLayerType(enabled ? android.view.View.LAYER_TYPE_SOFTWARE
+      : android.view.View.LAYER_TYPE_NONE,null);
  }
  MapQcfThumbnails(Context context,Listener listener){
   super(context);this.listener=listener;
   setBackgroundColor(Color.rgb(250,248,242));
-  // Original large KFQC SVGs can overflow Chromium GPU tile memory when
-  // a BOOX or emulator holds two pages and two close-ups simultaneously.
-  // Software layers favour predictable monochrome rendering over GPU tiling.
-  setLayerType(android.view.View.LAYER_TYPE_SOFTWARE,null);
   WebSettings settings=getSettings();settings.setJavaScriptEnabled(true);
   settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);
   settings.setBlockNetworkLoads(true);settings.setDomStorageEnabled(false);
