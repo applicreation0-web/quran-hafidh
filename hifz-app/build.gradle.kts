@@ -6,6 +6,9 @@ plugins {
 
 // Separate intermediates prevent private/public incremental asset contamination.
 val private114 = System.getenv("AYAH_THEMES_PRIVATE_114") == "1"
+// Public CI prepares only the code. Approved private files and the reusable
+// personal debug signing key are applied offline, never committed to GitHub.
+val atlas1179OfflineRuntime = System.getenv("HAAFIDH_1179_OFFLINE_PRIVATE_RUNTIME") == "1"
 // Only the user-approved 1.17.5 isolated BOOX test build uses this opt-in.
 val boox1175Preview = private114 && System.getenv("HAAFIDH_1175_PRIVATE_DEBUG") == "1"
 // Explicit opt-in: private corpus belongs in an official in-place RELEASE only on a
@@ -341,6 +344,10 @@ android {
         versionCode = 46
         versionName = "1.17.8"
         if (boox1175Preview) versionName = "1.17.8"
+        if (atlas1179OfflineRuntime) {
+            versionCode = 47  // Update the existing 1.17.9 private debug in place.
+            versionName = "1.17.9.1"
+        }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -369,14 +376,17 @@ android {
 
     buildTypes {
         getByName("debug") {
-            buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", private114.toString())
+            buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE",
+                (private114 || atlas1179OfflineRuntime).toString())
             // Private BOOX preview: display user-approved wording without granting source/rights certification.
-            buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", private114.toString())
+            buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW",
+                (private114 || atlas1179OfflineRuntime).toString())
             isDebuggable = false
             // Isolated personal test install; never overwrites the official 1.17.1 package.
             applicationIdSuffix = if (private114) ".ayahthemes114private" else if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
             if (boox1175Preview) applicationIdSuffix = ".boox1175debug"
-            versionNameSuffix = if (boox1175Preview) "-BOOX-HOME-PRIVATE-DEBUG" else if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
+            if (atlas1179OfflineRuntime) applicationIdSuffix = ".atlas1179debug"
+            versionNameSuffix = if (atlas1179OfflineRuntime) "-ATLAS-COMPARISON-DEBUG" else if (boox1175Preview) "-BOOX-HOME-PRIVATE-DEBUG" else if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
             // Private Atlas content is enabled only by an explicit local build flag.
