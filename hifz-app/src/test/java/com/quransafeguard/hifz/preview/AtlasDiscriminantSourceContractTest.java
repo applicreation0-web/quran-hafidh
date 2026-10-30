@@ -30,6 +30,18 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse(activity.contains("setSabqiProgress"));
         assertFalse(activity.contains("setItqanProgress"));
     }
+    @Test public void lectureContextLinkKeepsQcfAndHifzImmutable() throws Exception {
+        String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
+        assertTrue(reader.contains("discriminantButton=Ui.iconButton(this"));
+        assertTrue(reader.contains("AtlasDiscriminantCases.indexFor(selected.getSurah(),selected.getAyah())>=0"));
+        assertTrue(reader.contains("boolean available=!freeActiveMask&&selected!=null"));
+        assertTrue(reader.contains("GeometryRepository.get(this).pageForVerse(source)!=page"));
+        assertTrue(reader.contains("startActivity(new Intent(this,AtlasDiscriminantActivity.class)"));
+        assertTrue(reader.contains("updateDiscriminantButton();"));
+        assertTrue(catalog.contains("return -1;"));
+        assertFalse(reader.contains("new HifzSessionActivity()"));
+    }
     @Test public void exactQcfAndWordCoordinatesOnly() throws Exception {
         String thumbnails=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java");
         String excerpts=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
