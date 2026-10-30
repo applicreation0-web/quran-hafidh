@@ -263,6 +263,29 @@ final class MapQcfThumbnails extends WebView {
   evaluateJavascript("if(window.receiveFullChunk)receiveFullChunk("+index+","+total+",'"+chunk+"',"+pendingCompactGeneration+");",null);
  }
 
+ /** Drop the previous full SVG document before a different Atlas pair is decoded.
+  * A new 600 KB vector on top of two former page DOMs can exhaust Chromium tiles. */
+ void releaseAtlasComparison(Runnable onCleared){
+  if(disposed||!atlasSinglePageCompact){if(onCleared!=null)onCleared.run();return;}
+  final int token=++fullGeneration;
+  pendingCompactSvg=null;renderKey="";vectorCache.clear();
+  final boolean[] delivered={false};
+  Runnable finish=()->{
+   if(delivered[0])return;
+   delivered[0]=true;
+   if(disposed||token!=fullGeneration)return;
+   setWebViewClient(new android.webkit.WebViewClient());
+   if(onCleared!=null)onCleared.run();
+  };
+  setWebViewClient(new android.webkit.WebViewClient(){
+   @Override public void onPageFinished(WebView view,String url){
+    if("about:blank".equals(url))finish.run();
+   }
+  });
+  loadUrl("about:blank");
+  // Never strand the reader if an older BOOX WebView omits the blank-page callback.
+  postDelayed(finish,700L);
+ }
  /** Invalidate queued bridge work before releasing the native WebView. */
  @Override public void destroy(){
   if(disposed)return;
