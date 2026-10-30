@@ -101,6 +101,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Automatic page correction: visible reread, then 100% masked recall, no flags. */
     private ActiveReviewCorrectionStore correctionStore;
     private ActiveReviewCorrectionStore.State correctionState;
+    private boolean activeCorrectionRecoveryRequired;
     private boolean correctionMaskedPageReady;
     private Button correctionPageDoneButton;
     private LocalDate sessionDate;
@@ -140,7 +141,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             try {
                 ActiveReviewCorrectionStore.State saved=correctionStore.pending();
                 if(saved!=null)sessionDate=LocalDate.parse(saved.date);
+                else if(prefs.isActiveMurajaahCursorValid()) {
+                    String revealedDate=correctionStore.revealedSessionDate(
+                        prefs.activeMurajaahCursor(),prefs.lastActiveMurajaahDate());
+                    if(revealedDate!=null)sessionDate=LocalDate.parse(revealedDate);
+                }
             }catch(RuntimeException damaged) {
+                activeCorrectionRecoveryRequired=true;
                 android.util.Log.e("QuranHifz","Corrective page state requires recovery",damaged);
             }
         }
@@ -263,6 +270,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationOverlay = new AnnotationOverlayView(this);
         annotationOverlay.setStore(annotationStore);
         annotationOverlay.setDrawingEnabled(annotationEnabled);
+        // Saved Lecture notes are recall hints even when drawing is disabled.
+        annotationOverlay.setVisibility(MURAJAAH_ACTIVE.equals(mode)?View.GONE:View.VISIBLE);
         FrameLayout mushafContainer = new FrameLayout(this);
         mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -357,7 +366,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         return RevisionAtlasAccess.allowed(active,sessionCompleted,
             sessionDate.toString().equals(prefs.lastActiveMurajaahDate()),
             AtlasDiscriminantCases.indexFor(verse.getSurah(),verse.getAyah())>=0,
-            geometry.pageForVerse(verse)==currentPage,covered);
+            AtlasDiscriminantCases.versesOnPage(currentPage).contains(verse),covered);
     }
 
     private void updateDiscriminantAction(){
@@ -366,7 +375,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         else if(!canCompareRevisionVerse(discriminantVerse)){
             discriminantVerse=null;
             if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&!sessionCompleted)
-                for(VerseRef verse:murajaahPlan.traversalVerses)
+                for(VerseRef verse:AtlasDiscriminantCases.versesOnPage(currentPage))
                     if(canCompareRevisionVerse(verse)){discriminantVerse=verse;break;}
         }
         boolean allowed=canCompareRevisionVerse(discriminantVerse);
@@ -379,11 +388,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef source=discriminantVerse;
         // Pause before launching, so even launch time cannot count as revision time.
         clock.pause();
-        startActivity(new Intent(this,AtlasDiscriminantActivity.class)
+        Intent comparison=new Intent(this,AtlasDiscriminantActivity.class)
             .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,source.getSurah())
             .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,source.getAyah())
             .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,
-                MURAJAAH_ACTIVE.equals(mode)?"Révision active":"Révision passive"));
+                MURAJAAH_ACTIVE.equals(mode)?"Révision active":"Révision passive");
+        // Active comparison stays restricted to its actually validated source verse.
+        if(MURAJAAH.equals(mode))comparison.putExtra(AtlasDiscriminantActivity.EXTRA_PAGE,currentPage);
+        comparison.putExtra(AtlasDiscriminantActivity.EXTRA_CASE_INDEX,
+            AtlasDiscriminantCases.indexFor(source.getSurah(),source.getAyah()));
+        startActivity(comparison);
     }
 
     @Override public void onAtlasDiscriminantTap(VerseRef verse){
@@ -1677,10 +1691,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      * in clear.
      */
     private void renderMurajaahActive(){
+        if(activeCorrectionRecoveryRequired)
+            throw new IllegalStateException("Revealed-page checkpoint requires recovery");
         String today = sessionDate.toString();
         correctionState=correctionStore.pending();
         if (today.equals(prefs.lastActiveMurajaahDate())) {
-            if(correctionState!=null&&!correctionStore.clear())
+            if(!correctionStore.clear())
                 throw new IllegalStateException("Validated correction checkpoint could not be cleared");
             correctionState=null;
             sessionCompleted = true;
@@ -2034,12 +2050,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         ActiveReviewCorrectionStore.State state=correctionState;
         if(state==null)return;
         if("DONE".equals(state.stage)){completeMurajaahValidation();return;}
+        closeAudio();
         currentPage=state.page();
         correctionMaskedPageReady=false;
         correctionPageDoneButton=null;
         currentMask="READ".equals(state.stage)?0:100;
         currentSelection=Collections.emptyList();
-        currentLineIds=currentMask==100?applyActiveLandmarks(currentPage):Collections.emptyList();
+        currentLineIds=currentMask==100?geometry.lineIdsOnPage(currentPage):Collections.emptyList();
         program.setText("Révision active · pages dévoilées");
         mushaf.setHighlightVerses(Collections.emptyList());
         progress.setText("Page "+(state.pageIndex+1)+"/"+state.pages.size()
@@ -2058,7 +2075,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             }));
         }else{
             LinearLayout passed=Ui.roundAction(this,"","Page récitée sans aide",v->{
-                if(!correctionMaskedPageReady||!activeAyahThemesReady||correctionState.assisted){
+                if(!correctionMaskedPageReady||correctionState.assisted){
                     Toast.makeText(this,"Masque non prêt ou aide utilisée : recommencez la page.",
                         Toast.LENGTH_LONG).show();return;
                 }
@@ -2210,14 +2227,22 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void showCurrent(){
         hasShown=true;
         if(MURAJAAH_ACTIVE.equals(mode)&&correctionState!=null){
-            if("READ".equals(correctionState.stage))
+            if("READ".equals(correctionState.stage)){
+                mushaf.clearSemanticCues();
+                mushaf.clearPageLandmarkBoxes();
                 mushaf.show(currentPage,Collections.emptyList(),Collections.emptyList(),0,false);
-            else
-                mushaf.showFreeActivePreparedPage(currentPage,currentLineIds,
-                    activePageLandmarks,activePageAmorces,activeAyahThemesReady);
+            }else
+                mushaf.showFullMaskedPreparedPage(currentPage,currentLineIds);
             return;
         }
         if(MURAJAAH_ACTIVE.equals(mode)) {
+            // Missing title/word geometry deliberately shows the page in clear.
+            // Persist that exposure before loading even its first visible frame.
+            if(!activeAyahThemesReady&&(murajaahPlan==null||!correctionStore.recordReveal(
+                    sessionDate.toString(),murajaahPlan.start,currentPage))){
+                onError("Impossible d’enregistrer cette page visible ; affichage interrompu.");
+                return;
+            }
             // No old-page geometry redraw and no unmasked first frame on BOOX:
             // exact 100% SVG mask plus Quran-word holes precede the reveal.
             mushaf.showFreeActivePreparedPage(currentPage,currentLineIds,
@@ -2348,7 +2373,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (ITQAN.equals(mode) && itqanAnchorFailOpen) return 0;
         if ((isSundayFinalPageRepetition()||POST_FINAL_RECALL.equals(mode)) && sundayFinalAnchorUnavailable) return 0;
         if (MURAJAAH_ACTIVE.equals(mode) && currentMask > 0
-                && !activeAyahThemesReady) return 0;
+                && correctionState==null && !activeAyahThemesReady) return 0;
         return currentMask;
     }
 
@@ -2418,6 +2443,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             Toast.makeText(this,"Installez le pack audio dans Paramètres.",Toast.LENGTH_LONG).show();
             startActivity(new Intent(this,SettingsActivity.class));
             return;
+        }
+        if(MURAJAAH_ACTIVE.equals(mode)&&!sessionCompleted){
+            boolean saved=correctionState!=null
+                ? "READ".equals(correctionState.stage)||correctionStore.revealDuringControl(correctionState)
+                : murajaahPlan!=null&&correctionStore.recordReveal(
+                    sessionDate.toString(),murajaahPlan.start,currentPage);
+            if(!saved){onError("Impossible d’enregistrer cette aide audio.");return;}
+            if(correctionState!=null&&"RECALL".equals(correctionState.stage)){
+                correctionState=correctionStore.pending();
+                if(correctionPageDoneButton!=null)correctionPageDoneButton.setEnabled(false);
+            }
         }
         closeAudio();
         audioPlayer=new HifzAudioDialog(this,mushaf,currentSelection);
@@ -2519,7 +2555,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(MURAJAAH_ACTIVE.equals(mode)&&correctionState!=null
                 &&"RECALL".equals(correctionState.stage)){
             correctionMaskedPageReady=page==correctionState.page()
-                &&activeAyahThemesReady&&currentMask==100;
+                &&!currentLineIds.isEmpty()&&currentMask==100;
             if(correctionPageDoneButton!=null)
                 correctionPageDoneButton.setEnabled(correctionMaskedPageReady
                     &&!correctionState.assisted);

@@ -39,26 +39,28 @@ public final class AtlasDiscriminantSourceContractTest {
     @Test public void lectureContextLinkKeepsQcfAndHifzImmutable() throws Exception {
         String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
-        assertTrue(reader.contains("discriminantButton=Ui.iconButton(this"));
-        assertTrue(reader.contains("AtlasDiscriminantCases.indexFor(selected.getSurah(),selected.getAyah())>=0"));
-        assertTrue(reader.contains("boolean available=!freeActiveMask&&selected!=null"));
-        assertTrue(reader.contains("GeometryRepository.get(this).pageForVerse(source)!=page"));
+        assertFalse("Reader actions must not grow a second bottom chain button",reader.contains("discriminantButton=Ui.iconButton(this"));
+        assertTrue(reader.contains("AtlasDiscriminantCases.versesOnPage(page)"));
+        assertTrue(reader.contains("if(freeActiveMask)return;"));
+        assertTrue(reader.contains("if(selected!=null&&onPage.contains(selected))"));
+        assertTrue(reader.contains("!AtlasDiscriminantCases.versesOnPage(page).contains(source)"));
         assertTrue(reader.contains("startActivity(new Intent(this,AtlasDiscriminantActivity.class)"));
         assertTrue(reader.contains("updateDiscriminantButton();"));
-        assertTrue(catalog.contains("return -1;"));
+        assertTrue(catalog.contains("indices.isEmpty()?-1:indices.get(0)"));
         assertFalse(reader.contains("new HifzSessionActivity()"));
     }
     @Test public void lectureGutterMarkerIsSourceRestrictedAndNeverModifiesQcf() throws Exception {
         String marker=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantMarkers.java");
         String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String mushaf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
-        assertTrue(marker.contains("AtlasDiscriminantCases.PILOT"));
-        assertTrue(marker.contains("geometry.pageForVerse(v)==page"));
-        assertTrue(marker.contains("var side=left>=36?'left':right>=36?'right':null"));
+        assertTrue(marker.contains("AtlasDiscriminantCases.versesOnPage(page)"));
+        assertFalse("Page rendering must use the index, not rescan the catalogue",marker.contains("AtlasDiscriminantCases.PILOT"));
+        assertTrue(marker.contains("var side=left>=46?'left':right>=46?'right':null"));
         assertTrue(marker.contains("m.querySelectorAll('.ayahPolygon')"));
         assertTrue(marker.contains("HifzNative.comparisonTap"));
         assertTrue(reader.contains("onAtlasDiscriminantTap(VerseRef verse)"));
         assertTrue(reader.contains("if(verse==null||freeActiveMask"));
+        assertTrue(reader.contains("if(!AtlasDiscriminantCases.versesOnPage(page).contains(verse))return;"));
         assertTrue(reader.contains("AtlasDiscriminantMarkers.show(mushaf,shown"));
         assertTrue(mushaf.contains("default void onAtlasDiscriminantTap(VerseRef verse)"));
         assertFalse(marker.contains("HifzPrefs"));
@@ -97,16 +99,29 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(xml.contains("M14,11"));
         assertTrue(markers.contains("M10 13a5"));
         assertTrue(markers.contains("M14 11a5"));
-        assertTrue(markers.contains("for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.PILOT)"));
-        assertTrue(markers.contains("geometry.pageForVerse(v)==page"));
+        assertTrue(markers.contains("AtlasDiscriminantCases.versesOnPage(page)"));
+        assertEquals("A page has one grouped chain marker",1,occurrences(markers,"document.createElement('button')"));
+        assertTrue("Choose the verse anchor before creating one grouped marker",
+            markers.indexOf("});if(!anchor||!chosen)return;") < markers.indexOf("document.createElement('button')"));
+        assertTrue(markers.contains("width:44px;height:44px"));
+        assertTrue(markers.contains("100vw - 96px"));
+        assertFalse("HTML SVG attributes must not contain literal backslashes",markers.contains("\\\\\\\""));
+        assertTrue(markers.contains("root.appendChild(btn)"));
         assertFalse(markers.contains("M2.5 5.5h6"));
     }
     @Test public void fullJalalaynOnBothSidesAndTrueQcfWords() throws Exception {
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
         String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
         assertTrue(activity.contains("loadBothTafsirs(c);"));
-        assertTrue(activity.contains("leftTafsir=tafsirColumn(tafsirs)"));
-        assertTrue(activity.contains("rightTafsir=tafsirColumn(tafsirs)"));
+        assertTrue(activity.contains("tafsirRepository.load(verse)"));
+        assertTrue(activity.contains("loadOneTafsir(c.first,leftTafsir,token)"));
+        assertTrue(activity.contains("loadOneTafsir(c.second,rightTafsir,token)"));
+        assertTrue(activity.contains("leftTafsir.setVisibility(side==0?View.VISIBLE:View.GONE)"));
+        assertTrue(activity.contains("rightTafsir.setVisibility(side==1?View.VISIBLE:View.GONE)"));
+        assertTrue(activity.contains("tafsirPanel.setVisibility(View.VISIBLE)"));
+        assertTrue(activity.contains("if(lateralTafsir)workspace.addView(tafsirPanel"));
+        assertFalse("Tafsir must not be buried below the page comparison",activity.contains("tafsirColumn(tafsirs)"));
+        assertTrue(activity.contains("token!=tafsirRequest"));
         assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,entry.firstWordIndices,"));
         assertTrue(catalog.contains("new Entry(2,63,2,93"));
         assertFalse(activity.contains("new HifzPrefs("));
@@ -123,18 +138,43 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse(activity.contains("class RelationRail extends View"));
         assertTrue(activity.contains("leftRead.setText(\"Lire \"+c.first+\" en Lecture\")"));
         assertTrue(activity.contains("rightRead.setText(\"Lire \"+c.second+\" en Lecture\")"));
-        assertTrue(activity.contains("Ui.dp(this,compact?106:126)"));
+        assertTrue("QCF page fit is recomputed when the contextual Tafsir is opened",
+            activity.contains("comparisonScroll.post(this::fitVisiblePages)"));
         assertFalse(activity.contains("position.setText("));
     }
     @Test public void narrowReadingPageHasVerifiedLinkWithoutManualVerseTap() throws Exception {
         String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         assertTrue(reader.contains("contextualDiscriminantVerse"));
-        assertTrue(reader.contains("for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.PILOT)"));
-        assertTrue(reader.contains("index.pageForVerse(candidate)==page"));
-        assertTrue(reader.contains("available=contextualDiscriminantVerse!=null"));
-        assertTrue(reader.contains("if(GeometryRepository.get(this).pageForVerse(source)!=page)return;"));
-        assertTrue(reader.contains("||freeActiveMask||contextualDiscriminantVerse==null"));
+        assertTrue(reader.contains("List<VerseRef> onPage=AtlasDiscriminantCases.versesOnPage(page)"));
+        assertTrue(reader.contains("else if(!onPage.isEmpty())contextualDiscriminantVerse=onPage.get(0)"));
+        assertTrue(reader.contains("return !freeActiveMask&&contextualDiscriminantVerse!=null"));
+        assertTrue(reader.contains("if(!AtlasDiscriminantCases.versesOnPage(page).contains(source))return;"));
+        assertTrue(reader.contains("if(freeActiveMask||contextualDiscriminantVerse==null)return;"));
         assertFalse(reader.contains("selected=contextualDiscriminantVerse"));
     }
 
+    @Test public void approvedCatalogueCarriesProvenanceWithoutInventedExplanations()throws Exception{
+        String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
+        int checked=0;
+        java.util.regex.Pattern quoted=java.util.regex.Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"");
+        for(String line:catalog.split("\\n")){
+            if(!line.trim().startsWith("new Entry("))continue;
+            java.util.regex.Matcher values=quoted.matcher(line);
+            java.util.List<String> fields=new java.util.ArrayList<>();
+            while(values.find())fields.add(values.group(1));
+            assertEquals("Every generated case retains kind, two references, explanation and provenance",6,fields.size());
+            assertEquals("A catalogue reference must not invent a religious explanation","",fields.get(3));
+            assertTrue("Book cases retain the exact source book provenance",
+                fields.get(5).startsWith("https://quranpedia.app/books/b10901/") ||
+                (fields.get(4).startsWith("Ajout explicite de l’utilisateur") && fields.get(5).isEmpty()
+                    && fields.get(1).equals("2:63") && fields.get(2).equals("2:93")));
+            checked++;
+        }
+        assertTrue("The approved runtime catalogue must replace the five-case pilot",checked>5);
+    }
+
+    private static int occurrences(String source,String token){
+        int count=0;for(int i=0;(i=source.indexOf(token,i))>=0;i+=token.length())count++;
+        return count;
+    }
 }

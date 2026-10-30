@@ -40,3 +40,75 @@ Pour chaque paire approuvée : référence sourate/verset du Mushaf (et éventue
 ## Statut
 **Brouillon documentaire — NON VALIDÉ POUR L'APPLICATION.**
 N'assimiler ni le total de 291 à une liste exhaustive ni les mots pivots extraits à des discriminants audités mot à mot.
+
+## Audit d’admission du 30 octobre 2026
+
+Le relevé provisoire ci-dessus reste un document historique. Le catalogue courant est
+`alabbad_catalogue_approved.json`, reconstruit par
+`python scripts/build_alabbad_catalogue.py --book-cache /tmp/alabbad`.
+Le dossier temporaire contient uniquement les chapitres HTML s1 à s14 téléchargés
+sur le site source; ces pages et le commentaire de l’auteur ne sont pas versionnés.
+Les décisions explicites sont dans `alabbad_editorial_decisions.json`; les deux
+suppléments dans `alabbad_supplementary_decisions.json`.
+
+L’audit courant `alabbad_audit_294.json` / `.csv` donne une décision distincte pour
+**chacun des 291 candidats**, le cas utilisateur 2:63/2:93 et deux suppléments
+source-confirmés : 2:58/7:161 et 30:37/39:52. Bilan sur ces 294 dossiers :
+
+| Décision | Dossiers |
+|---|---:|
+| retenu | 199 |
+| corrigé (pivot ou référence) | 79 |
+| exclu | 6 |
+| à arbitrer, absent du catalogue applicatif | 10 |
+| admis dans le catalogue | 278 |
+
+Les numéros d’audit 1–291 correspondent exactement au CSV initial. Le numéro 292
+est exclusivement attribué à la demande utilisateur. Les suppléments 293 et 294
+sont attestés respectivement dans s1, page imprimée 13, et s11, page imprimée 99.
+Ils n’ont pas été artificiellement ajoutés au décompte historique des 291.
+
+### Décisions particulières
+
+- 59 et 60 : le relevé avait associé deux exemples de **la même disposition** des
+  mots dans chaque groupe; ils ne fournissent pas la variation locale recherchée.
+- 119, 162 et 277 : juxtaposition accidentelle de deux groupes indépendants du livre.
+- 270 : doublon exact du couple 101; pas de seconde entrée applicative.
+- 171 : référence 46:3 de la transcription web corrigée en **46:31**, qui correspond
+  effectivement à la citation coranique; première suite distinctive
+  وَيُجِرْكُم / وَيُؤَخِّرْكُم après ذُنُوبِكُم.
+- 46, 137 et 176 : contrôle de provenance entre chapitres incomplet; quarantaine.
+- 62 et 138 : choix du pivot local encore insuffisamment délimité; quarantaine.
+- 187 et 188 : texte attribué à 23:23 mêlé à celui de 7:59 dans la transcription.
+- 201 : le site reproduit deux citations identiques, alors que 10:60 et 40:61 diffèrent.
+- 221 : le site cite le singulier pour 44:38; contrôle complémentaire nécessaire.
+- 212 : les préfixes entourent une formule terminale identique; le pivot initial
+  proposé automatiquement n’a pas été admis.
+
+### Vérification et limites exactes
+
+Le générateur valide les références numériques, le nombre de mots de chaque verset
+admis, les indices à base 1, les mots exacts, l’existence et les bornes de chaque
+boîte QCF, et la présence du SVG KFQC de la page du **mot discriminant**. Les
+empreintes SHA-256 des sources textuelles, géométriques et SVG sont conservées.
+Avec `--book-cache`, les deux références doivent figurer dans le chapitre indiqué;
+les pages imprimées sont conservées dans l’audit. Une référence sans crochet
+ouvrant (7:161 dans s1) est reconnue sans modifier le texte source.
+
+Le texte local Tanzil contient une basmala préfixée aux ouvertures de sourate,
+ainsi que U+200A et U+2060 à l’intérieur de mots. Le générateur traite ces éléments
+explicitement. Après ce traitement, 6 235 des 6 236 versets ont le même nombre de
+mots que les index QCF. L’exception 15:7 (لو ما / لوما) est bloquée pour l’admission.
+Aucun couple admis ne repose sur cette exception.
+
+Les SVG KFQC sont des tracés sans texte de mot lisible par machine. Il serait donc
+inexact de présenter cette vérification comme une inspection visuelle indépendante
+de chaque glyphe. Les coordonnées sont vérifiées contre le sidecar canonique;
+les libellés sont alignés au texte canonique local et les rapprochements contrôlés
+sur les citations coraniques du livre. Les libellés exportés conservent l’écriture
+Unicode du fichier textuel, qui peut différer de la graphie des tracés QCF.
+
+Un mot après une omission est parfois le premier mot de la suite complète de la
+āya, au-delà de l’extrait abrégé du livre (par exemple 4:43/5:6). Il est donné comme
+**point de bifurcation dans le verset**, et non comme citation du commentaire.
+Aucune justification religieuse ou théologique n’est générée.

@@ -18,8 +18,8 @@ import com.quransafeguard.hifz.core.VerseRef;
 
 /**
  * Atlas-native, read-only, monochrome E-Ink comparison of two Quran passages.
- * Two equal-size authentic KFQC Mushaf pages, followed by two independently
- * scrollable full Jalalayn commentaries from the existing audited offline corpus.
+ * Two equal-size authentic KFQC Mushaf pages and contextual full Jalalayn
+ * commentary from the existing audited offline corpus.
  * The comparison notes are authored and source-backed; no AI-generated commentary.
  *
  * Deliberately separate from Révision active (no HifzPrefs or mutable session state).
@@ -28,6 +28,10 @@ public final class AtlasDiscriminantActivity extends Activity {
     static final String EXTRA_SURAH="discriminantSurah";
     static final String EXTRA_AYAH="discriminantAyah";
     static final String EXTRA_ORIGIN="discriminantOrigin";
+    static final String EXTRA_PAGE="sourceQcfPage";
+    static final String EXTRA_CASE_INDEX="discriminantCaseIndex";
+    private java.util.List<Integer> caseIndices;
+    private Button previousCase,nextCase;
 
     private int selectedIndex;
     private GeometryRepository geometry;
@@ -36,8 +40,15 @@ public final class AtlasDiscriminantActivity extends Activity {
     private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
     private TafsirRepository tafsirRepository;
     private int tafsirRequest;
-    private TextView leftTafsir,rightTafsir,explanationLine;
-    private TextView title, leftHeader, rightHeader, kind, leftCue, rightCue;
+    private TextView leftTafsir,rightTafsir,tafsirHeading;
+    private LinearLayout tafsirPanel;
+    private ScrollView tafsirScroll,comparisonScroll;
+    private LinearLayout workspace,pagePair;
+    private int pageHeaderHeight,comparisonDetailHeight;
+    private TextView firstTafsirTab,secondTafsirTab;
+    private int selectedTafsir=-1;
+    private boolean lateralTafsir;
+    private TextView title, leftHeader, rightHeader;
     private TextView leftRead, rightRead, returnToSource;
     private boolean disposed;
     private int currentLeftPage, currentRightPage;
@@ -48,12 +59,15 @@ public final class AtlasDiscriminantActivity extends Activity {
         tafsirRepository=new TafsirRepository(this);
         try {
             geometry=GeometryRepository.get(this);
-            selectedIndex=state!=null
-                ? state.getInt("caseIndex",0)
-                : AtlasDiscriminantCases.preferredIndex(
-                    getIntent().getIntExtra(EXTRA_SURAH,0),
+            int sourcePage=getIntent().getIntExtra(EXTRA_PAGE,0);
+            caseIndices=sourcePage>0?AtlasDiscriminantCases.indicesForPage(sourcePage):
+                AtlasDiscriminantCases.indicesForVerse(getIntent().getIntExtra(EXTRA_SURAH,0),
                     getIntent().getIntExtra(EXTRA_AYAH,0));
-            selectedIndex=Math.max(0,Math.min(AtlasDiscriminantCases.PILOT.size()-1,selectedIndex));
+            if(caseIndices.isEmpty())caseIndices=java.util.Collections.singletonList(0);
+            selectedIndex=state!=null?state.getInt("caseIndex",caseIndices.get(0)):
+                getIntent().getIntExtra(EXTRA_CASE_INDEX,caseIndices.get(0));
+            if(!caseIndices.contains(selectedIndex))selectedIndex=caseIndices.get(0);
+            selectedTafsir=state==null?-1:state.getInt("tafsirSide",-1);
             build();
             render();
         } catch (Exception unavailable) {
@@ -73,14 +87,14 @@ public final class AtlasDiscriminantActivity extends Activity {
      * empty excerpt region, and two independently labelled Lecture destinations.
      */
     private void build() {
-        int h=getResources().getDisplayMetrics().heightPixels;
-        int dpHeight=(int)(h/getResources().getDisplayMetrics().density);
+        float density=getResources().getDisplayMetrics().density;
+        int dpHeight=(int)(getResources().getDisplayMetrics().heightPixels/density);
+        int dpWidth=(int)(getResources().getDisplayMetrics().widthPixels/density);
         boolean compact=dpHeight<740;
-        boolean veryCompact=dpHeight<565;
+        lateralTafsir=dpWidth>=900;
         LinearLayout root=Ui.column(this);
         root.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));
         root.setBackgroundColor(Ui.PAPER);
-
         LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
         top.addView(Ui.iconButton(this,"","Retour",v->finish()));
         title=text("",compact?15:17,true);
@@ -88,15 +102,25 @@ public final class AtlasDiscriminantActivity extends Activity {
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
         top.addView(title,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
+        previousCase=new Button(this);previousCase.setText("‹");
+        previousCase.setContentDescription("Comparaison précédente de cette page");
+        previousCase.setOnClickListener(v->moveCase(-1));
+        nextCase=new Button(this);nextCase.setText("›");
+        nextCase.setContentDescription("Comparaison suivante de cette page");
+        nextCase.setOnClickListener(v->moveCase(1));
+        top.addView(previousCase,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
+        top.addView(nextCase,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         root.addView(top,new LinearLayout.LayoutParams(-1,Ui.dp(this,48)));
-        // On a narrow BOOX/phone, keep genuine Mushaf proportions and both Tafsirs:
-        // scroll content vertically instead of shrinking pages and hiding the words.
+        workspace=lateralTafsir?Ui.row(this):Ui.column(this);
+        root.addView(workspace,new LinearLayout.LayoutParams(-1,0,1f));
         ScrollView contentScroll=new ScrollView(this);
+        comparisonScroll=contentScroll;
         contentScroll.setFillViewport(false);
         LinearLayout body=Ui.column(this);
         contentScroll.addView(body,new ScrollView.LayoutParams(-1,-2));
-        root.addView(contentScroll,new LinearLayout.LayoutParams(-1,0,1f));
-
+        workspace.addView(contentScroll,lateralTafsir?
+            new LinearLayout.LayoutParams(0,-1,1f):new LinearLayout.LayoutParams(-1,0,1f));
+        contentScroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->fitVisiblePages());
         LinearLayout heads=Ui.row(this);heads.setGravity(Gravity.CENTER_VERTICAL);
         leftHeader=text("",compact?12:13.5f,true);
         rightHeader=text("",compact?12:13.5f,true);
@@ -104,11 +128,14 @@ public final class AtlasDiscriminantActivity extends Activity {
         heads.addView(leftHeader,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?35:40),1));
         heads.addView(rightHeader,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?35:40),1));
         body.addView(heads);
+        pageHeaderHeight=Ui.dp(this,compact?35:40);
+        comparisonDetailHeight=Ui.dp(this,48+(compact?90:108));
 
         LinearLayout pair=Ui.row(this);
+        pagePair=pair;
         left=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
-            @Override public void onPageChosen(int page){openReader(true,page);}
-            @Override public void onOpenReading(int page){openReader(true,page);}
+            @Override public void onPageChosen(int page){selectTafsir(0);}
+            @Override public void onOpenReading(int page){selectTafsir(0);}
             @Override public void onRendered(int page,boolean success){
                 if(page!=currentLeftPage)return;
                 leftPageStatus=success?1:-1;
@@ -117,8 +144,8 @@ public final class AtlasDiscriminantActivity extends Activity {
             }
         });
         right=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
-            @Override public void onPageChosen(int page){openReader(false,page);}
-            @Override public void onOpenReading(int page){openReader(false,page);}
+            @Override public void onPageChosen(int page){selectTafsir(1);}
+            @Override public void onOpenReading(int page){selectTafsir(1);}
             @Override public void onRendered(int page,boolean success){
                 if(page!=currentRightPage)return;
                 rightPageStatus=success?1:-1;
@@ -134,10 +161,10 @@ public final class AtlasDiscriminantActivity extends Activity {
         rp.setMargins(Ui.dp(this,3),0,0,0);
         pair.addView(left,lp);pair.addView(right,rp);
         // Both genuine 345:550 KFQC pages remain intact, tappable and proportional.
-        int width=getResources().getDisplayMetrics().widthPixels;
-        int natural=Math.round((width-Ui.dp(this,18))/2f*550f/345f);
-        int cap=Math.round(getResources().getDisplayMetrics().heightPixels*0.53f);
-        int pairedHeight=Math.min(natural,Math.max(Ui.dp(this,180),cap));
+        int availableWidth=Ui.dp(this,dpWidth-(lateralTafsir?330:8));
+        int natural=Math.round((availableWidth-Ui.dp(this,18))/2f*550f/345f);
+        int cap=Ui.dp(this,Math.max(170,dpHeight-(lateralTafsir?260:365)));
+        int pairedHeight=Math.min(natural,cap);
         body.addView(pair,new LinearLayout.LayoutParams(-1,pairedHeight));
 
         LinearLayout readingLinks=Ui.row(this);
@@ -147,43 +174,35 @@ public final class AtlasDiscriminantActivity extends Activity {
         readingLinks.addView(rightRead,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
         body.addView(readingLinks);
 
-        kind=text("",compact?13:15,true);
-        kind.setGravity(Gravity.CENTER);
-        kind.setMaxLines(2);
-        body.addView(kind,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?40:46)));
-        // Real KFQC vector glyphs clipped to the verified discriminant words (+context).
+        // A short source-vector context stays beside the same two localizations.
         strips=new QcfAtlasVerseStrips(this);
-        body.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?106:126)));
-
-        LinearLayout cues=Ui.row(this);
-        leftCue=text("",compact?12.5f:14f,false);
-        rightCue=text("",compact?12.5f:14f,false);
-        leftCue.setPadding(Ui.dp(this,5),0,Ui.dp(this,5),0);
-        rightCue.setPadding(Ui.dp(this,5),0,Ui.dp(this,5),0);
-        leftCue.setGravity(Gravity.CENTER);
-        rightCue.setGravity(Gravity.CENTER);
-        leftCue.setMaxLines(compact?2:3);rightCue.setMaxLines(compact?2:3);
-        leftCue.setEllipsize(TextUtils.TruncateAt.END);
-        rightCue.setEllipsize(TextUtils.TruncateAt.END);
-        cues.addView(leftCue,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?54:76),1f));
-        View line=new View(this);line.setBackgroundColor(Ui.LINE);
-        cues.addView(line,new LinearLayout.LayoutParams(Math.max(1,Ui.dp(this,1)),-1));
-        cues.addView(rightCue,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?54:76),1f));
-        body.addView(cues);
-
-        explanationLine=text("",compact?11.5f:13.5f,false);
-        explanationLine.setGravity(Gravity.CENTER);
-        explanationLine.setMaxLines(compact?3:4);
-        explanationLine.setEllipsize(TextUtils.TruncateAt.END);
-        explanationLine.setPadding(Ui.dp(this,8),Ui.dp(this,3),Ui.dp(this,8),Ui.dp(this,3));
-        body.addView(explanationLine,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?58:68)));
-
-        // Independent sourced Jalalayn texts, never synthesized from AI.
-        LinearLayout tafsirs=Ui.row(this);
-        tafsirs.setBaselineAligned(false);
-        leftTafsir=tafsirColumn(tafsirs);
-        rightTafsir=tafsirColumn(tafsirs);
-        body.addView(tafsirs,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?250:330)));
+        strips.setOnRendered(()->{
+            if(!disposed&&leftPageStatus==1&&rightPageStatus==1&&strips.bothRenderedForTest())
+                strips.setAlpha(1f);
+        });
+        body.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?90:108)));
+        tafsirPanel=Ui.column(this);
+        tafsirPanel.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,4));
+        LinearLayout tabs=Ui.row(this);
+        firstTafsirTab=tafsirTab(0);secondTafsirTab=tafsirTab(1);
+        tabs.addView(firstTafsirTab,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
+        tabs.addView(secondTafsirTab,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
+        tafsirPanel.addView(tabs);
+        tafsirHeading=text("",14,true);
+        tafsirHeading.setPadding(0,Ui.dp(this,6),0,Ui.dp(this,8));
+        tafsirPanel.addView(tafsirHeading);
+        leftTafsir=tafsirText();rightTafsir=tafsirText();
+        LinearLayout tafsirBodies=Ui.column(this);
+        tafsirBodies.addView(leftTafsir);tafsirBodies.addView(rightTafsir);
+        tafsirScroll=new ScrollView(this);
+        tafsirScroll.addView(tafsirBodies,new ScrollView.LayoutParams(-1,-2));
+        tafsirPanel.addView(tafsirScroll,new LinearLayout.LayoutParams(-1,0,1));
+        if(lateralTafsir)workspace.addView(tafsirPanel,
+            new LinearLayout.LayoutParams(Ui.dp(this,322),-1));
+        else workspace.addView(tafsirPanel,new LinearLayout.LayoutParams(-1,
+            Ui.dp(this,Math.max(180,dpHeight*2/5))));
+        // No empty commentary region until a Mushaf is selected.
+        tafsirPanel.setVisibility(selectedTafsir<0?View.GONE:View.VISIBLE);
 
         LinearLayout bottom=Ui.row(this);bottom.setGravity(Gravity.CENTER_VERTICAL);
         returnToSource=text("",compact?13:14,false);
@@ -201,22 +220,66 @@ public final class AtlasDiscriminantActivity extends Activity {
         Ui.respectSystemBars(this,root,0,0,0,0);
     }
 
-    private TextView tafsirColumn(LinearLayout parent){
-        LinearLayout column=Ui.column(this);
-        column.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),0);
-        TextView heading=text("Tafsīr al-Jalālayn · anglais",12f,true);
-        heading.setGravity(Gravity.CENTER);
-        column.addView(heading,new LinearLayout.LayoutParams(-1,Ui.dp(this,36)));
-        TextView body=Ui.bookText(this,"",14f,false);
+    private TextView tafsirText(){
+        TextView body=Ui.bookText(this,"",16f,false);
         body.setTextColor(Ui.INK);
         body.setTextIsSelectable(true);
-        body.setPadding(Ui.dp(this,4),Ui.dp(this,3),Ui.dp(this,4),Ui.dp(this,5));
-        ScrollView scroll=new ScrollView(this);
-        scroll.setVerticalScrollBarEnabled(true);
-        scroll.addView(body,new ScrollView.LayoutParams(-1,-2));
-        column.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
-        parent.addView(column,new LinearLayout.LayoutParams(0,-1,1f));
+        body.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,12));
         return body;
+    }
+
+    private TextView tafsirTab(int side){
+        TextView tab=text("",14,true);
+        tab.setGravity(Gravity.CENTER);
+        tab.setContentDescription(side==0?"Tafsīr du premier verset":"Tafsīr du second verset");
+        tab.setOnClickListener(v->selectTafsir(side));
+        return tab;
+    }
+
+    private void selectTafsir(int side){
+        if(side<0||side>1)return;
+        selectedTafsir=side;
+        tafsirPanel.setVisibility(View.VISIBLE);
+        leftTafsir.setVisibility(side==0?View.VISIBLE:View.GONE);
+        rightTafsir.setVisibility(side==1?View.VISIBLE:View.GONE);
+        firstTafsirTab.setSelected(side==0);secondTafsirTab.setSelected(side==1);
+        firstTafsirTab.setBackgroundColor(side==0?Ui.LINE:Ui.PAPER);
+        secondTafsirTab.setBackgroundColor(side==1?Ui.LINE:Ui.PAPER);
+        VerseRef verse=side==0?current().first:current().second;
+        tafsirHeading.setText("Tafsīr al-Jalālayn · "+verse+" · anglais");
+        tafsirScroll.scrollTo(0,0);
+        if(!lateralTafsir){
+            // Keep commentary in a separate pane: opening it never scrolls the
+            // two source pages out of the upper comparison viewport.
+            int available=workspace.getHeight();
+            if(available>0){
+                int desired=Math.max(Ui.dp(this,180),Math.round(available*0.40f));
+                int panelHeight=Math.min(desired,Math.round(available*0.50f));
+                LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)tafsirPanel.getLayoutParams();
+                params.height=panelHeight;tafsirPanel.setLayoutParams(params);
+            }
+        }
+        comparisonScroll.scrollTo(0,0);
+        comparisonScroll.post(this::fitVisiblePages);
+    }
+
+    private void fitVisiblePages(){
+        if(pagePair==null||comparisonScroll==null||comparisonScroll.getHeight()<=pageHeaderHeight)return;
+        if(selectedTafsir>=0&&!lateralTafsir&&workspace.getHeight()>0){
+            int available=workspace.getHeight();
+            int panelHeight=Math.min(Math.max(Ui.dp(this,180),Math.round(available*0.40f)),
+                Math.round(available*0.50f));
+            LinearLayout.LayoutParams panelParams=(LinearLayout.LayoutParams)tafsirPanel.getLayoutParams();
+            if(panelParams.height!=panelHeight){panelParams.height=panelHeight;tafsirPanel.setLayoutParams(panelParams);}
+        }
+        // The entire physical 345:550 page always fits in its own viewport;
+        // links and the optional detail strips remain reachable below it.
+        int natural=Math.round(Math.max(1,(comparisonScroll.getWidth()-Ui.dp(this,18))/2f)*550f/345f);
+        int available=Math.max(Ui.dp(this,32),comparisonScroll.getHeight()-pageHeaderHeight-Ui.dp(this,4)
+            -(selectedTafsir<0?comparisonDetailHeight:0));
+        int height=Math.min(natural,available);
+        LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)pagePair.getLayoutParams();
+        if(params.height!=height){params.height=height;pagePair.setLayoutParams(params);}
     }
 
     private void loadBothTafsirs(AtlasDiscriminantCases.Entry c){
@@ -258,6 +321,11 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     private void render() {
+        // Never retain a previous pair's glyphs under the new reference labels.
+        // Keep the WebView attached/visible so Chromium can complete animation
+        // frame readiness callbacks, while making every old glyph transparent.
+        strips.setAlpha(0f);
+        strips.clearComparison();
         AtlasDiscriminantCases.Entry c=current();
         if(c.first.equals(c.second))throw new IllegalStateException("Self-comparison forbidden");
         currentLeftPage=geometry.pageForVerse(c.first);
@@ -271,14 +339,22 @@ public final class AtlasDiscriminantActivity extends Activity {
         // Load the second page only after the first confirms a real image.onload;
         // otherwise one failed image could hide a missing QCF resource indefinitely.
         leftPageStatus=0;rightPageStatus=0;
+        right.cancelPendingAtlasRender();
         right.setVisibility(View.INVISIBLE);
         // Highlights the exact original SVG ayah polygon.
+        left.setAtlasWordDifferences(c.first,c.firstWordIndices);
         left.showPages(currentLeftPage,currentLeftPage,currentLeftPage,
             c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
 
-        title.setText("Comparer · "+c.first+" ↔ "+c.second);
-        kind.setText(c.kind);
-        explanationLine.setText(c.explanation);
+        int position=caseIndices.indexOf(selectedIndex);
+        title.setText(c.first+" ↔ "+c.second+(caseIndices.size()>1?
+            " · "+(position+1)+"/"+caseIndices.size():""));
+        previousCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
+        nextCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
+        previousCase.setEnabled(position>0);nextCase.setEnabled(position+1<caseIndices.size());
+        firstTafsirTab.setText(c.first.toString());
+        secondTafsirTab.setText(c.second.toString());
+        if(selectedTafsir>=0)selectTafsir(selectedTafsir);
         loadBothTafsirs(c);
         leftRead.setText("Lire "+c.first+" en Lecture");
         rightRead.setText("Lire "+c.second+" en Lecture");
@@ -286,14 +362,20 @@ public final class AtlasDiscriminantActivity extends Activity {
         String label="Révision active".equals(origin)?"Révision active":
             "Révision passive".equals(origin)?"Révision passive":"Lecture";
         returnToSource.setText("← Retour à "+label);
-        leftCue.setText(c.firstCue);
-        rightCue.setText(c.secondCue);
+
+    }
+
+    private void moveCase(int direction){
+        int next=caseIndices.indexOf(selectedIndex)+direction;
+        if(next<0||next>=caseIndices.size())return;
+        selectedIndex=caseIndices.get(next);render();
     }
 
     private void showRightAfterLeft(){
         if(rightPageStatus!=0)return;
         AtlasDiscriminantCases.Entry c=current();
         right.setVisibility(View.VISIBLE);
+        right.setAtlasWordDifferences(c.second,c.secondWordIndices);
         right.showPages(currentRightPage,currentRightPage,currentRightPage,
             c.second.getSurah(),c.second.getAyah(),c.second.getAyah(),false);
     }
@@ -305,6 +387,8 @@ public final class AtlasDiscriminantActivity extends Activity {
                 entry.second,currentRightPage,entry.secondWordIndices);
         }
     }
+    boolean qcfStripsVisibleForTest(){return strips!=null&&strips.getVisibility()==View.VISIBLE&&strips.getAlpha()>0f;}
+    int qcfStripsGenerationForTest(){return strips.generationForTest();}
     boolean qcfStripsReadyForTest(){return strips!=null&&strips.bothRenderedForTest();}
     android.graphics.Rect[] qcfCropBoundsForTest(){
         android.graphics.Rect first=new android.graphics.Rect(),second=new android.graphics.Rect();
@@ -358,10 +442,29 @@ public final class AtlasDiscriminantActivity extends Activity {
         startActivity(intent);
     }
 
+    int selectedTafsirForTest(){return selectedTafsir;}
+    boolean tafsirPanelVisibleForTest(){return tafsirPanel!=null&&tafsirPanel.getVisibility()==View.VISIBLE;}
+    boolean lateralTafsirForTest(){return lateralTafsir;}
+    boolean tafsirHeadingVisibleForTest(){
+        android.graphics.Rect visible=new android.graphics.Rect();
+        return tafsirHeading!=null&&tafsirHeading.getGlobalVisibleRect(visible)
+            &&visible.height()==tafsirHeading.getHeight();
+    }
+    boolean bothQcfPagesFullyVisibleForTest(){
+        for(MapQcfThumbnails page:new MapQcfThumbnails[]{left,right}){
+            android.graphics.Rect visible=new android.graphics.Rect();
+            if(page==null||!page.getGlobalVisibleRect(visible)||visible.width()!=page.getWidth()
+                ||visible.height()!=page.getHeight())return false;
+        }
+        return true;
+    }
+    MapQcfThumbnails[] qcfViewsForTest(){return new MapQcfThumbnails[]{left,right};}
+
     int getCurrentLeftPageForTest() { return currentLeftPage; }
 
     @Override protected void onSaveInstanceState(Bundle state){
         state.putInt("caseIndex",selectedIndex);
+        state.putInt("tafsirSide",selectedTafsir);
         super.onSaveInstanceState(state);
     }
     /** Chromium WebViews must be removed from the view hierarchy before destroy().

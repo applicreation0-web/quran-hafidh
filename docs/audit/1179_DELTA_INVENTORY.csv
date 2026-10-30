@@ -1,0 +1,45 @@
+path,status,added,deleted,subsystem,base_blob,candidate_blob
+.github/workflows/haafidh-1179-reader-revision-ux-audit.yml,A,88,0,CI/workflow,,43ecaf2e3ea7a4e6703ffc6924e1eb1e4fafec84
+.github/workflows/haafidh-1179-reveal-replay-mutash-audit.yml,A,129,0,CI/workflow,,b49d7253e3822d0661d86214e53736a7b7ea1de1
+.github/workflows/haafidh-atlas-discriminant-pilot-audit.yml,A,88,0,CI/workflow,,2d86373f1fc665e03ffed799db7155cc747559df
+docs/audit/HAAFIDH_1179_ATLAS_FINAL_INTEGRATION_20261030.md,A,92,0,documentation/plan,,8cd438309eb7207aa25f1ada6ed5d122d3471bbb
+docs/superpowers/plans/2026-10-30-atlas-revision-final.md,A,32,0,documentation/plan,,b0fdc76f99aefee062402e452ffeceb2d23a6fb7
+hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ActiveReviewCorrectionInstrumentedTest.java,A,72,0,Android instrumentation tests,,d6c135184eec0359888f536a02b834f699778f2d
+hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/AtlasDiscriminantInstrumentedTest.java,A,519,0,Android instrumentation tests,,6c4571d2bfa74bb204d5d35e4d2623b6cac6dd5a
+hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/MutashPageMarkersInstrumentedTest.java,A,39,0,Android instrumentation tests,,0c6b790426e4b03b2f7148f44bb6c8ab7712026f
+hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/RevisionAtlasInstrumentedTest.java,A,244,0,Android instrumentation tests,,36b4e5afdbba9ba529e2d7d6c7e71dc9c5846c24
+hifz-app/src/main/AndroidManifest.xml,M,3,1,Android manifest/resource,6b05c1284204f729d82391bd64420ce04344d68e,fa3b3e780d6c0701ebe2a0113fdc8b72542916d1
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/ActiveReviewCorrectionPlan.java,A,23,0,Android UI/adapters/correction state,,c363f651c8332a972888e79cd51cf77685b39fad
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/ActiveReviewCorrectionStore.java,A,158,0,Android UI/adapters/correction state,,f2e4ac2413aeb3e4681bec002d50869c433303a5
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java,A,388,0,Android UI/adapters/correction state,,6688497a4b5db145b4136b61917919ff9f8e6f6b
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java,A,98,0,Android UI/adapters/correction state,,4484d46e13725ea04326eda18291f3bda1e35c9d
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantMarkers.java,A,77,0,Android UI/adapters/correction state,,1478670672e08a0c8484f7365b1df043cc42e6c6
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java,M,241,68,Android UI/adapters/correction state,6467a65de19b276f0e7cba7de0ae729efeaa2b93,6fa5bcc12a556ebd124c275a2013dc8395858e4d
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java,M,99,9,Android UI/adapters/correction state,750013d368854082d6dc6d1094d9c472ed962cc7,7c65f2f7ca7898e49233c42a66da1f1b199e4b71
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapScreen.java,M,2,0,Android UI/adapters/correction state,95d74a4df66374d258f10c47e01996e89d37f392,09f38c8440b66a4daf47564675a9c3222dc42fbb
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java,M,9,0,Android UI/adapters/correction state,e151e2b0b0220883ea0ec9380fac1abc3a743d91,2d777f203c6fd601f3f1b28d17b7dc5a5d3e5167
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java,A,224,0,Android UI/adapters/correction state,,bf45c182c54c6f9f467a10623c42aaaf0adde190
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfExcerptWindow.java,A,10,0,Android UI/adapters/correction state,,b5d3ff81d50337bc4a5e4ccbe56fae937a64b263
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionAtlasAccess.java,A,10,0,Android UI/adapters/correction state,,9090edfcd714758d5b5d9214475c6004993f170d
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java,M,1,6,Android UI/adapters/correction state,88eae0785ff0a80cbe7ae89760c805541be758df,a5c1b09f7e3309bd4281d31125e620f4a277b1fc
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java,M,100,0,Android UI/adapters/correction state,9afaacf5e1bf68fb8060517a96ad6396ee213bd5,8a2fbd5a7398ba53427710b7f15f6f0bb9695f15
+hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java,M,3,0,Android UI/adapters/correction state,812c71eb52a93026e222d43738a9c6f7fd727a51,a2ef07544f65be1caf4090a6ede85b9770388778
+hifz-app/src/main/res/drawable/ic_ui_atlas_similar.xml,A,15,0,Android manifest/resource,,90795e59fa4c04dc275af0777f0b58e5207a1d71
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/ActiveReviewCorrectionPlanTest.java,A,31,0,JVM/source contract tests,,98ec94c8839c689d46fa796085291b4c9e8f0da7
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCasesTest.java,A,68,0,JVM/source contract tests,,73af2674e207b6b262311174b871888ba91f2bb9
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasDiscriminantSourceContractTest.java,A,140,0,JVM/source contract tests,,00476cd140c0e7cc5415bde212079415c59acc0f
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionSourceContractTest.java,M,1,1,JVM/source contract tests,5da55abaed1c3d7aaa5eeff7cb410e734c80ed52,b710ccce8254ca7eb634a53a4b503bc1c2cb336f
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/Lot2SourceContractTest.java,M,8,1,JVM/source contract tests,9f427e76c77b89a9b65b8c96dadb3709769440c8,3d9ac5586d070bc87f89c1b56e683cb1eb954df4
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/QcfExcerptWindowTest.java,A,16,0,JVM/source contract tests,,1eebc43bcbb63242e424f9895ddfe191da0ec1c8
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/RevisionAtlasAccessTest.java,A,23,0,JVM/source contract tests,,82ffc5dd8c819900e18f9439c056c9628f16b8a2
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/RevisionRevealDoesNotMarkHintSourceContractTest.java,M,22,38,JVM/source contract tests,3f026731a109478c11310ed7ffa53d4a1312af18,1a50d86c9e7d7c20c4362a064727c031ba57b804
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/RevisionWeakSpotDecaySourceContractTest.java,M,20,62,JVM/source contract tests,aae200208ae628af2d59b9993a9433dfbb7c5c8a,d3757865d7e03e6b643c4cf2b032e3261c867549
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/RevisionWeakSpotSourceContractTest.java,M,18,63,JVM/source contract tests,b890de1151ce10bac8c64d5826a8fd665dc46273,6dadc1063167817ca863db3052626ce8b0702b3d
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/UiIconMappingTest.java,M,5,0,JVM/source contract tests,fe36d0a1494f6027c696fa1e930d9df7da40e3d1,9d53986c73fbde2cfb4ed63b69cb33d77dce2ff1
+hifz-app/src/test/java/com/quransafeguard/hifz/preview/WeakVersesActivitySourceContractTest.java,M,16,57,JVM/source contract tests,e4534903c526e444723b7bd48534fe7d585250f1,96300fe9bff7b43e73af584d7eaafd136d919962
+research/README_alabbad_mutashabihat.md,A,42,0,research inventory,,cfa4a616a9610c40586c1908289581473b960ed7
+research/alabbad_inventaire_provisoire_291.csv,A,292,0,research inventory,,c513f4bc14ee88adbe294f20c9330244b99cb8f4
+research/alabbad_section5_bifurcations.csv,A,60,0,research inventory,,458a74d4f7b7e677cda6e6b6054c647d876c66f3
+research/alabbad_sections1-4_pivots_candidates.csv,A,233,0,research inventory,,cb096a0d96ba54c1b3a486e4d17fdcbd95b7955b
+research/mutashabihat_292_dont_1_priorite_utilisateur.csv,A,293,0,research inventory,,4f4acd1fd21a751afcb6023d552f4217394c4a14
+scripts/run_atlas_revision_android_audit.sh,A,23,0,audit runner,,7dba1a4dabad7263b4d4a87a93e4fcad7f93a3c3

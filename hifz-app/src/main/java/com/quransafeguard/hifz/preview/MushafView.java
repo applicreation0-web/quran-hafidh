@@ -71,6 +71,7 @@ public final class MushafView extends WebView {
     private boolean maskFollowsSelection = true;
     /** Lecture free-mask only: block unmasked SVG paint until exact word holes exist. */
     private boolean atomicFreeMaskBoot;
+    private boolean atomicFullMaskBoot;
     private JSONArray pageLandmarkBoxes = new JSONArray();
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
@@ -176,6 +177,7 @@ public final class MushafView extends WebView {
      */
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus) {
         atomicFreeMaskBoot = false;
+        atomicFullMaskBoot = false;
         lastContextFocus = contextFocus;
         retried = false;
         load(page, selection, lineIds, maskPercent);
@@ -189,6 +191,7 @@ public final class MushafView extends WebView {
     public void showFreeActivePreparedPage(int page, List<String> lineIds,
             JSONArray landmarks, JSONArray cues, boolean exactGeometryReady) {
         atomicFreeMaskBoot = exactGeometryReady;
+        atomicFullMaskBoot = false;
         lastContextFocus = false;
         maskFollowsSelection = false;
         landmarkStartLineId = null;
@@ -199,6 +202,26 @@ public final class MushafView extends WebView {
         semanticHighlightEnabled = false;
         retried = false;
         load(page, Collections.emptyList(), lineIds, exactGeometryReady ? 100 : 0);
+    }
+
+    /** Corrective recall: hide the SVG until a complete mask with no word holes is painted. */
+    public void showFullMaskedPreparedPage(int page,List<String> lineIds) {
+        atomicFreeMaskBoot = false;
+        atomicFullMaskBoot = true;
+        lastContextFocus = false;
+        maskFollowsSelection = false;
+        landmarkStartLineId = null;
+        landmarkEndLineId = null;
+        pageLandmarkBoxes = new JSONArray();
+        semanticCues = new JSONArray();
+        semanticAnchorMaskMode = false;
+        semanticHighlightEnabled = false;
+        retried = false;
+        if(lineIds==null||lineIds.isEmpty()){
+            showFailure("Masque de page complet indisponible");
+            return;
+        }
+        load(page,Collections.emptyList(),lineIds,100);
     }
 
     private void load(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
@@ -221,16 +244,19 @@ public final class MushafView extends WebView {
             String geometry = needsGeometry ? GeometryRepository.get(getContext()).pageGeometryJson(page) : null;
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             if (!html.contains("'nonce-" + INLINE_NONCE + "'")) throw new IllegalStateException("reader CSP nonce missing");
-            if (atomicFreeMaskBoot) {
+            if (atomicFreeMaskBoot || atomicFullMaskBoot) {
                 // Hide raw Mushaf SVG BEFORE HTML parsing paints any Arabic glyph.
                 // The verified 100% mask alone may reveal this same folio later.
                 if (!html.contains("</style>")) throw new IllegalStateException("reader CSS missing");
                 html = html.replace("</style>", "#mushaf{visibility:hidden}\n</style>");
                 final String callback = "N?.pageShown(currentPage,Number(boot.renderGeneration||0));";
                 if (!javascript.contains(callback)) throw new IllegalStateException("reader page callback missing");
+                String invalidMask = atomicFullMaskBoot
+                    ? "mask!==100||!prepared||!prepared.children.length||protectedWordBoxes().length!==0"
+                    : "!prepared||!prepared.querySelector('#hifz-exact-word-holes')";
                 javascript = javascript.replace(callback,
                     "var prepared=window.document.querySelector('#mushaf svg g.masklayer');"
-                    +"if(!prepared||!prepared.querySelector('#hifz-exact-word-holes')){"
+                    +"if("+invalidMask+"){"
                     +"N?.error('Masque précis indisponible : page laissée masquée');return;}"
                     +"document.getElementById('mushaf').style.visibility='visible';"
                     +callback);

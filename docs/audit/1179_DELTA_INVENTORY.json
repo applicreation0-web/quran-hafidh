@@ -1,0 +1,578 @@
+{
+  "baseline": "ae68ee1a46e195e9da1068aed981f3363869a4e0",
+  "candidate": "0b2fb5ba25afe462fce6a0251da308a1382155fa",
+  "scope": "Committed ae68 -> 0b2 snapshot only; excludes subsequent finalisation worktree edits. Regenerate for final commit.",
+  "file_count": 44,
+  "added_lines": 4075,
+  "deleted_lines": 306,
+  "files": [
+    {
+      "path": ".github/workflows/haafidh-1179-reader-revision-ux-audit.yml",
+      "status": "A",
+      "added": 88,
+      "deleted": 0,
+      "subsystem": "CI/workflow",
+      "base_blob": null,
+      "candidate_blob": "43ecaf2e3ea7a4e6703ffc6924e1eb1e4fafec84"
+    },
+    {
+      "path": ".github/workflows/haafidh-1179-reveal-replay-mutash-audit.yml",
+      "status": "A",
+      "added": 129,
+      "deleted": 0,
+      "subsystem": "CI/workflow",
+      "base_blob": null,
+      "candidate_blob": "b49d7253e3822d0661d86214e53736a7b7ea1de1"
+    },
+    {
+      "path": ".github/workflows/haafidh-atlas-discriminant-pilot-audit.yml",
+      "status": "A",
+      "added": 88,
+      "deleted": 0,
+      "subsystem": "CI/workflow",
+      "base_blob": null,
+      "candidate_blob": "2d86373f1fc665e03ffed799db7155cc747559df"
+    },
+    {
+      "path": "docs/audit/HAAFIDH_1179_ATLAS_FINAL_INTEGRATION_20261030.md",
+      "status": "A",
+      "added": 92,
+      "deleted": 0,
+      "subsystem": "documentation/plan",
+      "base_blob": null,
+      "candidate_blob": "8cd438309eb7207aa25f1ada6ed5d122d3471bbb"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-30-atlas-revision-final.md",
+      "status": "A",
+      "added": 32,
+      "deleted": 0,
+      "subsystem": "documentation/plan",
+      "base_blob": null,
+      "candidate_blob": "b0fdc76f99aefee062402e452ffeceb2d23a6fb7"
+    },
+    {
+      "path": "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ActiveReviewCorrectionInstrumentedTest.java",
+      "status": "A",
+      "added": 72,
+      "deleted": 0,
+      "subsystem": "Android instrumentation tests",
+      "base_blob": null,
+      "candidate_blob": "d6c135184eec0359888f536a02b834f699778f2d"
+    },
+    {
+      "path": "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/AtlasDiscriminantInstrumentedTest.java",
+      "status": "A",
+      "added": 519,
+      "deleted": 0,
+      "subsystem": "Android instrumentation tests",
+      "base_blob": null,
+      "candidate_blob": "6c4571d2bfa74bb204d5d35e4d2623b6cac6dd5a"
+    },
+    {
+      "path": "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/MutashPageMarkersInstrumentedTest.java",
+      "status": "A",
+      "added": 39,
+      "deleted": 0,
+      "subsystem": "Android instrumentation tests",
+      "base_blob": null,
+      "candidate_blob": "0c6b790426e4b03b2f7148f44bb6c8ab7712026f"
+    },
+    {
+      "path": "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/RevisionAtlasInstrumentedTest.java",
+      "status": "A",
+      "added": 244,
+      "deleted": 0,
+      "subsystem": "Android instrumentation tests",
+      "base_blob": null,
+      "candidate_blob": "36b4e5afdbba9ba529e2d7d6c7e71dc9c5846c24"
+    },
+    {
+      "path": "hifz-app/src/main/AndroidManifest.xml",
+      "status": "M",
+      "added": 3,
+      "deleted": 1,
+      "subsystem": "Android manifest/resource",
+      "base_blob": "6b05c1284204f729d82391bd64420ce04344d68e",
+      "candidate_blob": "fa3b3e780d6c0701ebe2a0113fdc8b72542916d1"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/ActiveReviewCorrectionPlan.java",
+      "status": "A",
+      "added": 23,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": null,
+      "candidate_blob": "c363f651c8332a972888e79cd51cf77685b39fad"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/ActiveReviewCorrectionStore.java",
+      "status": "A",
+      "added": 158,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": null,
+      "candidate_blob": "f2e4ac2413aeb3e4681bec002d50869c433303a5"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java",
+      "status": "A",
+      "added": 388,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": null,
+      "candidate_blob": "6688497a4b5db145b4136b61917919ff9f8e6f6b"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java",
+      "status": "A",
+      "added": 98,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": null,
+      "candidate_blob": "4484d46e13725ea04326eda18291f3bda1e35c9d"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantMarkers.java",
+      "status": "A",
+      "added": 77,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": null,
+      "candidate_blob": "1478670672e08a0c8484f7365b1df043cc42e6c6"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java",
+      "status": "M",
+      "added": 241,
+      "deleted": 68,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": "6467a65de19b276f0e7cba7de0ae729efeaa2b93",
+      "candidate_blob": "6fa5bcc12a556ebd124c275a2013dc8395858e4d"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java",
+      "status": "M",
+      "added": 99,
+      "deleted": 9,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": "750013d368854082d6dc6d1094d9c472ed962cc7",
+      "candidate_blob": "7c65f2f7ca7898e49233c42a66da1f1b199e4b71"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapScreen.java",
+      "status": "M",
+      "added": 2,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": "95d74a4df66374d258f10c47e01996e89d37f392",
+      "candidate_blob": "09f38c8440b66a4daf47564675a9c3222dc42fbb"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java",
+      "status": "M",
+      "added": 9,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": "e151e2b0b0220883ea0ec9380fac1abc3a743d91",
+      "candidate_blob": "2d777f203c6fd601f3f1b28d17b7dc5a5d3e5167"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java",
+      "status": "A",
+      "added": 224,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": null,
+      "candidate_blob": "bf45c182c54c6f9f467a10623c42aaaf0adde190"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfExcerptWindow.java",
+      "status": "A",
+      "added": 10,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": null,
+      "candidate_blob": "b5d3ff81d50337bc4a5e4ccbe56fae937a64b263"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionAtlasAccess.java",
+      "status": "A",
+      "added": 10,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": null,
+      "candidate_blob": "9090edfcd714758d5b5d9214475c6004993f170d"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java",
+      "status": "M",
+      "added": 1,
+      "deleted": 6,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": "88eae0785ff0a80cbe7ae89760c805541be758df",
+      "candidate_blob": "a5c1b09f7e3309bd4281d31125e620f4a277b1fc"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java",
+      "status": "M",
+      "added": 100,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": "9afaacf5e1bf68fb8060517a96ad6396ee213bd5",
+      "candidate_blob": "8a2fbd5a7398ba53427710b7f15f6f0bb9695f15"
+    },
+    {
+      "path": "hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java",
+      "status": "M",
+      "added": 3,
+      "deleted": 0,
+      "subsystem": "Android UI/adapters/correction state",
+      "base_blob": "812c71eb52a93026e222d43738a9c6f7fd727a51",
+      "candidate_blob": "a2ef07544f65be1caf4090a6ede85b9770388778"
+    },
+    {
+      "path": "hifz-app/src/main/res/drawable/ic_ui_atlas_similar.xml",
+      "status": "A",
+      "added": 15,
+      "deleted": 0,
+      "subsystem": "Android manifest/resource",
+      "base_blob": null,
+      "candidate_blob": "90795e59fa4c04dc275af0777f0b58e5207a1d71"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/ActiveReviewCorrectionPlanTest.java",
+      "status": "A",
+      "added": 31,
+      "deleted": 0,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": null,
+      "candidate_blob": "98ec94c8839c689d46fa796085291b4c9e8f0da7"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCasesTest.java",
+      "status": "A",
+      "added": 68,
+      "deleted": 0,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": null,
+      "candidate_blob": "73af2674e207b6b262311174b871888ba91f2bb9"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/AtlasDiscriminantSourceContractTest.java",
+      "status": "A",
+      "added": 140,
+      "deleted": 0,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": null,
+      "candidate_blob": "00476cd140c0e7cc5415bde212079415c59acc0f"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionSourceContractTest.java",
+      "status": "M",
+      "added": 1,
+      "deleted": 1,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": "5da55abaed1c3d7aaa5eeff7cb410e734c80ed52",
+      "candidate_blob": "b710ccce8254ca7eb634a53a4b503bc1c2cb336f"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/Lot2SourceContractTest.java",
+      "status": "M",
+      "added": 8,
+      "deleted": 1,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": "9f427e76c77b89a9b65b8c96dadb3709769440c8",
+      "candidate_blob": "3d9ac5586d070bc87f89c1b56e683cb1eb954df4"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/QcfExcerptWindowTest.java",
+      "status": "A",
+      "added": 16,
+      "deleted": 0,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": null,
+      "candidate_blob": "1eebc43bcbb63242e424f9895ddfe191da0ec1c8"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/RevisionAtlasAccessTest.java",
+      "status": "A",
+      "added": 23,
+      "deleted": 0,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": null,
+      "candidate_blob": "82ffc5dd8c819900e18f9439c056c9628f16b8a2"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/RevisionRevealDoesNotMarkHintSourceContractTest.java",
+      "status": "M",
+      "added": 22,
+      "deleted": 38,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": "3f026731a109478c11310ed7ffa53d4a1312af18",
+      "candidate_blob": "1a50d86c9e7d7c20c4362a064727c031ba57b804"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/RevisionWeakSpotDecaySourceContractTest.java",
+      "status": "M",
+      "added": 20,
+      "deleted": 62,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": "aae200208ae628af2d59b9993a9433dfbb7c5c8a",
+      "candidate_blob": "d3757865d7e03e6b643c4cf2b032e3261c867549"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/RevisionWeakSpotSourceContractTest.java",
+      "status": "M",
+      "added": 18,
+      "deleted": 63,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": "b890de1151ce10bac8c64d5826a8fd665dc46273",
+      "candidate_blob": "6dadc1063167817ca863db3052626ce8b0702b3d"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/UiIconMappingTest.java",
+      "status": "M",
+      "added": 5,
+      "deleted": 0,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": "fe36d0a1494f6027c696fa1e930d9df7da40e3d1",
+      "candidate_blob": "9d53986c73fbde2cfb4ed63b69cb33d77dce2ff1"
+    },
+    {
+      "path": "hifz-app/src/test/java/com/quransafeguard/hifz/preview/WeakVersesActivitySourceContractTest.java",
+      "status": "M",
+      "added": 16,
+      "deleted": 57,
+      "subsystem": "JVM/source contract tests",
+      "base_blob": "e4534903c526e444723b7bd48534fe7d585250f1",
+      "candidate_blob": "96300fe9bff7b43e73af584d7eaafd136d919962"
+    },
+    {
+      "path": "research/README_alabbad_mutashabihat.md",
+      "status": "A",
+      "added": 42,
+      "deleted": 0,
+      "subsystem": "research inventory",
+      "base_blob": null,
+      "candidate_blob": "cfa4a616a9610c40586c1908289581473b960ed7"
+    },
+    {
+      "path": "research/alabbad_inventaire_provisoire_291.csv",
+      "status": "A",
+      "added": 292,
+      "deleted": 0,
+      "subsystem": "research inventory",
+      "base_blob": null,
+      "candidate_blob": "c513f4bc14ee88adbe294f20c9330244b99cb8f4"
+    },
+    {
+      "path": "research/alabbad_section5_bifurcations.csv",
+      "status": "A",
+      "added": 60,
+      "deleted": 0,
+      "subsystem": "research inventory",
+      "base_blob": null,
+      "candidate_blob": "458a74d4f7b7e677cda6e6b6054c647d876c66f3"
+    },
+    {
+      "path": "research/alabbad_sections1-4_pivots_candidates.csv",
+      "status": "A",
+      "added": 233,
+      "deleted": 0,
+      "subsystem": "research inventory",
+      "base_blob": null,
+      "candidate_blob": "cb096a0d96ba54c1b3a486e4d17fdcbd95b7955b"
+    },
+    {
+      "path": "research/mutashabihat_292_dont_1_priorite_utilisateur.csv",
+      "status": "A",
+      "added": 293,
+      "deleted": 0,
+      "subsystem": "research inventory",
+      "base_blob": null,
+      "candidate_blob": "4f4acd1fd21a751afcb6023d552f4217394c4a14"
+    },
+    {
+      "path": "scripts/run_atlas_revision_android_audit.sh",
+      "status": "A",
+      "added": 23,
+      "deleted": 0,
+      "subsystem": "audit runner",
+      "base_blob": null,
+      "candidate_blob": "7dba1a4dabad7263b4d4a87a93e4fcad7f93a3c3"
+    }
+  ],
+  "remote_ref_snapshot": [
+    {
+      "ref": "origin/debug/haafidh-1179-boox-test-20261030",
+      "sha": "23dc6a13acad5cb8eea93e654c2972b073d4c3be",
+      "ancestor_of_candidate": false,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 7,
+      "unique_commits": [
+        "3eedd95fbf8a2edf1eed6c293d0fa82fa45d61b3",
+        "f545de6847fec8ee3a435bfa6f0f688db11f19c5",
+        "127e7b531e99b2a775307cde911f89c59710b40f",
+        "175294d220613cc4b3e58c58176f00bfc5ec60fd",
+        "04dce909d91ddd199b77cdf9a9e9a656a33dabca",
+        "1c65b5cb2eebf977c70737cdf1e41561c385a1cc",
+        "23dc6a13acad5cb8eea93e654c2972b073d4c3be"
+      ],
+      "classification": "divergent: manual review only"
+    },
+    {
+      "ref": "origin/debug/haafidh-1179-encrypted-delivery-20261030",
+      "sha": "c5c54a6c78cd31feb85caf8bc2e2a04b26f7ece8",
+      "ancestor_of_candidate": false,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 9,
+      "unique_commits": [
+        "3eedd95fbf8a2edf1eed6c293d0fa82fa45d61b3",
+        "f545de6847fec8ee3a435bfa6f0f688db11f19c5",
+        "127e7b531e99b2a775307cde911f89c59710b40f",
+        "175294d220613cc4b3e58c58176f00bfc5ec60fd",
+        "04dce909d91ddd199b77cdf9a9e9a656a33dabca",
+        "1c65b5cb2eebf977c70737cdf1e41561c385a1cc",
+        "23dc6a13acad5cb8eea93e654c2972b073d4c3be",
+        "99dafa3fcb80b227c0f425f4bbcf24a6eb24f71e",
+        "c5c54a6c78cd31feb85caf8bc2e2a04b26f7ece8"
+      ],
+      "classification": "divergent: manual review only"
+    },
+    {
+      "ref": "origin/research/alabbad-mutashabihat-stricts-20261030",
+      "sha": "dc0bbc744429420f8733068540cb39566c17aa42",
+      "ancestor_of_candidate": false,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 6,
+      "unique_commits": [
+        "5676d1a05d8e500cd56001d2243d7186ea9e658e",
+        "90c9b8397f1d2325ad1ad318c1e3740d59c04eba",
+        "b42cb06d37ca9e47710aeeeae6ec034ef499a008",
+        "5796b30bde116004cd51e7fed80a8a3e583e13da",
+        "85664b3a5671a7d9dd07c48acd074d0633971e30",
+        "dc0bbc744429420f8733068540cb39566c17aa42"
+      ],
+      "classification": "divergent: manual review only"
+    },
+    {
+      "ref": "origin/work/haafidh-1179-atlas-private-debug-20261030",
+      "sha": "7f68ea3b698fc675fd0e907f6476dca097bdf231",
+      "ancestor_of_candidate": false,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 4,
+      "unique_commits": [
+        "baf344b234e28247397a6e1a3642764fb94e5ff6",
+        "224d5e3026858fbc2804c072c239c25fe942e563",
+        "e17aba5ded234c33211708f3b24f8a4983836467",
+        "7f68ea3b698fc675fd0e907f6476dca097bdf231"
+      ],
+      "classification": "divergent: manual review only"
+    },
+    {
+      "ref": "origin/work/haafidh-1179-boox-ui-20261026",
+      "sha": "038c9581da765a6c2efac7f740f5d6e3d1bc65d6",
+      "ancestor_of_candidate": false,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 9,
+      "unique_commits": [
+        "fdd5c38616a8994bdeeb7a775dec606f6e71cb88",
+        "23967eb5faadd2cf55c6a3ba588a2d3540e52ac8",
+        "c014fbd666c4d885d1859257ea162a7d31d4a348",
+        "60f79057446fb9dae32ea0967593350a56fa7710",
+        "66dfcd72db5a076253461808d9536128909c3060",
+        "70ee12ca5d15c98cc1d2014ebedf0a4566d19c22",
+        "d438596a5cda4a2dc1de062c07d03d504b1a04de",
+        "b2d232e744af7edd0b33b9d3c24da34136b93ca7",
+        "038c9581da765a6c2efac7f740f5d6e3d1bc65d6"
+      ],
+      "classification": "divergent: manual review only"
+    },
+    {
+      "ref": "origin/work/haafidh-1179-cloud-sync",
+      "sha": "ae68ee1a46e195e9da1068aed981f3363869a4e0",
+      "ancestor_of_candidate": true,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 0,
+      "unique_commits": [],
+      "classification": "included by ancestry"
+    },
+    {
+      "ref": "origin/work/haafidh-1179-compare-tafsir-layout-20261030",
+      "sha": "565446f65c45c719492ef9a7066ab86770dc1c00",
+      "ancestor_of_candidate": true,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 0,
+      "unique_commits": [],
+      "classification": "included by ancestry"
+    },
+    {
+      "ref": "origin/work/haafidh-1179-reader-revision-comparison-ux-20261030",
+      "sha": "52ebe164b5853e5ae4e9fce211e382164080bc23",
+      "ancestor_of_candidate": true,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 0,
+      "unique_commits": [],
+      "classification": "included by ancestry"
+    },
+    {
+      "ref": "origin/work/haafidh-1179-reader-revision-ux-debug-20261030",
+      "sha": "7a151d38359498e13d7680c35471119a2168943e",
+      "ancestor_of_candidate": false,
+      "patch_equivalent_count": 2,
+      "unique_patch_count": 2,
+      "unique_commits": [
+        "020ee69d2177b5d84d9b279043b6f56b57281d4a",
+        "49c71d06c0513971ae06d57a0614ec4db968aee1"
+      ],
+      "classification": "divergent: manual review only"
+    },
+    {
+      "ref": "origin/work/haafidh-1179-reveal-replay-mutash-final-20261030",
+      "sha": "0b2fb5ba25afe462fce6a0251da308a1382155fa",
+      "ancestor_of_candidate": true,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 0,
+      "unique_commits": [],
+      "classification": "included by ancestry"
+    },
+    {
+      "ref": "origin/work/haafidh-active-correction-mutashabihat-20261029",
+      "sha": "8b89986272fae4567c9a806fee4f69890af98ad0",
+      "ancestor_of_candidate": false,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 18,
+      "unique_commits": [
+        "2899726b1fa982d6a5217c5d5b16fa399ca19e63",
+        "0dad125621aad15ecccc4cf6f5283221923b1e4b",
+        "815013ab1ac03987b277e7f13e8e40733367ef67",
+        "57d0cb4f3d228117ac8207b889540db2a88b0a3e",
+        "e67d095d3f96269d15feca3d9be7a92426378648",
+        "76a0d461d2ba7315ed5abbde6552e36177fa68da",
+        "6f0ec5f0d098e0b37e39b90e76d59336a486a06e",
+        "bb1b211b6339d3c0a0b98b46afc806f47310d495",
+        "ec11ecac2db13bf988c21d3d25592b83d70ac2ab",
+        "b1bc56016d8165af27db51064970aeb987a5a41c",
+        "75f18b22cdb0e76cfde2b01358d3bc3d7dd43dd3",
+        "4c7e7a6a0516554d20d470c2cfc787c10bcfa862",
+        "5ffb71a6e3d22c2db35d298f1ced11b2bf1e8b3d",
+        "231e1a1616b604aaa54698ca33fc662aece22842",
+        "fbb96bf140066199e84b4a1e15d6ca5f1d52152a",
+        "6297498899545e430f5e4acfe2e13ea632d512f2",
+        "ff9845d21200523f22bb9b7a2105c8c2129b0723",
+        "8b89986272fae4567c9a806fee4f69890af98ad0"
+      ],
+      "classification": "divergent: manual review only"
+    },
+    {
+      "ref": "origin/work/haafidh-atlas-discriminants-pilot-20261029",
+      "sha": "e94d46aa4a049efc5bcc370d97d77f5fbb471430",
+      "ancestor_of_candidate": true,
+      "patch_equivalent_count": 0,
+      "unique_patch_count": 0,
+      "unique_commits": [],
+      "classification": "included by ancestry"
+    }
+  ]
+}

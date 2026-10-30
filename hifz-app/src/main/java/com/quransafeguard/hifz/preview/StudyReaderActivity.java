@@ -62,8 +62,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private VerseRef pendingJumpVerse;
     private Button tafsirButton;
     private Button semanticButton;
-    /** Read-only Atlas relation; only available after selecting a documented, visible verse. */
-    private Button discriminantButton;
     /** Independent read-only QCF page link; never changes the user's selected Tafsir verse. */
     private VerseRef contextualDiscriminantVerse;
     /** Lecture-only, opt-in Révision active gomme: no timer, validation or Hifz writes. */
@@ -234,11 +232,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticButton = Ui.iconButton(this, "", "Afficher les ancres", v -> toggleSemanticCues());
         semanticButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
-        // Existing Atlas link icon; no overlays or text reflow on original QCF glyphs.
-        discriminantButton=Ui.iconButton(this,"","Versets ressemblants",
-            v->openSelectedDiscriminant());
-        discriminantButton.setVisibility(View.GONE);
-        readerActions.addView(discriminantButton);
+        // Correspondences are reached through the single contextual QCF margin mark.
         // One discreet access point, using the existing Révision pictogram.
         // The 100% mask only affects the current Lecture surface.
         freeActiveMaskButton=Ui.iconButton(this,"","Révision active",
@@ -390,53 +384,29 @@ public final class StudyReaderActivity extends android.app.Activity implements M
      * changes a Mushaf page, Hifz engine, mask, credit or session cursor.
      */
     private void updateDiscriminantButton() {
-        if(discriminantButton==null)return;
-        // Exact selected verse takes priority; on a narrow device the outside
-        // gutter may be unavailable, so expose the first verified link for this
-        // actual page in the toolbar without requiring any Quran text selection.
         contextualDiscriminantVerse=null;
-        boolean available=!freeActiveMask&&selected!=null
-            &&AtlasDiscriminantCases.indexFor(selected.getSurah(),selected.getAyah())>=0;
-        if(available){
-            try {
-                available=GeometryRepository.get(this).pageForVerse(selected)==page;
-                if(available)contextualDiscriminantVerse=selected;
-            } catch(RuntimeException missingGeometry) {available=false;}
-        }
-        if(!freeActiveMask&&!available){
-            try {
-                GeometryRepository index=GeometryRepository.get(this);
-                for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.PILOT) {
-                    for(VerseRef candidate:new VerseRef[]{entry.first,entry.second}) {
-                        if(index.pageForVerse(candidate)==page){
-                            contextualDiscriminantVerse=candidate;
-                            break;
-                        }
-                    }
-                    if(contextualDiscriminantVerse!=null)break;
-                }
-            }catch(RuntimeException unavailable){contextualDiscriminantVerse=null;}
-            available=contextualDiscriminantVerse!=null;
-        }
-        discriminantButton.setVisibility(available?View.VISIBLE:View.GONE);
-        if(available)Ui.setIconDescription(discriminantButton,
-            "Versets ressemblants · "+contextualDiscriminantVerse);
+        if(freeActiveMask)return;
+        List<VerseRef> onPage=AtlasDiscriminantCases.versesOnPage(page);
+        if(selected!=null&&onPage.contains(selected))contextualDiscriminantVerse=selected;
+        else if(!onPage.isEmpty())contextualDiscriminantVerse=onPage.get(0);
     }
 
     private void openSelectedDiscriminant() {
         // Revalidate the exact current-page source; toolbar never navigates to
         // a stale selection from another page and never unwraps a masked Quran.
-        if(discriminantButton==null||discriminantButton.getVisibility()!=View.VISIBLE
-            ||freeActiveMask||contextualDiscriminantVerse==null)return;
+        if(freeActiveMask||contextualDiscriminantVerse==null)return;
         final VerseRef source=contextualDiscriminantVerse;
         if(AtlasDiscriminantCases.indexFor(source.getSurah(),source.getAyah())<0)return;
         try {
-            if(GeometryRepository.get(this).pageForVerse(source)!=page)return;
+            if(!AtlasDiscriminantCases.versesOnPage(page).contains(source))return;
         } catch(RuntimeException unavailable) {return;}
         startActivity(new Intent(this,AtlasDiscriminantActivity.class)
             .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,source.getSurah())
             .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,source.getAyah())
-            .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,"Lecture"));
+            .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,"Lecture")
+            .putExtra(AtlasDiscriminantActivity.EXTRA_PAGE,page)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_CASE_INDEX,
+                AtlasDiscriminantCases.indexFor(source.getSurah(),source.getAyah())));
         // The existing Lecture activity remains underneath, retaining selection,
         // QCF page, annotation state and current mask without writing Hifz prefs.
     }
@@ -445,7 +415,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     int selectedDiscriminantPageForTest(){return page;}
     VerseRef selectedDiscriminantVerseForTest(){return selected;}
     boolean freeActiveMaskForTest(){return freeActiveMask;}
-    View discriminantActionForTest(){return discriminantButton;}
+    boolean discriminantAvailableForTest(){return !freeActiveMask&&contextualDiscriminantVerse!=null;}
 
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
@@ -519,10 +489,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(verse==null||freeActiveMask||
             AtlasDiscriminantCases.indexFor(verse.getSurah(),verse.getAyah())<0)return;
         try {
-            if(GeometryRepository.get(this).pageForVerse(verse)!=page)return;
+            if(!AtlasDiscriminantCases.versesOnPage(page).contains(verse))return;
         }catch(RuntimeException missingQcf){return;}
-        selected=verse;
-        updateDiscriminantButton();
+        contextualDiscriminantVerse=verse;
         openSelectedDiscriminant();
     }
 

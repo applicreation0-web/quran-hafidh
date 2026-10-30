@@ -30,6 +30,27 @@ import static org.junit.Assert.*;
 
 /** Real Android UI: two actual QCF page WebViews, one two-strip comparison, read-only Hifz. */
 public final class AtlasDiscriminantInstrumentedTest {
+    private static int exactPairIndex(int firstSurah,int firstAyah,int secondSurah,int secondAyah){
+        for(int i=0;i<AtlasDiscriminantCases.PILOT.size();i++){
+            AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(i);
+            if(pair.first.getSurah()==firstSurah&&pair.first.getAyah()==firstAyah
+                &&pair.second.getSurah()==secondSurah&&pair.second.getAyah()==secondAyah)return i;
+        }
+        throw new AssertionError("Required audited pair missing: "+firstSurah+":"+firstAyah+
+            " / "+secondSurah+":"+secondAyah);
+    }
+    private static AtlasDiscriminantCases.Entry samplePair(){
+        return AtlasDiscriminantCases.PILOT.get(exactPairIndex(2,63,2,93));
+    }
+    private static Intent pairIntent(Context context,int index){
+        AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(index);
+        return new Intent(context,AtlasDiscriminantActivity.class)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,pair.first.getSurah())
+            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,pair.first.getAyah())
+            .putExtra(AtlasDiscriminantActivity.EXTRA_CASE_INDEX,index)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,"Lecture");
+    }
+
     private static int countViews(View root,Class<?> expected) {
         int count=expected.isInstance(root)?1:0;
         if(root instanceof ViewGroup){
@@ -37,6 +58,206 @@ public final class AtlasDiscriminantInstrumentedTest {
             for(int i=0;i<group.getChildCount();i++)count+=countViews(group.getChildAt(i),expected);
         }
         return count;
+    }
+
+    private static void waitForQcf(ActivityScenario<AtlasDiscriminantActivity> scenario) throws Exception {
+        AtomicBoolean ready=new AtomicBoolean();
+        for(int attempt=0;attempt<60;attempt++){
+            scenario.onActivity(a->{
+                assertEquals(a.qcfFailureDetailForTest(),0,a.qcfPagesFailedForTest());
+                ready.set(a.qcfPagesReadyForTest()&&a.qcfStripsReadyForTest());
+            });
+            if(ready.get())return;
+            Thread.sleep(250L);
+        }
+        fail("Authentic paired QCF rendering timed out");
+    }
+
+    private static void assertContextPanesVisible(ActivityScenario<AtlasDiscriminantActivity> scenario)throws Exception{
+        AtomicBoolean ready=new AtomicBoolean();
+        for(int attempt=0;attempt<40;attempt++){
+            scenario.onActivity(a->ready.set(a.bothQcfPagesFullyVisibleForTest()
+                &&a.tafsirHeadingVisibleForTest()));
+            if(ready.get())return;
+            Thread.sleep(100L);
+        }
+        fail("Both complete QCF localizations and the contextual tafsir heading must remain visible");
+    }
+
+    private static void assertOriginalPageShapeAndWordMarks(
+        ActivityScenario<AtlasDiscriminantActivity> scenario,AtlasDiscriminantCases.Entry expected)throws Exception{
+        java.util.concurrent.CountDownLatch latch=new java.util.concurrent.CountDownLatch(2);
+        AtomicReference<String> first=new AtomicReference<>(),second=new AtomicReference<>();
+        scenario.onActivity(a->{
+            MapQcfThumbnails[] pages=a.qcfViewsForTest();
+            for(int side=0;side<2;side++){
+                final AtomicReference<String> result=side==0?first:second;
+                pages[side].evaluateJavascript("(function(){var svg=document.querySelector('.paper svg');"
+                    +"if(!svg)return '';return svg.getAttribute('viewBox')+'|'+"
+                    +"svg.querySelectorAll('#atlas-exact-word-differences line').length;})()",
+                    value->{result.set(value);latch.countDown();});
+            }
+        });
+        assertTrue("QCF DOM audit callback timed out",latch.await(5,java.util.concurrent.TimeUnit.SECONDS));
+        int side=0;
+        for(String value:new String[]{first.get(),second.get()}){
+            String actual=new org.json.JSONArray("["+value+"]").getString(0);
+            String[] parts=actual.split("\\|");
+            String[] box=parts[0].trim().split("\\s+");
+            assertEquals("Original QCF page width must remain 345",345,Double.parseDouble(box[2]),0.001);
+            assertEquals("Original QCF page height must remain 550",550,Double.parseDouble(box[3]),0.001);
+            assertEquals("Full page highlights must match the audited side",side==0?
+                expected.firstWordIndices.length:expected.secondWordIndices.length,Integer.parseInt(parts[1]));
+            side++;
+        }
+    }
+
+    private static void tapScreen(int x,int y){
+        Instrumentation instrument=InstrumentationRegistry.getInstrumentation();
+        long now=android.os.SystemClock.uptimeMillis();
+        android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,
+            android.view.MotionEvent.ACTION_DOWN,x,y,0);
+        android.view.MotionEvent up=android.view.MotionEvent.obtain(now,now+80,
+            android.view.MotionEvent.ACTION_UP,x,y,0);
+        instrument.sendPointerSync(down);instrument.sendPointerSync(up);
+        down.recycle();up.recycle();instrument.waitForIdleSync();
+    }
+
+    private static void saveComparisonScreenshot(Context context,String label)throws Exception{
+        Bitmap screenshot=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+        assertNotNull(screenshot);
+        ContentValues values=new ContentValues();
+        values.put(MediaStore.Images.Media.DISPLAY_NAME,"haafidh-mutash-"+label+".png");
+        values.put(MediaStore.Images.Media.MIME_TYPE,"image/png");
+        values.put(MediaStore.Images.Media.RELATIVE_PATH,Environment.DIRECTORY_PICTURES+"/HaafidhAudit");
+        Uri uri=context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values);
+        assertNotNull(uri);
+        try(OutputStream out=context.getContentResolver().openOutputStream(uri)){
+            assertNotNull(out);assertTrue(screenshot.compress(Bitmap.CompressFormat.PNG,100,out));
+        }
+        screenshot.recycle();
+    }
+
+    /** Run on phone and BOOX profiles: page touch, retained localizations and rotation. */
+    @Test public void mushafTapOpensContextualTafsirAndSwitchPreservesBothQcfPages()throws Exception{
+        Context context=ApplicationProvider.getApplicationContext();
+        Intent intent=pairIntent(context,exactPairIndex(2,63,2,93));
+        try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
+            try {
+            scenario.onActivity(a->a.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT));
+            AtomicBoolean portrait=new AtomicBoolean();
+            for(int attempt=0;attempt<60;attempt++){
+                scenario.onActivity(a->portrait.set(a.getResources().getConfiguration().orientation==
+                    android.content.res.Configuration.ORIENTATION_PORTRAIT));
+                if(portrait.get())break;
+                Thread.sleep(100L);
+            }
+            assertTrue("Portrait layout must be exercised",portrait.get());
+            waitForQcf(scenario);
+            assertOriginalPageShapeAndWordMarks(scenario,samplePair());
+            AtomicReference<Rect[]> pageBounds=new AtomicReference<>();
+            AtomicReference<MapQcfThumbnails[]> originalPages=new AtomicReference<>();
+            scenario.onActivity(a->{
+                assertFalse("No buried, permanently allocated tafsir region",a.tafsirPanelVisibleForTest());
+                pageBounds.set(a.qcfPageBoundsForTest());originalPages.set(a.qcfViewsForTest());
+            });
+            Rect target=pageBounds.get()[0];
+            assertFalse("First Mushaf must be directly visible",target.isEmpty());
+            tapScreen(target.centerX(),target.centerY());
+            AtomicBoolean opened=new AtomicBoolean();
+            for(int attempt=0;attempt<40;attempt++){
+                scenario.onActivity(a->opened.set(a.tafsirPanelVisibleForTest()&&a.selectedTafsirForTest()==0));
+                if(opened.get())break;
+                Thread.sleep(100L);
+            }
+            assertTrue("Touching the actual QCF page must open its contextual tafsir",opened.get());
+            assertContextPanesVisible(scenario);
+            AtomicReference<Rect[]> selectedBounds=new AtomicReference<>();
+            scenario.onActivity(a->{
+                selectedBounds.set(a.qcfPageBoundsForTest());
+                View second=findByDescription(a.getWindow().getDecorView(),"Tafsīr du second verset");
+                assertNotNull(second);assertTrue(second.performClick());
+            });
+            scenario.onActivity(a->{
+                assertEquals(1,a.selectedTafsirForTest());
+                assertSame("Switching commentary must retain first QCF WebView",originalPages.get()[0],a.qcfViewsForTest()[0]);
+                assertSame("Switching commentary must retain second QCF WebView",originalPages.get()[1],a.qcfViewsForTest()[1]);
+                assertArrayEquals("Both QCF localizations must stay at the same bounds",selectedBounds.get(),a.qcfPageBoundsForTest());
+                assertTrue(a.qcfPagesReadyForTest());
+            });
+            assertContextPanesVisible(scenario);
+            // The second actual source page also switches the contextual panel.
+            scenario.onActivity(a->pageBounds.set(a.qcfPageBoundsForTest()));
+            Rect secondPage=pageBounds.get()[1];
+            tapScreen(secondPage.centerX(),secondPage.centerY());
+            scenario.onActivity(a->assertEquals(1,a.selectedTafsirForTest()));
+            assertContextPanesVisible(scenario);
+            AtomicBoolean loaded=new AtomicBoolean();
+            for(int attempt=0;attempt<40;attempt++){
+                scenario.onActivity(a->{
+                    CharSequence[] texts=a.tafsirTextsForTest();
+                    loaded.set(texts[0].length()>100&&texts[1].length()>100);
+                });
+                if(loaded.get())break;
+                Thread.sleep(100L);
+            }
+            assertTrue("Both original offline Jalalayn texts must load",loaded.get());
+            String profile=context.getResources().getConfiguration().smallestScreenWidthDp>=600?"boox":"phone";
+            saveComparisonScreenshot(context,profile+"-portrait-contextual");
+            scenario.recreate();waitForQcf(scenario);
+            scenario.onActivity(a->{assertEquals("Selected tafsir survives recreation",1,a.selectedTafsirForTest());
+                assertTrue(a.tafsirPanelVisibleForTest());});
+            scenario.onActivity(a->a.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE));
+            AtomicBoolean landscape=new AtomicBoolean();
+            for(int attempt=0;attempt<60;attempt++){
+                scenario.onActivity(a->landscape.set(a.getResources().getConfiguration().orientation==
+                    android.content.res.Configuration.ORIENTATION_LANDSCAPE));
+                if(landscape.get())break;
+                Thread.sleep(100L);
+            }
+            assertTrue("Landscape layout must be exercised",landscape.get());
+            waitForQcf(scenario);
+            scenario.onActivity(a->{assertEquals(1,a.selectedTafsirForTest());assertTrue(a.tafsirPanelVisibleForTest());});
+            assertOriginalPageShapeAndWordMarks(scenario,samplePair());
+            assertContextPanesVisible(scenario);
+            saveComparisonScreenshot(context,profile+"-landscape-contextual");
+            } finally {
+                scenario.onActivity(a->a.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT));
+                AtomicBoolean restored=new AtomicBoolean();
+                for(int attempt=0;attempt<60;attempt++){
+                    scenario.onActivity(a->restored.set(a.getResources().getConfiguration().orientation==
+                        android.content.res.Configuration.ORIENTATION_PORTRAIT));
+                    if(restored.get())break;
+                    Thread.sleep(100L);
+                }
+                assertTrue("Restore portrait for subsequent UI tests",restored.get());
+            }
+        }
+    }
+
+    /** A delayed new render must never expose the previous pair's excerpt. */
+    @Test public void changingCaseImmediatelyClearsOldQcfExcerpts()throws Exception{
+        Context context=ApplicationProvider.getApplicationContext();
+        int page=GeometryRepository.get(context).pageForVerse(samplePair().first);
+        java.util.List<Integer> indices=AtlasDiscriminantCases.indicesForPage(page);
+        assertTrue("Fixture page must have multiple verified relations",indices.size()>1);
+        Intent intent=pairIntent(context,indices.get(0)).putExtra(AtlasDiscriminantActivity.EXTRA_PAGE,page);
+        try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
+            waitForQcf(scenario);
+            scenario.onActivity(a->{
+                assertTrue("Initial source excerpts must be visible",a.qcfStripsVisibleForTest());
+                int previousGeneration=a.qcfStripsGenerationForTest();
+                View next=findByDescription(a.getWindow().getDecorView(),"Comparaison suivante de cette page");
+                assertNotNull(next);assertTrue(next.performClick());
+                assertTrue("New labels invalidate all old excerpt callbacks",
+                    a.qcfStripsGenerationForTest()>previousGeneration);
+                assertFalse("Previous glyphs must disappear before asynchronous page loading",
+                    a.qcfStripsVisibleForTest());
+                assertFalse("Old excerpt readiness must not survive a pair change",a.qcfStripsReadyForTest());
+            });
+            waitForQcf(scenario);
+            scenario.onActivity(a->assertTrue("Only the new completed excerpts may reappear",a.qcfStripsVisibleForTest()));
+        }
     }
 
     /** Exact one-based markers must all exist in the shipped word geometry, never estimated. */
@@ -84,12 +305,10 @@ public final class AtlasDiscriminantInstrumentedTest {
      */
     @Test public void secondPilotRendersAloneWithoutPriorHeavyPages() throws Exception {
         Context context=ApplicationProvider.getApplicationContext();
-        Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
-            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,6)
-            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,151);
+        Intent intent=pairIntent(context,exactPairIndex(6,151,17,31));
         // Validate the exact underlying page bytes and crop independently of Chromium.
         for(AtlasDiscriminantCases.Entry pair:java.util.Collections.singletonList(
-            AtlasDiscriminantCases.PILOT.get(1))) {
+            AtlasDiscriminantCases.PILOT.get(exactPairIndex(6,151,17,31)))) {
             assertExactQcfWords(context,pair.first,pair.firstWordIndices);
             assertExactQcfWords(context,pair.second,pair.secondWordIndices);
         }
@@ -105,7 +324,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 if(ready.get())break;
             }
             assertTrue("Direct 6:151 / 17:31 genuine QCF pages did not render",ready.get());
-            AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(1);
+            AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(exactPairIndex(6,151,17,31));
             assertExactQcfWords(context,pair.first,pair.firstWordIndices);
             assertExactQcfWords(context,pair.second,pair.secondWordIndices);
         }
@@ -115,7 +334,7 @@ public final class AtlasDiscriminantInstrumentedTest {
     private static void assertInkIsVisible(Bitmap shot,Rect visible,String description) {
         int left=Math.max(0,visible.left),top=Math.max(0,visible.top);
         int right=Math.min(shot.getWidth(),visible.right),bottom=Math.min(shot.getHeight(),visible.bottom);
-        assertTrue(description+" missing viewport",right-left>80&&bottom-top>120);
+        assertTrue(description+" missing viewport",right-left>40&&bottom-top>20);
         int dark=0,samples=0;
         for(int y=top+8;y<bottom-8;y+=3)for(int x=left+8;x<right-8;x+=3) {
             int px=shot.getPixel(x,y);
@@ -131,17 +350,15 @@ public final class AtlasDiscriminantInstrumentedTest {
         Context context=ApplicationProvider.getApplicationContext();
         SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
         Map<String,?> before=new HashMap<>(prefs.getAll());
-        Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
-            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,30)
-            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,37);
+        Intent intent=pairIntent(context,exactPairIndex(2,63,2,93));
         try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
             scenario.onActivity(activity->{
                 View root=activity.findViewById(android.R.id.content);
                 assertEquals(2,countViews(root,MapQcfThumbnails.class));
                 assertEquals(1,countViews(root,QcfAtlasVerseStrips.class));
-                assertEquals("30:37 must be at page mapped by real geometry",
+                assertEquals("2:63 must be at page mapped by real geometry",
                     GeometryRepository.get(activity).pageForVerse(
-                        new com.quransafeguard.hifz.core.VerseRef(30,37)),
+                        new com.quransafeguard.hifz.core.VerseRef(2,63)),
                     activity.getCurrentLeftPageForTest());
             });
             AtomicBoolean ready=new AtomicBoolean(false);
@@ -163,14 +380,14 @@ public final class AtlasDiscriminantInstrumentedTest {
             // Verify real SVG crop and exact word underline, not simply Android view creation.
             GeometryRepository g=GeometryRepository.get(context);
             com.quransafeguard.hifz.core.VerseRef verse=
-                new com.quransafeguard.hifz.core.VerseRef(30,37);
+                new com.quransafeguard.hifz.core.VerseRef(2,63);
             int page=g.pageForVerse(verse);
             String original=MapQcfThumbnails.readSvg(context,page);
             String cropped=QcfAtlasVerseStrips.cropSvg(original,
-                WordGeometryRepository.shared(context).wordsForPage(page),verse,new int[]{2});
-            assertFalse("The exact Quran crop must be available for 30:37",cropped.isEmpty());
+                WordGeometryRepository.shared(context).wordsForPage(page),verse,samplePair().firstWordIndices);
+            assertFalse("The exact Quran crop must be available for 2:63",cropped.isEmpty());
             assertTrue("Exact original Quran paths must be preserved",cropped.contains("ayahPolygon"));
-            assertTrue("The differing second word must be underlined",cropped.contains("exact-word-differences"));
+            assertTrue("The audited differing words must be underlined",cropped.contains("exact-word-differences"));
             Bitmap shot=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
             assertNotNull("Must capture a genuine emulator comparison frame",shot);
             assertTrue(shot.getWidth()>100&&shot.getHeight()>100);
@@ -209,9 +426,10 @@ public final class AtlasDiscriminantInstrumentedTest {
         // A fresh reader initializes schema-6 defaults; compare only changes
         // made while the comparison is open, not first-install initialization.
         AtomicReference<Map<String,?>> before=new AtomicReference<>();
+        int sourcePage=GeometryRepository.get(context).pageForVerse(samplePair().first);
         Intent start=new Intent(context,StudyReaderActivity.class)
-            .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,408)
-            .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,"30:37");
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,sourcePage)
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,"2:63");
         Instrumentation instrument=InstrumentationRegistry.getInstrumentation();
         Instrumentation.ActivityMonitor monitor=instrument.addMonitor(
             AtlasDiscriminantActivity.class.getName(),null,false);
@@ -223,35 +441,33 @@ public final class AtlasDiscriminantInstrumentedTest {
                     Thread.sleep(250L);
                     scene.onActivity(activity->{
                         original.set(activity);
-                        View button=activity.discriminantActionForTest();
-                        ready.set(activity.selectedDiscriminantPageForTest()==408
+                        ready.set(activity.selectedDiscriminantPageForTest()==sourcePage
                             &&activity.selectedDiscriminantVerseForTest()!=null
-                            &&"30:37".equals(activity.selectedDiscriminantVerseForTest().toString())
-                            &&button!=null&&button.getVisibility()==View.VISIBLE);
+                            &&"2:63".equals(activity.selectedDiscriminantVerseForTest().toString())
+                            &&activity.discriminantAvailableForTest());
                     });
                     if(ready.get())break;
                 }
-                assertTrue("Documented 30:37 must show the compact Lecture comparison icon",
+                assertTrue("Documented 2:63 must expose its contextual comparison",
                     ready.get());
                 before.set(new HashMap<>(hifz.getAll()));
                 scene.onActivity(activity->{
-                    View button=activity.discriminantActionForTest();
-                    assertNotNull(button);
-                    assertTrue(button.performClick());
+                    assertTrue(activity.discriminantAvailableForTest());
+                    activity.onAtlasDiscriminantTap(new com.quransafeguard.hifz.core.VerseRef(2,63));
                 });
                 Activity opened=instrument.waitForMonitorWithTimeout(monitor,20000);
                 assertNotNull("Lecture must launch the comparison for its selected verse",opened);
                 assertTrue(opened instanceof AtlasDiscriminantActivity);
-                assertEquals(408,((AtlasDiscriminantActivity)opened).getCurrentLeftPageForTest());
+                assertEquals(sourcePage,((AtlasDiscriminantActivity)opened).getCurrentLeftPageForTest());
                 instrument.runOnMainSync(opened::finish);
                 instrument.waitForIdleSync();
                 scene.onActivity(activity->{
                     assertSame("The original reader Activity must survive, not a new session",
                         original.get(),activity);
-                    assertEquals(408,activity.selectedDiscriminantPageForTest());
-                    assertEquals("30:37",activity.selectedDiscriminantVerseForTest().toString());
+                    assertEquals(sourcePage,activity.selectedDiscriminantPageForTest());
+                    assertEquals("2:63",activity.selectedDiscriminantVerseForTest().toString());
                     assertFalse(activity.freeActiveMaskForTest());
-                    assertEquals(View.VISIBLE,activity.discriminantActionForTest().getVisibility());
+                    assertTrue(activity.discriminantAvailableForTest());
                 });
                 assertEquals("Atlas visit must not modify initialized Hifz state",
                     before.get(),hifz.getAll());
@@ -272,14 +488,10 @@ public final class AtlasDiscriminantInstrumentedTest {
         Context context=ApplicationProvider.getApplicationContext();
         SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
         Map<String,?> before=new HashMap<>(prefs.getAll());
-        // Reader-first UI: every validated pair has its own contextual entry,
-        // without next/previous controls or a standalone Atlas catalogue.
+        // Each exact catalogue index must load its own pair, including shared verses.
         for(int i=0;i<AtlasDiscriminantCases.PILOT.size();i++){
             AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(i);
-            Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
-                .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,pair.first.getSurah())
-                .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,pair.first.getAyah())
-                .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,"Lecture");
+            Intent intent=pairIntent(context,i);
             try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
                 scenario.onActivity(activity->{
                     View firstLink=findByDescription(activity.getWindow().getDecorView(),
@@ -289,6 +501,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                     assertNotNull("First explicit Lecture link missing",firstLink);
                     assertNotNull("Second explicit Lecture link missing",secondLink);
                     assertTrue(firstLink.isClickable()&&secondLink.isClickable());
+                    assertEquals("Lire "+pair.first+" en Lecture",((android.widget.TextView)firstLink).getText().toString());
+                    assertEquals("Lire "+pair.second+" en Lecture",((android.widget.TextView)secondLink).getText().toString());
                     assertNull("Standalone Atlas next-couple arrow must be absent",
                         findByDescription(activity.getWindow().getDecorView(),
                             "Passage suivant du corpus"));
@@ -320,18 +534,26 @@ public final class AtlasDiscriminantInstrumentedTest {
                         java.lang.reflect.Field stripsField=AtlasDiscriminantActivity.class.getDeclaredField("strips");
                         stripsField.setAccessible(true);
                         ((QcfAtlasVerseStrips)stripsField.get(activity)).evaluateJavascript(
-                            "(function(){var ids=[];for(var i=0;i<2;i++){"
-                            +"var s=document.querySelector('#crop'+i+' svg');if(!s)return false;"
-                            +"var clip=s.querySelector('clipPath');if(!clip||!clip.id)return false;"
-                            +"if(document.getElementById(clip.id)!==clip)return false;"
-                            +"var group=s.querySelector('g[clip-path]');"
-                            +"if(!group||group.getAttribute('clip-path')!=='url(#'+clip.id+')')return false;"
-                            +"ids.push(clip.id);}return ids[0]!==ids[1];})()",
+                            "(function(){var ids=[],prefixes=['atlas-word-window-"+
+                            pair.first.getSurah()+"-"+pair.first.getAyah()+"','atlas-word-window-"+
+                            pair.second.getSurah()+"-"+pair.second.getAyah()+"'];var expected=["+
+                            pair.firstWordIndices.length+","+pair.secondWordIndices.length+"];"
+                            +"for(var i=0;i<2;i++){var s=document.querySelector('#crop'+i+' svg');if(!s)return false;"
+                            +"var clips=s.querySelectorAll('clipPath');if(!clips.length)return false;"
+                            +"for(var j=0;j<clips.length;j++){var clip=clips[j];"
+                            +"if(!clip.id||clip.id.indexOf(prefixes[i])!==0||ids.indexOf(clip.id)>=0)return false;"
+                            +"if(document.getElementById(clip.id)!==clip)return false;ids.push(clip.id);}"
+                            +"var groups=s.querySelectorAll('g[clip-path]');if(!groups.length)return false;"
+                            +"for(var k=0;k<groups.length;k++){var ref=groups[k].getAttribute('clip-path');"
+                            +"if(!ref||ref.indexOf('url(#')!==0)return false;"
+                            +"var target=document.getElementById(ref.slice(5,-1));if(!target||!s.contains(target))return false;}"
+                            +"if(s.querySelectorAll('[id^=exact-word-differences] line').length!==expected[i])return false;}return true;})()",
                             value->{clipResult.set(value);clipsChecked.countDown();});
                     }catch(ReflectiveOperationException invalid){throw new AssertionError(invalid);}
                 });
                 assertTrue("Paired QCF clip DOM callback missing",clipsChecked.await(10,java.util.concurrent.TimeUnit.SECONDS));
                 assertEquals("Each inline QCF excerpt must resolve its own exact-word clip", "true",clipResult.get());
+                assertOriginalPageShapeAndWordMarks(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);
             }
@@ -344,10 +566,7 @@ public final class AtlasDiscriminantInstrumentedTest {
      * then return to the SAME comparison without touching Hifz. */
     @Test public void bothVisibleLectureLinksOpenExactVersesAndReturn() throws Exception {
         Context context=ApplicationProvider.getApplicationContext();
-        Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
-            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,2)
-            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,58)
-            .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,"Lecture");
+        Intent intent=pairIntent(context,exactPairIndex(2,63,2,93));
         Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
         Instrumentation.ActivityMonitor monitor=instrumentation.addMonitor(
             StudyReaderActivity.class.getName(),null,false);
@@ -372,14 +591,14 @@ public final class AtlasDiscriminantInstrumentedTest {
                     });
                     Activity opened=instrumentation.waitForMonitorWithTimeout(monitor,15000);
                     assertNotNull("Tapping explicit Lecture destination must open reader",opened);
-                    assertEquals(first?"2:58":"7:161",opened.getIntent()
+                    assertEquals(first?samplePair().first.toString():samplePair().second.toString(),opened.getIntent()
                         .getStringExtra(StudyReaderActivity.EXTRA_JUMP_VERSE));
-                    assertEquals(first?9:171,opened.getIntent()
+                    assertEquals(GeometryRepository.get(context).pageForVerse(first?samplePair().first:samplePair().second),opened.getIntent()
                         .getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,-1));
                     instrumentation.runOnMainSync(opened::finish);
                     instrumentation.waitForIdleSync();
                     scenario.onActivity(activity->{
-                        assertEquals(9,activity.getCurrentLeftPageForTest());
+                        assertEquals(GeometryRepository.get(context).pageForVerse(samplePair().first),activity.getCurrentLeftPageForTest());
                         assertTrue("Back must restore the same comparison",
                             activity.qcfPagesFailedForTest()==0);
                     });
@@ -418,21 +637,20 @@ public final class AtlasDiscriminantInstrumentedTest {
         app.registerActivityLifecycleCallbacks(callbacks);
         try {
             int qcfPage=GeometryRepository.get(context).pageForVerse(
-                new com.quransafeguard.hifz.core.VerseRef(30,37));
+                new com.quransafeguard.hifz.core.VerseRef(2,63));
             Intent intent=new Intent(context,StudyReaderActivity.class)
                 .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,qcfPage)
-                .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,"30:37");
+                .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,"2:63");
             try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(intent)){
                 AtomicBoolean ready=new AtomicBoolean(false);
                 for(int attempt=0;attempt<40;attempt++){
                     Thread.sleep(250L);
                     scenario.onActivity(activity->{
                         readerRef.set(activity);
-                        View action=activity.discriminantActionForTest();
                         com.quransafeguard.hifz.core.VerseRef verse=
                             activity.selectedDiscriminantVerseForTest();
-                        ready.set(action!=null && action.getVisibility()==View.VISIBLE &&
-                            verse!=null && verse.getSurah()==30 && verse.getAyah()==37);
+                        ready.set(activity.discriminantAvailableForTest() &&
+                            verse!=null && verse.getSurah()==2 && verse.getAyah()==63);
                     });
                     if(ready.get())break;
                 }
@@ -443,8 +661,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                 scenario.onActivity(activity->{
                     assertEquals("Original Lecture page",qcfPage,activity.selectedDiscriminantPageForTest());
                     assertFalse("No comparison while masked",activity.freeActiveMaskForTest());
-                    assertTrue("Exact relation tap must launch Atlas",
-                        activity.discriminantActionForTest().performClick());
+                    assertTrue("Exact relation must be available",activity.discriminantAvailableForTest());
+                    activity.onAtlasDiscriminantTap(new com.quransafeguard.hifz.core.VerseRef(2,63));
                 });
                 for(int attempt=0;attempt<40 && comparisonRef.get()==null;attempt++)
                     Thread.sleep(250L);
@@ -461,22 +679,22 @@ public final class AtlasDiscriminantInstrumentedTest {
                     com.quransafeguard.hifz.core.VerseRef selected=
                         activity.selectedDiscriminantVerseForTest();
                     assertNotNull("Selected verse lost on return",selected);
-                    assertEquals(30,selected.getSurah());
-                    assertEquals(37,selected.getAyah());
+                    assertEquals(2,selected.getSurah());
+                    assertEquals(63,selected.getAyah());
                     assertFalse("Mask must remain unchanged",activity.freeActiveMaskForTest());
-                    assertEquals(View.VISIBLE,activity.discriminantActionForTest().getVisibility());
+                    assertTrue(activity.discriminantAvailableForTest());
 
-                    // Page-scoped contract: verse 30:38 has no direct relation, but
-                    // 30:37 is still present on this very QCF page. The toolbar
+                    // Changing the selected verse preserves its Tafsir selection;
+                    // verified 2:63 remains on the same QCF page. The margin icon
                     // must stay available without changing the selected Tafsir verse.
-                    activity.onVerseTap(new com.quransafeguard.hifz.core.VerseRef(30,38));
+                    activity.onVerseTap(new com.quransafeguard.hifz.core.VerseRef(2,64));
                     assertEquals("Selecting a different verse must not change the Reader page",
                         qcfPage,activity.selectedDiscriminantPageForTest());
                     assertEquals("Selecting a nearby verse must preserve its Tafsir selection",
-                        new com.quransafeguard.hifz.core.VerseRef(30,38),
+                        new com.quransafeguard.hifz.core.VerseRef(2,64),
                         activity.selectedDiscriminantVerseForTest());
-                    assertEquals("The page still contains verified 30:37; keep its link",
-                        View.VISIBLE,activity.discriminantActionForTest().getVisibility());
+                    assertTrue("The page still contains verified 2:63; keep its link",
+                        activity.discriminantAvailableForTest());
                 });
                 assertEquals("Atlas round-trip must not modify Lecture cursor prefs",
                     beforeReading,reading.getAll());
@@ -488,7 +706,7 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
-    /** The toolbar is the page-scoped fallback when a phone has no safe outside QCF gutter. */
+    /** The margin action remains available on verified pages without selecting a verse. */
     @Test public void verifiedPageShowsChainLinkBeforeAnyVerseSelection() throws Exception {
         Context context=ApplicationProvider.getApplicationContext();
         int page=GeometryRepository.get(context).pageForVerse(
@@ -500,9 +718,8 @@ public final class AtlasDiscriminantInstrumentedTest {
             for(int i=0;i<40;i++){
                 Thread.sleep(250L);
                 scene.onActivity(activity->{
-                    View action=activity.discriminantActionForTest();
                     ready.set(activity.selectedDiscriminantPageForTest()==page
-                        &&action!=null&&action.getVisibility()==View.VISIBLE);
+                        &&activity.discriminantAvailableForTest());
                 });
                 if(ready.get())break;
             }

@@ -48,6 +48,8 @@ final class ActiveReviewCorrectionStore {
                 ||pages.isEmpty()||pages.size()>604||originPage<1||originPage>604
                 ||pageIndex<0||pageIndex>=pages.size()
                 ||(!"READ".equals(stage)&&!"RECALL".equals(stage)&&!"DONE".equals(stage))
+                ||("DONE".equals(stage)&&pageIndex!=pages.size()-1)
+                ||(assisted&&!"RECALL".equals(stage))
                 ||new LinkedHashSet<>(pages).size()!=pages.size())
                 throw new IllegalArgumentException("Invalid correction state");
             for(Integer page:pages)
@@ -86,23 +88,32 @@ final class ActiveReviewCorrectionStore {
         return save(new State(date,start,end,elapsed,pages,originPage,0,"READ",false));
     }
     boolean pageReread(State state){
-        return state!=null&&"READ".equals(state.stage)
+        return isCurrent(state)&&"READ".equals(state.stage)
             &&save(state.move(state.pageIndex,"RECALL",false));
     }
     boolean revealDuringControl(State state){
-        return state!=null&&"RECALL".equals(state.stage)
+        return isCurrent(state)&&"RECALL".equals(state.stage)
             &&save(state.move(state.pageIndex,"RECALL",true));
     }
     boolean restartPage(State state){
-        return state!=null&&"RECALL".equals(state.stage)
+        return isCurrent(state)&&"RECALL".equals(state.stage)
             &&save(state.move(state.pageIndex,"READ",false));
     }
     boolean pageRecalled(State state){
-        if(state==null||!"RECALL".equals(state.stage)||state.assisted)return false;
+        if(!isCurrent(state)||!"RECALL".equals(state.stage)||state.assisted)return false;
         int next=state.pageIndex+1;
         return next<state.pages.size()
             ?save(state.move(next,"READ",false))
             :save(state.move(state.pageIndex,"DONE",false));
+    }
+
+    private boolean isCurrent(State state){
+        State saved=pending();
+        return state!=null&&saved!=null&&state.date.equals(saved.date)
+            &&state.start.equals(saved.start)&&state.end.equals(saved.end)
+            &&state.activeElapsedMs==saved.activeElapsedMs&&state.pages.equals(saved.pages)
+            &&state.originPage==saved.originPage&&state.pageIndex==saved.pageIndex
+            &&state.stage.equals(saved.stage)&&state.assisted==saved.assisted;
     }
 
     private boolean save(State state){
@@ -142,6 +153,12 @@ final class ActiveReviewCorrectionStore {
     boolean recordReveal(String date,VerseRef start,int page){
         if(date==null||start==null||page<1||page>604)return false;
         try{
+            String raw=prefs.getString(KEY_REVEALED,"");
+            if(raw!=null&&!raw.isEmpty()){
+                JSONObject existing=new JSONObject(raw);
+                if(!date.equals(existing.getString("date"))
+                    ||!start.toString().equals(existing.getString("start")))return false;
+            }
             Set<Integer> pages=new LinkedHashSet<>(revealed(date,start));
             pages.add(page);
             JSONObject doc=new JSONObject();
@@ -151,6 +168,24 @@ final class ActiveReviewCorrectionStore {
             doc.put("pages",array);
             return prefs.edit().putString(KEY_REVEALED,doc.toString()).commit();
         }catch(Exception invalid){return false;}
+    }
+
+    /** Restore the original date even when force-stop preceded the replay's begin(). */
+    String revealedSessionDate(VerseRef start,String validatedDate){
+        String raw=prefs.getString(KEY_REVEALED,"");
+        if(raw==null||raw.isEmpty())return null;
+        try{
+            JSONObject doc=new JSONObject(raw);
+            String date=LocalDate.parse(doc.getString("date")).toString();
+            // A receipt may have committed just before process death and cleanup.
+            if(date.equals(validatedDate))return date;
+            if(!start.toString().equals(doc.getString("start")))
+                throw new IllegalArgumentException("Revealed-page cursor mismatch");
+            if(revealed(date,start).isEmpty())throw new IllegalArgumentException("Empty reveal checkpoint");
+            return date;
+        }catch(Exception invalid){
+            throw new IllegalStateException("Revealed-page date requires review",invalid);
+        }
     }
     boolean clear(){
         return prefs.edit().remove(KEY_STATE).remove(KEY_REVEALED).commit();

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "auditId": 293,
+      "first": "2:58",
+      "second": "7:161",
+      "firstWordIndices": [
+        11,
+        14
+      ],
+      "secondWordIndices": [
+        11,
+        13
+      ],
+      "firstWords": [
+        "وَٱدۡخُلُوا۟",
+        "وَقُولُوا۟"
+      ],
+      "secondWords": [
+        "وَقُولُوا۟",
+        "وَٱدۡخُلُوا۟"
+      ],
+      "source": "al-Abbad",
+      "sourceUrl": "https://quranpedia.app/books/b10901/s1.html",
+      "priority": "P1",
+      "decision": "retenu",
+      "reason": "Supplément demandé: inversion des deux verbes dans la formule commune; citations explicitement comparées, page imprimée 13. Points contrôlés : 2:58 mot(s) 11,14 « وَٱدۡخُلُوا۟ / وَقُولُوا۟ » ; 7:161 mot(s) 11,13 « وَقُولُوا۟ / وَٱدۡخُلُوا۟ ».",
+      "kind": "Variation de mot ou de particule",
+      "supplementary": true
+    },
+    {
+      "auditId": 294,
+      "first": "30:37",
+      "second": "39:52",
+      "firstWordIndices": [
+        2
+      ],
+      "secondWordIndices": [
+        2
+      ],
+      "firstWords": [
+        "یَرَوۡا۟"
+      ],
+      "secondWords": [
+        "یَعۡلَمُوۤا۟"
+      ],
+      "source": "al-Abbad",
+      "sourceUrl": "https://quranpedia.app/books/b10901/s11.html",
+      "priority": "P1",
+      "decision": "retenu",
+      "reason": "Supplément demandé: même amorce et même formule; variation locale du deuxième mot, page imprimée 99. Points contrôlés : 30:37 mot(s) 2 « یَرَوۡا۟ » ; 39:52 mot(s) 2 « یَعۡلَمُوۤا۟ ».",
+      "kind": "Variation de mot ou de particule",
+      "supplementary": true
+    }
+  ]
+}

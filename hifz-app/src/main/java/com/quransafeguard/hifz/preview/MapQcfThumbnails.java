@@ -34,6 +34,35 @@ final class MapQcfThumbnails extends WebView {
  private boolean markOnlyBoundaries;
  private boolean mosaicMode;
  private boolean atlasSinglePageCompact;
+ private com.quransafeguard.hifz.core.VerseRef atlasDifferenceVerse;
+ private int[] atlasDifferenceWords=new int[0];
+ void setAtlasWordDifferences(com.quransafeguard.hifz.core.VerseRef verse,int[] words){
+  atlasDifferenceVerse=verse;atlasDifferenceWords=words==null?new int[0]:words.clone();
+  renderKey="";
+ }
+ /** Cancel a staged old comparison before its replacement page is requested. */
+ void cancelPendingAtlasRender(){
+  if(!atlasSinglePageCompact||disposed)return;
+  ++fullGeneration;pendingCompactSvg=null;renderKey="";stopLoading();
+ }
+ private String highlightAtlasWords(String svg,int page)throws Exception{
+  if(!atlasSinglePageCompact||atlasDifferenceVerse==null)return svg;
+  java.util.regex.Matcher view=java.util.regex.Pattern.compile("viewBox=['\"]([^'\"]+)['\"]").matcher(svg);
+  if(!view.find())throw new IllegalStateException("Missing original QCF viewBox");
+  String[] box=view.group(1).trim().split("\\s+");
+  double originX=Double.parseDouble(box[0]),originY=Double.parseDouble(box[1]);
+  StringBuilder lines=new StringBuilder("<g id='atlas-exact-word-differences' fill='none' stroke='#121211' stroke-width='0.85'>");
+  java.util.List<WordGeometryRepository.WordBox> geometry=WordGeometryRepository.shared(getContext()).wordsForPage(page);
+  for(int index:atlasDifferenceWords){
+   WordGeometryRepository.WordBox found=null;
+   for(WordGeometryRepository.WordBox word:geometry)
+    if(word.surah==atlasDifferenceVerse.getSurah()&&word.ayah==atlasDifferenceVerse.getAyah()&&word.word==index){found=word;break;}
+   if(found==null)throw new IllegalStateException("Missing exact QCF difference word "+index);
+   lines.append(String.format(Locale.ROOT,"<line x1='%.2f' y1='%.2f' x2='%.2f' y2='%.2f'/>",
+    originX+found.x0,originY+found.y1+1.5,originX+found.x1,originY+found.y1+1.5));
+  }
+  return svg.replace("</svg>",lines.append("</g>").toString()+"</svg>");
+ }
  private int mosaicFirst=-1,mosaicGeneration,fullGeneration;
  /** Never send a 600 KB+ SVG as one oversized UTF-16 evaluateJavascript statement. */
  private static final int COMPACT_CHUNK_CHARS=24_000;
@@ -209,7 +238,7 @@ final class MapQcfThumbnails extends WebView {
    .append("var touch=null,ignoreClick=0;document.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});")
    .append("document.addEventListener('touchend',e=>{if(!touch)return;var dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){e.preventDefault();ignoreClick=Date.now()+400;MapPages.step(dx>0?1:-1);}});")
    .append("function readPage(p){if(Date.now()>ignoreClick)MapPages.open(p);}function choosePage(p){if(Date.now()>ignoreClick)MapPages.choose(p);}</script></head><body>");
-  html.append("<main class='tile selected'><div class='paper' role='button' tabindex='0' aria-label='Lecture page ")
+  html.append("<main class='tile selected'><div class='paper' role='button' tabindex='0' aria-label='").append(atlasSinglePageCompact?"Tafsīr de la page ":"Lecture page ")
       .append(selected).append("' onclick='readPage(").append(selected)
       .append(")'>");
   if (!atlasSinglePageCompact)
@@ -285,7 +314,7 @@ final class MapQcfThumbnails extends WebView {
    }
    String encoded;
    try{
-    String highlighted=highlightExactVersePolygons(cachedSvg(page),s,a,b,only);
+    String highlighted=highlightAtlasWords(highlightExactVersePolygons(cachedSvg(page),s,a,b,only),page);
     encoded=android.util.Base64.encodeToString(
         highlighted.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
    }catch(Exception unavailable){

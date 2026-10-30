@@ -26,6 +26,7 @@ final class QcfAtlasVerseStrips extends WebView {
     private String pendingEncoded;
     private int pendingGen,pendingSide,pendingNext;
     private boolean disposed;
+    private Runnable renderedListener;
     private VerseRef left, right;
     private int pageLeft,pageRight;
     private int[] wordsLeft,wordsRight;
@@ -43,6 +44,16 @@ final class QcfAtlasVerseStrips extends WebView {
         s.setBuiltInZoomControls(false);
         addJavascriptInterface(new Bridge(),"QcfStrip");
     }
+
+    void setOnRendered(Runnable listener){renderedListener=listener;}
+    /** Invalidate old bridge callbacks before any new comparison label is shown. */
+    void clearComparison(){
+        ++generation;pendingEncoded=null;renderStatus[0]=0;renderStatus[1]=0;
+        stopLoading();
+        loadDataWithBaseURL(null,"<html><body style='margin:0;background:#faf8f0'></body></html>",
+            "text/html","UTF-8",null);
+    }
+    int generationForTest(){return generation;}
 
     void show(VerseRef a,int aPage,int[] aWords,VerseRef b,int bPage,int[] bWords) {
         if(disposed || a==null || b==null || aPage<1 || aPage>604 || bPage<1 || bPage>604)
@@ -96,6 +107,10 @@ final class QcfAtlasVerseStrips extends WebView {
             x1=Math.max(x1,word.x1);y1=Math.max(y1,word.y1);
         }
         if(x1<=x0||y1<=y0)return "";
+        // Preserve the complete physical source line. Individual word rectangles
+        // can sever Arabic diacritics or leave detached fragments of neighbours.
+        // Full line context remains authentic, with only audited words underlined.
+        x0=0;x1=345;
         x0=Math.max(0,x0-8);y0=Math.max(0,y0-8);
         x1=Math.min(345,x1+8);y1=Math.min(550,y1+8);
         if(x1-x0<15||y1-y0<10)return "";
@@ -116,14 +131,10 @@ final class QcfAtlasVerseStrips extends WebView {
         String vb=String.format(Locale.ROOT,"viewBox='%.2f %.2f %.2f %.2f'",
             originX+x0,originY+y0,x1-x0,y1-y0);
         String cropped=source.substring(0,m.start())+vb+source.substring(m.end());
-        // Clip the original glyph paths to exact source-word windows. The bounding
-        // box alone would include unrelated words between differences on separate lines.
-        for(WordGeometryRepository.WordBox word:found){
-            if(!QcfExcerptWindow.includes(word.word,underlineWords))continue;
-            clips.append(String.format(Locale.ROOT,
-                "<rect x='%.2f' y='%.2f' width='%.2f' height='%.2f'/>",
-                originX+word.x0-2,originY+word.y0-2,word.x1-word.x0+4,word.y1-word.y0+4));
-        }
+        // Clip at the page edge and outside the complete selected source lines.
+        clips.append(String.format(Locale.ROOT,
+            "<rect x='%.2f' y='%.2f' width='345' height='%.2f'/>",
+            originX,originY+y0,y1-y0));
         int rootStart=cropped.indexOf("<svg");
         int rootEnd=rootStart<0?-1:cropped.indexOf('>',rootStart);
         if(rootEnd<0||!cropped.contains("</svg>"))return "";
@@ -185,6 +196,7 @@ final class QcfAtlasVerseStrips extends WebView {
             post(()->{
                 if(disposed||gen!=generation||side<0||side>1)return;
                 renderStatus[side]=success?1:-1;
+                if(bothRenderedForTest()&&renderedListener!=null)renderedListener.run();
                 if(side==pendingSide&&gen==pendingGen)pendingEncoded=null;
                 if(side==0 && renderStatus[1]==0)
                     evaluateJavascript("if(window.QcfStrip)QcfStrip.render(1,"+gen+");",null);
