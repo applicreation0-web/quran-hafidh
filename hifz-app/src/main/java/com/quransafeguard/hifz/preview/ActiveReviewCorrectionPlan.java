@@ -6,7 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Every revealed QCF page is replayed once, whether or not a verse was flagged. */
+/** Every revealed QCF page is replayed once; manual verse markers are not consulted. */
 final class ActiveReviewCorrectionPlan {
     private ActiveReviewCorrectionPlan() {}
 
