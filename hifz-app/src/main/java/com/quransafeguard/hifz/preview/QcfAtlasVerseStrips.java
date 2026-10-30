@@ -22,6 +22,9 @@ import java.util.regex.Pattern;
 final class QcfAtlasVerseStrips extends WebView {
     private static final Pattern VIEWBOX=Pattern.compile("viewBox\\s*=\\s*(['\"])([^'\"]+)\\1");
     private int generation;
+    private static final int CHUNK_CHARS=24_000;
+    private String pendingEncoded;
+    private int pendingGen,pendingSide,pendingNext;
     private boolean disposed;
     private VerseRef left, right;
     private int pageLeft,pageRight;
@@ -47,6 +50,7 @@ final class QcfAtlasVerseStrips extends WebView {
         left=a;right=b;pageLeft=aPage;pageRight=bPage;
         wordsLeft=aWords.clone();wordsRight=bWords.clone();
         int gen=++generation;
+        pendingEncoded=null;
         renderStatus[0]=0;renderStatus[1]=0;
         String html="<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
             +"<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0}"
@@ -57,7 +61,12 @@ final class QcfAtlasVerseStrips extends WebView {
             +"span{font:12px sans-serif;color:#524f49;text-align:center}</style></head>"
             +"<body><main><section><div class='crop' id='crop0'><span>Chargement de l'extrait QCF…</span></div></section>"
             +"<section><div class='crop' id='crop1'><span>Chargement de l'extrait QCF…</span></div></section></main>"
-            +"<script>var gen="+gen+";"
+            +"<script>var gen="+gen+";var parts=[],expect=0,activeSide=-1;"
+            +"function receiveStripChunk(side,i,total,part,g){if(g!==gen)return;"
+            +"if(total<1||total>100||i!==expect||(activeSide!==-1&&activeSide!==side)){QcfStrip.stripStatus(side,g,false);return;}"
+            +"activeSide=side;parts.push(part);expect++;"
+            +"if(expect===total){var complete=parts.join('');parts=[];expect=0;activeSide=-1;receiveStrip(side,complete,g);}"
+            +"else QcfStrip.chunkAck(side,i,g);}"
             +"function receiveStrip(i,src,g){if(g!==gen)return;var target=document.getElementById('crop'+i);if(!target)return;"
             +"if(!src){target.textContent='Extrait QCF indisponible — ouvrir le Muṣḥaf';QcfStrip.stripStatus(i,g,false);return;}"
             +"try{var raw=atob(src),bytes=new Uint8Array(raw.length);for(var j=0;j<raw.length;j++)bytes[j]=raw.charCodeAt(j);"
@@ -129,15 +138,34 @@ final class QcfAtlasVerseStrips extends WebView {
 
     @Override public void destroy() {
         if(disposed)return;
-        disposed=true;++generation;removeJavascriptInterface("QcfStrip");stopLoading();
+        disposed=true;++generation;pendingEncoded=null;
+        removeJavascriptInterface("QcfStrip");stopLoading();
         super.destroy();
     }
 
+    private void sendChunk(){
+        if(disposed||pendingEncoded==null||pendingGen!=generation)return;
+        int index=pendingNext;
+        int total=(pendingEncoded.length()+CHUNK_CHARS-1)/CHUNK_CHARS;
+        if(index>=total||total>100)return;
+        int start=index*CHUNK_CHARS;
+        String part=pendingEncoded.substring(start,Math.min(start+CHUNK_CHARS,pendingEncoded.length()));
+        pendingNext++;
+        evaluateJavascript("if(window.receiveStripChunk)receiveStripChunk("+pendingSide+","+index+","+total+",'"+part+"',"+pendingGen+");",null);
+    }
+
     private final class Bridge {
+        @JavascriptInterface public void chunkAck(int side,int index,int gen){
+            post(()->{
+                if(!disposed&&pendingEncoded!=null&&gen==generation&&gen==pendingGen
+                    &&side==pendingSide&&pendingNext==index+1)sendChunk();
+            });
+        }
         @JavascriptInterface public void stripStatus(int side,int gen,boolean success){
             post(()->{
                 if(disposed||gen!=generation||side<0||side>1)return;
                 renderStatus[side]=success?1:-1;
+                if(side==pendingSide&&gen==pendingGen)pendingEncoded=null;
                 if(side==0 && renderStatus[1]==0)
                     evaluateJavascript("if(window.QcfStrip)QcfStrip.render(1,"+gen+");",null);
             });
@@ -164,7 +192,12 @@ final class QcfAtlasVerseStrips extends WebView {
             final String safe=encoded;
             post(()->{
                 if(disposed||gen!=generation)return;
-                evaluateJavascript("if(window.receiveStrip)receiveStrip("+side+",'"+safe+"',"+gen+");",null);
+                if(safe.isEmpty()){
+                    evaluateJavascript("if(window.receiveStrip)receiveStrip("+side+",'',"+gen+");",null);
+                }else{
+                    pendingEncoded=safe;pendingGen=gen;pendingSide=side;pendingNext=0;
+                    sendChunk();
+                }
             });
         }
     }
