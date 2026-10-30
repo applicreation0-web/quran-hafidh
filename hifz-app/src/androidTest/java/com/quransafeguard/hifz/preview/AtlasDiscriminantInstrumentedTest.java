@@ -272,20 +272,26 @@ public final class AtlasDiscriminantInstrumentedTest {
         Context context=ApplicationProvider.getApplicationContext();
         SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
         Map<String,?> before=new HashMap<>(prefs.getAll());
-        AtlasDiscriminantCases.Entry first=AtlasDiscriminantCases.PILOT.get(0);
-        Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
-            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,first.first.getSurah())
-            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,first.first.getAyah());
-        // Test the user's actual next-arrow navigation in one screen; repeatedly
-        // destroying three heavy WebViews is not the production navigation path.
-        try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
-            for(int i=0;i<AtlasDiscriminantCases.PILOT.size();i++){
-                AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(i);
-                if(i>0)scenario.onActivity(activity->{
-                    View next=findByDescription(activity.getWindow().getDecorView(),
-                        "Passage suivant du corpus");
-                    assertNotNull("Atlas next-couple button missing",next);
-                    assertTrue("Atlas next-couple button not clickable",next.performClick());
+        // Reader-first UI: every validated pair has its own contextual entry,
+        // without next/previous controls or a standalone Atlas catalogue.
+        for(int i=0;i<AtlasDiscriminantCases.PILOT.size();i++){
+            AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(i);
+            Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
+                .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,pair.first.getSurah())
+                .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,pair.first.getAyah())
+                .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,"Lecture");
+            try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
+                scenario.onActivity(activity->{
+                    View firstLink=findByDescription(activity.getWindow().getDecorView(),
+                        "Ouvrir le premier verset en Lecture");
+                    View secondLink=findByDescription(activity.getWindow().getDecorView(),
+                        "Ouvrir le second verset en Lecture");
+                    assertNotNull("First explicit Lecture link missing",firstLink);
+                    assertNotNull("Second explicit Lecture link missing",secondLink);
+                    assertTrue(firstLink.isClickable()&&secondLink.isClickable());
+                    assertNull("Standalone Atlas next-couple arrow must be absent",
+                        findByDescription(activity.getWindow().getDecorView(),
+                            "Passage suivant du corpus"));
                 });
                 scenario.onActivity(activity->{
                     GeometryRepository geometry=GeometryRepository.get(activity);
