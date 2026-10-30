@@ -124,4 +124,42 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
         assertEquals("Atlas comparison must never mutate the main Hifz state",before,prefs.getAll());
     }
+    /**
+     * Every curated pair must survive the same genuine asynchronous QCF decoding.
+     * The first pilot's screenshot test remains the stronger pixel/underline check;
+     * this guards against later pairs hiding missing pages or invalid verse geometry.
+     */
+    @Test public void everyPilotPairLoadsBothAuthenticQcfPagesAndStrips() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        Map<String,?> before=new HashMap<>(prefs.getAll());
+        for(AtlasDiscriminantCases.Entry pair:AtlasDiscriminantCases.PILOT){
+            Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
+                .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,pair.first.getSurah())
+                .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,pair.first.getAyah());
+            try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
+                scenario.onActivity(activity->{
+                    GeometryRepository geometry=GeometryRepository.get(activity);
+                    assertEquals("Wrong left QCF page for "+pair.first,
+                        geometry.pageForVerse(pair.first),activity.getCurrentLeftPageForTest());
+                    assertEquals("Exactly two QCF page WebViews required for "+pair.first,
+                        2,countViews(activity.findViewById(android.R.id.content),MapQcfThumbnails.class));
+                });
+                AtomicBoolean ready=new AtomicBoolean(false);
+                for(int attempt=0;attempt<40;attempt++){
+                    Thread.sleep(500L);
+                    scenario.onActivity(activity->{
+                        assertEquals("Invalid original QCF page or verse crop in "+pair.first+
+                            " / "+pair.second,0,activity.qcfPagesFailedForTest());
+                        ready.set(activity.qcfPagesReadyForTest()&&activity.qcfStripsReadyForTest());
+                    });
+                    if(ready.get())break;
+                }
+                assertTrue("Both original QCF pages and excerpts must load: "+
+                    pair.first+" / "+pair.second,ready.get());
+            }
+        }
+        assertEquals("Browsing Atlas must not alter Hifz progress",before,prefs.getAll());
+    }
+
 }
