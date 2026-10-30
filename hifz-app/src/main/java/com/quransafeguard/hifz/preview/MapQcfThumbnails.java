@@ -33,6 +33,10 @@ final class MapQcfThumbnails extends WebView {
  private boolean mosaicMode;
  private boolean atlasSinglePageCompact;
  private int mosaicFirst=-1,mosaicGeneration,fullGeneration;
+ /** Never send a 600 KB+ SVG as one oversized UTF-16 evaluateJavascript statement. */
+ private static final int COMPACT_CHUNK_CHARS=24_000;
+ private String pendingCompactSvg;
+ private int pendingCompactPage,pendingCompactGeneration,pendingCompactNext;
  private final java.util.LinkedHashMap<Integer,String> vectorCache=
      new java.util.LinkedHashMap<Integer,String>(8,0.75f,true){
       @Override protected boolean removeEldestEntry(java.util.Map.Entry<Integer,String> entry){return size()>6;}
@@ -183,6 +187,7 @@ final class MapQcfThumbnails extends WebView {
   // Decompression and SVG highlighting run on the JavaScript bridge worker.
   // Keep every page swipe off the BOOX/phone Android main thread.
   final int generation=++fullGeneration;
+  pendingCompactSvg=null;
   StringBuilder html=new StringBuilder(4000);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>")
    .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:14px sans-serif}")
@@ -220,6 +225,12 @@ final class MapQcfThumbnails extends WebView {
   }
   html.append("<script>var fullGeneration=").append(generation).append(";var currentSvgPage=").append(selected)
       .append(";var inlineQcf=").append(atlasSinglePageCompact?"true":"false").append(";")
+      .append("var fullParts=[],fullExpected=0;")
+      .append("function receiveFullChunk(i,total,part,gen){if(gen!==fullGeneration)return;")
+      .append("if(i!==fullExpected||total<1||total>100){MapPages.fullStatus(currentSvgPage,gen,false);return;}")
+      .append("fullParts.push(part);fullExpected++;")
+      .append("if(fullExpected===total){var joined=fullParts.join('');fullParts=[];receiveFull(joined,gen);}")
+      .append("else MapPages.fullChunkAck(i,gen);}")
       .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var box=document.querySelector('.paper');if(!box)return;")
       .append("if(!src){MapPages.fullStatus(currentSvgPage,gen,false);return;}")
       .append("if(inlineQcf){try{")
@@ -239,10 +250,24 @@ final class MapQcfThumbnails extends WebView {
       .append("</script></body></html>");
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
  }
+ /** Acknowledged 24 KB chunks keep WebView IPC well under Android Binder limits. */
+ private void sendCompactChunk(){
+  if(disposed||pendingCompactSvg==null||mosaicMode
+      ||pendingCompactGeneration!=fullGeneration||pendingCompactPage!=selected)return;
+  int index=pendingCompactNext;
+  int total=(pendingCompactSvg.length()+COMPACT_CHUNK_CHARS-1)/COMPACT_CHUNK_CHARS;
+  if(index>=total||total>100)return;
+  int start=index*COMPACT_CHUNK_CHARS;
+  String chunk=pendingCompactSvg.substring(start,Math.min(pendingCompactSvg.length(),start+COMPACT_CHUNK_CHARS));
+  pendingCompactNext++;
+  evaluateJavascript("if(window.receiveFullChunk)receiveFullChunk("+index+","+total+",'"+chunk+"',"+pendingCompactGeneration+");",null);
+ }
+
  /** Invalidate queued bridge work before releasing the native WebView. */
  @Override public void destroy(){
   if(disposed)return;
   disposed=true;++fullGeneration;++mosaicGeneration;
+  pendingCompactSvg=null;
   removeJavascriptInterface("MapPages");stopLoading();super.destroy();
  }
  private final class Bridge {
@@ -266,7 +291,13 @@ final class MapQcfThumbnails extends WebView {
    final String prepared=encoded;
    post(()->{
     if(disposed||mosaicMode||generation!=fullGeneration||page!=selected)return;
-    evaluateJavascript("if(window.receiveFull)receiveFull('"+prepared+"',"+generation+");",null);
+    if(atlasSinglePageCompact&&!prepared.isEmpty()){
+     pendingCompactSvg=prepared;
+     pendingCompactPage=page;pendingCompactGeneration=generation;pendingCompactNext=0;
+     sendCompactChunk();
+    }else{
+     evaluateJavascript("if(window.receiveFull)receiveFull('"+prepared+"',"+generation+");",null);
+    }
    });
   }
   /** Decode on the WebView JavaScript bridge worker, never on Android's UI thread.
@@ -287,10 +318,18 @@ final class MapQcfThumbnails extends WebView {
    });
   }
   @JavascriptInterface public void ready(int generation){post(()->{if(!disposed&&mosaicMode&&generation==mosaicGeneration)invalidate();});}
+  @JavascriptInterface public void fullChunkAck(int index,int generation){
+   post(()->{
+    if(!disposed&&pendingCompactSvg!=null&&generation==pendingCompactGeneration
+        &&pendingCompactNext==index+1&&generation==fullGeneration)sendCompactChunk();
+   });
+  }
   @JavascriptInterface public void fullStatus(int page,int generation,boolean success){
    post(()->{
-    if(!disposed&&!mosaicMode&&generation==fullGeneration&&page==selected&&listener!=null)
-     listener.onRendered(page,success);
+    if(!disposed&&!mosaicMode&&generation==fullGeneration&&page==selected){
+     pendingCompactSvg=null;
+     if(listener!=null)listener.onRendered(page,success);
+    }
    });
   }
   @JavascriptInterface public void shift(int delta){post(()->{if(!disposed)MapQcfThumbnails.this.shiftMosaic(delta);});}
