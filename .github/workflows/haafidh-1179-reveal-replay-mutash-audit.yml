@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: haafidh-1179-reveal-mutash-${{ github.ref }}
+  group: haafidh-1179-reveal-mutash-final-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   regression:
