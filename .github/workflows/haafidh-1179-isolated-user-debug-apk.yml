@@ -95,11 +95,30 @@ jobs:
             adb shell pidof "$package" | grep -Eq '[0-9]+'
             adb exec-out screencap -p > artifact/EMULATOR_HOME.png
             test -s artifact/EMULATOR_HOME.png
-      - name: No publication of debug APK in PUBLIC GitHub repository
+      - name: Encrypt private debug APK before leaving GitHub runner
         if: success()
+        shell: bash
         run: |
-          echo "PASS: APK compiled/installed in temporary runner but NOT uploaded."
-          test -s artifact/QURAN_HAAFIDH_1.17.9_BOOX_ANDROID_ISOLATED_TEST.apk
+          set -euo pipefail
+          input="artifact/QURAN_HAAFIDH_1.17.9_BOOX_ANDROID_ISOLATED_TEST.apk"
+          recipient="debug-transfer/haafidh1179-recipient-public-cert.pem"
+          test -s "$input"
+          test -s "$recipient"
+          mkdir -p encrypted-transfer
+          openssl cms -encrypt -binary -aes256 -in "$input" \
+            -out encrypted-transfer/haafidh1179-private-debug.apk.cms -outform DER "$recipient"
+          test -s encrypted-transfer/haafidh1179-private-debug.apk.cms
+          sha256sum "$input" > encrypted-transfer/ORIGINAL_APK_SHA256.txt
+          cp artifact/SOURCE_SHA.txt encrypted-transfer/
+          printf 'ENCRYPTED HANDOFF ONLY. This file is NOT an installable APK.\nOnly the holder of the offline private RSA key may decrypt it.\nNo plaintext APK, private key, signing secret, backup, or Atlas private asset uploaded.\n' > encrypted-transfer/ENCRYPTED_README.txt
+      - name: Upload ENCRYPTED transfer payload only - no public APK or release
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HAAFIDH-1179-RSA-ENCRYPTED-TRANSFER-ONLY
+          path: encrypted-transfer/
+          if-no-files-found: error
+          retention-days: 1
       - name: Upload diagnostic reports if unsuccessful, never the APK
         if: failure()
         uses: actions/upload-artifact@v4
