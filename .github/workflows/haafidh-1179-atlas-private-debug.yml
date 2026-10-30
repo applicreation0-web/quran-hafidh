@@ -69,6 +69,12 @@ jobs:
             'Private runtime flag enabled; proprietary assets NOT in public CI.' \
             'Do not distribute this staging APK as a complete debug.' \
             'No public release produced.' > hifz-app/build/private-atlas-debug/README.txt
+      - name: Upload staging APK and offline signing tools immediately
+        uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-1179-offline-staging-pre-emulator-NO-PRIVATE-ASSETS
+          path: hifz-app/build/private-atlas-debug/
+          retention-days: 2
       - name: Emulator install and launch smoke test
         uses: reactivecircus/android-emulator-runner@v2
         with:
