@@ -69,6 +69,16 @@ final class AtlasDiscriminantCases {
         }
         return -1;
     }
+    /** Exact source-backed verse match. Unlisted verses must never advertise a link. */
+    static Entry forVerse(int surah,int ayah) {
+        for(Entry entry:PILOT) {
+            if(entry.first.getSurah()==surah && entry.first.getAyah()==ayah
+                ||entry.second.getSurah()==surah && entry.second.getAyah()==ayah)
+                return entry;
+        }
+        return null;
+    }
+
     static int preferredIndex(int surah,int ayah) {
         int exact=indexFor(surah,ayah);
         return exact>=0?exact:0;
