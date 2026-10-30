@@ -77,7 +77,14 @@ jobs:
           disable-animations: true
           script: |
             mkdir -p hifz-app/build/atlas-comparison-audit
-            trap 'adb logcat -d -s HaafidhAtlasQCF:V QcfAtlasStrips:V chromium:E > hifz-app/build/atlas-comparison-audit/emulator-qcf-logcat.txt || true' EXIT
+            collect_audit() {
+              adb logcat -d -s HaafidhAtlasQCF:V QcfAtlasStrips:V chromium:E > hifz-app/build/atlas-comparison-audit/emulator-qcf-logcat.txt || true
+              adb pull /sdcard/Pictures/HaafidhAudit/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png || true
+              for capture in passive active-masked active-validated; do
+                adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-$capture.png hifz-app/build/atlas-comparison-audit/ || true
+              done
+            }
+            trap collect_audit EXIT
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest,com.quransafeguard.hifz.preview.RevisionAtlasInstrumentedTest
             adb pull /sdcard/Pictures/HaafidhAudit/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
             test -s hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png

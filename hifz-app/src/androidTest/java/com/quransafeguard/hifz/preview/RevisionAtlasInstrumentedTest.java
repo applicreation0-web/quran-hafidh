@@ -102,6 +102,7 @@ public final class RevisionAtlasInstrumentedTest {
                 Activity reader=ins.waitForMonitorWithTimeout(lecture,20000);assertNotNull(reader);
                 ins.waitForIdleSync();
                 JSONObject afterReaderBootstrap=snapshot(c);
+                assertTrue("Nested Lecture must preserve every Hifz backup store",sameJson(before,afterReaderBootstrap));
                 Thread.sleep(1200L);
                 assertEquals("Nested Lecture cannot resume the revision clock",paused,clock.get().elapsedMs());
                 assertTrue(sameJson(afterReaderBootstrap,snapshot(c)));
@@ -142,7 +143,9 @@ public final class RevisionAtlasInstrumentedTest {
                     assertEquals(View.GONE,((View)field(a,"discriminantButton")).getVisibility());
                 });
                 assertEquals("No active relation markers", "0",js(s,"document.querySelectorAll('#atlas-discriminant-marks button').length"));
-                assertNull(ins.waitForMonitorWithTimeout(atlas,500));
+                // Instrumentation.waitForMonitorWithTimeout removes its monitor even
+                // on timeout; query the monitor directly to keep observing the later launch.
+                assertNull(atlas.waitForActivityWithTimeout(500));
                 HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("atlas-revision-active-masked.png");
                 s.recreate();
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Active recreation stays masked");
