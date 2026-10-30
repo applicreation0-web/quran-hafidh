@@ -3,8 +3,6 @@ package com.quransafeguard.hifz.preview;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
-import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -26,15 +24,15 @@ import com.quransafeguard.hifz.core.VerseRef;
 public final class AtlasDiscriminantActivity extends Activity {
     static final String EXTRA_SURAH="discriminantSurah";
     static final String EXTRA_AYAH="discriminantAyah";
+    static final String EXTRA_ORIGIN="discriminantOrigin";
 
     private int selectedIndex;
     private GeometryRepository geometry;
     private MapQcfThumbnails left, right;
     private QcfAtlasVerseStrips strips;
-    private TextView title, position, leftHeader, rightHeader, kind, leftCue, rightCue;
-    private RelationRail rail;
+    private TextView title, leftHeader, rightHeader, kind, leftCue, rightCue;
+    private TextView leftRead, rightRead, returnToSource;
     private boolean disposed;
-    private Button prev,next;
     private int currentLeftPage, currentRightPage;
     private int leftPageStatus, rightPageStatus; // 0 pending, +1 decoded, -1 failed
 
@@ -61,6 +59,11 @@ public final class AtlasDiscriminantActivity extends Activity {
         return t;
     }
 
+    /**
+     * The comparison belongs to the invoking Lecture/Révision context.
+     * No browseable Atlas catalogue, no huge decorative rail, no stretched
+     * empty excerpt region, and two independently labelled Lecture destinations.
+     */
     private void build() {
         int h=getResources().getDisplayMetrics().heightPixels;
         int dpHeight=(int)(h/getResources().getDisplayMetrics().density);
@@ -72,29 +75,22 @@ public final class AtlasDiscriminantActivity extends Activity {
 
         LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
         top.addView(Ui.iconButton(this,"","Retour",v->finish()));
-        title=text("Versets ressemblants",compact?15:17,true);
+        title=text("",compact?15:17,true);
         title.setGravity(Gravity.CENTER);
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
         top.addView(title,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
-        prev=Ui.iconButton(this,"","Passage précédent du corpus",v->move(-1));
-        next=Ui.iconButton(this,"","Passage suivant du corpus",v->move(1));
-        top.addView(prev);top.addView(next);
         root.addView(top,new LinearLayout.LayoutParams(-1,Ui.dp(this,48)));
 
-        rail=new RelationRail();
-        root.addView(rail,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?66:85)));
-
         LinearLayout heads=Ui.row(this);heads.setGravity(Gravity.CENTER_VERTICAL);
-        leftHeader=text("",compact?11.5f:13f,true);
-        rightHeader=text("",compact?11.5f:13f,true);
+        leftHeader=text("",compact?12:13.5f,true);
+        rightHeader=text("",compact?12:13.5f,true);
         leftHeader.setGravity(Gravity.CENTER);rightHeader.setGravity(Gravity.CENTER);
         heads.addView(leftHeader,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?35:40),1));
         heads.addView(rightHeader,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?35:40),1));
         root.addView(heads);
 
         LinearLayout pair=Ui.row(this);
-        pair.setPadding(0,0,0,0);
         left=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
             @Override public void onPageChosen(int page){openReader(true,page);}
             @Override public void onOpenReading(int page){openReader(true,page);}
@@ -126,76 +122,87 @@ public final class AtlasDiscriminantActivity extends Activity {
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,-1,1f);
         rp.setMargins(Ui.dp(this,3),0,0,0);
         pair.addView(left,lp);pair.addView(right,rp);
-        // Initially share the space, then size these two original 345:550 pages
-        // to their physical aspect ratio. Any extra height belongs to readable QCF
-        // detail strips, not an empty block beneath the tiny page previews.
+        // Both genuine 345:550 KFQC pages remain intact and tappable.
         root.addView(pair,new LinearLayout.LayoutParams(-1,0,1f));
+
+        LinearLayout readingLinks=Ui.row(this);
+        leftRead=readingLink(true);
+        rightRead=readingLink(false);
+        readingLinks.addView(leftRead,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
+        readingLinks.addView(rightRead,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
+        root.addView(readingLinks);
 
         if(!veryCompact){
             strips=new QcfAtlasVerseStrips(this);
+            // Fixed-height QCF excerpts: the old weight=1 stretched this region
+            // into hundreds of pixels of blank space on phones.
             root.addView(strips,new LinearLayout.LayoutParams(-1,
-                Ui.dp(this,compact?94:125),1f));
+                Ui.dp(this,compact?106:126)));
         }
 
-        LinearLayout rel=Ui.row(this);rel.setGravity(Gravity.CENTER_VERTICAL);
-        kind=text("",compact?12:13.5f,true);
+        kind=text("",compact?13:15,true);
         kind.setGravity(Gravity.CENTER);
         kind.setMaxLines(2);
-        rel.addView(kind,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?44:48)));
-        root.addView(rel);
+        root.addView(kind,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?40:46)));
 
         LinearLayout cues=Ui.row(this);
-        leftCue=text("",compact?11.5f:13f,false);
-        rightCue=text("",compact?11.5f:13f,false);
-        leftCue.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);
-        rightCue.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);
+        leftCue=text("",compact?12.5f:14f,false);
+        rightCue=text("",compact?12.5f:14f,false);
+        leftCue.setPadding(Ui.dp(this,5),0,Ui.dp(this,5),0);
+        rightCue.setPadding(Ui.dp(this,5),0,Ui.dp(this,5),0);
         leftCue.setGravity(Gravity.CENTER);
         rightCue.setGravity(Gravity.CENTER);
         leftCue.setMaxLines(compact?2:3);rightCue.setMaxLines(compact?2:3);
         leftCue.setEllipsize(TextUtils.TruncateAt.END);
         rightCue.setEllipsize(TextUtils.TruncateAt.END);
-        cues.addView(leftCue,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?52:75),1f));
+        cues.addView(leftCue,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?54:76),1f));
         View line=new View(this);line.setBackgroundColor(Ui.LINE);
-        cues.addView(line,new LinearLayout.LayoutParams(Ui.dp(this,1),-1));
-        cues.addView(rightCue,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?52:75),1f));
+        cues.addView(line,new LinearLayout.LayoutParams(Math.max(1,Ui.dp(this,1)),-1));
+        cues.addView(rightCue,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?54:76),1f));
         root.addView(cues);
 
         LinearLayout bottom=Ui.row(this);bottom.setGravity(Gravity.CENTER_VERTICAL);
+        returnToSource=text("",compact?13:14,false);
+        returnToSource.setGravity(Gravity.CENTER_VERTICAL);
+        returnToSource.setPadding(Ui.dp(this,13),0,0,0);
+        returnToSource.setContentDescription("Retour à la séance d’origine");
+        returnToSource.setOnClickListener(v->finish());
+        bottom.addView(returnToSource,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
         Button explanation=Ui.iconButton(this,"","Indice et référence",v->showExplanation());
         bottom.addView(explanation,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
-        position=text("",12f,false);
-        position.setGravity(Gravity.CENTER);
-        bottom.addView(position,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
-        Button open=Ui.iconButton(this,"","Lecture",v->openReader(true,currentLeftPage));
-        bottom.addView(open,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         root.addView(bottom,new LinearLayout.LayoutParams(-1,Ui.dp(this,48)));
-        // Layout after real window insets / density are resolved; portrait phone,
-        // landscape, BOOX and Android font scaling share the same ratio rule.
+
+        // Only the original QCF full pages take flexible height; Arabic excerpts
+        // are no longer stretched on tall phone/BOOX screens.
         root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,oright,ob)->{
             if(pair.getWidth()<Ui.dp(this,120)||root.getHeight()<Ui.dp(this,400))return;
             int fixed=root.getPaddingTop()+root.getPaddingBottom();
             for(int i=0;i<root.getChildCount();i++){
                 View child=root.getChildAt(i);
-                if(child!=pair&&child!=strips)fixed+=child.getMeasuredHeight();
+                if(child!=pair)fixed+=child.getMeasuredHeight();
             }
-            int flexible=Math.max(0,root.getHeight()-fixed);
-            int minStrip=strips==null?0:Ui.dp(this,compact?94:125);
-            int available=Math.max(Ui.dp(this,100),flexible-minStrip);
+            int available=root.getHeight()-fixed;
             int natural=Math.round(Math.max(0,(pair.getWidth()-Ui.dp(this,8))/2f)*550f/345f);
-            int desired=strips==null?flexible:Math.min(available,natural+Ui.dp(this,4));
-            LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)pair.getLayoutParams();
-            if(desired>Ui.dp(this,100)&&(params.height!=desired||params.weight!=0f)){
-                params.height=desired;params.weight=0f;pair.setLayoutParams(params);
+            int desired=Math.min(available,natural+Ui.dp(this,4));
+            if(desired>Ui.dp(this,110)){
+                LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)pair.getLayoutParams();
+                if(params.height!=desired||params.weight!=0f){
+                    params.height=desired;params.weight=0f;pair.setLayoutParams(params);
+                }
             }
         });
         setContentView(root);
         Ui.respectSystemBars(this,root,0,0,0,0);
     }
 
-    private void move(int d){
-        int nextIndex=selectedIndex+d;
-        if(nextIndex<0||nextIndex>=AtlasDiscriminantCases.PILOT.size())return;
-        selectedIndex=nextIndex;render();
+    private TextView readingLink(boolean first){
+        TextView link=text("",14f,true);
+        link.setGravity(Gravity.CENTER);
+        link.setPaintFlags(link.getPaintFlags()|android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+        link.setContentDescription(first?"Ouvrir le premier verset en Lecture":
+            "Ouvrir le second verset en Lecture");
+        link.setOnClickListener(v->openReader(first,first?currentLeftPage:currentRightPage));
+        return link;
     }
 
     private AtlasDiscriminantCases.Entry current(){
@@ -222,13 +229,16 @@ public final class AtlasDiscriminantActivity extends Activity {
         left.showPages(currentLeftPage,currentLeftPage,currentLeftPage,
             c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
 
-        kind.setText("Différence · "+c.kind);
+        title.setText("Comparer · "+c.first+" ↔ "+c.second);
+        kind.setText(c.kind);
+        leftRead.setText("Lire "+c.first+" en Lecture");
+        rightRead.setText("Lire "+c.second+" en Lecture");
+        String origin=getIntent().getStringExtra(EXTRA_ORIGIN);
+        String label="Révision active".equals(origin)?"Révision active":
+            "Révision passive".equals(origin)?"Révision passive":"Lecture";
+        returnToSource.setText("← Retour à "+label);
         leftCue.setText(c.firstCue);
         rightCue.setText(c.secondCue);
-        position.setText((selectedIndex+1)+" / "+AtlasDiscriminantCases.PILOT.size());
-        prev.setEnabled(selectedIndex>0);
-        next.setEnabled(selectedIndex<AtlasDiscriminantCases.PILOT.size()-1);
-        rail.invalidate();
     }
 
     private void showRightAfterLeft(){
@@ -314,28 +324,4 @@ public final class AtlasDiscriminantActivity extends Activity {
         super.onDestroy();
     }
 
-    /** Original Atlas visual grammar: one fine rail, filled nodes and a double-ring active point. */
-    private final class RelationRail extends View {
-        private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-        RelationRail(){super(AtlasDiscriminantActivity.this);}
-        @Override protected void onDraw(Canvas c) {
-            super.onDraw(c);
-            AtlasDiscriminantCases.Entry e=current();
-            float w=getWidth(),h=getHeight();
-            float y=h*.55f,a=w*.25f,b=w*.75f;
-            p.setColor(Ui.INK);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(Ui.dp(getContext(),1));
-            c.drawLine(a+Ui.dp(getContext(),8),y,b-Ui.dp(getContext(),8),y,p);
-            p.setStyle(Paint.Style.FILL);
-            c.drawCircle(a,y,Ui.dp(getContext(),7),p);
-            c.drawCircle(b,y,Ui.dp(getContext(),5),p);
-            p.setStyle(Paint.Style.STROKE);
-            c.drawCircle(a,y,Ui.dp(getContext(),13),p);
-            c.drawCircle(a,y,Ui.dp(getContext(),17),p);
-            p.setStyle(Paint.Style.FILL);
-            p.setTextAlign(Paint.Align.CENTER);
-            p.setTextSize(Ui.dp(getContext(),12));
-            c.drawText(e.first.toString(),a,Ui.dp(getContext(),17),p);
-            c.drawText(e.second.toString(),b,Ui.dp(getContext(),17),p);
-        }
-    }
 }
