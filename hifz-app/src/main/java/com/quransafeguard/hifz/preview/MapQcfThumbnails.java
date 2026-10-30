@@ -189,6 +189,7 @@ final class MapQcfThumbnails extends WebView {
    .append("body{display:flex;flex-direction:column}.tile{flex:1;min-height:0;width:100%;display:flex;justify-content:center;padding:4px 8px;overflow:hidden}")
    .append(".paper{width:100%;height:100%;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}")
    .append(".paper img{display:block;flex:none;object-fit:contain;width:auto;height:auto;max-width:100%;max-height:100%}")
+   .append(".paper svg{display:block;flex:none;max-width:100%;max-height:100%;width:100%;height:100%;overflow:hidden}")
    .append("footer{height:60px;flex:none;text-align:center;padding:2px 6px 3px}")
    .append("nav{height:54px;display:flex;gap:4px;align-items:center;justify-content:center;overflow:hidden}")
    .append("button{flex:none;width:44px;height:44px;min-width:44px;min-height:44px;border:1px solid #b7b6b0;border-radius:50%;background:transparent;color:#121211;font:14px sans-serif;padding:0}")
@@ -202,8 +203,12 @@ final class MapQcfThumbnails extends WebView {
    .append("function readPage(p){if(Date.now()>ignoreClick)MapPages.open(p);}function choosePage(p){if(Date.now()>ignoreClick)MapPages.choose(p);}</script></head><body>");
   html.append("<main class='tile selected'><div class='paper' role='button' tabindex='0' aria-label='Lecture page ")
       .append(selected).append("' onclick='readPage(").append(selected)
-      .append(")'><img alt='Page ").append(selected)
-      .append(" entière' onload='fit()'></div></main>");
+      .append(")'>");
+  if (!atlasSinglePageCompact)
+   html.append("<img alt='Page ").append(selected).append(" entière' onload='fit()'>");
+  else
+   html.append("<span id='qcf-loading' style='font-size:12px'>Chargement du Mushaf QCF…</span>");
+  html.append("</div></main>");
   if (!atlasSinglePageCompact) {
   html.append("<footer><nav aria-label='Pages de l’unité'>");
   for(int p=start;p<=end;p++){
@@ -213,10 +218,20 @@ final class MapQcfThumbnails extends WebView {
   }
   html.append("</nav></footer>");
   }
-  html.append("<script>var fullGeneration=").append(generation).append(";var currentSvgPage=").append(selected).append(";")
-      .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var img=document.querySelector('.paper img');if(!img)return;")
-      .append("if(!src){img.alt='Page indisponible';MapPages.fullStatus(currentSvgPage,gen,false);return;}")
-      .append("img.onload=function(){fit();requestAnimationFrame(function(){fit();requestAnimationFrame(fit);});MapPages.fullStatus(currentSvgPage,gen,true);};")
+  html.append("<script>var fullGeneration=").append(generation).append(";var currentSvgPage=").append(selected)
+      .append(";var inlineQcf=").append(atlasSinglePageCompact?"true":"false").append(";")
+      .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var box=document.querySelector('.paper');if(!box)return;")
+      .append("if(!src){MapPages.fullStatus(currentSvgPage,gen,false);return;}")
+      .append("if(inlineQcf){try{")
+      .append("var raw=atob(src),bytes=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);")
+      .append("var parsed=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'image/svg+xml');")
+      .append("var svg=parsed.documentElement;if(!svg||svg.localName!=='svg'||parsed.getElementsByTagName('parsererror').length)throw Error('SVG XML invalid');")
+      .append("var paths=svg.getElementsByTagName('path').length;if(paths<20)throw Error('Missing original QCF paths');")
+      .append("var imported=document.importNode(svg,true);box.textContent='';box.appendChild(imported);")
+      .append("requestAnimationFrame(function(){requestAnimationFrame(function(){var rect=imported.getBoundingClientRect();MapPages.fullStatus(currentSvgPage,gen,rect.width>40&&rect.height>60);});});")
+      .append("}catch(err){box.textContent='Page QCF indisponible';MapPages.fullStatus(currentSvgPage,gen,false);}return;}")
+      .append("var img=document.querySelector('.paper img');if(!img){MapPages.fullStatus(currentSvgPage,gen,false);return;}")
+      .append("img.onload=function(){fit();requestAnimationFrame(function(){fit();requestAnimationFrame(function(){MapPages.fullStatus(currentSvgPage,gen,true);});});};")
       .append("img.onerror=function(){img.alt='Page QCF indisponible';MapPages.fullStatus(currentSvgPage,gen,false);};")
       .append("img.src='data:image/svg+xml;base64,'+src;}")
       .append("new ResizeObserver(()=>{fit();pills();}).observe(document.body);pills();")
