@@ -25,7 +25,8 @@ final class AtlasDiscriminantCases {
         }
     }
     private AtlasDiscriminantCases() {}
-    private static final int[] NONE = {};
+    // One-based lexical positions checked against Quranic Arabic Corpus.
+    // Android QCF sidecar geometry and genuine SVG crops are independently gated in CI.
     static final List<Entry> PILOT = Collections.unmodifiableList(Arrays.asList(
         new Entry(30,37,39,52,"Mot remplacé",
             "Ar-Rūm : yaraw (« voir »).",
@@ -40,21 +41,21 @@ final class AtlasDiscriminantCases {
             "La cause exprimée détermine l'ordre du rappel de la subsistance : "
                 +"pauvreté actuelle ou pauvreté redoutée.",
             "Ibn Jamāʿa, Kashf al-Maʿānī, question 137",
-            "https://www.islamweb.org/ar/library/content/244/134",NONE,NONE),
+            "https://www.islamweb.org/ar/library/content/244/134",new int[]{17,20,21},new int[]{4,7,8}),
         new Entry(2,60,7,160,"Verbe remplacé",
             "Al-Baqarah : infajarat — écoulement abondant.",
             "Al-Aʿrāf : inbajasat — jaillissement.",
             "Les deux descriptions évoquent l'eau issue de la pierre. "
                 +"Le choix des verbes distingue l'abondance de l'apparition initiale.",
             "Al-Karmānī, Al-Burhān fī Mutashābih al-Qurʾān",
-            "https://ablibrary.net/book_content/b/12494/74?lang=ar",NONE,NONE),
+            "https://ablibrary.net/book_content/b/12494/74?lang=ar",new int[]{9},new int[]{16}),
         new Entry(2,58,7,161,"Variations multiples",
             "Al-Baqarah : « entrez », puis mangez abondamment.",
             "Al-Aʿrāf : « habitez », puis mangez.",
             "La première formulation insiste sur l'entrée dans la ville ; "
                 +"la seconde sur le séjour. Plusieurs autres différences existent dans ces versets.",
             "Fatḥ al-Bayān, commentaire de 7:161",
-            "https://tafsir.app/fath-albayan/7/161",NONE,NONE)
+            "https://tafsir.app/fath-albayan/7/161",new int[]{3,6,10},new int[]{4,7})
     ));
 
     static int preferredIndex(int surah,int ayah) {
