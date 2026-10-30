@@ -36,9 +36,14 @@ jobs:
           const root="app/src/main/assets/mushaf/hafs/kfqc/svg-br/";
           const files=fs.readdirSync(root).filter(x=>/^\d{3}\.svg\.br$/.test(x));
           if(files.length!==604)throw new Error("Expected exactly 604 original QCF pages");
-          for(const page of [1,8,100,302,406,463,604]){
+          for(const page of [1,8,9,100,148,171,285,302,406,408,463,464,604]){
             const p=root+String(page).padStart(3,"0")+".svg.br";
             const svg=zlib.brotliDecompressSync(fs.readFileSync(p)).toString("utf8");
+            if([9,148,171,285,408,464].includes(page)){
+              process.stdout.write("QCF page "+page+": "+Buffer.byteLength(svg,"utf8")+" uncompressed UTF-8 bytes\\n");
+              if(Buffer.byteLength(svg,"utf8")>850000)
+                throw new Error("Page "+page+" exceeds hard-coded MapQcfThumbnails.readSvg 850000 byte limit");
+            }
             if(!svg.includes("<svg")||!svg.includes("</svg>"))throw new Error("Broken SVG "+page);
             const vb=svg.match(/viewBox\s*=\s*['"]([^'"]+)['"]/);
             if(!vb)throw new Error("Missing QCF viewBox "+page);
