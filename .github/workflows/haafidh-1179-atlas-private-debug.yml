@@ -1,0 +1,90 @@
+name: Quran Haafidh 1.17.9 Atlas — private side-by-side debug APK (NO RELEASE)
+on:
+  push:
+    branches:
+      - work/haafidh-1179-atlas-private-debug-20261030
+    paths:
+      - '.github/workflows/haafidh-1179-atlas-private-debug.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provenance and NO RELEASE guard
+        run: |
+          set -euo pipefail
+          echo "Commit: $(git rev-parse HEAD)"
+          test "${GITHUB_REF_NAME}" = "work/haafidh-1179-atlas-private-debug-20261030"
+          test -z "${HIFZ_KEYSTORE_PATH:-}"
+          test -z "${HIFZ_PRIVATE_RELEASE_UPGRADE:-}"
+          test -z "${AYAH_THEMES_PRIVATE_114:-}"
+          echo "PASS: isolated private debug only; official release signing and private assets unavailable"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install pinned Android tools and authentic QCF Mushaf
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Assemble isolated debug application (not release)
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :hifz-app:assembleDebug
+      - name: Verify app identity, debug signature and hash
+        run: |
+          set -euo pipefail
+          mkdir -p hifz-app/build/private-atlas-debug
+          mapfile -t apks < <(find hifz-app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -type f | sort)
+          test "${#apks[@]}" -eq 1
+          apk="${apks[0]}"
+          aapt="${ANDROID_HOME}/build-tools/36.0.0/aapt"
+          signer="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
+          "${aapt}" dump badging "$apk" | head -n 20 | tee hifz-app/build/private-atlas-debug/package-metadata.txt
+          package=$("${aapt}" dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+          test "$package" = "com.quransafeguard.hifz.ibnkathirtest"
+          test "$package" != "com.quransafeguard.hifz"
+          "${signer}" verify --verbose --print-certs "$apk" | tee hifz-app/build/private-atlas-debug/signature.txt
+          cp "$apk" hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_PRIVATE_DEBUG.apk
+          sha256sum hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_PRIVATE_DEBUG.apk | tee hifz-app/build/private-atlas-debug/SHA256SUMS.txt
+          printf '%s\n' 'Private side-by-side debug. Does not upgrade the official application.' \
+            'Package: com.quransafeguard.hifz.ibnkathirtest' \
+            'Private proprietary Atlas title pack is NOT embedded.' \
+            'No Hifz progression imported from the official app.' \
+            'No public release produced.' > hifz-app/build/private-atlas-debug/README.txt
+      - name: Emulator install and launch smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            set -e
+            apk=hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_PRIVATE_DEBUG.apk
+            adb install -r "$apk"
+            adb shell am start -n com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity
+            sleep 7
+            adb shell dumpsys activity activities > hifz-app/build/private-atlas-debug/emulator-activities.txt
+            grep -F "com.quransafeguard.hifz.ibnkathirtest" hifz-app/build/private-atlas-debug/emulator-activities.txt
+            adb exec-out screencap -p > hifz-app/build/private-atlas-debug/emulator-launch.png
+            test -s hifz-app/build/private-atlas-debug/emulator-launch.png
+      - name: Attach private debug, signature evidence, and smoke screenshot
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-1179-atlas-private-side-by-side-debug-NO-RELEASE
+          path: hifz-app/build/private-atlas-debug/
+          retention-days: 7
