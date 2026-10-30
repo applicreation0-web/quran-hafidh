@@ -1329,6 +1329,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                         mapPreviewUnits.forSurah(surah),originalQcf);
             }
         }
+        updateDiscriminantButton();
     }
     @Override public void finish() {
         if(mapUnitPreview){
