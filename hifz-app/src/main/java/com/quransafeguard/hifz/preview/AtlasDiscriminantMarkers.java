@@ -62,11 +62,11 @@ final class AtlasDiscriminantMarkers {
             "btn.style.cssText='position:absolute;left:'+x+'px;top:'+y+'px;"+
             "width:34px;height:34px;padding:5px;margin:0;pointer-events:auto;"+
             "border:1px solid #777;border-radius:6px;background:#faf8f2;color:#121211';"+
-            "btn.innerHTML='<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" "+
-            "width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" "+
-            "stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">"+
-            "<path d=\"M2.5 5.5h6v13h-6zM15.5 5.5h6v13h-6zM8.5 12h7\"/>"+
-            "<circle cx=\"5.5\" cy=\"12\" r=\"1.7\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.7\"/></svg>';"+
+            "btn.innerHTML='<svg xmlns=\\\"http://www.w3.org/2000/svg\\\" viewBox=\\\"0 0 24 24\\\" "+
+            "width=\\\"24\\\" height=\\\"24\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" "+
+            "stroke-width=\\\"2.6\\\" stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\">"+
+            "<path d=\\\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\\\"/>"+
+            "<path d=\\\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\\\"/></svg>';"+
             "btn.addEventListener('click',function(event){event.stopPropagation();"+
             "HifzNative.comparisonTap(Number(p[0]),Number(p[1]));});"+
             "root.appendChild(btn);"+
