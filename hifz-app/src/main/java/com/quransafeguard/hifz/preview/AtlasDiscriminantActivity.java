@@ -126,13 +126,15 @@ public final class AtlasDiscriminantActivity extends Activity {
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,-1,1f);
         rp.setMargins(Ui.dp(this,3),0,0,0);
         pair.addView(left,lp);pair.addView(right,rp);
-        // The genuine 15-line QCF page gets all remaining vertical space, never a stretched font.
+        // Initially share the space, then size these two original 345:550 pages
+        // to their physical aspect ratio. Any extra height belongs to readable QCF
+        // detail strips, not an empty block beneath the tiny page previews.
         root.addView(pair,new LinearLayout.LayoutParams(-1,0,1f));
 
         if(!veryCompact){
             strips=new QcfAtlasVerseStrips(this);
             root.addView(strips,new LinearLayout.LayoutParams(-1,
-                Ui.dp(this,compact?94:125)));
+                Ui.dp(this,compact?94:125),1f));
         }
 
         LinearLayout rel=Ui.row(this);rel.setGravity(Gravity.CENTER_VERTICAL);
@@ -159,16 +161,33 @@ public final class AtlasDiscriminantActivity extends Activity {
         root.addView(cues);
 
         LinearLayout bottom=Ui.row(this);bottom.setGravity(Gravity.CENTER_VERTICAL);
-        Button explanation=Ui.smallButton(this,"Explication",v->showExplanation());
-        explanation.setContentDescription("Indice détaillé et référence bibliographique");
-        bottom.addView(explanation,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
+        Button explanation=Ui.iconButton(this,"","Indice et référence",v->showExplanation());
+        bottom.addView(explanation,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         position=text("",12f,false);
         position.setGravity(Gravity.CENTER);
-        bottom.addView(position,new LinearLayout.LayoutParams(0,Ui.dp(this,48),0.6f));
-        Button open=Ui.smallButton(this,"Lecture",v->openReader(true,currentLeftPage));
-        open.setContentDescription("Ouvrir la source dans le vrai Mushaf");
-        bottom.addView(open,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
+        bottom.addView(position,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
+        Button open=Ui.iconButton(this,"","Lecture",v->openReader(true,currentLeftPage));
+        bottom.addView(open,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         root.addView(bottom,new LinearLayout.LayoutParams(-1,Ui.dp(this,48)));
+        // Layout after real window insets / density are resolved; portrait phone,
+        // landscape, BOOX and Android font scaling share the same ratio rule.
+        root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,oright,ob)->{
+            if(pair.getWidth()<Ui.dp(this,120)||root.getHeight()<Ui.dp(this,400))return;
+            int fixed=root.getPaddingTop()+root.getPaddingBottom();
+            for(int i=0;i<root.getChildCount();i++){
+                View child=root.getChildAt(i);
+                if(child!=pair&&child!=strips)fixed+=child.getMeasuredHeight();
+            }
+            int flexible=Math.max(0,root.getHeight()-fixed);
+            int minStrip=strips==null?0:Ui.dp(this,compact?94:125);
+            int available=Math.max(Ui.dp(this,100),flexible-minStrip);
+            int natural=Math.round(Math.max(0,(pair.getWidth()-Ui.dp(this,8))/2f)*550f/345f);
+            int desired=strips==null?flexible:Math.min(available,natural+Ui.dp(this,4));
+            LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)pair.getLayoutParams();
+            if(desired>Ui.dp(this,100)&&(params.height!=desired||params.weight!=0f)){
+                params.height=desired;params.weight=0f;pair.setLayoutParams(params);
+            }
+        });
         setContentView(root);
         Ui.respectSystemBars(this,root,0,0,0,0);
     }
