@@ -55,7 +55,19 @@ final class AtlasDiscriminantCases {
             "La première formulation insiste sur l'entrée dans la ville ; "
                 +"la seconde sur le séjour. Plusieurs autres différences existent dans ces versets.",
             "Fatḥ al-Bayān, commentaire de 7:161",
-            "https://tafsir.app/fath-albayan/7/161",new int[]{3,6,10},new int[]{4,7})
+            "https://tafsir.app/fath-albayan/7/161",new int[]{3,6,10},new int[]{4,7}),
+        // User-priority intra-surah confusion. Ten identical opening words;
+        // the 11th word branches: وَاذْكُرُوا versus وَاسْمَعُوا.
+        // Provenance: user's own recurring error, verified against Qur'an 2:63/2:93,
+        // not attributed to al-'Abbad's book.
+        new Entry(2,63,2,93,"Même début, puis bifurcation",
+            "2:63 : وَاذْكُرُوا — et rappelez-vous.",
+            "2:93 : وَاسْمَعُوا — et écoutez.",
+            "Après خُذُوا مَا آتَيْنَاكُمْ بِقُوَّةٍ, le 11e mot diverge. "
+                +"2:63 poursuit avec le rappel du contenu et la piété ; "
+                +"2:93 rapporte la réponse « nous avons entendu et désobéi ».",
+            "Ajout prioritaire de l'utilisateur ; Coran 2:63 et 2:93",
+            "https://quran.com/2/63",new int[]{11},new int[]{11})
     ));
 
     /** Strict lookup for contextual actions: never show an unrelated comparison.
