@@ -1,0 +1,114 @@
+name: Quran Haafidh 1.17.9 - ISOLATED PRIVATE TEST APK (NO RELEASE)
+on:
+  push:
+    branches:
+      - debug/haafidh-1179-boox-test-20261030
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-1179-private-debug-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-isolated-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      HAAFIDH_1179_ISOLATED_DEBUG: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce separate test identity and previously validated core
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "debug/haafidh-1179-boox-test-20261030"
+          test "${HAAFIDH_1179_ISOLATED_DEBUG}" = "1"
+          test -z "${HIFZ_KEYSTORE_PATH:-}"
+          test -z "${HIFZ_PRIVATE_RELEASE_UPGRADE:-}"
+          test -z "${AYAH_THEMES_PRIVATE_114:-}"
+          git merge-base --is-ancestor 0b2fb5ba25afe462fce6a0251da308a1382155fa HEAD
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Fetch original 604-page QCF Mushaf and SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Complete Hifz tests and compile isolated Android debug
+        run: |
+          gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:assembleDebug
+      - name: Verify APK package identity, debug signature and private asset boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifact
+          mapfile -t apks < <(find hifz-app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -type f)
+          test "${#apks[@]}" -eq 1
+          apk="${apks[0]}"
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > artifact/BADGING.txt
+          grep -q "package: name='com.quransafeguard.hifz.haafidh1179debug' versionCode='46' versionName='1.17.9-BOOX-TEST'" artifact/BADGING.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" > artifact/SIGNATURE.txt
+          python3 - "$apk" <<'PY'
+          import sys, zipfile, re
+          with zipfile.ZipFile(sys.argv[1]) as apk:
+              names=apk.namelist()
+          qcf=[n for n in names if re.fullmatch(r"assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br",n)]
+          assert len(qcf)==604, f"Expected all 604 authentic QCF pages, got {len(qcf)}"
+          assert not any(n.startswith("assets/atlas_private/") or
+              n.startswith("assets/ayah_themes_private/") or
+              n=="assets/atlas/atlas_display_catalog_v1.json" for n in names), "Private corpus leaked to a test artifact"
+          assert any(n.startswith("assets/tafsir/") for n in names), "Offline public Tafsir missing"
+          print("PASS: 604 genuine QCF pages, offline Tafsir and no private Atlas corpus")
+          PY
+          cp "$apk" artifact/QURAN_HAAFIDH_1.17.9_BOOX_ANDROID_ISOLATED_TEST.apk
+          git rev-parse HEAD > artifact/SOURCE_SHA.txt
+          printf 'ISOLATED DEBUG ONLY - install alongside official Quran Haafidh.\nApplication ID: com.quransafeguard.hifz.haafidh1179debug\nVersion: 1.17.9-BOOX-TEST\nThe five verified mutashabihat pairs and all 604 authentic Mushaf pages are present.\nThe remaining 291 al-Abbad candidates are research only.\nPrivate Atlas editorial assets are NOT bundled in the public-source test APK.\nNever uninstall or replace official Quran Haafidh to try this build.\nNot a signed official in-place upgrade or release.\n' > artifact/READ_ME_FIRST.txt
+          (cd artifact && sha256sum QURAN_HAAFIDH_1.17.9_BOOX_ANDROID_ISOLATED_TEST.apk > SHA256SUMS.txt)
+      - name: Verify real emulator installation and launch of test-only package
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            apk="artifact/QURAN_HAAFIDH_1.17.9_BOOX_ANDROID_ISOLATED_TEST.apk"
+            package="com.quransafeguard.hifz.haafidh1179debug"
+            adb install -r "$apk"
+            adb shell pm path "$package" | grep -F "package:"
+            adb shell am start -W -n "$package/com.quransafeguard.hifz.preview.MainActivity"
+            sleep 3
+            adb shell pidof "$package" | grep -Eq '[0-9]+'
+            adb exec-out screencap -p > artifact/EMULATOR_HOME.png
+            test -s artifact/EMULATOR_HOME.png
+      - name: Upload private test ZIP with APK and provenance - NO GitHub release
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: QURAN-HAAFIDH-1179-BOOX-ANDROID-ISOLATED-DEBUG
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload diagnostic reports if unsuccessful, never the APK
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: QURAN-HAAFIDH-1179-DEBUG-FAILED-DIAGNOSTICS
+          path: |
+            hifz-app/build/reports/
+            hifz-app/build/test-results/
+            hifz-core/build/test-results/
+          if-no-files-found: warn
+          retention-days: 7
