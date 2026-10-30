@@ -26,6 +26,7 @@ final class QcfAtlasVerseStrips extends WebView {
     private VerseRef left, right;
     private int pageLeft,pageRight;
     private int[] wordsLeft,wordsRight;
+    private final int[] renderStatus=new int[2];
 
     QcfAtlasVerseStrips(Context context) {
         super(context);
@@ -46,20 +47,26 @@ final class QcfAtlasVerseStrips extends WebView {
         left=a;right=b;pageLeft=aPage;pageRight=bPage;
         wordsLeft=aWords.clone();wordsRight=bWords.clone();
         int gen=++generation;
+        renderStatus[0]=0;renderStatus[1]=0;
         String html="<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
             +"<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0}"
             +"main{display:grid;grid-template-columns:1fr 1fr;height:100%;gap:6px;padding:3px}"
             +"section{border-top:1px solid #88847d;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center}"
-            +"img{width:100%;height:100%;object-fit:contain;display:block}"
+            +"section .crop{width:100%;height:100%;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}"
+            +"section svg{display:block;width:100%;height:100%;max-width:100%;max-height:100%}"
             +"span{font:12px sans-serif;color:#524f49;text-align:center}</style></head>"
-            +"<body><main><section><span id='hint0'>Extrait QCF indisponible — ouvrir le Muṣḥaf</span><img id='v0' hidden></section>"
-            +"<section><span id='hint1'>Extrait QCF indisponible — ouvrir le Muṣḥaf</span><img id='v1' hidden></section></main>"
+            +"<body><main><section><div class='crop' id='crop0'><span>Chargement de l'extrait QCF…</span></div></section>"
+            +"<section><div class='crop' id='crop1'><span>Chargement de l'extrait QCF…</span></div></section></main>"
             +"<script>var gen="+gen+";"
-            +"function receiveStrip(i,src,g){if(g!==gen)return;var im=document.getElementById('v'+i);"
-            +"if(!src||!im)return;im.onload=function(){this.hidden=false;document.getElementById('hint'+i).hidden=true};"
-            +"im.onerror=function(){im.hidden=true;document.getElementById('hint'+i).hidden=false};"
-            +"im.src='data:image/svg+xml;base64,'+src;}"
-            +"addEventListener('load',()=>{QcfStrip.render(0,gen);QcfStrip.render(1,gen)});"
+            +"function receiveStrip(i,src,g){if(g!==gen)return;var target=document.getElementById('crop'+i);if(!target)return;"
+            +"if(!src){target.textContent='Extrait QCF indisponible — ouvrir le Muṣḥaf';QcfStrip.stripStatus(i,g,false);return;}"
+            +"try{var raw=atob(src),bytes=new Uint8Array(raw.length);for(var j=0;j<raw.length;j++)bytes[j]=raw.charCodeAt(j);"
+            +"var parsed=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'image/svg+xml');"
+            +"var svg=parsed.documentElement;if(!svg||svg.localName!=='svg'||parsed.getElementsByTagName('parsererror').length||svg.getElementsByTagName('path').length<20)throw Error('Bad QCF excerpt');"
+            +"var original=document.importNode(svg,true);target.textContent='';target.appendChild(original);"
+            +"requestAnimationFrame(function(){requestAnimationFrame(function(){var box=original.getBoundingClientRect();QcfStrip.stripStatus(i,g,box.width>20&&box.height>10);});});"
+            +"}catch(e){target.textContent='Extrait QCF indisponible — ouvrir le Muṣḥaf';QcfStrip.stripStatus(i,g,false);}}"
+            +"addEventListener('load',()=>QcfStrip.render(0,gen));"
             +"</script></body></html>";
         loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
     }
@@ -117,6 +124,9 @@ final class QcfAtlasVerseStrips extends WebView {
         return cropped.replace("</svg>",strokes+"</svg>");
     }
 
+    boolean bothRenderedForTest(){return renderStatus[0]==1&&renderStatus[1]==1;}
+    int failureCountForTest(){return (renderStatus[0]<0?1:0)+(renderStatus[1]<0?1:0);}
+
     @Override public void destroy() {
         if(disposed)return;
         disposed=true;++generation;removeJavascriptInterface("QcfStrip");stopLoading();
@@ -124,6 +134,14 @@ final class QcfAtlasVerseStrips extends WebView {
     }
 
     private final class Bridge {
+        @JavascriptInterface public void stripStatus(int side,int gen,boolean success){
+            post(()->{
+                if(disposed||gen!=generation||side<0||side>1)return;
+                renderStatus[side]=success?1:-1;
+                if(side==0 && renderStatus[1]==0)
+                    evaluateJavascript("if(window.QcfStrip)QcfStrip.render(1,"+gen+");",null);
+            });
+        }
         @JavascriptInterface public void render(int side,int gen){
             if(disposed || gen!=generation || (side!=0&&side!=1))return;
             VerseRef verse=side==0?left:right;
