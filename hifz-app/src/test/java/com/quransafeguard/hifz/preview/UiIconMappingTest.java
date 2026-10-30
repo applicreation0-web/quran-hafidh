@@ -37,6 +37,7 @@ public final class UiIconMappingTest {
             {"Carte", R.drawable.ic_ui_semantic_map},
             {"Atlas", R.drawable.ic_palace_compass},
             {"Versets ressemblants", R.drawable.ic_ui_atlas_similar},
+            {"Indice et référence", R.drawable.ic_ui_info},
             {"Carte Atlas", R.drawable.ic_ui_semantic_map},
             {"Choisir une sourate", R.drawable.ic_ui_surah_list},
             {"Mémoriser", R.drawable.ic_ui_memorize},
