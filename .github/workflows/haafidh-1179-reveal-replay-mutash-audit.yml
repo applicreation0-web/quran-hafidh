@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  statuses: write
 concurrency:
   group: haafidh-1179-reveal-mutash-final-${{ github.ref }}
   cancel-in-progress: true
@@ -37,7 +38,35 @@ jobs:
           sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
           bash scripts/fetch_mushaf_pages.sh
       - name: Hifz core plus all JVM and source contracts
-        run: gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+        run: |
+          set -o pipefail
+          gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest 2>&1 | tee "$RUNNER_TEMP/haafidh-jvm.log"
+      - name: Report concise Gradle diagnostics as private commit statuses
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess
+          path=os.path.join(os.environ["RUNNER_TEMP"],"haafidh-jvm.log")
+          rows=open(path,encoding="utf-8",errors="replace").read().splitlines() if os.path.exists(path) else ["Gradle log not produced"]
+          patterns=[r"\\.java:\\d+: error:",r"\\.kt:\\d+: error:",r"^> Task .+ FAILED",r"^\\s*[^ ].+ > .+ FAILED",r"^FAILURE:",r"^\\* What went wrong:",r"^Execution failed for task",r"^There were failing tests",r"^\\s*Caused by:"]
+          rx=re.compile("|".join(patterns),re.I)
+          failures=[re.sub(r"\\x1b\\[[0-9;]*m","",x).strip() for x in rows if rx.search(x)]
+          if not failures: failures=rows[-8:]
+          unique=[]
+          for item in failures:
+              if item and item not in unique: unique.append(item)
+          base=os.environ["GITHUB_REPOSITORY"]
+          sha=os.environ["GITHUB_SHA"]
+          url=f'{os.environ["GITHUB_SERVER_URL"]}/{base}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
+          for i,line in enumerate(unique[:8],1):
+              subprocess.run(["gh","api",f"repos/{base}/statuses/{sha}",
+                  "-f","state=failure","-f",f"context=haafidh-1179/gradle-diagnostic-{i}",
+                  "-f",f"description={line[:135]}","-f",f"target_url={url}"],
+                  stdout=subprocess.DEVNULL,check=True)
+          print("Recorded",min(len(unique),8),"diagnostic statuses")
+          PY
       - name: KVM access for real Android UI and persistence tests
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
