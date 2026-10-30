@@ -73,6 +73,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Instrumented page replay, all-604-page icon, QCF/tafsir and revision navigation
+        id: android_audit
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -82,6 +83,39 @@ jobs:
           disable-animations: true
           script: |
             bash scripts/run_atlas_revision_android_audit.sh
+      - name: Report concise failed Android testcases as commit statuses
+        if: ${{ failure() && steps.android_audit.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,subprocess,xml.etree.ElementTree as ET
+          failures=[]
+          for base in [pathlib.Path("hifz-app/build/outputs/androidTest-results"),
+                       pathlib.Path("hifz-app/build/test-results")]:
+              if not base.exists(): continue
+              for path in base.rglob("*.xml"):
+                  try:
+                      root=ET.parse(path).getroot()
+                      for case in root.iter("testcase"):
+                          error=case.find("failure")
+                          if error is None: error=case.find("error")
+                          if error is None: continue
+                          label=(case.get("classname","")+"."+case.get("name","")).strip(".")
+                          cause=error.get("message","") or (error.text or "").splitlines()[0]
+                          failures.append((label+": "+cause).strip())
+                  except (ET.ParseError,OSError,IndexError):
+                      continue
+          if not failures: failures=["Android instrumentation failed before readable JUnit XML reports"]
+          base=os.environ["GITHUB_REPOSITORY"]; sha=os.environ["GITHUB_SHA"]
+          url=f'{os.environ["GITHUB_SERVER_URL"]}/{base}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
+          for i,line in enumerate(dict.fromkeys(failures),1):
+              if i>8:break
+              subprocess.run(["gh","api",f"repos/{base}/statuses/{sha}","-f","state=failure",
+                  "-f",f"context=haafidh-1179/android-diagnostic-{i}",
+                  "-f",f"description={line[:135]}","-f",f"target_url={url}"],
+                  stdout=subprocess.DEVNULL,check=True)
+          PY
       - name: Preserve test reports only - never APK or release
         if: always()
         uses: actions/upload-artifact@v4
