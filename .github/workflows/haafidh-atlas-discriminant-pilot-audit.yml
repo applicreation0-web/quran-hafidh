@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: haafidh-atlas-qcf-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -68,8 +71,9 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest
             mkdir -p hifz-app/build/atlas-comparison-audit
+            trap 'adb logcat -d -s HaafidhAtlasQCF:V QcfAtlasStrips:V chromium:E > hifz-app/build/atlas-comparison-audit/emulator-qcf-logcat.txt || true' EXIT
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest
             adb pull /sdcard/Pictures/HaafidhAudit/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
             test -s hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
       - uses: actions/upload-artifact@v4
