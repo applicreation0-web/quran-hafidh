@@ -128,13 +128,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   heading.setClickable(true);heading.setFocusable(true);heading.setOnClickListener(v->chooseUnit());
   top.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
   top.addView(Ui.iconButton(activity,"","Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);setLevel(true);})),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
-  // Separate editorial pilot, opened from Atlas without modifying its unit/passage rails.
-  top.addView(Ui.iconButton(activity,"","Versets ressemblants",v->{
-   Intent intent=new Intent(activity,AtlasDiscriminantActivity.class)
-       .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,surah)
-       .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,focusStart);
-   activity.startActivity(intent);
-  }),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
+  // Similar-verse comparisons are reached contextually from Lecture or Révision,
+  // never from a stand-alone Atlas browsing shortcut.
   root.addView(top);
   // Use the current window (including density/zoom and system-bar insets),
   // then its measured content bounds; physical display dimensions can be stale.
