@@ -286,7 +286,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0)
         +(strips==null?0:strips.failureCountForTest());}
     String qcfFailureDetailForTest(){
-        return "leftPage="+currentLeftPage+" status="+leftPageStatus
+        return "leftPage="+currentLeftPage+" status="+leftPageStatus+" cause="+left.rendererDiagnosticForTest()
             +" rightPage="+currentRightPage+" status="+rightPageStatus
             +" strips="+(strips==null?"disabled":strips.renderStatusForTest());
     }
