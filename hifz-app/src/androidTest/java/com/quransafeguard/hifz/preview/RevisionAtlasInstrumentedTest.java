@@ -151,6 +151,21 @@ public final class RevisionAtlasInstrumentedTest {
                     assertEquals(View.GONE,((View)field(a,"discriminantButton")).getVisibility());
                     View validate=find(a.findViewById(android.R.id.content),"Valider jusqu’ici");
                     assertNotNull(validate);validate.performClick();
+                });
+                ins.waitForIdleSync();
+                // A small acquired corpus loops in the time-budgeted plan. Its
+                // existing partial-validation confirmation must be accepted by
+                // the real user action, never bypassed by a test-only receipt.
+                if(!HifzClock.today().toString().equals(p.lastActiveMurajaahDate())){
+                    android.view.accessibility.AccessibilityNodeInfo root=ins.getUiAutomation().getRootInActiveWindow();
+                    assertNotNull("Partial validation dialog missing",root);
+                    java.util.List<android.view.accessibility.AccessibilityNodeInfo> buttons=
+                        root.findAccessibilityNodeInfosByText("Valider quand même");
+                    assertFalse("Expected the real partial-validation confirmation",buttons.isEmpty());
+                    assertTrue(buttons.get(0).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK));
+                    ins.waitForIdleSync();
+                }
+                s.onActivity(a->{
                     assertEquals(HifzClock.today().toString(),p.lastActiveMurajaahDate());
                     assertEquals(View.VISIBLE,((View)field(a,"discriminantButton")).getVisibility());
                 });
