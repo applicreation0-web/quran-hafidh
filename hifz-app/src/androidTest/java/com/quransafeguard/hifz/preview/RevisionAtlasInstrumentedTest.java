@@ -50,6 +50,24 @@ public final class RevisionAtlasInstrumentedTest {
     private static JSONObject snapshot(Context c)throws Exception{
         JSONObject result=HifzBackup.export(c);result.remove("exportedAtEpochMs");return result;
     }
+    private static void saveAuditCapture(String name)throws Exception{
+        HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot(name);
+        Context c=ApplicationProvider.getApplicationContext();
+        // UTP uninstalls the target package after the suite. Preserve this real
+        // screenshot in MediaStore before app-specific external files disappear.
+        android.content.ContentValues values=new android.content.ContentValues();
+        values.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME,name);
+        values.put(android.provider.MediaStore.Images.Media.MIME_TYPE,"image/png");
+        values.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH,
+            android.os.Environment.DIRECTORY_PICTURES+"/HaafidhAudit");
+        android.net.Uri uri=c.getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values);
+        assertNotNull("MediaStore audit capture destination",uri);
+        try(java.io.InputStream in=new java.io.FileInputStream(new java.io.File(c.getExternalFilesDir(null),name));
+            java.io.OutputStream out=c.getContentResolver().openOutputStream(uri)){
+            assertNotNull(out);byte[] bytes=new byte[16384];int n;
+            while((n=in.read(bytes))!=-1)out.write(bytes,0,n);
+        }
+    }
     private static boolean sameJson(Object a,Object b)throws Exception{
         if(a instanceof JSONObject && b instanceof JSONObject){
             JSONObject x=(JSONObject)a,y=(JSONObject)b;
@@ -89,7 +107,7 @@ public final class RevisionAtlasInstrumentedTest {
                     a.onVerseTap(new VerseRef(30,36));
                     assertEquals(View.VISIBLE,((View)field(a,"discriminantButton")).getVisibility());
                 });
-                HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("atlas-revision-passive.png");
+                saveAuditCapture("atlas-revision-passive.png");
                 s.onActivity(a->a.onAtlasDiscriminantTap(new VerseRef(30,37)));
                 Activity comparison=ins.waitForMonitorWithTimeout(atlas,20000);assertNotNull(comparison);
                 ins.waitForIdleSync();
@@ -146,7 +164,7 @@ public final class RevisionAtlasInstrumentedTest {
                 // Instrumentation.waitForMonitorWithTimeout removes its monitor even
                 // on timeout; query the monitor directly to keep observing the later launch.
                 assertNull(atlas.waitForActivityWithTimeout(500));
-                HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("atlas-revision-active-masked.png");
+                saveAuditCapture("atlas-revision-active-masked.png");
                 s.recreate();
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Active recreation stays masked");
                 s.onActivity(a->{
@@ -172,7 +190,7 @@ public final class RevisionAtlasInstrumentedTest {
                     assertEquals(HifzClock.today().toString(),p.lastActiveMurajaahDate());
                     assertEquals(View.VISIBLE,((View)field(a,"discriminantButton")).getVisibility());
                 });
-                HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("atlas-revision-active-validated.png");
+                saveAuditCapture("atlas-revision-active-validated.png");
                 s.recreate();
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Validated closing Fatiha");
                 s.onActivity(a->{
