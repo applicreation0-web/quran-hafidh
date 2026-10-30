@@ -570,7 +570,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("the next segment is simply the following entry in traversal order",
             afterPage.contains("return i + 1 < segments.size() ? segments.get(i + 1).start : null;"));
         String afterEnd = method(session,
-            "private VerseRef murajaahNextSegmentAfter(VerseRef end) {", "@Override public void onPageSwipe(int delta){goPage(delta);}");
+            "private VerseRef murajaahNextSegmentAfter(VerseRef end) {", "private void finishMurajaah(){");
         assertTrue("the tapped endpoint's segment must be found by its own ordinal bounds",
             afterEnd.contains("endOrdinal >= GeometryRepository.ordinal(segment.start)")
                 && afterEnd.contains("endOrdinal <= GeometryRepository.ordinal(segment.end)"));
