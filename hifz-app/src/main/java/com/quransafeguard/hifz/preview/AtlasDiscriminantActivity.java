@@ -290,12 +290,21 @@ public final class AtlasDiscriminantActivity extends Activity {
         state.putInt("caseIndex",selectedIndex);
         super.onSaveInstanceState(state);
     }
+    /** Chromium WebViews must be removed from the view hierarchy before destroy().
+     * This also prevents renderer teardown racing with the next Atlas comparison. */
+    private static void detachQcf(android.webkit.WebView view) {
+        if(view==null)return;
+        android.view.ViewParent parent=view.getParent();
+        if(parent instanceof ViewGroup)((ViewGroup)parent).removeView(view);
+        view.destroy();
+    }
+
     @Override protected void onDestroy(){
         if(!disposed){
             disposed=true;
-            if(left!=null)left.destroy();
-            if(right!=null)right.destroy();
-            if(strips!=null)strips.destroy();
+            detachQcf(left);
+            detachQcf(right);
+            detachQcf(strips);
         }
         super.onDestroy();
     }
