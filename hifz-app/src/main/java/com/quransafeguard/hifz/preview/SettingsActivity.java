@@ -36,7 +36,7 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
     private GeometryRepository geometry;
-    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, morningTimeSetting, eveningTimeSetting, weakVersesSetting;
+    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, morningTimeSetting, eveningTimeSetting;
     private TextView sabqiStatus, itqanStatus, acquiredStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
     private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
     private static final DayOfWeek[] WEEKDAYS = {
@@ -168,8 +168,6 @@ public final class SettingsActivity extends android.app.Activity {
             v->startActivity(new Intent(this,FreeMemActivity.class))));
         advanced.addView(Ui.divider(this));
         advanced.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));advanced.addView(Ui.divider(this));
-        weakVersesSetting=Ui.settingRow(this,"Repères faibles","",v->startActivity(new Intent(this,WeakVersesActivity.class)));
-        advanced.addView(weakVersesSetting);advanced.addView(Ui.divider(this));
         parents.put(about,advanced);
         advanced.addView(Ui.settingRow(this,"À propos du parcours","",v->showScreen(about)));advanced.addView(Ui.divider(this));
         advanced.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
@@ -658,9 +656,6 @@ public final class SettingsActivity extends android.app.Activity {
         murajaahStatus.setText("Matin · Révision active "+maintenanceMinutes()+" min + Révision passive "
             +maintenanceMinutes()+" min · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
-        int weakCount=prefs.murajaahWeakVerses().size();
-        TextView weakValue=Ui.settingValue(weakVersesSetting);
-        if(weakValue!=null)weakValue.setText(weakCount==0?"Aucun":weakCount+" verset(s)");
     }
 
     private void refreshAudio(){
