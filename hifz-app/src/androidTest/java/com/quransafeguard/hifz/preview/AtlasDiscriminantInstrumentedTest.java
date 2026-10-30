@@ -82,13 +82,19 @@ public final class AtlasDiscriminantInstrumentedTest {
         Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
             .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,6)
             .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,151);
+        // Validate the exact underlying page bytes and crop independently of Chromium.
+        for(AtlasDiscriminantCases.Entry pair:java.util.Collections.singletonList(
+            AtlasDiscriminantCases.PILOT.get(1))) {
+            assertExactQcfWords(context,pair.first,pair.firstWordIndices);
+            assertExactQcfWords(context,pair.second,pair.secondWordIndices);
+        }
         try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
             AtomicBoolean ready=new AtomicBoolean(false);
             for(int i=0;i<40;i++){
                 Thread.sleep(500L);
                 scenario.onActivity(activity->{
-                    assertEquals("Page 148 / 285 direct load failed",0,
-                        activity.qcfPagesFailedForTest());
+                    assertEquals("Page 148 / 285 direct load failed : "+
+                        activity.qcfFailureDetailForTest(),0,activity.qcfPagesFailedForTest());
                     ready.set(activity.qcfPagesReadyForTest()&&activity.qcfStripsReadyForTest());
                 });
                 if(ready.get())break;
@@ -227,7 +233,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                     Thread.sleep(500L);
                     scenario.onActivity(activity->{
                         assertEquals("Invalid original QCF page or verse crop in "+pair.first+
-                            " / "+pair.second,0,activity.qcfPagesFailedForTest());
+                            " / "+pair.second+" : "+activity.qcfFailureDetailForTest(),
+                            0,activity.qcfPagesFailedForTest());
                         ready.set(activity.qcfPagesReadyForTest()&&activity.qcfStripsReadyForTest());
                     });
                     if(ready.get())break;
