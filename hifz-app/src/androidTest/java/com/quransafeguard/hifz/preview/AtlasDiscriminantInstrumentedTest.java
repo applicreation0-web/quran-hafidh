@@ -307,6 +307,25 @@ public final class AtlasDiscriminantInstrumentedTest {
                 }
                 assertTrue("Both original QCF pages and excerpts must load: "+
                     pair.first+" / "+pair.second,ready.get());
+                java.util.concurrent.CountDownLatch clipsChecked=new java.util.concurrent.CountDownLatch(1);
+                AtomicReference<String> clipResult=new AtomicReference<>();
+                scenario.onActivity(activity->{
+                    try {
+                        java.lang.reflect.Field stripsField=AtlasDiscriminantActivity.class.getDeclaredField("strips");
+                        stripsField.setAccessible(true);
+                        ((QcfAtlasVerseStrips)stripsField.get(activity)).evaluateJavascript(
+                            "(function(){var ids=[];for(var i=0;i<2;i++){"
+                            +"var s=document.querySelector('#crop'+i+' svg');if(!s)return false;"
+                            +"var clip=s.querySelector('clipPath');if(!clip||!clip.id)return false;"
+                            +"if(document.getElementById(clip.id)!==clip)return false;"
+                            +"var group=s.querySelector('g[clip-path]');"
+                            +"if(!group||group.getAttribute('clip-path')!=='url(#'+clip.id+')')return false;"
+                            +"ids.push(clip.id);}return ids[0]!==ids[1];})()",
+                            value->{clipResult.set(value);clipsChecked.countDown();});
+                    }catch(ReflectiveOperationException invalid){throw new AssertionError(invalid);}
+                });
+                assertTrue("Paired QCF clip DOM callback missing",clipsChecked.await(10,java.util.concurrent.TimeUnit.SECONDS));
+                assertEquals("Each inline QCF excerpt must resolve its own exact-word clip", "true",clipResult.get());
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);
             }

@@ -95,11 +95,18 @@ public final class Lot2SourceContractTest {
         assertTrue(session.contains("if (!corpus.contains(verse))"));
         assertTrue(session.contains("if (!corpus.contains(through))"));
         assertTrue(session.contains("countMurajaahLinesThrough(murajaahActualEnd)"));
-        assertFalse(session.contains("murajaahPlan.traversalVerses.contains(verse)"));
         assertFalse(session.contains("geometry.lineCountForVerseRange(murajaahPlan.start, murajaahActualEnd)"));
         int tapStart = session.indexOf("@Override public void onVerseTap");
         int tapEnd = session.indexOf("@Override public void onPageSwipe", tapStart);
         assertTrue(tapStart >= 0 && tapEnd > tapStart);
+        // This protects endpoint validation, not a read-only Atlas link's own scope.
+        // A documented comparison can be restricted to the displayed plan without
+        // forbidding the learner from revising beyond that plan.
+        assertFalse(session.substring(tapStart, tapEnd).contains("murajaahPlan.traversalVerses.contains(verse)"));
+        int countStart=session.indexOf("private int countMurajaahLinesThrough(");
+        int countEnd=session.indexOf("private String murajaahObjectiveLabel()",countStart);
+        assertTrue(countStart>=0&&countEnd>countStart);
+        assertFalse(session.substring(countStart,countEnd).contains("traversalVerses.contains"));
         assertFalse(session.substring(tapStart, tapEnd).contains("renderMode()"));
     }
 

@@ -84,6 +84,7 @@ jobs:
             adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-passive.png hifz-app/build/atlas-comparison-audit/
             adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-active-masked.png hifz-app/build/atlas-comparison-audit/
             adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-active-validated.png hifz-app/build/atlas-comparison-audit/
+            cp -R hifz-app/build/outputs/androidTest-results hifz-app/build/atlas-comparison-audit/comparison-android-results
       - name: Android backup, finals persistence and masked validation regression
         uses: reactivecircus/android-emulator-runner@v2
         with:
