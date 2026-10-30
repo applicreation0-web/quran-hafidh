@@ -7,8 +7,8 @@ import static org.junit.Assert.*;
 
 /** Editorial pilot must not silently expand with unverifiable generated pairs. */
 public final class AtlasDiscriminantCasesTest {
-    @Test public void fourVerifiedPairsAreUniqueAndGrounded() {
-        assertEquals(4,AtlasDiscriminantCases.PILOT.size());
+    @Test public void fiveReviewedPairsAreUniqueAndGrounded() {
+        assertEquals(5,AtlasDiscriminantCases.PILOT.size());
         Set<String> unordered=new HashSet<>();
         for(AtlasDiscriminantCases.Entry e:AtlasDiscriminantCases.PILOT) {
             assertFalse(e.first.equals(e.second));
@@ -28,6 +28,8 @@ public final class AtlasDiscriminantCasesTest {
         assertEquals(1,AtlasDiscriminantCases.preferredIndex(17,31));
         assertEquals(2,AtlasDiscriminantCases.preferredIndex(7,160));
         assertEquals(3,AtlasDiscriminantCases.preferredIndex(2,58));
+        assertEquals(4,AtlasDiscriminantCases.preferredIndex(2,63));
+        assertEquals(4,AtlasDiscriminantCases.preferredIndex(2,93));
         assertEquals(0,AtlasDiscriminantCases.preferredIndex(4,10));
     }
     @Test public void contextualLookupIsStrictForBothSidesAndUnrelatedVerses() {
@@ -54,6 +56,10 @@ public final class AtlasDiscriminantCasesTest {
         assertArrayEquals(new int[]{16},AtlasDiscriminantCases.PILOT.get(2).secondWordIndices);
         assertArrayEquals(new int[]{3,6,10},AtlasDiscriminantCases.PILOT.get(3).firstWordIndices);
         assertArrayEquals(new int[]{4,7},AtlasDiscriminantCases.PILOT.get(3).secondWordIndices);
+        assertArrayEquals(new int[]{11},AtlasDiscriminantCases.PILOT.get(4).firstWordIndices);
+        assertArrayEquals(new int[]{11},AtlasDiscriminantCases.PILOT.get(4).secondWordIndices);
+        assertEquals("2:63",AtlasDiscriminantCases.PILOT.get(4).first.toString());
+        assertEquals("2:93",AtlasDiscriminantCases.PILOT.get(4).second.toString());
         for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.PILOT) {
             for(int word:entry.firstWordIndices)assertTrue(word>0);
             for(int word:entry.secondWordIndices)assertTrue(word>0);
