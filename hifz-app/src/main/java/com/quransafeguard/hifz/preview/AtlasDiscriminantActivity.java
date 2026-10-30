@@ -18,9 +18,9 @@ import com.quransafeguard.hifz.core.VerseRef;
 
 /**
  * Atlas-native, read-only, monochrome E-Ink comparison of two Quran passages.
- * The two full pages are shipped original KFQC SVGs; the lower close-ups crop those
- * same SVG paths, with verified physical word underlines. The notes are authored,
- * sourced editorial content, never an AI-generated Quran explanation at runtime.
+ * Two equal-size authentic KFQC Mushaf pages, followed by two independently
+ * scrollable full Jalalayn commentaries from the existing audited offline corpus.
+ * The comparison notes are authored and source-backed; no AI-generated commentary.
  *
  * Deliberately separate from Révision active (no HifzPrefs or mutable session state).
  */
@@ -33,7 +33,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private GeometryRepository geometry;
     private MapQcfThumbnails left, right;
     private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
-    private final TafsirRepository tafsirRepository=new TafsirRepository(this);
+    private TafsirRepository tafsirRepository;
     private int tafsirRequest;
     private TextView leftTafsir,rightTafsir,explanationLine;
     private TextView title, leftHeader, rightHeader, kind, leftCue, rightCue;
@@ -44,6 +44,7 @@ public final class AtlasDiscriminantActivity extends Activity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        tafsirRepository=new TafsirRepository(this);
         try {
             geometry=GeometryRepository.get(this);
             selectedIndex=state!=null
@@ -164,8 +165,8 @@ public final class AtlasDiscriminantActivity extends Activity {
         // Independent sourced Jalalayn texts, never synthesized from AI.
         LinearLayout tafsirs=Ui.row(this);
         tafsirs.setBaselineAligned(false);
-        leftTafsir=tafsirColumn(tafsirs,"2:58");
-        rightTafsir=tafsirColumn(tafsirs,"7:161");
+        leftTafsir=tafsirColumn(tafsirs);
+        rightTafsir=tafsirColumn(tafsirs);
         root.addView(tafsirs,new LinearLayout.LayoutParams(-1,0,1f));
 
         LinearLayout bottom=Ui.row(this);bottom.setGravity(Gravity.CENTER_VERTICAL);
@@ -202,7 +203,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         Ui.respectSystemBars(this,root,0,0,0,0);
     }
 
-    private TextView tafsirColumn(LinearLayout parent,String unused){
+    private TextView tafsirColumn(LinearLayout parent){
         LinearLayout column=Ui.column(this);
         column.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),0);
         TextView heading=text("Tafsīr al-Jalālayn · anglais",12f,true);
@@ -297,18 +298,6 @@ public final class AtlasDiscriminantActivity extends Activity {
         right.setVisibility(View.VISIBLE);
         right.showPages(currentRightPage,currentRightPage,currentRightPage,
             c.second.getSurah(),c.second.getAyah(),c.second.getAyah(),false);
-        if(strips!=null)strips.setVisibility(View.VISIBLE);
-    }
-
-    android.graphics.Rect[] qcfCropBoundsForTest(){
-        if(strips==null)return new android.graphics.Rect[0];
-        android.graphics.Rect whole=new android.graphics.Rect();
-        if(!strips.getGlobalVisibleRect(whole)||whole.width()<100)return new android.graphics.Rect[0];
-        int midpoint=whole.left+whole.width()/2;
-        return new android.graphics.Rect[]{
-            new android.graphics.Rect(whole.left,whole.top,midpoint,whole.bottom),
-            new android.graphics.Rect(midpoint,whole.top,whole.right,whole.bottom)
-        };
     }
 
     android.graphics.Rect[] qcfPageBoundsForTest(){
@@ -318,7 +307,9 @@ public final class AtlasDiscriminantActivity extends Activity {
         return new android.graphics.Rect[]{first,second};
     }
     boolean qcfPagesReadyForTest(){return leftPageStatus==1&&rightPageStatus==1;}
-    boolean qcfStripsReadyForTest(){return true; /* Redundant QCF crops intentionally removed. */}
+    boolean tafsirColumnsReadyForTest(){return leftTafsir!=null&&rightTafsir!=null;}
+    CharSequence[] tafsirTextsForTest(){return new CharSequence[]{leftTafsir==null?"":leftTafsir.getText(),
+        rightTafsir==null?"":rightTafsir.getText()};}
     int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0);}
     String qcfFailureDetailForTest(){
         return "leftPage="+currentLeftPage+" status="+leftPageStatus+" cause="+left.rendererDiagnosticForTest()
