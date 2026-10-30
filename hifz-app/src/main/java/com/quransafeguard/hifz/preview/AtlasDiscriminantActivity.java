@@ -240,6 +240,17 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(strips!=null)strips.setVisibility(View.VISIBLE);
     }
 
+    android.graphics.Rect[] qcfCropBoundsForTest(){
+        if(strips==null)return new android.graphics.Rect[0];
+        android.graphics.Rect whole=new android.graphics.Rect();
+        if(!strips.getGlobalVisibleRect(whole)||whole.width()<100)return new android.graphics.Rect[0];
+        int midpoint=whole.left+whole.width()/2;
+        return new android.graphics.Rect[]{
+            new android.graphics.Rect(whole.left,whole.top,midpoint,whole.bottom),
+            new android.graphics.Rect(midpoint,whole.top,whole.right,whole.bottom)
+        };
+    }
+
     android.graphics.Rect[] qcfPageBoundsForTest(){
         android.graphics.Rect first=new android.graphics.Rect(),second=new android.graphics.Rect();
         if(left!=null)left.getGlobalVisibleRect(first);
