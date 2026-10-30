@@ -17,6 +17,8 @@ jobs:
       HAAFIDH_1179_ISOLATED_DEBUG: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Enforce separate test identity and previously validated core
         shell: bash
         run: |
