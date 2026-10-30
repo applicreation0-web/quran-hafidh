@@ -31,6 +31,8 @@ val quranWordGeometrySourceDir = file("src/main/word-source/quran-ws-v1.1.2")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 // Only the CP-08P staging workflow opts into the separate personal phone-pilot ID.
 val cp08BaqaraPilot = System.getenv("CP08_BAQARAH_PILOT") == "1"
+// Isolated 1.17.9 user test: never changes the official installed package or signing.
+val haafidh1179IsolatedDebug = !private114 && System.getenv("HAAFIDH_1179_ISOLATED_DEBUG") == "1"
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
     inputs.dir(hifzTafsirSourceDir)
@@ -339,7 +341,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 46
-        versionName = "1.17.8"
+        versionName = if (haafidh1179IsolatedDebug) "1.17.9" else "1.17.8"
         if (boox1175Preview) versionName = "1.17.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -376,7 +378,8 @@ android {
             // Isolated personal test install; never overwrites the official 1.17.1 package.
             applicationIdSuffix = if (private114) ".ayahthemes114private" else if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
             if (boox1175Preview) applicationIdSuffix = ".boox1175debug"
-            versionNameSuffix = if (boox1175Preview) "-BOOX-HOME-PRIVATE-DEBUG" else if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
+            if (haafidh1179IsolatedDebug) applicationIdSuffix = ".haafidh1179debug"
+            versionNameSuffix = if (haafidh1179IsolatedDebug) "-BOOX-TEST" else if (boox1175Preview) "-BOOX-HOME-PRIVATE-DEBUG" else if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
             // Private Atlas content is enabled only by an explicit local build flag.
