@@ -253,6 +253,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                     assertFalse(activity.freeActiveMaskForTest());
                     assertEquals(View.VISIBLE,activity.discriminantActionForTest().getVisibility());
                 });
+                assertEquals("Atlas visit must not modify initialized Hifz state",
+                    beforeComparison,hifz.getAll());
             }
         } finally {
             instrument.removeMonitor(monitor);
@@ -322,7 +324,6 @@ public final class AtlasDiscriminantInstrumentedTest {
         Application app=(Application)context;
         SharedPreferences hifz=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
         SharedPreferences reading=context.getSharedPreferences("hifz_study",Context.MODE_PRIVATE);
-        Map<String,?> beforeHifz=new HashMap<>(hifz.getAll());
         AtomicReference<StudyReaderActivity> readerRef=new AtomicReference<>();
         AtomicReference<AtlasDiscriminantActivity> comparisonRef=new AtomicReference<>();
         AtomicBoolean returned=new AtomicBoolean(false);
@@ -361,6 +362,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                     if(ready.get())break;
                 }
                 assertTrue("A documented verse in Lecture must expose its Atlas relation",ready.get());
+                // Compare only the detour; reader bootstrapping can initialize defaults.
+                Map<String,?> beforeHifz=new HashMap<>(hifz.getAll());
                 Map<String,?> beforeReading=new HashMap<>(reading.getAll());
                 scenario.onActivity(activity->{
                     assertEquals("Original Lecture page",qcfPage,activity.selectedDiscriminantPageForTest());
@@ -395,12 +398,12 @@ public final class AtlasDiscriminantInstrumentedTest {
                 });
                 assertEquals("Atlas round-trip must not modify Lecture cursor prefs",
                     beforeReading,reading.getAll());
+                assertEquals("Atlas round-trip must not create Hifz progress",
+                    beforeHifz,hifz.getAll());
             }
         } finally {
             app.unregisterActivityLifecycleCallbacks(callbacks);
         }
-        assertEquals("Atlas round-trip must not create Hifz progress",
-            beforeHifz,hifz.getAll());
     }
 
 }
