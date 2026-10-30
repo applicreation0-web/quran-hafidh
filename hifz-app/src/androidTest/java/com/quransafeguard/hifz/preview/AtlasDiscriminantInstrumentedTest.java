@@ -33,6 +33,32 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
         return count;
     }
+
+    /** Exact one-based markers must all exist in the shipped word geometry, never estimated. */
+    private static void assertExactQcfWords(Context context,
+        com.quransafeguard.hifz.core.VerseRef verse,int[] marked) throws Exception {
+        GeometryRepository g=GeometryRepository.get(context);
+        int page=g.pageForVerse(verse);
+        assertEquals("Do not crop a partial cross-page ayah: "+verse,
+            page,MawdudiMapModel.lastPageForVerse(verse,g));
+        java.util.List<WordGeometryRepository.WordBox> words=
+            WordGeometryRepository.shared(context).wordsForPage(page);
+        for(int requested:marked) {
+            boolean found=false;
+            for(WordGeometryRepository.WordBox box:words)
+                if(box.surah==verse.getSurah() && box.ayah==verse.getAyah()
+                    && box.word==requested){found=true;break;}
+            assertTrue("No exact QCF word "+verse+":"+requested+" on page "+page,found);
+        }
+        String svg=MapQcfThumbnails.readSvg(context,page);
+        String excerpt=QcfAtlasVerseStrips.cropSvg(svg,words,verse,marked);
+        assertFalse("Original QCF SVG excerpt cannot be cropped for "+verse,excerpt.isEmpty());
+        assertTrue("Original Quran word glyph paths were lost for "+verse,
+            excerpt.contains("ayahPolygon"));
+        int renderedLines=excerpt.split("<line x1=", -1).length-1;
+        assertEquals("Wrong number of QCF discriminant underlines for "+verse,
+            marked.length,renderedLines);
+    }
     /** Detect blank QCF panels or broken-image alt text even when WebView exists. */
     private static void assertInkIsVisible(Bitmap shot,Rect visible,String description) {
         int left=Math.max(0,visible.left),top=Math.max(0,visible.top);
@@ -157,6 +183,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                 }
                 assertTrue("Both original QCF pages and excerpts must load: "+
                     pair.first+" / "+pair.second,ready.get());
+                assertExactQcfWords(context,pair.first,pair.firstWordIndices);
+                assertExactQcfWords(context,pair.second,pair.secondWordIndices);
             }
         }
         assertEquals("Browsing Atlas must not alter Hifz progress",before,prefs.getAll());
