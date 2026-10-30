@@ -34,9 +34,15 @@ public final class AtlasDiscriminantCasesTest {
         AtlasDiscriminantCases.Entry a=AtlasDiscriminantCases.PILOT.get(0);
         assertArrayEquals(new int[]{2},a.firstWordIndices);
         assertArrayEquals(new int[]{2},a.secondWordIndices);
-        for(int i=1;i<AtlasDiscriminantCases.PILOT.size();i++) {
-            assertEquals(0,AtlasDiscriminantCases.PILOT.get(i).firstWordIndices.length);
-            assertEquals(0,AtlasDiscriminantCases.PILOT.get(i).secondWordIndices.length);
+        assertArrayEquals(new int[]{17,20,21},AtlasDiscriminantCases.PILOT.get(1).firstWordIndices);
+        assertArrayEquals(new int[]{4,7,8},AtlasDiscriminantCases.PILOT.get(1).secondWordIndices);
+        assertArrayEquals(new int[]{9},AtlasDiscriminantCases.PILOT.get(2).firstWordIndices);
+        assertArrayEquals(new int[]{16},AtlasDiscriminantCases.PILOT.get(2).secondWordIndices);
+        assertArrayEquals(new int[]{3,6,10},AtlasDiscriminantCases.PILOT.get(3).firstWordIndices);
+        assertArrayEquals(new int[]{4,7},AtlasDiscriminantCases.PILOT.get(3).secondWordIndices);
+        for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.PILOT) {
+            for(int word:entry.firstWordIndices)assertTrue(word>0);
+            for(int word:entry.secondWordIndices)assertTrue(word>0);
         }
     }
 }
