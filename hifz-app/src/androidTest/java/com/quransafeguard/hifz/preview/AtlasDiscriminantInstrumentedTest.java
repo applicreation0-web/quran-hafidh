@@ -3,6 +3,8 @@ package com.quransafeguard.hifz.preview;
 import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
+import android.app.Activity;
+import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -200,6 +202,61 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
         assertEquals("Atlas comparison must never mutate the main Hifz state",before,prefs.getAll());
     }
+    /** Genuine Lecture -> Atlas -> same Lecture Activity; no extra Hifz credit. */
+    @Test public void lectureSelectionOpensComparisonAndReturnsWithoutMovingCursor() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        SharedPreferences hifz=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        Map<String,?> before=new HashMap<>(hifz.getAll());
+        Intent start=new Intent(context,StudyReaderActivity.class)
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,408)
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,"30:37");
+        Instrumentation instrument=InstrumentationRegistry.getInstrumentation();
+        Instrumentation.ActivityMonitor monitor=instrument.addMonitor(
+            AtlasDiscriminantActivity.class.getName(),null,false);
+        try {
+            try(ActivityScenario<StudyReaderActivity> scene=ActivityScenario.launch(start)) {
+                AtomicBoolean ready=new AtomicBoolean(false);
+                AtomicReference<StudyReaderActivity> original=new AtomicReference<>();
+                for(int i=0;i<40;i++) {
+                    Thread.sleep(250L);
+                    scene.onActivity(activity->{
+                        original.set(activity);
+                        View button=activity.discriminantActionForTest();
+                        ready.set(activity.selectedDiscriminantPageForTest()==408
+                            &&activity.selectedDiscriminantVerseForTest()!=null
+                            &&"30:37".equals(activity.selectedDiscriminantVerseForTest().toString())
+                            &&button!=null&&button.getVisibility()==View.VISIBLE);
+                    });
+                    if(ready.get())break;
+                }
+                assertTrue("Documented 30:37 must show the compact Lecture comparison icon",
+                    ready.get());
+                scene.onActivity(activity->{
+                    View button=activity.discriminantActionForTest();
+                    assertNotNull(button);
+                    assertTrue(button.performClick());
+                });
+                Activity opened=instrument.waitForMonitorWithTimeout(monitor,20000);
+                assertNotNull("Lecture must launch the comparison for its selected verse",opened);
+                assertTrue(opened instanceof AtlasDiscriminantActivity);
+                assertEquals(408,((AtlasDiscriminantActivity)opened).getCurrentLeftPageForTest());
+                instrument.runOnMainSync(opened::finish);
+                instrument.waitForIdleSync();
+                scene.onActivity(activity->{
+                    assertSame("The original reader Activity must survive, not a new session",
+                        original.get(),activity);
+                    assertEquals(408,activity.selectedDiscriminantPageForTest());
+                    assertEquals("30:37",activity.selectedDiscriminantVerseForTest().toString());
+                    assertFalse(activity.freeActiveMaskForTest());
+                    assertEquals(View.VISIBLE,activity.discriminantActionForTest().getVisibility());
+                });
+            }
+        } finally {
+            instrument.removeMonitor(monitor);
+        }
+        assertEquals("Comparison must not change any Hifz progress",before,hifz.getAll());
+    }
+
     /**
      * Every curated pair must survive the same genuine asynchronous QCF decoding.
      * The first pilot's screenshot test remains the stronger pixel/underline check;
