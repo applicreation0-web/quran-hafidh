@@ -126,4 +126,15 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(activity.contains("Ui.dp(this,compact?106:126)"));
         assertFalse(activity.contains("position.setText("));
     }
+    @Test public void narrowReadingPageHasVerifiedLinkWithoutManualVerseTap() throws Exception {
+        String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        assertTrue(reader.contains("contextualDiscriminantVerse"));
+        assertTrue(reader.contains("for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.PILOT)"));
+        assertTrue(reader.contains("index.pageForVerse(candidate)==page"));
+        assertTrue(reader.contains("available=contextualDiscriminantVerse!=null"));
+        assertTrue(reader.contains("if(GeometryRepository.get(this).pageForVerse(source)!=page)return;"));
+        assertTrue(reader.contains("||freeActiveMask||contextualDiscriminantVerse==null"));
+        assertFalse(reader.contains("selected=contextualDiscriminantVerse"));
+    }
+
 }
