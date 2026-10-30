@@ -159,6 +159,7 @@ final class QcfAtlasVerseStrips extends WebView {
         postDelayed(finish,700L);
     }
 
+    String renderStatusForTest(){return renderStatus[0]+"/"+renderStatus[1];}
     boolean bothRenderedForTest(){return renderStatus[0]==1&&renderStatus[1]==1;}
     int failureCountForTest(){return (renderStatus[0]<0?1:0)+(renderStatus[1]<0?1:0);}
 
