@@ -34,17 +34,19 @@ final class ActiveReviewCorrectionStore {
         final VerseRef start, end;
         final long activeElapsedMs;
         final List<Integer> pages;
+        final int originPage; // Original current page, before visible/masked replay.
         final int pageIndex;
         final String stage; // READ, RECALL, DONE
         final boolean assisted;
         State(String date, VerseRef start, VerseRef end, long elapsed,
-              List<Integer> pages, int pageIndex, String stage, boolean assisted) {
+              List<Integer> pages, int originPage, int pageIndex, String stage, boolean assisted) {
             this.date=date;this.start=start;this.end=end;activeElapsedMs=elapsed;
             this.pages=Collections.unmodifiableList(new ArrayList<>(pages));
-            this.pageIndex=pageIndex;this.stage=stage;this.assisted=assisted;
+            this.originPage=originPage;this.pageIndex=pageIndex;this.stage=stage;this.assisted=assisted;
             if(date==null||start==null||end==null||elapsed<0
                 ||!date.equals(LocalDate.parse(date).toString())
-                ||pages.isEmpty()||pages.size()>604||pageIndex<0||pageIndex>=pages.size()
+                ||pages.isEmpty()||pages.size()>604||originPage<1||originPage>604
+                ||pageIndex<0||pageIndex>=pages.size()
                 ||(!"READ".equals(stage)&&!"RECALL".equals(stage)&&!"DONE".equals(stage))
                 ||new LinkedHashSet<>(pages).size()!=pages.size())
                 throw new IllegalArgumentException("Invalid correction state");
@@ -53,7 +55,7 @@ final class ActiveReviewCorrectionStore {
         }
         int page(){return pages.get(pageIndex);}
         State move(int index,String phase,boolean help){
-            return new State(date,start,end,activeElapsedMs,pages,index,phase,help);
+            return new State(date,start,end,activeElapsedMs,pages,originPage,index,phase,help);
         }
     }
 
@@ -71,7 +73,7 @@ final class ActiveReviewCorrectionStore {
                 GeometryRepository.parseVerse(doc.getString("start")),
                 GeometryRepository.parseVerse(doc.getString("end")),
                 doc.getLong("activeElapsedMs"),pages,
-                doc.getInt("pageIndex"),doc.getString("stage"),
+                doc.getInt("originPage"),doc.getInt("pageIndex"),doc.getString("stage"),
                 doc.optBoolean("assisted",false));
         }catch(Exception invalid){
             // Never silently delete a damaged checkpoint or advance the Hifz cursor.
@@ -79,9 +81,9 @@ final class ActiveReviewCorrectionStore {
         }
     }
 
-    boolean begin(String date,VerseRef start,VerseRef end,long elapsed,List<Integer> pages){
+    boolean begin(String date,VerseRef start,VerseRef end,long elapsed,List<Integer> pages,int originPage){
         if(pending()!=null||pages==null||pages.isEmpty())return false;
-        return save(new State(date,start,end,elapsed,pages,0,"READ",false));
+        return save(new State(date,start,end,elapsed,pages,originPage,0,"READ",false));
     }
     boolean pageReread(State state){
         return state!=null&&"READ".equals(state.stage)
@@ -108,6 +110,7 @@ final class ActiveReviewCorrectionStore {
             JSONObject doc=new JSONObject();
             doc.put("date",state.date);doc.put("start",state.start.toString());
             doc.put("end",state.end.toString());doc.put("activeElapsedMs",state.activeElapsedMs);
+            doc.put("originPage",state.originPage);
             doc.put("pageIndex",state.pageIndex);doc.put("stage",state.stage);
             doc.put("assisted",state.assisted);
             JSONArray array=new JSONArray();
