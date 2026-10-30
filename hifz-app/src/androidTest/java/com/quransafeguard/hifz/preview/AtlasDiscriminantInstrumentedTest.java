@@ -466,10 +466,17 @@ public final class AtlasDiscriminantInstrumentedTest {
                     assertFalse("Mask must remain unchanged",activity.freeActiveMaskForTest());
                     assertEquals(View.VISIBLE,activity.discriminantActionForTest().getVisibility());
 
-                    // Neighboring verse has no documented relation; fail closed.
+                    // Page-scoped contract: verse 30:38 has no direct relation, but
+                    // 30:37 is still present on this very QCF page. The toolbar
+                    // must stay available without changing the selected Tafsir verse.
                     activity.onVerseTap(new com.quransafeguard.hifz.core.VerseRef(30,38));
-                    assertEquals("Unrelated verse must hide Atlas relation",
-                        View.GONE,activity.discriminantActionForTest().getVisibility());
+                    assertEquals("Selecting a different verse must not change the Reader page",
+                        qcfPage,activity.selectedDiscriminantPageForTest());
+                    assertEquals("Selecting a nearby verse must preserve its Tafsir selection",
+                        new com.quransafeguard.hifz.core.VerseRef(30,38),
+                        activity.selectedDiscriminantVerseForTest());
+                    assertEquals("The page still contains verified 30:37; keep its link",
+                        View.VISIBLE,activity.discriminantActionForTest().getVisibility());
                 });
                 assertEquals("Atlas round-trip must not modify Lecture cursor prefs",
                     beforeReading,reading.getAll());
