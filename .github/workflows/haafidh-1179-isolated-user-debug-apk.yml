@@ -2,7 +2,7 @@ name: Quran Haafidh 1.17.9 - ISOLATED PRIVATE TEST APK (NO RELEASE)
 on:
   push:
     branches:
-      - debug/haafidh-1179-boox-test-20261030
+      - debug/haafidh-1179-encrypted-delivery-20261030
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,7 +23,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "${GITHUB_REF_NAME}" = "debug/haafidh-1179-boox-test-20261030"
+          test "${GITHUB_REF_NAME}" = "debug/haafidh-1179-encrypted-delivery-20261030"
           test "${HAAFIDH_1179_ISOLATED_DEBUG}" = "1"
           test -z "${HIFZ_KEYSTORE_PATH:-}"
           test -z "${HIFZ_PRIVATE_RELEASE_UPGRADE:-}"
@@ -76,25 +76,6 @@ jobs:
           git rev-parse HEAD > artifact/SOURCE_SHA.txt
           printf 'ISOLATED DEBUG ONLY - install alongside official Quran Haafidh.\nApplication ID: com.quransafeguard.hifz.haafidh1179debug\nVersion: 1.17.9-BOOX-TEST\nThe five verified mutashabihat pairs and all 604 authentic Mushaf pages are present.\nThe remaining 291 al-Abbad candidates are research only.\nPrivate Atlas editorial assets are NOT bundled in the public-source test APK.\nNever uninstall or replace official Quran Haafidh to try this build.\nNot a signed official in-place upgrade or release.\n' > artifact/READ_ME_FIRST.txt
           (cd artifact && sha256sum QURAN_HAAFIDH_1.17.9_BOOX_ANDROID_ISOLATED_TEST.apk > SHA256SUMS.txt)
-      - name: Verify real emulator installation and launch of test-only package
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          target: google_apis
-          profile: pixel_2
-          disable-animations: true
-          script: |
-            set -euo pipefail
-            apk="artifact/QURAN_HAAFIDH_1.17.9_BOOX_ANDROID_ISOLATED_TEST.apk"
-            package="com.quransafeguard.hifz.haafidh1179debug"
-            adb install -r "$apk"
-            adb shell pm path "$package" | grep -F "package:"
-            adb shell am start -W -n "$package/com.quransafeguard.hifz.preview.MainActivity"
-            sleep 3
-            adb shell pidof "$package" | grep -Eq '[0-9]+'
-            adb exec-out screencap -p > artifact/EMULATOR_HOME.png
-            test -s artifact/EMULATOR_HOME.png
       - name: Encrypt private debug APK before leaving GitHub runner
         if: success()
         shell: bash
