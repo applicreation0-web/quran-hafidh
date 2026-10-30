@@ -1,5 +1,8 @@
 package com.quransafeguard.hifz.preview;
 
+import android.app.Activity;
+import android.app.Application;
+import android.os.Bundle;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -246,6 +249,97 @@ public final class AtlasDiscriminantInstrumentedTest {
             }
         }
         assertEquals("Browsing Atlas must not alter Hifz progress",before,prefs.getAll());
+    }
+
+
+    /**
+     * Reader -> exact Atlas pair -> Back must preserve the SAME reader instance,
+     * the same selected QCF verse and current page, and all Hifz progress.
+     */
+    @Test public void lectureContextualLinkRoundTripPreservesQcfVerseAndHifzState() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        Application app=(Application)context;
+        SharedPreferences hifz=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+        SharedPreferences reading=context.getSharedPreferences("hifz_study",Context.MODE_PRIVATE);
+        Map<String,?> beforeHifz=new HashMap<>(hifz.getAll());
+        AtomicReference<StudyReaderActivity> readerRef=new AtomicReference<>();
+        AtomicReference<AtlasDiscriminantActivity> comparisonRef=new AtomicReference<>();
+        AtomicBoolean returned=new AtomicBoolean(false);
+        Application.ActivityLifecycleCallbacks callbacks=new Application.ActivityLifecycleCallbacks(){
+            @Override public void onActivityCreated(Activity activity,Bundle state){}
+            @Override public void onActivityStarted(Activity activity){}
+            @Override public void onActivityResumed(Activity activity){
+                if(activity instanceof AtlasDiscriminantActivity)
+                    comparisonRef.set((AtlasDiscriminantActivity)activity);
+                if(activity==readerRef.get() && comparisonRef.get()!=null)returned.set(true);
+            }
+            @Override public void onActivityPaused(Activity activity){}
+            @Override public void onActivityStopped(Activity activity){}
+            @Override public void onActivitySaveInstanceState(Activity activity,Bundle state){}
+            @Override public void onActivityDestroyed(Activity activity){}
+        };
+        app.registerActivityLifecycleCallbacks(callbacks);
+        try {
+            int qcfPage=GeometryRepository.get(context).pageForVerse(
+                new com.quransafeguard.hifz.core.VerseRef(30,37));
+            Intent intent=new Intent(context,StudyReaderActivity.class)
+                .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,qcfPage)
+                .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,"30:37");
+            try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(intent)){
+                AtomicBoolean ready=new AtomicBoolean(false);
+                for(int attempt=0;attempt<40;attempt++){
+                    Thread.sleep(250L);
+                    scenario.onActivity(activity->{
+                        readerRef.set(activity);
+                        View action=activity.discriminantActionForTest();
+                        com.quransafeguard.hifz.core.VerseRef verse=
+                            activity.selectedDiscriminantVerseForTest();
+                        ready.set(action!=null && action.getVisibility()==View.VISIBLE &&
+                            verse!=null && verse.getSurah()==30 && verse.getAyah()==37);
+                    });
+                    if(ready.get())break;
+                }
+                assertTrue("A documented verse in Lecture must expose its Atlas relation",ready.get());
+                Map<String,?> beforeReading=new HashMap<>(reading.getAll());
+                scenario.onActivity(activity->{
+                    assertEquals("Original Lecture page",qcfPage,activity.selectedDiscriminantPageForTest());
+                    assertFalse("No comparison while masked",activity.freeActiveMaskForTest());
+                    assertTrue("Exact relation tap must launch Atlas",
+                        activity.discriminantActionForTest().performClick());
+                });
+                for(int attempt=0;attempt<40 && comparisonRef.get()==null;attempt++)
+                    Thread.sleep(250L);
+                assertNotNull("Comparison was not opened from the selected verse",comparisonRef.get());
+                InstrumentationRegistry.getInstrumentation().runOnMainSync(
+                    ()->comparisonRef.get().finish());
+                for(int attempt=0;attempt<40 && !returned.get();attempt++)
+                    Thread.sleep(250L);
+                assertTrue("Back must resume the original Lecture instance",returned.get());
+                scenario.onActivity(activity->{
+                    assertSame("Must not recreate the Reader on return",readerRef.get(),activity);
+                    assertEquals("No page jump after comparison",
+                        qcfPage,activity.selectedDiscriminantPageForTest());
+                    com.quransafeguard.hifz.core.VerseRef selected=
+                        activity.selectedDiscriminantVerseForTest();
+                    assertNotNull("Selected verse lost on return",selected);
+                    assertEquals(30,selected.getSurah());
+                    assertEquals(37,selected.getAyah());
+                    assertFalse("Mask must remain unchanged",activity.freeActiveMaskForTest());
+                    assertEquals(View.VISIBLE,activity.discriminantActionForTest().getVisibility());
+
+                    // Neighboring verse has no documented relation; fail closed.
+                    activity.onVerseTap(new com.quransafeguard.hifz.core.VerseRef(30,38));
+                    assertEquals("Unrelated verse must hide Atlas relation",
+                        View.GONE,activity.discriminantActionForTest().getVisibility());
+                });
+                assertEquals("Atlas round-trip must not modify Lecture cursor prefs",
+                    beforeReading,reading.getAll());
+            }
+        } finally {
+            app.unregisterActivityLifecycleCallbacks(callbacks);
+        }
+        assertEquals("Atlas round-trip must not create Hifz progress",
+            beforeHifz,hifz.getAll());
     }
 
 }
