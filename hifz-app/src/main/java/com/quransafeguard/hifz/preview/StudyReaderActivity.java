@@ -64,6 +64,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private Button semanticButton;
     /** Read-only Atlas relation; only available after selecting a documented, visible verse. */
     private Button discriminantButton;
+    /** Independent read-only QCF page link; never changes the user's selected Tafsir verse. */
+    private VerseRef contextualDiscriminantVerse;
     /** Lecture-only, opt-in Révision active gomme: no timer, validation or Hifz writes. */
     private Button freeActiveMaskButton;
     private boolean freeActiveMask;
@@ -389,24 +391,45 @@ public final class StudyReaderActivity extends android.app.Activity implements M
      */
     private void updateDiscriminantButton() {
         if(discriminantButton==null)return;
+        // Exact selected verse takes priority; on a narrow device the outside
+        // gutter may be unavailable, so expose the first verified link for this
+        // actual page in the toolbar without requiring any Quran text selection.
+        contextualDiscriminantVerse=null;
         boolean available=!freeActiveMask&&selected!=null
             &&AtlasDiscriminantCases.indexFor(selected.getSurah(),selected.getAyah())>=0;
         if(available){
             try {
                 available=GeometryRepository.get(this).pageForVerse(selected)==page;
+                if(available)contextualDiscriminantVerse=selected;
             } catch(RuntimeException missingGeometry) {available=false;}
+        }
+        if(!freeActiveMask&&!available){
+            try {
+                GeometryRepository index=GeometryRepository.get(this);
+                for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.PILOT) {
+                    for(VerseRef candidate:new VerseRef[]{entry.first,entry.second}) {
+                        if(index.pageForVerse(candidate)==page){
+                            contextualDiscriminantVerse=candidate;
+                            break;
+                        }
+                    }
+                    if(contextualDiscriminantVerse!=null)break;
+                }
+            }catch(RuntimeException unavailable){contextualDiscriminantVerse=null;}
+            available=contextualDiscriminantVerse!=null;
         }
         discriminantButton.setVisibility(available?View.VISIBLE:View.GONE);
         if(available)Ui.setIconDescription(discriminantButton,
-            "Versets ressemblants · "+selected.getSurah()+":"+selected.getAyah());
+            "Versets ressemblants · "+contextualDiscriminantVerse);
     }
 
     private void openSelectedDiscriminant() {
-        // Revalidate the exact selected verse when tapping, not just at paint time.
+        // Revalidate the exact current-page source; toolbar never navigates to
+        // a stale selection from another page and never unwraps a masked Quran.
         if(discriminantButton==null||discriminantButton.getVisibility()!=View.VISIBLE
-            ||freeActiveMask||selected==null
-            ||AtlasDiscriminantCases.indexFor(selected.getSurah(),selected.getAyah())<0)return;
-        final VerseRef source=selected;
+            ||freeActiveMask||contextualDiscriminantVerse==null)return;
+        final VerseRef source=contextualDiscriminantVerse;
+        if(AtlasDiscriminantCases.indexFor(source.getSurah(),source.getAyah())<0)return;
         try {
             if(GeometryRepository.get(this).pageForVerse(source)!=page)return;
         } catch(RuntimeException unavailable) {return;}
