@@ -22,6 +22,18 @@ Extraction automatique de références placées après les citations coraniques 
 5. La totalité du livre ne peut être déclarée couverte par ces 291 entrées : contrôle éditorial et citations manquantes encore nécessaires.
 6. Les pages numériques `sN` ne sont **pas** les pages imprimées de l'édition. L'ouvrage donne par ailleurs une pagination imprimée à conserver lors d'un contrôle final.
 
+## Exception nominative — priorité demandée par l'utilisateur
+
+**Al-Baqarah 2:63 ↔ 2:93**, même sourate, **priorité P0** car cette confusion de récitation est fréquemment rencontrée par l'utilisateur.
+
+- Dix premiers mots identiques jusqu'à **بِقُوَّةٍ** inclus.
+- Première divergence au **11e mot** : 2:63 **وَاذْكُرُوا** / 2:93 **وَاسْمَعُوا**.
+- Suite utile : 2:63 **مَا فِيهِ لَعَلَّكُمْ تَتَّقُونَ** / 2:93 **قَالُوا سَمِعْنَا وَعَصَيْنَا**.
+- Contrôle textuel indépendant : https://quran.com/2/63 et https://quran.com/2/93 .
+- **Provenance : ajout explicite de l'utilisateur, vérifié sur les versets ; ne pas l'attribuer à al-ʿAbbād.** Ce cas n'a pas été établi comme une entrée de l'ouvrage.
+- Catalogue enrichi : `mutashabihat_292_dont_1_priorite_utilisateur.csv` = 291 candidats du livre + 1 cas utilisateur (68 intra / 224 inter). Le catalogue original de 291 entrées demeure inchangé.
+- Pour une future intégration Android, vérifier les indices de mots QCF avant le soulignement, conserver les deux Tafsīr et l'accès depuis Lecture / Révision. **Aucune insertion dans l'APK n'est réalisée par ce commit.**
+
 ## Contrat d'intégration futur
 Pour chaque paire approuvée : référence sourate/verset du Mushaf (et éventuelle plage), type exact de divergence, **mots de différence réellement vérifiés**, position des mots dans la géométrie QCF, deux lectures Tafsīr al-Jalālayn existantes et accès contextuel depuis Lecture et Révision. Pas d'entrée autonome Atlas, pas d'annotation durant la restitution de révision active, pas de modification des acquis, chronomètres ou sauvegardes.
 
