@@ -285,6 +285,11 @@ public final class AtlasDiscriminantActivity extends Activity {
     boolean qcfStripsReadyForTest(){return strips==null || strips.bothRenderedForTest();}
     int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0)
         +(strips==null?0:strips.failureCountForTest());}
+    String qcfFailureDetailForTest(){
+        return "leftPage="+currentLeftPage+" status="+leftPageStatus
+            +" rightPage="+currentRightPage+" status="+rightPageStatus
+            +" strips="+(strips==null?"disabled":strips.renderStatusForTest());
+    }
 
     private void showExplanation(){
         AtlasDiscriminantCases.Entry c=current();
