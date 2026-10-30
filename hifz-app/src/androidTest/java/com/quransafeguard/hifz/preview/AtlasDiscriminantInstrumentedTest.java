@@ -73,6 +73,33 @@ public final class AtlasDiscriminantInstrumentedTest {
         return null;
     }
 
+    /**
+     * Isolates page 148 / 285 without previous QCF DOMs; distinguishes an intrinsic
+     * SVG/geometry failure from a cumulative renderer-memory navigation failure.
+     */
+    @Test public void secondPilotRendersAloneWithoutPriorHeavyPages() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,6)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,151);
+        try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
+            AtomicBoolean ready=new AtomicBoolean(false);
+            for(int i=0;i<40;i++){
+                Thread.sleep(500L);
+                scenario.onActivity(activity->{
+                    assertEquals("Page 148 / 285 direct load failed",0,
+                        activity.qcfPagesFailedForTest());
+                    ready.set(activity.qcfPagesReadyForTest()&&activity.qcfStripsReadyForTest());
+                });
+                if(ready.get())break;
+            }
+            assertTrue("Direct 6:151 / 17:31 genuine QCF pages did not render",ready.get());
+            AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(1);
+            assertExactQcfWords(context,pair.first,pair.firstWordIndices);
+            assertExactQcfWords(context,pair.second,pair.secondWordIndices);
+        }
+    }
+
     /** Detect blank QCF panels or broken-image alt text even when WebView exists. */
     private static void assertInkIsVisible(Bitmap shot,Rect visible,String description) {
         int left=Math.max(0,visible.left),top=Math.max(0,visible.top);
