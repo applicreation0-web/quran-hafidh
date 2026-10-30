@@ -481,4 +481,32 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
+    /** The toolbar is the page-scoped fallback when a phone has no safe outside QCF gutter. */
+    @Test public void verifiedPageShowsChainLinkBeforeAnyVerseSelection() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        int page=GeometryRepository.get(context).pageForVerse(
+            new com.quransafeguard.hifz.core.VerseRef(2,63));
+        Intent start=new Intent(context,StudyReaderActivity.class)
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page);
+        try(ActivityScenario<StudyReaderActivity> scene=ActivityScenario.launch(start)) {
+            AtomicBoolean ready=new AtomicBoolean(false);
+            for(int i=0;i<40;i++){
+                Thread.sleep(250L);
+                scene.onActivity(activity->{
+                    View action=activity.discriminantActionForTest();
+                    ready.set(activity.selectedDiscriminantPageForTest()==page
+                        &&action!=null&&action.getVisibility()==View.VISIBLE);
+                });
+                if(ready.get())break;
+            }
+            assertTrue("Verified 2:63 must expose the chain-link icon without a tapped verse",ready.get());
+            scene.onActivity(activity->{
+                assertNull("Contextual icon must not alter the Tafsir verse selection",
+                    activity.selectedDiscriminantVerseForTest());
+                assertFalse("Regular Lecture must remain visible, never free-mask mode",
+                    activity.freeActiveMaskForTest());
+            });
+        }
+    }
+
 }
