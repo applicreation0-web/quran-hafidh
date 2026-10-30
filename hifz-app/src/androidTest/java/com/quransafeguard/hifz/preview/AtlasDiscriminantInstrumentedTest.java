@@ -61,7 +61,8 @@ public final class AtlasDiscriminantInstrumentedTest {
     }
     /** Finds the actual Atlas navigation button by its stable accessible label. */
     private static View findByDescription(View root,String description) {
-        if(description.contentEquals(root.getContentDescription()))return root;
+        CharSequence label=root.getContentDescription();
+        if(label!=null && description.contentEquals(label))return root;
         if(root instanceof ViewGroup) {
             ViewGroup parent=(ViewGroup)root;
             for(int i=0;i<parent.getChildCount();i++) {
