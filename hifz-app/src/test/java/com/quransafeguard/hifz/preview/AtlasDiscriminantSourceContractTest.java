@@ -42,6 +42,25 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(catalog.contains("return -1;"));
         assertFalse(reader.contains("new HifzSessionActivity()"));
     }
+    @Test public void lectureGutterMarkerIsSourceRestrictedAndNeverModifiesQcf() throws Exception {
+        String marker=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantMarkers.java");
+        String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        String mushaf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
+        assertTrue(marker.contains("AtlasDiscriminantCases.PILOT"));
+        assertTrue(marker.contains("geometry.pageForVerse(v)==page"));
+        assertTrue(marker.contains("var side=left>=32?'left':right>=32?'right':null"));
+        assertTrue(marker.contains("m.querySelectorAll('.ayahPolygon')"));
+        assertTrue(marker.contains("HifzNative.comparisonTap"));
+        assertTrue(reader.contains("onAtlasDiscriminantTap(VerseRef verse)"));
+        assertTrue(reader.contains("if(verse==null||freeActiveMask"));
+        assertTrue(reader.contains("AtlasDiscriminantMarkers.show(mushaf,shown"));
+        assertTrue(mushaf.contains("default void onAtlasDiscriminantTap(VerseRef verse)"));
+        assertFalse(marker.contains("HifzPrefs"));
+        assertFalse(marker.contains("putInt("));
+        assertFalse(marker.contains("innerHTML=svg"));
+        assertFalse(marker.contains("mushaf.appendChild"));
+    }
+
     @Test public void exactQcfAndWordCoordinatesOnly() throws Exception {
         String thumbnails=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java");
         String excerpts=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
