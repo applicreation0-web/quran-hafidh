@@ -41,8 +41,8 @@ final class AtlasDiscriminantMarkers {
             "var frame=host.getBoundingClientRect(),page=m.getBoundingClientRect();"+
             "var left=page.left-frame.left,right=frame.right-page.right;"+
             // A narrow reader has no safe outside gutter: toolbar action is the fallback.
-            "var side=left>=32?'left':right>=32?'right':null;if(!side)return;"+
-            "var x=side==='left'?left-30:page.right-frame.left+4;"+
+            "var side=left>=36?'left':right>=36?'right':null;if(!side)return;"+
+            "var x=side==='left'?left-35:page.right-frame.left+2;"+
             "var root=document.createElement('div');root.id='atlas-discriminant-marks';"+
             "root.style.cssText='position:absolute;inset:0;z-index:9;pointer-events:none';"+
             "host.appendChild(root);"+
@@ -55,15 +55,15 @@ final class AtlasDiscriminantMarkers {
             "var r=e.getBoundingClientRect();if(!target||r.top<target.top)target=r;"+
             "}}"+
             "if(!target)return;"+
-            "var y=Math.max(1,Math.min(host.clientHeight-28,target.top-frame.top));"+
+            "var y=Math.max(1,Math.min(host.clientHeight-35,target.top-frame.top));"+
             "var btn=document.createElement('button');btn.type='button';"+
             "btn.setAttribute('aria-label','Versets ressemblants '+ref);"+
             "btn.setAttribute('title','Versets ressemblants '+ref);"+
             "btn.style.cssText='position:absolute;left:'+x+'px;top:'+y+'px;"+
-            "width:26px;height:26px;padding:3px;margin:0;pointer-events:auto;"+
+            "width:34px;height:34px;padding:5px;margin:0;pointer-events:auto;"+
             "border:1px solid #777;border-radius:6px;background:#faf8f2;color:#121211';"+
             "btn.innerHTML='<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" "+
-            "width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" "+
+            "width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" "+
             "stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">"+
             "<path d=\"M2.5 5.5h6v13h-6zM15.5 5.5h6v13h-6zM8.5 12h7\"/>"+
             "<circle cx=\"5.5\" cy=\"12\" r=\"1.7\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.7\"/></svg>';"+
