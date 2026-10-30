@@ -57,10 +57,6 @@ final class MapQcfThumbnails extends WebView {
  void setAtlasSinglePageCompact(boolean enabled) {
   if(atlasSinglePageCompact==enabled)return;
   atlasSinglePageCompact=enabled;renderKey="";
-  // Software-only for paired Atlas original KFQC pages, never the other Atlas
-  // maps/reader surfaces which have their own renderer/performance contracts.
-  setLayerType(enabled ? android.view.View.LAYER_TYPE_SOFTWARE
-      : android.view.View.LAYER_TYPE_NONE,null);
  }
  MapQcfThumbnails(Context context,Listener listener){
   super(context);this.listener=listener;
@@ -245,7 +241,7 @@ final class MapQcfThumbnails extends WebView {
       .append("var raw=atob(src),bytes=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);")
       .append("var parsed=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'image/svg+xml');")
       .append("var svg=parsed.documentElement;if(!svg||svg.localName!=='svg'||parsed.getElementsByTagName('parsererror').length)throw Error('SVG XML invalid');")
-      .append("var paths=svg.getElementsByTagName('path').length;if(paths<20)throw Error('Missing original QCF paths');")
+      .append("if(!svg.querySelector('path.ayahPolygon'))throw Error('Missing original QCF ayah polygon');")
       .append("var imported=document.importNode(svg,true);box.textContent='';box.appendChild(imported);")
       .append("requestAnimationFrame(function(){requestAnimationFrame(function(){var rect=imported.getBoundingClientRect();if(rect.width<=40||rect.height<=60){qcfError('inline SVG viewport '+rect.width+'x'+rect.height,gen);}else MapPages.fullStatus(currentSvgPage,gen,true);});});")
       .append("}catch(err){box.textContent='Page QCF indisponible';qcfError('SVG parse/import '+String(err),gen);}return;}")
@@ -271,30 +267,6 @@ final class MapQcfThumbnails extends WebView {
   evaluateJavascript("if(window.receiveFullChunk)receiveFullChunk("+index+","+total+",'"+chunk+"',"+pendingCompactGeneration+");",null);
  }
 
- /** Drop the previous full SVG document before a different Atlas pair is decoded.
-  * A new 600 KB vector on top of two former page DOMs can exhaust Chromium tiles. */
- void releaseAtlasComparison(Runnable onCleared){
-  if(disposed||!atlasSinglePageCompact){if(onCleared!=null)onCleared.run();return;}
-  final int token=++fullGeneration;
-  pendingCompactSvg=null;renderKey="";
-  synchronized(this){vectorCache.clear();}
-  final boolean[] delivered={false};
-  Runnable finish=()->{
-   if(delivered[0])return;
-   delivered[0]=true;
-   if(disposed||token!=fullGeneration)return;
-   setWebViewClient(new android.webkit.WebViewClient());
-   if(onCleared!=null)onCleared.run();
-  };
-  setWebViewClient(new android.webkit.WebViewClient(){
-   @Override public void onPageFinished(WebView view,String url){
-    if("about:blank".equals(url))finish.run();
-   }
-  });
-  loadUrl("about:blank");
-  // Never strand the reader if an older BOOX WebView omits the blank-page callback.
-  postDelayed(finish,700L);
- }
  /** Invalidate queued bridge work before releasing the native WebView. */
  @Override public void destroy(){
   if(disposed)return;
