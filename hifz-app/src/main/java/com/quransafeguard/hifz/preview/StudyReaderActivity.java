@@ -62,6 +62,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private VerseRef pendingJumpVerse;
     private Button tafsirButton;
     private Button semanticButton;
+    /** Read-only Atlas relation; only available after selecting a documented, visible verse. */
+    private Button discriminantButton;
     /** Lecture-only, opt-in Révision active gomme: no timer, validation or Hifz writes. */
     private Button freeActiveMaskButton;
     private boolean freeActiveMask;
@@ -230,6 +232,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticButton = Ui.iconButton(this, "", "Afficher les ancres", v -> toggleSemanticCues());
         semanticButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
+        // Existing Atlas link icon; no overlays or text reflow on original QCF glyphs.
+        discriminantButton=Ui.iconButton(this,"","Versets ressemblants",
+            v->openSelectedDiscriminant());
+        discriminantButton.setVisibility(View.GONE);
+        readerActions.addView(discriminantButton);
         // One discreet access point, using the existing Révision pictogram.
         // The 100% mask only affects the current Lecture surface.
         freeActiveMaskButton=Ui.iconButton(this,"","Révision active",
@@ -375,6 +382,47 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return button;
     }
 
+    /**
+     * Strict source-first lookup: no unrelated case is offered as a default.
+     * The link stays hidden during Lecture's free masked recall, and never
+     * changes a Mushaf page, Hifz engine, mask, credit or session cursor.
+     */
+    private void updateDiscriminantButton() {
+        if(discriminantButton==null)return;
+        boolean available=!freeActiveMask&&selected!=null
+            &&AtlasDiscriminantCases.indexFor(selected.getSurah(),selected.getAyah())>=0;
+        if(available){
+            try {
+                available=GeometryRepository.get(this).pageForVerse(selected)==page;
+            } catch(RuntimeException missingGeometry) {available=false;}
+        }
+        discriminantButton.setVisibility(available?View.VISIBLE:View.GONE);
+        if(available)Ui.setIconDescription(discriminantButton,
+            "Versets ressemblants · "+selected.getSurah()+":"+selected.getAyah());
+    }
+
+    private void openSelectedDiscriminant() {
+        // Revalidate the exact selected verse when tapping, not just at paint time.
+        if(discriminantButton==null||discriminantButton.getVisibility()!=View.VISIBLE
+            ||freeActiveMask||selected==null
+            ||AtlasDiscriminantCases.indexFor(selected.getSurah(),selected.getAyah())<0)return;
+        final VerseRef source=selected;
+        try {
+            if(GeometryRepository.get(this).pageForVerse(source)!=page)return;
+        } catch(RuntimeException unavailable) {return;}
+        startActivity(new Intent(this,AtlasDiscriminantActivity.class)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,source.getSurah())
+            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,source.getAyah()));
+        // The existing Lecture activity remains underneath, retaining selection,
+        // QCF page, annotation state and current mask without writing Hifz prefs.
+    }
+
+    // Android instrumented contract: identify the same activity across the round trip.
+    int selectedDiscriminantPageForTest(){return page;}
+    VerseRef selectedDiscriminantVerseForTest(){return selected;}
+    boolean freeActiveMaskForTest(){return freeActiveMask;}
+    View discriminantActionForTest(){return discriminantButton;}
+
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
         if(mapPreview) {
@@ -407,6 +455,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // the next page is bootstrapped atomically with its own QCF word holes.
         if(freeActiveMask)showFreeActiveMaskPage();
         else if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
+        updateDiscriminantButton();
         showControls();
     }
 
@@ -433,6 +482,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             }
         }
         selected = verse;
+        updateDiscriminantButton();
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
         if(!mapUnitPreview&&!freeActiveMask)mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
         refreshOpenTafsir(verse);
@@ -631,6 +681,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         mushaf.setMaskEntropy(hifzPrefs.maskEntropyFor(freeActiveMask
             ?HifzSessionActivity.MURAJAAH_ACTIVE:"reader_default"));
         updateFreeActiveMaskButton();
+        updateDiscriminantButton();
         // Repaint the same original QCF folio without Atlas focus overlays.
         // On-page-shown installs exact holes *before* enabling the 100% mask.
         if(freeActiveMask)showFreeActiveMaskPage();
@@ -1244,6 +1295,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             if(freeActiveMask)showFreeActiveMaskPage();
             else if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         }
+        updateDiscriminantButton();
     }
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     @Override public void onPageShown(int shown) {
@@ -1310,6 +1362,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     @Override protected void onResume() {
         super.onResume();
+        updateDiscriminantButton();
         if(controlsVisible)scheduleAutoHide();
     }
 
