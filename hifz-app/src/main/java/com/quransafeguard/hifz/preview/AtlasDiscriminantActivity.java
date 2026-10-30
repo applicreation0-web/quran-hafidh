@@ -221,6 +221,12 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(strips!=null)strips.setVisibility(View.VISIBLE);
     }
 
+    android.graphics.Rect[] qcfPageBoundsForTest(){
+        android.graphics.Rect first=new android.graphics.Rect(),second=new android.graphics.Rect();
+        if(left!=null)left.getGlobalVisibleRect(first);
+        if(right!=null)right.getGlobalVisibleRect(second);
+        return new android.graphics.Rect[]{first,second};
+    }
     boolean qcfPagesReadyForTest(){return leftPageStatus==1&&rightPageStatus==1;}
     boolean qcfStripsReadyForTest(){return strips==null || strips.bothRenderedForTest();}
     int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0)
