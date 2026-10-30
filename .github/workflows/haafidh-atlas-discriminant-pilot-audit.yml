@@ -67,7 +67,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Instrumented 2-Mushaf comparison / screenshot / no Hifz change
+      - name: Instrumented Atlas, revision, backup and finals / real captures
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -75,32 +75,7 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: |
-            mkdir -p hifz-app/build/atlas-comparison-audit
-            collect_audit() {
-              adb logcat -d -s HaafidhAtlasQCF:V QcfAtlasStrips:V chromium:E > hifz-app/build/atlas-comparison-audit/emulator-qcf-logcat.txt || true
-              adb pull /sdcard/Pictures/HaafidhAudit/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png || true
-              for capture in passive active-masked active-validated; do
-                adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-$capture.png hifz-app/build/atlas-comparison-audit/ || true
-              done
-            }
-            trap collect_audit EXIT
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest,com.quransafeguard.hifz.preview.RevisionAtlasInstrumentedTest
-            adb pull /sdcard/Pictures/HaafidhAudit/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
-            test -s hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
-            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-passive.png hifz-app/build/atlas-comparison-audit/
-            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-active-masked.png hifz-app/build/atlas-comparison-audit/
-            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-active-validated.png hifz-app/build/atlas-comparison-audit/
-            cp -R hifz-app/build/outputs/androidTest-results hifz-app/build/atlas-comparison-audit/comparison-android-results
-      - name: Android backup, finals persistence and masked validation regression
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          target: google_apis
-          profile: pixel_2
-          disable-animations: true
-          script: gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalMaskReadinessInstrumentedTest
+          script: bash scripts/run_atlas_revision_android_audit.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
