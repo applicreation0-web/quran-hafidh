@@ -24,13 +24,14 @@ public final class ActiveReviewCorrectionInstrumentedTest {
         assertEquals(Arrays.asList(408,407),new ArrayList<>(store.revealed("2026-10-29",start)));
         assertTrue(store.revealed("2026-10-30",start).isEmpty());
         assertTrue(store.begin("2026-10-29",start,end,12345L,
-            ActiveReviewCorrectionPlan.select(store.revealed("2026-10-29",start))));
-        assertFalse(store.begin("2026-10-29",start,end,12345L,Collections.singletonList(200)));
+            ActiveReviewCorrectionPlan.select(store.revealed("2026-10-29",start)),409));
+        assertFalse(store.begin("2026-10-29",start,end,12345L,Collections.singletonList(200),409));
         ActiveReviewCorrectionStore reopened=new ActiveReviewCorrectionStore(prefs);
         ActiveReviewCorrectionStore.State state=reopened.pending();
         assertNotNull(state);
         assertEquals("READ",state.stage);
         assertEquals(408,state.page());
+        assertEquals(409,state.originPage);
         assertEquals(end,state.end);
         assertEquals(12345L,state.activeElapsedMs);
         assertTrue(reopened.pageReread(state));
