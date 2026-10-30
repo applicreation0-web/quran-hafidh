@@ -340,6 +340,48 @@ public final class AtlasDiscriminantInstrumentedTest {
     }
 
 
+    /** Two distinct, visible Lecture links must open the exact target verse,
+     * then return to the SAME comparison without touching Hifz. */
+    @Test public void bothVisibleLectureLinksOpenExactVersesAndReturn() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,2)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,58)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,"Lecture");
+        Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        Instrumentation.ActivityMonitor monitor=instrumentation.addMonitor(
+            StudyReaderActivity.class.getName(),null,false);
+        try {
+            try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
+                for(int side=0;side<2;side++){
+                    final boolean first=side==0;
+                    scenario.onActivity(activity->{
+                        View link=findByDescription(activity.getWindow().getDecorView(),
+                            first?"Ouvrir le premier verset en Lecture":
+                                "Ouvrir le second verset en Lecture");
+                        assertNotNull("Contextual Lecture destination missing",link);
+                        assertTrue("Text link must be directly tappable",link.performClick());
+                    });
+                    Activity opened=instrumentation.waitForMonitorWithTimeout(monitor,15000);
+                    assertNotNull("Tapping explicit Lecture destination must open reader",opened);
+                    assertEquals(first?"2:58":"7:161",opened.getIntent()
+                        .getStringExtra(StudyReaderActivity.EXTRA_JUMP_VERSE));
+                    assertEquals(first?9:171,opened.getIntent()
+                        .getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,-1));
+                    instrumentation.runOnMainSync(opened::finish);
+                    instrumentation.waitForIdleSync();
+                    scenario.onActivity(activity->{
+                        assertEquals(9,activity.getCurrentLeftPageForTest());
+                        assertTrue("Back must restore the same comparison",
+                            activity.qcfPagesFailedForTest()==0);
+                    });
+                }
+            }
+        } finally {
+            instrumentation.removeMonitor(monitor);
+        }
+    }
+
     /**
      * Reader -> exact Atlas pair -> Back must preserve the SAME reader instance,
      * the same selected QCF verse and current page, and all Hifz progress.
