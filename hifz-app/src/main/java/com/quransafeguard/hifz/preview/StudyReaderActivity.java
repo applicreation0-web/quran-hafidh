@@ -412,7 +412,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         } catch(RuntimeException unavailable) {return;}
         startActivity(new Intent(this,AtlasDiscriminantActivity.class)
             .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,source.getSurah())
-            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,source.getAyah()));
+            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,source.getAyah())
+            .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,"Lecture"));
         // The existing Lecture activity remains underneath, retaining selection,
         // QCF page, annotation state and current mask without writing Hifz prefs.
     }
