@@ -37,6 +37,10 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(thumbnails.contains("mushaf/hafs/kfqc/svg-br/%03d.svg.br"));
         assertTrue(thumbnails.contains("setAtlasSinglePageCompact"));
         assertTrue(thumbnails.contains("path.ayahPolygon[surah="));
+        assertTrue(thumbnails.contains("svg.querySelector('path.ayahPolygon')"));
+        assertTrue(excerpts.contains("svg.querySelector('path.ayahPolygon')"));
+        assertFalse(thumbnails.contains("paths<20"));
+        assertFalse(excerpts.contains("length<20"));
         assertTrue(excerpts.contains("MapQcfThumbnails.readSvg(getContext(),page)"));
         assertTrue(excerpts.contains("WordGeometryRepository.shared(getContext()).wordsForPage(page)"));
         assertTrue(excerpts.contains("lastPageForVerse(verse,geometry)==page"));
