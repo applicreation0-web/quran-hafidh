@@ -34,6 +34,8 @@ public final class AtlasDiscriminantActivity extends Activity {
     private TextView title, position, leftHeader, rightHeader, kind, leftCue, rightCue;
     private RelationRail rail;
     private boolean disposed;
+    private int comparisonGeneration;
+    private boolean firstComparison=true;
     private Button prev,next;
     private int currentLeftPage, currentRightPage;
     private int leftPageStatus, rightPageStatus; // 0 pending, +1 decoded, -1 failed
@@ -218,9 +220,23 @@ public final class AtlasDiscriminantActivity extends Activity {
         leftPageStatus=0;rightPageStatus=0;
         right.setVisibility(View.INVISIBLE);
         if(strips!=null)strips.setVisibility(View.INVISIBLE);
-        // Highlight the ACTUAL ayahPolygon of the Quran, not approximated rectangles.
-        left.showPages(currentLeftPage,currentLeftPage,currentLeftPage,
-            c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
+        final int generation=++comparisonGeneration;
+        if(firstComparison){
+            firstComparison=false;
+            showCurrentLeft();
+        }else{
+            // The prior two full QCF page documents and two enlarged excerpts
+            // must disappear BEFORE a new original vector is decoded.
+            final int required=strips==null?2:3;
+            final int[] released={0};
+            Runnable ready=()->{
+                if(disposed||generation!=comparisonGeneration)return;
+                if(++released[0]==required)showCurrentLeft();
+            };
+            left.releaseAtlasComparison(ready);
+            right.releaseAtlasComparison(ready);
+            if(strips!=null)strips.releaseAtlasComparison(ready);
+        }
 
         kind.setText("Différence · "+c.kind);
         leftCue.setText(c.firstCue);
@@ -229,6 +245,14 @@ public final class AtlasDiscriminantActivity extends Activity {
         prev.setEnabled(selectedIndex>0);
         next.setEnabled(selectedIndex<AtlasDiscriminantCases.PILOT.size()-1);
         rail.invalidate();
+    }
+
+    private void showCurrentLeft(){
+        if(disposed)return;
+        AtlasDiscriminantCases.Entry c=current();
+        // Highlight only the canonical QCF ayahPolygon, no approximated boxes.
+        left.showPages(currentLeftPage,currentLeftPage,currentLeftPage,
+            c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
     }
 
     private void showRightAfterLeft(){
