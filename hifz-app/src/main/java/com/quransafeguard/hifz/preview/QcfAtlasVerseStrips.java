@@ -34,8 +34,6 @@ final class QcfAtlasVerseStrips extends WebView {
     QcfAtlasVerseStrips(Context context) {
         super(context);
         setBackgroundColor(Color.rgb(250,248,240));
-        // Avoid renderer tile-memory exhaustion with two genuine vector crops.
-        setLayerType(android.view.View.LAYER_TYPE_SOFTWARE,null);
         WebSettings s=getSettings();
         s.setJavaScriptEnabled(true);
         s.setBlockNetworkLoads(true);
@@ -73,7 +71,7 @@ final class QcfAtlasVerseStrips extends WebView {
             +"if(!src){target.textContent='Extrait QCF indisponible — ouvrir le Muṣḥaf';QcfStrip.stripStatus(i,g,false);return;}"
             +"try{var raw=atob(src),bytes=new Uint8Array(raw.length);for(var j=0;j<raw.length;j++)bytes[j]=raw.charCodeAt(j);"
             +"var parsed=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'image/svg+xml');"
-            +"var svg=parsed.documentElement;if(!svg||svg.localName!=='svg'||parsed.getElementsByTagName('parsererror').length||svg.getElementsByTagName('path').length<20)throw Error('Bad QCF excerpt');"
+            +"var svg=parsed.documentElement;if(!svg||svg.localName!=='svg'||parsed.getElementsByTagName('parsererror').length||!svg.querySelector('path.ayahPolygon'))throw Error('Bad QCF excerpt');"
             +"var original=document.importNode(svg,true);target.textContent='';target.appendChild(original);"
             +"requestAnimationFrame(function(){requestAnimationFrame(function(){var box=original.getBoundingClientRect();QcfStrip.stripStatus(i,g,box.width>20&&box.height>10);});});"
             +"}catch(e){target.textContent='Extrait QCF indisponible — ouvrir le Muṣḥaf';QcfStrip.stripStatus(i,g,false);}}"
@@ -133,30 +131,6 @@ final class QcfAtlasVerseStrips extends WebView {
         strokes.append("</g>");
         if(!cropped.contains("</svg>"))return "";
         return cropped.replace("</svg>",strokes+"</svg>");
-    }
-
-    /** Flush two previous excerpt SVGs before allocating any new QCF pages. */
-    void releaseAtlasComparison(Runnable onCleared){
-        if(disposed){if(onCleared!=null)onCleared.run();return;}
-        final int token=++generation;
-        pendingEncoded=null;
-        renderStatus[0]=0;renderStatus[1]=0;
-        left=null;right=null;wordsLeft=null;wordsRight=null;
-        final boolean[] delivered={false};
-        Runnable finish=()->{
-            if(delivered[0])return;
-            delivered[0]=true;
-            if(disposed||token!=generation)return;
-            setWebViewClient(new android.webkit.WebViewClient());
-            if(onCleared!=null)onCleared.run();
-        };
-        setWebViewClient(new android.webkit.WebViewClient(){
-            @Override public void onPageFinished(WebView view,String url){
-                if("about:blank".equals(url))finish.run();
-            }
-        });
-        loadUrl("about:blank");
-        postDelayed(finish,700L);
     }
 
     String renderStatusForTest(){return renderStatus[0]+"/"+renderStatus[1];}
