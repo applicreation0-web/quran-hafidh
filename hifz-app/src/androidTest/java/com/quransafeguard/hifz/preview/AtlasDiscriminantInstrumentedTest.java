@@ -59,6 +59,19 @@ public final class AtlasDiscriminantInstrumentedTest {
         assertEquals("Wrong number of QCF discriminant underlines for "+verse,
             marked.length,renderedLines);
     }
+    /** Finds the actual Atlas navigation button by its stable accessible label. */
+    private static View findByDescription(View root,String description) {
+        if(description.contentEquals(root.getContentDescription()))return root;
+        if(root instanceof ViewGroup) {
+            ViewGroup parent=(ViewGroup)root;
+            for(int i=0;i<parent.getChildCount();i++) {
+                View found=findByDescription(parent.getChildAt(i),description);
+                if(found!=null)return found;
+            }
+        }
+        return null;
+    }
+
     /** Detect blank QCF panels or broken-image alt text even when WebView exists. */
     private static void assertInkIsVisible(Bitmap shot,Rect visible,String description) {
         int left=Math.max(0,visible.left),top=Math.max(0,visible.top);
@@ -159,11 +172,21 @@ public final class AtlasDiscriminantInstrumentedTest {
         Context context=ApplicationProvider.getApplicationContext();
         SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
         Map<String,?> before=new HashMap<>(prefs.getAll());
-        for(AtlasDiscriminantCases.Entry pair:AtlasDiscriminantCases.PILOT){
-            Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
-                .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,pair.first.getSurah())
-                .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,pair.first.getAyah());
-            try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
+        AtlasDiscriminantCases.Entry first=AtlasDiscriminantCases.PILOT.get(0);
+        Intent intent=new Intent(context,AtlasDiscriminantActivity.class)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,first.first.getSurah())
+            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,first.first.getAyah());
+        // Test the user's actual next-arrow navigation in one screen; repeatedly
+        // destroying three heavy WebViews is not the production navigation path.
+        try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
+            for(int i=0;i<AtlasDiscriminantCases.PILOT.size();i++){
+                AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(i);
+                if(i>0)scenario.onActivity(activity->{
+                    View next=findByDescription(activity.getWindow().getDecorView(),
+                        "Passage suivant du corpus");
+                    assertNotNull("Atlas next-couple button missing",next);
+                    assertTrue("Atlas next-couple button not clickable",next.performClick());
+                });
                 scenario.onActivity(activity->{
                     GeometryRepository geometry=GeometryRepository.get(activity);
                     assertEquals("Wrong left QCF page for "+pair.first,
