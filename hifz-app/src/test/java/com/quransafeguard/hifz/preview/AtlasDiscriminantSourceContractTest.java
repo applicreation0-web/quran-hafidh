@@ -9,6 +9,11 @@ import static org.junit.Assert.*;
 
 /** No fake Arabic, no internet, no Hifz state, and authentic two-page QCF vector rendering. */
 public final class AtlasDiscriminantSourceContractTest {
+    @Test public void pairedInlineSvgClipsHaveDistinctSourceScopedIds()throws Exception{
+        String source=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
+        assertFalse("Inline paired SVG cannot share a clip id",source.contains("id='atlas-word-window'"));
+        assertTrue(source.contains("target.getSurah()+\"-\"+target.getAyah()"));
+    }
     static String read(String path) throws Exception {
         Path p=Paths.get(path);
         if(!Files.exists(p))p=Paths.get("..",path);

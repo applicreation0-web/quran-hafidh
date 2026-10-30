@@ -94,6 +94,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean revealedThisRep;
     private Button revealButton;
     private Button murajaahFinishButton;
+    private Button discriminantButton;
+    private VerseRef discriminantVerse;
+    // UI-only authorization, populated only after the existing active validation succeeds.
+    private VerseRef validatedDiscriminantVerse;
     /** Révision active only: armed by "Marquer", the next verse tap flags/unflags it instead of moving the cursor. */
     private boolean weakMarkMode;
     /** Pages revealed at least once during this Révision active session, for weak-spot streak decay. */
@@ -204,6 +208,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         });
         buildUi();
         renderMode();
+        if(state!=null){
+            discriminantVerse=readAtlasVerse(state,"atlasSelected");
+            if(MURAJAAH_ACTIVE.equals(mode)&&sessionDate.toString().equals(prefs.lastActiveMurajaahDate()))
+                validatedDiscriminantVerse=readAtlasVerse(state,"atlasValidated");
+            updateDiscriminantAction();
+        }
     }
 
     private void buildUi() {
@@ -258,6 +268,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
+        discriminantButton=Ui.iconButton(this,"","Versets ressemblants",v->openRevisionDiscriminant());
+        discriminantButton.setVisibility(View.GONE);
+        controlBar.addView(discriminantButton);
         if (!MURAJAAH_ACTIVE.equals(mode)) {
             annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
             annotationButton.setSelected(annotationEnabled);
@@ -319,6 +332,63 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText("La séance ne peut pas être affichée. Ouvrez Diagnostic si nécessaire.");
         }
         if (sessionCompleted && !awaitingValidation) showClosingFatiha();
+        updateDiscriminantAction();
+    }
+
+    private static VerseRef readAtlasVerse(Bundle state,String key){
+        String value=state.getString(key);
+        if(value==null)return null;
+        try{String[] parts=value.split(":");return new VerseRef(Integer.parseInt(parts[0]),Integer.parseInt(parts[1]));}
+        catch(RuntimeException invalid){return null;}
+    }
+
+    private boolean canCompareRevisionVerse(VerseRef verse){
+        if(!isMurajaahMode()||verse==null||geometry==null)return false;
+        boolean active=MURAJAAH_ACTIVE.equals(mode);
+        boolean covered=active ? verse.equals(validatedDiscriminantVerse)
+            : murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse);
+        return RevisionAtlasAccess.allowed(active,sessionCompleted,
+            sessionDate.toString().equals(prefs.lastActiveMurajaahDate()),
+            AtlasDiscriminantCases.indexFor(verse.getSurah(),verse.getAyah())>=0,
+            geometry.pageForVerse(verse)==currentPage,covered);
+    }
+
+    private void updateDiscriminantAction(){
+        if(discriminantButton==null)return;
+        if(MURAJAAH_ACTIVE.equals(mode))discriminantVerse=validatedDiscriminantVerse;
+        else if(!canCompareRevisionVerse(discriminantVerse)){
+            discriminantVerse=null;
+            if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&!sessionCompleted)
+                for(VerseRef verse:murajaahPlan.traversalVerses)
+                    if(canCompareRevisionVerse(verse)){discriminantVerse=verse;break;}
+        }
+        boolean allowed=canCompareRevisionVerse(discriminantVerse);
+        discriminantButton.setVisibility(allowed?View.VISIBLE:View.GONE);
+        if(allowed)Ui.setIconDescription(discriminantButton,"Versets ressemblants · "+discriminantVerse);
+    }
+
+    private void openRevisionDiscriminant(){
+        if(!canCompareRevisionVerse(discriminantVerse))return;
+        VerseRef source=discriminantVerse;
+        // Pause before launching, so even launch time cannot count as revision time.
+        clock.pause();
+        startActivity(new Intent(this,AtlasDiscriminantActivity.class)
+            .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,source.getSurah())
+            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,source.getAyah()));
+    }
+
+    @Override public void onAtlasDiscriminantTap(VerseRef verse){
+        // A gutter tap is consultation only: never route through onVerseTap/checkpoint.
+        if(!canCompareRevisionVerse(verse))return;
+        discriminantVerse=verse;
+        updateDiscriminantAction();
+        openRevisionDiscriminant();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state){
+        if(discriminantVerse!=null)state.putString("atlasSelected",discriminantVerse.toString());
+        if(validatedDiscriminantVerse!=null)state.putString("atlasValidated",validatedDiscriminantVerse.toString());
+        super.onSaveInstanceState(state);
     }
 
     /**
@@ -1889,6 +1959,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
             }
+            validatedDiscriminantVerse=null;
+            if(AtlasDiscriminantCases.indexFor(murajaahActualEnd.getSurah(),murajaahActualEnd.getAyah())>=0)
+                validatedDiscriminantVerse=murajaahActualEnd;
+            else if(murajaahPlan.traversalVerses.contains(murajaahActualEnd))
+                for(VerseRef verse:murajaahPlan.traversalVerses){
+                    if(AtlasDiscriminantCases.indexFor(verse.getSurah(),verse.getAyah())>=0)
+                        validatedDiscriminantVerse=verse;
+                    if(verse.equals(murajaahActualEnd))break;
+                }
         } else {
             SpeedCalibration.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
             String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
@@ -2032,6 +2111,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         murajaahActualEnd=verse;
+        if(MURAJAAH.equals(mode))discriminantVerse=verse;
+        updateDiscriminantAction();
         updateMurajaahProgress();
         mushaf.setSelection(Collections.singletonList(verse),currentLineIds);
         checkpointMurajaah(clock.elapsedMs());
@@ -2332,6 +2413,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onPageShown(int page){
         currentPage=page;
         annotationOverlay.setPage(page);
+        org.json.JSONArray atlasRows=new org.json.JSONArray();
+        // Active recall never exposes either a marker or a link; closing Fatiha has none.
+        java.util.Set<VerseRef> atlasSeen=new java.util.HashSet<>();
+        if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&!sessionCompleted)
+            for(VerseRef verse:murajaahPlan.traversalVerses)
+                if(canCompareRevisionVerse(verse)&&atlasSeen.add(verse))
+                    atlasRows.put(verse.toString());
+        AtlasDiscriminantMarkers.show(mushaf,atlasRows);
+        updateDiscriminantAction();
         if ((isSundayFinalPageRepetition() && currentMask == 100)
                 || (POST_FINAL_RECALL.equals(mode) && currentPostFinalReview != null
                     && page == currentPostFinalReview.page && currentMask == 100)) {

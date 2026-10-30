@@ -58,7 +58,7 @@ jobs:
           JS
       - name: Pilot source, icon and QCF comparison tests
         run: |
-          gradle --no-daemon :hifz-app:testDebugUnitTest --tests '*AtlasDiscriminantCasesTest' --tests '*AtlasDiscriminantSourceContractTest' --tests '*UiIconMappingTest'
+          gradle --no-daemon :hifz-app:testDebugUnitTest --tests '*AtlasDiscriminantCasesTest' --tests '*AtlasDiscriminantSourceContractTest' --tests '*UiIconMappingTest' --tests '*RevisionAtlasAccessTest' --tests '*QcfExcerptWindowTest'
       - name: Full Hifz JVM and source regression gates
         run: |
           gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
@@ -78,9 +78,21 @@ jobs:
           script: |
             mkdir -p hifz-app/build/atlas-comparison-audit
             trap 'adb logcat -d -s HaafidhAtlasQCF:V QcfAtlasStrips:V chromium:E > hifz-app/build/atlas-comparison-audit/emulator-qcf-logcat.txt || true' EXIT
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest,com.quransafeguard.hifz.preview.RevisionAtlasInstrumentedTest
             adb pull /sdcard/Pictures/HaafidhAudit/haafidh-atlas-discriminant-portrait.png hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
             test -s hifz-app/build/atlas-comparison-audit/atlas-pilot-emulator-portrait.png
+            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-passive.png hifz-app/build/atlas-comparison-audit/
+            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-active-masked.png hifz-app/build/atlas-comparison-audit/
+            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/atlas-revision-active-validated.png hifz-app/build/atlas-comparison-audit/
+      - name: Android backup, finals persistence and masked validation regression
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalMaskReadinessInstrumentedTest
       - uses: actions/upload-artifact@v4
         if: always()
         with:

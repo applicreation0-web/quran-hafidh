@@ -89,10 +89,13 @@ final class QcfAtlasVerseStrips extends WebView {
             if(word.surah==target.getSurah()&&word.ayah==target.getAyah())found.add(word);
         if(found.isEmpty())return "";
         double x0=345,y0=550,x1=0,y1=0;
+        StringBuilder clips=new StringBuilder();
         for(WordGeometryRepository.WordBox word:found) {
+            if(!QcfExcerptWindow.includes(word.word,underlineWords))continue;
             x0=Math.min(x0,word.x0);y0=Math.min(y0,word.y0);
             x1=Math.max(x1,word.x1);y1=Math.max(y1,word.y1);
         }
+        if(x1<=x0||y1<=y0)return "";
         x0=Math.max(0,x0-8);y0=Math.max(0,y0-8);
         x1=Math.min(345,x1+8);y1=Math.min(550,y1+8);
         if(x1-x0<15||y1-y0<10)return "";
@@ -113,6 +116,22 @@ final class QcfAtlasVerseStrips extends WebView {
         String vb=String.format(Locale.ROOT,"viewBox='%.2f %.2f %.2f %.2f'",
             originX+x0,originY+y0,x1-x0,y1-y0);
         String cropped=source.substring(0,m.start())+vb+source.substring(m.end());
+        // Clip the original glyph paths to exact source-word windows. The bounding
+        // box alone would include unrelated words between differences on separate lines.
+        for(WordGeometryRepository.WordBox word:found){
+            if(!QcfExcerptWindow.includes(word.word,underlineWords))continue;
+            clips.append(String.format(Locale.ROOT,
+                "<rect x='%.2f' y='%.2f' width='%.2f' height='%.2f'/>",
+                originX+word.x0-2,originY+word.y0-2,word.x1-word.x0+4,word.y1-word.y0+4));
+        }
+        int rootStart=cropped.indexOf("<svg");
+        int rootEnd=rootStart<0?-1:cropped.indexOf('>',rootStart);
+        if(rootEnd<0||!cropped.contains("</svg>"))return "";
+        String clipId="atlas-word-window-"+target.getSurah()+"-"+target.getAyah();
+        cropped=cropped.substring(0,rootEnd+1)
+            +"<defs><clipPath id='"+clipId+"'>"+clips+"</clipPath></defs>"
+            +"<g clip-path='url(#"+clipId+")'>"+cropped.substring(rootEnd+1)
+                .replace("</svg>","</g></svg>");
         // Change the intrinsic SVG aspect ratio as well; no stretched / reflowed glyphs.
         cropped=cropped.replaceFirst("width='345' height='550'",
             String.format(Locale.ROOT,"width='%.2f' height='%.2f'",x1-x0,y1-y0));

@@ -6,7 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Lecture-only, read-only Atlas relation markers in the OUTSIDE gutter of the
+ * Read-only Atlas relation markers in the OUTSIDE gutter of the
  * original QCF Mushaf. Never edits glyph SVG or Hifz data and never guesses
  * the verse position from line numbers.
  */
@@ -28,6 +28,11 @@ final class AtlasDiscriminantMarkers {
     static void show(MushafView view,int page,GeometryRepository geometry,boolean suppressed) {
         // Hide all hints with the free active mask; never annotate scheduled Hifz.
         JSONArray rows=suppressed || geometry==null?new JSONArray():onPage(page,geometry);
+        show(view,rows);
+    }
+
+    /** Session callers supply only their permitted exact-page/corpus references. */
+    static void show(MushafView view,JSONArray rows) {
         String js="(function(){"+
             "var old=document.getElementById('atlas-discriminant-marks');if(old)old.remove();"+
             "var host=document.getElementById('box'),m=document.getElementById('mushaf');"+
@@ -60,8 +65,8 @@ final class AtlasDiscriminantMarkers {
             "btn.innerHTML='<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" "+
             "width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" "+
             "stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">"+
-            "<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/>"+
-            "<path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/></svg>';"+
+            "<path d=\"M2.5 5.5h6v13h-6zM15.5 5.5h6v13h-6zM8.5 12h7\"/>"+
+            "<circle cx=\"5.5\" cy=\"12\" r=\"1.7\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.7\"/></svg>';"+
             "btn.addEventListener('click',function(event){event.stopPropagation();"+
             "HifzNative.comparisonTap(Number(p[0]),Number(p[1]));});"+
             "root.appendChild(btn);"+
