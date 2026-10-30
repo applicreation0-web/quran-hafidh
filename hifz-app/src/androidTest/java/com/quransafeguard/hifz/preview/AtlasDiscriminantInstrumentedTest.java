@@ -354,6 +354,14 @@ public final class AtlasDiscriminantInstrumentedTest {
         try {
             try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
                 for(int side=0;side<2;side++){
+                    // Instrumentation.waitForMonitorWithTimeout consumes the
+                    // matching monitor after one Activity launch. Re-register
+                    // for the second independent Lecture destination.
+                    if(side>0){
+                        instrumentation.removeMonitor(monitor);
+                        monitor=instrumentation.addMonitor(
+                            StudyReaderActivity.class.getName(),null,false);
+                    }
                     final boolean first=side==0;
                     scenario.onActivity(activity->{
                         View link=findByDescription(activity.getWindow().getDecorView(),
