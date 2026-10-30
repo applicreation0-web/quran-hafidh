@@ -1,0 +1,65 @@
+name: Haafidh 1.17.9 - Relecture des pages dévoilées + mutashabihat (NO RELEASE)
+on:
+  push:
+    branches:
+      - work/haafidh-1179-reveal-replay-mutash-final-20261030
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-1179-reveal-mutash-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: No private release keys or release artifacts
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "work/haafidh-1179-reveal-replay-mutash-final-20261030"
+          test -z "${HIFZ_PRIVATE_RELEASE_UPGRADE:-}"
+          test -z "${HIFZ_KEYSTORE_PATH:-}"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install pinned SDK and authentic QCF Mushaf
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Hifz core plus all JVM and source contracts
+        run: gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: KVM access for real Android UI and persistence tests
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Instrumented page replay, all-604-page icon, QCF/tafsir and revision navigation
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewCorrectionInstrumentedTest,com.quransafeguard.hifz.preview.MutashPageMarkersInstrumentedTest,com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest,com.quransafeguard.hifz.preview.RevisionAtlasInstrumentedTest
+      - name: Preserve test reports only - never APK or release
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-1179-reveal-mutash-audit-NO-APK
+          path: |
+            hifz-app/build/reports/
+            hifz-app/build/test-results/
+            hifz-app/build/outputs/androidTest-results/
+          retention-days: 14
