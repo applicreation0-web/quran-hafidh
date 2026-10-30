@@ -268,7 +268,8 @@ final class MapQcfThumbnails extends WebView {
  void releaseAtlasComparison(Runnable onCleared){
   if(disposed||!atlasSinglePageCompact){if(onCleared!=null)onCleared.run();return;}
   final int token=++fullGeneration;
-  pendingCompactSvg=null;renderKey="";vectorCache.clear();
+  pendingCompactSvg=null;renderKey="";
+  synchronized(this){vectorCache.clear();}
   final boolean[] delivered={false};
   Runnable finish=()->{
    if(delivered[0])return;
