@@ -95,14 +95,11 @@ jobs:
             adb shell pidof "$package" | grep -Eq '[0-9]+'
             adb exec-out screencap -p > artifact/EMULATOR_HOME.png
             test -s artifact/EMULATOR_HOME.png
-      - name: Upload private test ZIP with APK and provenance - NO GitHub release
+      - name: No publication of debug APK in PUBLIC GitHub repository
         if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: QURAN-HAAFIDH-1179-BOOX-ANDROID-ISOLATED-DEBUG
-          path: artifact/
-          if-no-files-found: error
-          retention-days: 14
+        run: |
+          echo "PASS: APK compiled/installed in temporary runner but NOT uploaded."
+          test -s artifact/QURAN_HAAFIDH_1.17.9_BOOX_ANDROID_ISOLATED_TEST.apk
       - name: Upload diagnostic reports if unsuccessful, never the APK
         if: failure()
         uses: actions/upload-artifact@v4
