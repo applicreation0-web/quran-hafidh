@@ -206,7 +206,9 @@ public final class AtlasDiscriminantInstrumentedTest {
     @Test public void lectureSelectionOpensComparisonAndReturnsWithoutMovingCursor() throws Exception {
         Context context=ApplicationProvider.getApplicationContext();
         SharedPreferences hifz=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
-        Map<String,?> before=new HashMap<>(hifz.getAll());
+        // A fresh reader initializes schema-6 defaults; compare only changes
+        // made while the comparison is open, not first-install initialization.
+        AtomicReference<Map<String,?>> before=new AtomicReference<>();
         Intent start=new Intent(context,StudyReaderActivity.class)
             .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,408)
             .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,"30:37");
@@ -231,6 +233,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 }
                 assertTrue("Documented 30:37 must show the compact Lecture comparison icon",
                     ready.get());
+                before.set(new HashMap<>(hifz.getAll()));
                 scene.onActivity(activity->{
                     View button=activity.discriminantActionForTest();
                     assertNotNull(button);
@@ -254,7 +257,8 @@ public final class AtlasDiscriminantInstrumentedTest {
         } finally {
             instrument.removeMonitor(monitor);
         }
-        assertEquals("Comparison must not change any Hifz progress",before,hifz.getAll());
+        assertNotNull("Reader baseline must be captured before opening Atlas",before.get());
+        assertEquals("Comparison must not change any Hifz progress",before.get(),hifz.getAll());
     }
 
     /**
