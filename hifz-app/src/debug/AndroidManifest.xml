@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <application android:label="Quran Haafidh - Ibn Kathir TEST" tools:replace="android:label" />
+    <application android:label="Quran Haafidh 1.17.9 TEST" tools:replace="android:label" />
 </manifest>
