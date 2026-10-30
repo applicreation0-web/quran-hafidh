@@ -98,12 +98,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private VerseRef discriminantVerse;
     // UI-only authorization, populated only after the existing active validation succeeds.
     private VerseRef validatedDiscriminantVerse;
-    /** Révision active only: armed by "Marquer", the next verse tap flags/unflags it instead of moving the cursor. */
-    private boolean weakMarkMode;
-    /** Pages revealed at least once during this Révision active session, for weak-spot streak decay. */
-    private final java.util.Set<Integer> activeRevealedPages = new java.util.HashSet<>();
-    /** Reported as confusing: Révéler alone records nothing — said once per session, not on every touch. */
-    private boolean revealDoesNotMarkHintShown;
+    /** Automatic page correction: visible reread, then 100% masked recall, no flags. */
+    private ActiveReviewCorrectionStore correctionStore;
+    private ActiveReviewCorrectionStore.State correctionState;
+    private boolean correctionMaskedPageReady;
+    private Button correctionPageDoneButton;
     private LocalDate sessionDate;
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
@@ -120,6 +119,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 && !POST_FINAL_RECALL.equals(mode)
                 && !MURAJAAH.equals(mode) && !MURAJAAH_ACTIVE.equals(mode)) mode = SABQI;
         prefs = new HifzPrefs(this);
+        correctionStore = new ActiveReviewCorrectionStore(this);
         postFinalStore = new PostFinalRecallStore(this);
         requestedPostFinalFamily=getIntent().getStringExtra(EXTRA_POST_FINAL_FAMILY);
         String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
@@ -135,6 +135,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 ? capturedToday : LocalDate.parse(requestedSessionDate);
         } catch (RuntimeException invalidRecordedDate) {
             sessionDate = capturedToday;
+        }
+        if (MURAJAAH_ACTIVE.equals(mode)) {
+            try {
+                ActiveReviewCorrectionStore.State saved=correctionStore.pending();
+                if(saved!=null)sessionDate=LocalDate.parse(saved.date);
+            }catch(RuntimeException damaged) {
+                android.util.Log.e("QuranHifz","Corrective page state requires recovery",damaged);
+            }
         }
         // Resume the original frozen evening/final session, including its calendar date,
         // instead of assigning yesterday's repetitions to today's new cumulative set.
@@ -309,7 +317,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         revealButton = null;
         murajaahFinishButton = null;
         awaitingValidation = false;
-        weakMarkMode = false;
         unitFirstPage = 1;
         unitLastPage = 1;
         try {
@@ -1654,7 +1661,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         program.setText("Révision · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
         mushaf.setMaskFollowsSelection(false);
-        mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
+        mushaf.setHighlightVerses(Collections.emptyList());
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
         updateMurajaahActions();
@@ -1671,7 +1678,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private void renderMurajaahActive(){
         String today = sessionDate.toString();
+        correctionState=correctionStore.pending();
         if (today.equals(prefs.lastActiveMurajaahDate())) {
+            if(correctionState!=null&&!correctionStore.clear())
+                throw new IllegalStateException("Validated correction checkpoint could not be cleared");
+            correctionState=null;
             sessionCompleted = true;
             program.setText("Révision active · séance validée");
             progress.setText(prefs.lastActiveMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastActiveMurajaahLabel()));
@@ -1689,6 +1700,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
         murajaahPlan = geometry.planEligibleLines(prefs.activeMurajaahCursor(), lines, corpus);
         murajaahActualEnd = prefs.activeMurajaahActualEnd();
+        if(correctionState!=null){
+            if(!correctionState.date.equals(today)
+                ||!correctionState.start.equals(murajaahPlan.start)
+                ||!corpus.contains(correctionState.end)
+                ||!correctionState.end.equals(murajaahActualEnd))
+                throw new IllegalStateException("Correction and active Hifz endpoint mismatch");
+            murajaahActualEnd=correctionState.end;
+            clock.pause();
+            renderActiveCorrection();
+            return;
+        }
         if (murajaahActualEnd != null && !corpus.contains(murajaahActualEnd)) {
             murajaahActualEnd = null;
             prefs.setActiveMurajaahActualEnd(null);
@@ -1701,7 +1723,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = applyActiveLandmarks(currentPage);
         program.setText("Révision active · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
-        mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
+        mushaf.setHighlightVerses(Collections.emptyList());
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
         updateMurajaahActions();
@@ -1813,11 +1835,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             configureRevealButton(revealButton);
             actions.addView(revealAction);
             updateRevealButton();
-            LinearLayout markAction = Ui.roundAction(this, "", weakMarkMode ? "Touchez le verset…" : "Marquer", v -> {
-                weakMarkMode = !weakMarkMode;
-                updateMurajaahActions();
-            });
-            actions.addView(markAction);
         }
     }
 
@@ -2105,8 +2122,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onVerseTap(VerseRef verse){
-        if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted) return;
-        if (MURAJAAH_ACTIVE.equals(mode) && weakMarkMode) { toggleWeakVerse(verse); return; }
+        if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted || correctionState!=null) return;
         EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
         if (!corpus.contains(verse)) {
             Toast.makeText(this, "Ce verset n’appartient pas encore au corpus acquis.", Toast.LENGTH_SHORT).show();
@@ -2121,18 +2137,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateMurajaahActions();
     }
 
-    /** Single-shot: one tap while armed by "Marquer" flips that verse's weak-spot flag, then disarms. */
-    private void toggleWeakVerse(VerseRef verse) {
-        weakMarkMode = false;
-        if (!prefs.toggleMurajaahWeakVerse(verse)) {
-            onError("Impossible d’enregistrer le repère.");
-            return;
-        }
-        mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
-        updateMurajaahActions();
-    }
-
-    @Override public void onPageSwipe(int delta){goPage(delta);}
+    @Override public void onPageSwipe(int delta){if(correctionState==null)goPage(delta);}
     @Override public void onSemanticCueTap(String passageId) {
         if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
         semanticTitleDialog=null;
@@ -2287,6 +2292,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void goPage(int delta) {
+        if(correctionState!=null)return;
         int target=Math.max(1,Math.min(604,currentPage+delta));
         boolean limited=SABQI.equals(mode)||SABQI_TODAY_REVIEW.equals(mode)||ITQAN.equals(mode)
             ||RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
