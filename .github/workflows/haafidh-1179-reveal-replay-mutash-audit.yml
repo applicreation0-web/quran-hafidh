@@ -81,13 +81,14 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewCorrectionInstrumentedTest,com.quransafeguard.hifz.preview.MutashPageMarkersInstrumentedTest,com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest,com.quransafeguard.hifz.preview.RevisionAtlasInstrumentedTest
+            bash scripts/run_atlas_revision_android_audit.sh
       - name: Preserve test reports only - never APK or release
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: haafidh-1179-reveal-mutash-audit-NO-APK
           path: |
+            hifz-app/build/atlas-comparison-audit/
             hifz-app/build/reports/
             hifz-app/build/test-results/
             hifz-app/build/outputs/androidTest-results/
