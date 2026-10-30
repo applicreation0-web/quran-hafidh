@@ -43,7 +43,9 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(excerpts.contains("return \"\"; // no guess for invalid source annotations"));
         assertTrue(activity.contains("left.showPages("));
         assertTrue(activity.contains("right.showPages("));
-        assertTrue(activity.contains("if(strips!=null)strips.show("));
+        // Excerpts must load only after both full-size QCF thumbnails reported image.onload.
+        assertTrue(activity.contains("if(leftPageStatus==1 && rightPageStatus==1 && strips!=null)"));
+        assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,entry.firstWordIndices,"));
         assertFalse(excerpts.contains("java.net."));
         assertFalse(excerpts.contains("http://"));
     }
