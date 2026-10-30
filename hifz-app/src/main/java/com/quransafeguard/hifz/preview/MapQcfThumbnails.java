@@ -24,6 +24,8 @@ final class MapQcfThumbnails extends WebView {
   default void onRendered(int page, boolean success){}
  }
  private String renderKey="";
+ private volatile String lastRenderDiagnostic="none";
+ String rendererDiagnosticForTest(){return lastRenderDiagnostic;}
  private volatile boolean disposed;
  private int passageFirstPage,passageLastPage;
  private final Listener listener;
@@ -191,6 +193,7 @@ final class MapQcfThumbnails extends WebView {
   // Decompression and SVG highlighting run on the JavaScript bridge worker.
   // Keep every page swipe off the BOOX/phone Android main thread.
   final int generation=++fullGeneration;
+  lastRenderDiagnostic="pending QCF page "+selected;
   pendingCompactSvg=null;
   StringBuilder html=new StringBuilder(4000);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>")
@@ -230,21 +233,22 @@ final class MapQcfThumbnails extends WebView {
   html.append("<script>var fullGeneration=").append(generation).append(";var currentSvgPage=").append(selected)
       .append(";var inlineQcf=").append(atlasSinglePageCompact?"true":"false").append(";")
       .append("var fullParts=[],fullExpected=0;")
+      .append("function qcfError(reason,gen){MapPages.describe(gen,String(reason).slice(0,220));MapPages.fullStatus(currentSvgPage,gen,false);}")
       .append("function receiveFullChunk(i,total,part,gen){if(gen!==fullGeneration)return;")
-      .append("if(i!==fullExpected||total<1||total>100){MapPages.fullStatus(currentSvgPage,gen,false);return;}")
+      .append("if(i!==fullExpected||total<1||total>100){qcfError('chunk order '+i+' expected '+fullExpected+' total '+total,gen);return;}")
       .append("fullParts.push(part);fullExpected++;")
       .append("if(fullExpected===total){var joined=fullParts.join('');fullParts=[];receiveFull(joined,gen);}")
       .append("else MapPages.fullChunkAck(i,gen);}")
       .append("function receiveFull(src,gen){if(gen!==fullGeneration)return;var box=document.querySelector('.paper');if(!box)return;")
-      .append("if(!src){MapPages.fullStatus(currentSvgPage,gen,false);return;}")
+      .append("if(!src){qcfError('empty source page',gen);return;}")
       .append("if(inlineQcf){try{")
       .append("var raw=atob(src),bytes=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);")
       .append("var parsed=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'image/svg+xml');")
       .append("var svg=parsed.documentElement;if(!svg||svg.localName!=='svg'||parsed.getElementsByTagName('parsererror').length)throw Error('SVG XML invalid');")
       .append("var paths=svg.getElementsByTagName('path').length;if(paths<20)throw Error('Missing original QCF paths');")
       .append("var imported=document.importNode(svg,true);box.textContent='';box.appendChild(imported);")
-      .append("requestAnimationFrame(function(){requestAnimationFrame(function(){var rect=imported.getBoundingClientRect();MapPages.fullStatus(currentSvgPage,gen,rect.width>40&&rect.height>60);});});")
-      .append("}catch(err){box.textContent='Page QCF indisponible';MapPages.fullStatus(currentSvgPage,gen,false);}return;}")
+      .append("requestAnimationFrame(function(){requestAnimationFrame(function(){var rect=imported.getBoundingClientRect();if(rect.width<=40||rect.height<=60){qcfError('inline SVG viewport '+rect.width+'x'+rect.height,gen);}else MapPages.fullStatus(currentSvgPage,gen,true);});});")
+      .append("}catch(err){box.textContent='Page QCF indisponible';qcfError('SVG parse/import '+String(err),gen);}return;}")
       .append("var img=document.querySelector('.paper img');if(!img){MapPages.fullStatus(currentSvgPage,gen,false);return;}")
       .append("img.onload=function(){fit();requestAnimationFrame(function(){fit();requestAnimationFrame(function(){MapPages.fullStatus(currentSvgPage,gen,true);});});};")
       .append("img.onerror=function(){img.alt='Page QCF indisponible';MapPages.fullStatus(currentSvgPage,gen,false);};")
@@ -351,6 +355,10 @@ final class MapQcfThumbnails extends WebView {
     if(!disposed&&pendingCompactSvg!=null&&generation==pendingCompactGeneration
         &&pendingCompactNext==index+1&&generation==fullGeneration)sendCompactChunk();
    });
+  }
+  @JavascriptInterface public void describe(int generation,String reason){
+   if(!disposed&&generation==fullGeneration)
+    lastRenderDiagnostic=reason==null?"null":reason;
   }
   @JavascriptInterface public void fullStatus(int page,int generation,boolean success){
    post(()->{
