@@ -80,6 +80,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                 if(ready.get())break;
             }
             assertTrue("Both actual QCF pages AND their comparison strips must visibly render",ready.get());
+            // A native WebView paint is asynchronous after DOM's second animation frame.
+            Thread.sleep(1200L);
             // Verify real SVG crop and exact word underline, not simply Android view creation.
             GeometryRepository g=GeometryRepository.get(context);
             com.quransafeguard.hifz.core.VerseRef verse=
@@ -98,6 +100,13 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertNotNull(pageBounds);
             assertInkIsVisible(shot,pageBounds[0],"Left KFQC page");
             assertInkIsVisible(shot,pageBounds[1],"Right KFQC page");
+            AtomicReference<Rect[]> croppedBounds=new AtomicReference<>();
+            scenario.onActivity(activity->croppedBounds.set(activity.qcfCropBoundsForTest()));
+            Rect[] crop=croppedBounds.get();
+            if(crop!=null&&crop.length==2){
+                assertInkIsVisible(shot,crop[0],"Left exact QCF comparison strip");
+                assertInkIsVisible(shot,crop[1],"Right exact QCF comparison strip");
+            }
             // MediaStore retains the audit photo if Gradle uninstalls the test APK.
             // No Android storage permission; only a new image authored by this app.
             ContentValues entry=new ContentValues();
