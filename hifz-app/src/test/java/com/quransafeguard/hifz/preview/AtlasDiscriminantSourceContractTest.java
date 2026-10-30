@@ -90,6 +90,28 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse(excerpts.contains("java.net."));
         assertFalse(excerpts.contains("http://"));
     }
+    @Test public void oneCrispInterlockingChainIconOnEveryEligiblePage() throws Exception {
+        String xml=read("hifz-app/src/main/res/drawable/ic_ui_atlas_similar.xml");
+        String markers=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantMarkers.java");
+        assertTrue(xml.contains("M10,13"));
+        assertTrue(xml.contains("M14,11"));
+        assertTrue(markers.contains("M10 13a5"));
+        assertTrue(markers.contains("M14 11a5"));
+        assertTrue(markers.contains("for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.PILOT)"));
+        assertTrue(markers.contains("geometry.pageForVerse(v)==page"));
+        assertFalse(markers.contains("M2.5 5.5h6"));
+    }
+    @Test public void fullJalalaynOnBothSidesAndTrueQcfWords() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
+        assertTrue(activity.contains("loadBothTafsirs(c);"));
+        assertTrue(activity.contains("leftTafsir=tafsirColumn(tafsirs)"));
+        assertTrue(activity.contains("rightTafsir=tafsirColumn(tafsirs)"));
+        assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,entry.firstWordIndices,"));
+        assertTrue(catalog.contains("new Entry(2,63,2,93"));
+        assertFalse(activity.contains("new HifzPrefs("));
+    }
+
     @Test public void noExternalCorpusOrGeneratedExplanations() throws Exception {
         String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
