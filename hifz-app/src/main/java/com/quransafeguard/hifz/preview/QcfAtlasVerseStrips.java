@@ -34,6 +34,8 @@ final class QcfAtlasVerseStrips extends WebView {
     QcfAtlasVerseStrips(Context context) {
         super(context);
         setBackgroundColor(Color.rgb(250,248,240));
+        // Avoid renderer tile-memory exhaustion with two genuine vector crops.
+        setLayerType(android.view.View.LAYER_TYPE_SOFTWARE,null);
         WebSettings s=getSettings();
         s.setJavaScriptEnabled(true);
         s.setBlockNetworkLoads(true);
