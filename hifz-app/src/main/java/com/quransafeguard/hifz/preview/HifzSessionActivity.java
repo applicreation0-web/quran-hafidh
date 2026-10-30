@@ -374,7 +374,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         clock.pause();
         startActivity(new Intent(this,AtlasDiscriminantActivity.class)
             .putExtra(AtlasDiscriminantActivity.EXTRA_SURAH,source.getSurah())
-            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,source.getAyah()));
+            .putExtra(AtlasDiscriminantActivity.EXTRA_AYAH,source.getAyah())
+            .putExtra(AtlasDiscriminantActivity.EXTRA_ORIGIN,
+                MURAJAAH_ACTIVE.equals(mode)?"Révision active":"Révision passive"));
     }
 
     @Override public void onAtlasDiscriminantTap(VerseRef verse){
