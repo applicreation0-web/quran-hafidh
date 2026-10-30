@@ -50,6 +50,39 @@ public final class RevisionAtlasInstrumentedTest {
     private static JSONObject snapshot(Context c)throws Exception{
         JSONObject result=HifzBackup.export(c);result.remove("exportedAtEpochMs");return result;
     }
+
+    private static AyahThemesCueIndex recallTitleFixture(Context c)throws Exception{
+        // CI deliberately excludes private headings. Exercise the real mask with
+        // canonical passage boundaries and exact shipped QCF word geometry.
+        // Synthetic labels are test metadata only; no Quran text is generated.
+        MawdudiPassageIndex canonical=MawdudiPassageIndex.load(c);
+        org.json.JSONArray rows=new org.json.JSONArray();
+        for(MawdudiPassageIndex.Passage p:canonical.all())
+            rows.put(new JSONObject().put("id",p.id).put("surah",p.surah)
+                .put("start",p.firstAyah).put("end",p.lastAyah)
+                .put("source_immutability","LOCKED").put("display_label","TEST "+p.id)
+                .put("source",p.editorialAdaptation?JSONObject.NULL:"Ayah Themes")
+                .put("source_title_exact",p.editorialAdaptation?JSONObject.NULL:"TEST "+p.id)
+                .put("display_label_origin",p.editorialAdaptation?AyahThemesCueIndex.EDITORIAL:AyahThemesCueIndex.ORIGINAL)
+                .put("display_label_approved_by_user",p.editorialAdaptation));
+        return AyahThemesCueIndex.parse(new JSONObject().put("schema",AyahThemesCueIndex.SCHEMA)
+            .put("passages",rows).toString(),canonical,WordGeometryRepository.shared(c));
+    }
+    private static void prepareRealRecallMask(ActivityScenario<HifzSessionActivity> s,AyahThemesCueIndex titles){
+        s.onActivity(a->{
+            try{Field f=HifzSessionActivity.class.getDeclaredField("ayahThemesTitles");
+                f.setAccessible(true);f.set(a,titles);}
+            catch(ReflectiveOperationException e){throw new AssertionError(e);}
+            invoke(a,"renderMurajaahActive",new Class<?>[0]);
+        });
+        HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Actual QCF recall mask");
+    }
+    private static void assertRealRecallMask(ActivityScenario<HifzSessionActivity> s)throws Exception{
+        assertEquals("A Java field of 100 is not evidence of a painted mask", "true",js(s,
+            "(function(){return mask===100 && document.querySelectorAll('g.masklayer').length>0"
+            +" && !!document.querySelector('#hifz-exact-word-holes');})()"));
+    }
+
     private static void saveAuditCapture(String name)throws Exception{
         HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot(name);
         Context c=ApplicationProvider.getApplicationContext();
@@ -150,9 +183,11 @@ public final class RevisionAtlasInstrumentedTest {
         Instrumentation.ActivityMonitor atlas=ins.addMonitor(AtlasDiscriminantActivity.class.getName(),null,false);
         try{
             HifzPrefs p=fixture(c);
+            AyahThemesCueIndex titles=recallTitleFixture(c);
             try(ActivityScenario<HifzSessionActivity> s=ActivityScenario.launch(new Intent(c,HifzSessionActivity.class)
                 .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE))){
-                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Active mask Atlas gate");
+                prepareRealRecallMask(s,titles);
+                assertRealRecallMask(s);
                 s.onActivity(a->{
                     assertEquals(100,field(a,"currentMask"));
                     assertEquals(View.GONE,((View)field(a,"discriminantButton")).getVisibility());
@@ -166,7 +201,8 @@ public final class RevisionAtlasInstrumentedTest {
                 assertNull(atlas.waitForActivityWithTimeout(500));
                 saveAuditCapture("atlas-revision-active-masked.png");
                 s.recreate();
-                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Active recreation stays masked");
+                prepareRealRecallMask(s,titles);
+                assertRealRecallMask(s);
                 s.onActivity(a->{
                     assertEquals(100,field(a,"currentMask"));
                     assertEquals(View.GONE,((View)field(a,"discriminantButton")).getVisibility());
