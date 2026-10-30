@@ -489,6 +489,19 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (tafsirWasOpen && !largeScreen) hideControls(); else showControls();
     }
 
+    /** A gutter link is always checked against the exact current verse/page.
+     * No hint may open during the free active mask. */
+    @Override public void onAtlasDiscriminantTap(VerseRef verse) {
+        if(verse==null||freeActiveMask||
+            AtlasDiscriminantCases.indexFor(verse.getSurah(),verse.getAyah())<0)return;
+        try {
+            if(GeometryRepository.get(this).pageForVerse(verse)!=page)return;
+        }catch(RuntimeException missingQcf){return;}
+        selected=verse;
+        updateDiscriminantButton();
+        openSelectedDiscriminant();
+    }
+
     @Override public void onPageSwipe(int delta) { go(delta); }
     @Override public void onSurfaceTap() {
         if (isTafsirOpen()) return;
@@ -667,6 +680,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void toggleFreeActiveMask() {
         if(ayahThemesCues==null)return;
         freeActiveMask=!freeActiveMask;
+        // Remove relation links before showing the first masked frame.
+        if(freeActiveMask)AtlasDiscriminantMarkers.show(mushaf,page,null,true);
         freeActiveMaskPageReady=false;
         closeSemanticTitle();
         mushaf.clearReveal();
@@ -1301,6 +1316,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override public void onPageShown(int shown) {
         if(shown!=page)closeSemanticTitle();
         page = shown;
+        // The glyph SVG is never changed: add only safe outside-gutter markers.
+        try {
+            AtlasDiscriminantMarkers.show(mushaf,shown,
+                freeActiveMask?null:GeometryRepository.get(this),freeActiveMask);
+        }catch(RuntimeException missingQcf){
+            AtlasDiscriminantMarkers.show(mushaf,shown,null,true);
+        }
         annotationOverlay.setPage(shown);
         updateSurahPickerLabel();
         updateRubPickerLabel();
