@@ -23,8 +23,9 @@ public final class AtlasDiscriminantSourceContractTest {
         String map=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapScreen.java");
         String manifest=read("hifz-app/src/main/AndroidManifest.xml");
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
-        assertTrue(map.contains("new Intent(activity,AtlasDiscriminantActivity.class)"));
-        assertTrue(map.contains("AtlasDiscriminantActivity.EXTRA_SURAH"));
+        // Contextual comparison is entered from Lecture/Révision, not the Atlas home.
+        assertFalse(map.contains("new Intent(activity,AtlasDiscriminantActivity.class)"));
+        assertFalse(map.contains("\"Versets ressemblants\""));
         assertTrue(manifest.contains("android:name=\".AtlasDiscriminantActivity\" android:exported=\"false\""));
         assertTrue(activity.contains("geometry.pageForVerse(c.first)"));
         assertTrue(activity.contains("geometry.pageForVerse(c.second)"));
@@ -97,6 +98,10 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse(activity.contains("ChatCompletion"));
         assertTrue(activity.contains("c.explanation"));
         assertTrue(activity.contains("c.sourceUrl"));
-        assertTrue(activity.contains("class RelationRail extends View"));
+        assertFalse(activity.contains("class RelationRail extends View"));
+        assertTrue(activity.contains("leftRead.setText(\"Lire \"+c.first+\" en Lecture\")"));
+        assertTrue(activity.contains("rightRead.setText(\"Lire \"+c.second+\" en Lecture\")"));
+        assertTrue(activity.contains("Ui.dp(this,compact?106:126)"));
+        assertFalse(activity.contains("position.setText("));
     }
 }
