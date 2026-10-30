@@ -54,7 +54,7 @@ public final class AtlasDiscriminantSourceContractTest {
         String mushaf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
         assertTrue(marker.contains("AtlasDiscriminantCases.PILOT"));
         assertTrue(marker.contains("geometry.pageForVerse(v)==page"));
-        assertTrue(marker.contains("var side=left>=32?'left':right>=32?'right':null"));
+        assertTrue(marker.contains("var side=left>=36?'left':right>=36?'right':null"));
         assertTrue(marker.contains("m.querySelectorAll('.ayahPolygon')"));
         assertTrue(marker.contains("HifzNative.comparisonTap"));
         assertTrue(reader.contains("onAtlasDiscriminantTap(VerseRef verse)"));
