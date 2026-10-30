@@ -222,7 +222,9 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     boolean qcfPagesReadyForTest(){return leftPageStatus==1&&rightPageStatus==1;}
-    int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0);}
+    boolean qcfStripsReadyForTest(){return strips==null || strips.bothRenderedForTest();}
+    int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0)
+        +(strips==null?0:strips.failureCountForTest());}
 
     private void showExplanation(){
         AtlasDiscriminantCases.Entry c=current();
