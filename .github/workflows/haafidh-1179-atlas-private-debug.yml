@@ -39,6 +39,8 @@ jobs:
           sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
           bash scripts/fetch_mushaf_pages.sh
       - name: Assemble isolated debug application (not release)
+        env:
+          HAAFIDH_1179_OFFLINE_PRIVATE_RUNTIME: "1"
         run: |
           set -euo pipefail
           gradle --no-daemon --stacktrace :hifz-app:assembleDebug
@@ -53,15 +55,19 @@ jobs:
           signer="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
           "${aapt}" dump badging "$apk" | head -n 20 | tee hifz-app/build/private-atlas-debug/package-metadata.txt
           package=$("${aapt}" dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
-          test "$package" = "com.quransafeguard.hifz.ibnkathirtest"
+          test "$package" = "com.quransafeguard.hifz.atlas1179debug"
           test "$package" != "com.quransafeguard.hifz"
           "${signer}" verify --verbose --print-certs "$apk" | tee hifz-app/build/private-atlas-debug/signature.txt
-          cp "$apk" hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_PRIVATE_DEBUG.apk
-          sha256sum hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_PRIVATE_DEBUG.apk | tee hifz-app/build/private-atlas-debug/SHA256SUMS.txt
-          printf '%s\n' 'Private side-by-side debug. Does not upgrade the official application.' \
-            'Package: com.quransafeguard.hifz.ibnkathirtest' \
-            'Private proprietary Atlas title pack is NOT embedded.' \
-            'No Hifz progression imported from the official app.' \
+          cp "$apk" hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_OFFLINE_STAGING_UNSIGNED_PRIVATE.apk
+          # Public SDK tools, no signing key and no proprietary content.
+          cp "${ANDROID_HOME}/build-tools/36.0.0/lib/apksigner.jar" hifz-app/build/private-atlas-debug/apksigner.jar
+          cp "${ANDROID_HOME}/build-tools/36.0.0/zipalign" hifz-app/build/private-atlas-debug/zipalign
+          cp "${ANDROID_HOME}/build-tools/36.0.0/aapt" hifz-app/build/private-atlas-debug/aapt
+          sha256sum hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_OFFLINE_STAGING_UNSIGNED_PRIVATE.apk | tee hifz-app/build/private-atlas-debug/SHA256SUMS.txt
+          printf '%s\n' 'OFFLINE STAGING ONLY. Private verified corpus MUST be added and app re-signed locally before delivery.' \
+            'Package: com.quransafeguard.hifz.atlas1179debug' \
+            'Private runtime flag enabled; proprietary assets NOT in public CI.' \
+            'Do not distribute this staging APK as a complete debug.' \
             'No public release produced.' > hifz-app/build/private-atlas-debug/README.txt
       - name: Emulator install and launch smoke test
         uses: reactivecircus/android-emulator-runner@v2
@@ -73,12 +79,12 @@ jobs:
           disable-animations: true
           script: |
             set -e
-            apk=hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_PRIVATE_DEBUG.apk
+            apk=hifz-app/build/private-atlas-debug/Quran_Haafidh_1179_Atlas_OFFLINE_STAGING_UNSIGNED_PRIVATE.apk
             adb install -r "$apk"
-            adb shell am start -n com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity
+            adb shell am start -n com.quransafeguard.hifz.atlas1179debug/com.quransafeguard.hifz.preview.MainActivity
             sleep 7
             adb shell dumpsys activity activities > hifz-app/build/private-atlas-debug/emulator-activities.txt
-            grep -F "com.quransafeguard.hifz.ibnkathirtest" hifz-app/build/private-atlas-debug/emulator-activities.txt
+            grep -F "com.quransafeguard.hifz.atlas1179debug" hifz-app/build/private-atlas-debug/emulator-activities.txt
             adb exec-out screencap -p > hifz-app/build/private-atlas-debug/emulator-launch.png
             test -s hifz-app/build/private-atlas-debug/emulator-launch.png
       - name: Attach private debug, signature evidence, and smoke screenshot
