@@ -133,6 +133,30 @@ final class QcfAtlasVerseStrips extends WebView {
         return cropped.replace("</svg>",strokes+"</svg>");
     }
 
+    /** Flush two previous excerpt SVGs before allocating any new QCF pages. */
+    void releaseAtlasComparison(Runnable onCleared){
+        if(disposed){if(onCleared!=null)onCleared.run();return;}
+        final int token=++generation;
+        pendingEncoded=null;
+        renderStatus[0]=0;renderStatus[1]=0;
+        left=null;right=null;wordsLeft=null;wordsRight=null;
+        final boolean[] delivered={false};
+        Runnable finish=()->{
+            if(delivered[0])return;
+            delivered[0]=true;
+            if(disposed||token!=generation)return;
+            setWebViewClient(new android.webkit.WebViewClient());
+            if(onCleared!=null)onCleared.run();
+        };
+        setWebViewClient(new android.webkit.WebViewClient(){
+            @Override public void onPageFinished(WebView view,String url){
+                if("about:blank".equals(url))finish.run();
+            }
+        });
+        loadUrl("about:blank");
+        postDelayed(finish,700L);
+    }
+
     boolean bothRenderedForTest(){return renderStatus[0]==1&&renderStatus[1]==1;}
     int failureCountForTest(){return (renderStatus[0]<0?1:0)+(renderStatus[1]<0?1:0);}
 
