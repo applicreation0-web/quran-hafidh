@@ -254,7 +254,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                     assertEquals(View.VISIBLE,activity.discriminantActionForTest().getVisibility());
                 });
                 assertEquals("Atlas visit must not modify initialized Hifz state",
-                    beforeComparison,hifz.getAll());
+                    before.get(),hifz.getAll());
             }
         } finally {
             instrument.removeMonitor(monitor);
