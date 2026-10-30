@@ -58,12 +58,19 @@ final class AtlasDiscriminantCases {
             "https://tafsir.app/fath-albayan/7/161",new int[]{3,6,10},new int[]{4,7})
     ));
 
-    static int preferredIndex(int surah,int ayah) {
+    /** Strict lookup for contextual actions: never show an unrelated comparison.
+     * Atlas's original open-from-map flow may still intentionally start at the first pilot. */
+    static int indexFor(int surah,int ayah) {
+        if(surah<1||surah>114||ayah<1)return -1;
         for(int i=0;i<PILOT.size();i++){
             Entry c=PILOT.get(i);
             if((c.first.getSurah()==surah && c.first.getAyah()==ayah)
                 || (c.second.getSurah()==surah && c.second.getAyah()==ayah))return i;
         }
-        return 0;
+        return -1;
+    }
+    static int preferredIndex(int surah,int ayah) {
+        int exact=indexFor(surah,ayah);
+        return exact>=0?exact:0;
     }
 }
