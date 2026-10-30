@@ -34,6 +34,8 @@ public final class MushafView extends WebView {
         void onError(String message);
         void onPageShown(int page);
         default void onSurfaceTap() {}
+        /** Explicit outside-gutter Atlas marker; other Hifz modes ignore it. */
+        default void onAtlasDiscriminantTap(VerseRef verse) {}
         /** Tapping an Al-Munīr amorce never masquerades as a Quran verse tap. */
         default void onSemanticCueTap(String passageId) {}
         /** Arabic-book semantics: +1 means next canonical page and is triggered by a right swipe. */
@@ -526,6 +528,13 @@ public final class MushafView extends WebView {
             });
         }
 
+        @JavascriptInterface public void comparisonTap(int surah,int ayah) {
+            post(() -> {
+                if(listener==null)return;
+                try {listener.onAtlasDiscriminantTap(new VerseRef(surah,ayah));}
+                catch(IllegalArgumentException ignored) { /* Reject invalid marker request. */ }
+            });
+        }
         @JavascriptInterface public void semanticCueTap(String passageId) {
             post(() -> { if (listener != null && passageId != null) listener.onSemanticCueTap(passageId); });
         }
