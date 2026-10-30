@@ -10,6 +10,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import android.widget.TextView;
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -29,7 +32,10 @@ public final class AtlasDiscriminantActivity extends Activity {
     private int selectedIndex;
     private GeometryRepository geometry;
     private MapQcfThumbnails left, right;
-    private QcfAtlasVerseStrips strips;
+    private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
+    private final TafsirRepository tafsirRepository=new TafsirRepository(this);
+    private int tafsirRequest;
+    private TextView leftTafsir,rightTafsir,explanationLine;
     private TextView title, leftHeader, rightHeader, kind, leftCue, rightCue;
     private TextView leftRead, rightRead, returnToSource;
     private boolean disposed;
@@ -108,11 +114,6 @@ public final class AtlasDiscriminantActivity extends Activity {
                 if(page!=currentRightPage)return;
                 rightPageStatus=success?1:-1;
                 android.util.Log.i("HaafidhAtlasQCF","Right SVG "+page+" rendered="+success);
-                if(leftPageStatus==1 && rightPageStatus==1 && strips!=null){
-                    AtlasDiscriminantCases.Entry entry=current();
-                    strips.show(entry.first,currentLeftPage,entry.firstWordIndices,
-                        entry.second,currentRightPage,entry.secondWordIndices);
-                }
             }
         });
         left.setAtlasSinglePageCompact(true);
@@ -131,14 +132,6 @@ public final class AtlasDiscriminantActivity extends Activity {
         readingLinks.addView(leftRead,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
         readingLinks.addView(rightRead,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
         root.addView(readingLinks);
-
-        if(!veryCompact){
-            strips=new QcfAtlasVerseStrips(this);
-            // Fixed-height QCF excerpts: the old weight=1 stretched this region
-            // into hundreds of pixels of blank space on phones.
-            root.addView(strips,new LinearLayout.LayoutParams(-1,
-                Ui.dp(this,compact?106:126)));
-        }
 
         kind=text("",compact?13:15,true);
         kind.setGravity(Gravity.CENTER);
@@ -161,6 +154,20 @@ public final class AtlasDiscriminantActivity extends Activity {
         cues.addView(rightCue,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?54:76),1f));
         root.addView(cues);
 
+        explanationLine=text("",compact?11.5f:13.5f,false);
+        explanationLine.setGravity(Gravity.CENTER);
+        explanationLine.setMaxLines(compact?3:4);
+        explanationLine.setEllipsize(TextUtils.TruncateAt.END);
+        explanationLine.setPadding(Ui.dp(this,8),Ui.dp(this,3),Ui.dp(this,8),Ui.dp(this,3));
+        root.addView(explanationLine,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?58:68)));
+
+        // Independent sourced Jalalayn texts, never synthesized from AI.
+        LinearLayout tafsirs=Ui.row(this);
+        tafsirs.setBaselineAligned(false);
+        leftTafsir=tafsirColumn(tafsirs,"2:58");
+        rightTafsir=tafsirColumn(tafsirs,"7:161");
+        root.addView(tafsirs,new LinearLayout.LayoutParams(-1,0,1f));
+
         LinearLayout bottom=Ui.row(this);bottom.setGravity(Gravity.CENTER_VERTICAL);
         returnToSource=text("",compact?13:14,false);
         returnToSource.setGravity(Gravity.CENTER_VERTICAL);
@@ -172,19 +179,19 @@ public final class AtlasDiscriminantActivity extends Activity {
         bottom.addView(explanation,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         root.addView(bottom,new LinearLayout.LayoutParams(-1,Ui.dp(this,48)));
 
-        // Only the original QCF full pages take flexible height; Arabic excerpts
-        // are no longer stretched on tall phone/BOOX screens.
+        // Both mini-Mushaf use the same 345:550 scale, width and height.
+        // The paired Tafsir views receive the remaining height independently.
         root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,oright,ob)->{
             if(pair.getWidth()<Ui.dp(this,120)||root.getHeight()<Ui.dp(this,400))return;
             int fixed=root.getPaddingTop()+root.getPaddingBottom();
             for(int i=0;i<root.getChildCount();i++){
                 View child=root.getChildAt(i);
-                if(child!=pair)fixed+=child.getMeasuredHeight();
+                if(child!=pair&&child!=tafsirs)fixed+=child.getMeasuredHeight();
             }
-            int available=root.getHeight()-fixed;
+            int flexible=root.getHeight()-fixed;
             int natural=Math.round(Math.max(0,(pair.getWidth()-Ui.dp(this,8))/2f)*550f/345f);
-            int desired=Math.min(available,natural+Ui.dp(this,4));
-            if(desired>Ui.dp(this,110)){
+            int desired=Math.min(natural+Ui.dp(this,4),flexible-Ui.dp(this,125));
+            if(desired>Ui.dp(this,105)){
                 LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)pair.getLayoutParams();
                 if(params.height!=desired||params.weight!=0f){
                     params.height=desired;params.weight=0f;pair.setLayoutParams(params);
@@ -193,6 +200,48 @@ public final class AtlasDiscriminantActivity extends Activity {
         });
         setContentView(root);
         Ui.respectSystemBars(this,root,0,0,0,0);
+    }
+
+    private TextView tafsirColumn(LinearLayout parent,String unused){
+        LinearLayout column=Ui.column(this);
+        column.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),0);
+        TextView heading=text("Tafsīr al-Jalālayn · anglais",12f,true);
+        heading.setGravity(Gravity.CENTER);
+        column.addView(heading,new LinearLayout.LayoutParams(-1,Ui.dp(this,36)));
+        TextView body=Ui.bookText(this,"",14f,false);
+        body.setTextColor(Ui.INK);
+        body.setTextIsSelectable(true);
+        body.setPadding(Ui.dp(this,4),Ui.dp(this,3),Ui.dp(this,4),Ui.dp(this,5));
+        ScrollView scroll=new ScrollView(this);
+        scroll.setVerticalScrollBarEnabled(true);
+        scroll.addView(body,new ScrollView.LayoutParams(-1,-2));
+        column.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
+        parent.addView(column,new LinearLayout.LayoutParams(0,-1,1f));
+        return body;
+    }
+
+    private void loadBothTafsirs(AtlasDiscriminantCases.Entry c){
+        final int token=++tafsirRequest;
+        leftTafsir.setText("Chargement du Tafsīr al-Jalālayn…");
+        rightTafsir.setText("Chargement du Tafsīr al-Jalālayn…");
+        tafsirIo.execute(()->{
+            loadOneTafsir(c.first,leftTafsir,token);
+            loadOneTafsir(c.second,rightTafsir,token);
+        });
+    }
+
+    private void loadOneTafsir(VerseRef verse,TextView target,int token){
+        TafsirRepository.Entry entry=null;
+        try {entry=tafsirRepository.load(verse);}
+        catch(Exception unavailable){android.util.Log.w("HaafidhAtlasTafsir",
+            "Jalalayn unavailable for "+verse,unavailable);}
+        final CharSequence result=entry==null
+            ?"Tafsīr al-Jalālayn indisponible pour ce verset."
+            :BaqaraPilotScreen.renderExistingJalalayn(entry);
+        runOnUiThread(()->{
+            if(disposed||isFinishing()||token!=tafsirRequest)return;
+            target.setText(result);
+        });
     }
 
     private TextView readingLink(boolean first){
@@ -224,13 +273,14 @@ public final class AtlasDiscriminantActivity extends Activity {
         // otherwise one failed image could hide a missing QCF resource indefinitely.
         leftPageStatus=0;rightPageStatus=0;
         right.setVisibility(View.INVISIBLE);
-        if(strips!=null)strips.setVisibility(View.INVISIBLE);
         // Highlights the exact original SVG ayah polygon.
         left.showPages(currentLeftPage,currentLeftPage,currentLeftPage,
             c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
 
         title.setText("Comparer · "+c.first+" ↔ "+c.second);
         kind.setText(c.kind);
+        explanationLine.setText(c.explanation);
+        loadBothTafsirs(c);
         leftRead.setText("Lire "+c.first+" en Lecture");
         rightRead.setText("Lire "+c.second+" en Lecture");
         String origin=getIntent().getStringExtra(EXTRA_ORIGIN);
@@ -268,13 +318,12 @@ public final class AtlasDiscriminantActivity extends Activity {
         return new android.graphics.Rect[]{first,second};
     }
     boolean qcfPagesReadyForTest(){return leftPageStatus==1&&rightPageStatus==1;}
-    boolean qcfStripsReadyForTest(){return strips==null || strips.bothRenderedForTest();}
-    int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0)
-        +(strips==null?0:strips.failureCountForTest());}
+    boolean qcfStripsReadyForTest(){return true; /* Redundant QCF crops intentionally removed. */}
+    int qcfPagesFailedForTest(){return (leftPageStatus==-1?1:0)+(rightPageStatus==-1?1:0);}
     String qcfFailureDetailForTest(){
         return "leftPage="+currentLeftPage+" status="+leftPageStatus+" cause="+left.rendererDiagnosticForTest()
             +" rightPage="+currentRightPage+" status="+rightPageStatus
-            +" strips="+(strips==null?"disabled":strips.renderStatusForTest());
+            +" tafsir="+(leftTafsir!=null&&rightTafsir!=null?"paired":"unavailable");
     }
 
     private void showExplanation(){
@@ -319,7 +368,8 @@ public final class AtlasDiscriminantActivity extends Activity {
             disposed=true;
             detachQcf(left);
             detachQcf(right);
-            detachQcf(strips);
+            tafsirRequest++;
+            tafsirIo.shutdownNow();
         }
         super.onDestroy();
     }
