@@ -30,6 +30,20 @@ public final class AtlasDiscriminantCasesTest {
         assertEquals(3,AtlasDiscriminantCases.preferredIndex(2,58));
         assertEquals(0,AtlasDiscriminantCases.preferredIndex(4,10));
     }
+    @Test public void contextualLookupIsStrictForBothSidesAndUnrelatedVerses() {
+        for(int i=0;i<AtlasDiscriminantCases.PILOT.size();i++){
+            AtlasDiscriminantCases.Entry e=AtlasDiscriminantCases.PILOT.get(i);
+            assertEquals(i,AtlasDiscriminantCases.indexFor(e.first.getSurah(),e.first.getAyah()));
+            assertEquals(i,AtlasDiscriminantCases.indexFor(e.second.getSurah(),e.second.getAyah()));
+        }
+        assertEquals(-1,AtlasDiscriminantCases.indexFor(30,38));
+        assertEquals(-1,AtlasDiscriminantCases.indexFor(2,255));
+        assertEquals(-1,AtlasDiscriminantCases.indexFor(0,0));
+        assertEquals(-1,AtlasDiscriminantCases.indexFor(115,1));
+        assertEquals(-1,AtlasDiscriminantCases.indexFor(30,-1));
+        // Preserve the existing optional Atlas fallback, never use it for Lecture.
+        assertEquals(0,AtlasDiscriminantCases.preferredIndex(30,38));
+    }
     @Test public void markedWordsAreNarrowAndOneBased() {
         AtlasDiscriminantCases.Entry a=AtlasDiscriminantCases.PILOT.get(0);
         assertArrayEquals(new int[]{2},a.firstWordIndices);
