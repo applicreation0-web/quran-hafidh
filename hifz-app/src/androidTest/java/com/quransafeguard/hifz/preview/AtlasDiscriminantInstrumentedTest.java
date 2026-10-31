@@ -244,10 +244,16 @@ public final class AtlasDiscriminantInstrumentedTest {
             String script="(function(){var svg=document.querySelector('.paper svg');if(!svg)return '';"
                 +"var p=svg.querySelector('path.ayahPolygon[surah=\""+requested.getSurah()+"\"][ayah=\""+requested.getAyah()+"\"]');if(!p)return '';"
                 +"var b=p.getBBox(),m=p.getScreenCTM();if(!m)return '';"
-                +"for(var x=1;x<12;x++)for(var y=1;y<12;y++){var local=svg.createSVGPoint();"
-                +"local.x=b.x+b.width*x/12;local.y=b.y+b.height*y/12;"
-                +"if(p.isPointInFill(local)){var q=local.matrixTransform(m);"
-                +"return JSON.stringify({x:q.x,y:q.y,w:innerWidth,h:innerHeight});}}return '';})()";
+                +"var fractions=[0.5,0.375,0.625,0.25,0.75,0.125,0.875];"
+                +"var all=svg.querySelectorAll('path.ayahPolygon');"
+                +"function winner(q){for(var k=all.length-1;k>=0;k--){var c=all[k],ct=c.getScreenCTM();"
+                +"if(ct&&c.isPointInFill(q.matrixTransform(ct.inverse())))return c;}return null;}"
+                +"for(var x of fractions)for(var y of fractions){var local=svg.createSVGPoint();"
+                +"local.x=b.x+b.width*x;local.y=b.y+b.height*y;"
+                +"if(p.isPointInFill(local)){var q=local.matrixTransform(m),safe=true;"
+                +"for(var dx of [-1,0,1])for(var dy of [-1,0,1]){var test=svg.createSVGPoint();"
+                +"test.x=q.x+dx;test.y=q.y+dy;if(winner(test)!==p)safe=false;}"
+                +"if(safe)return JSON.stringify({x:q.x,y:q.y,w:innerWidth,h:innerHeight});}}return '';})()";
             scenario.onActivity(a->a.qcfViewsForTest()[side].evaluateJavascript(script,
                 value->{coordinates.set(value);found.countDown();}));
             assertTrue("Actual ayah polygon coordinate callback",found.await(10,java.util.concurrent.TimeUnit.SECONDS));
@@ -269,8 +275,11 @@ public final class AtlasDiscriminantInstrumentedTest {
             if(polygonPoint.get()==null){point[0]+=page.getWidth()/2;point[1]+=page.getHeight()/2;}
             else try{
                 org.json.JSONObject q=polygonPoint.get();
-                point[0]+=(int)Math.round(q.getDouble("x")*page.getWidth()/q.getDouble("w"));
-                point[1]+=(int)Math.round(q.getDouble("y")*page.getHeight()/q.getDouble("h"));
+                double cssToDisplay=page.getScale();
+                point[0]+=(int)Math.round(q.getDouble("x")*cssToDisplay);
+                point[1]+=(int)Math.round(q.getDouble("y")*cssToDisplay);
+                android.util.Log.i("HaafidhEnduranceTouch","verse="+requested+" side="+side
+                    +" css="+q+" scale="+cssToDisplay+" display="+java.util.Arrays.toString(point));
             }catch(org.json.JSONException invalid){throw new AssertionError(invalid);}
             Rect visibleWindow=new Rect();root.getWindowVisibleDisplayFrame(visibleWindow);
             assertTrue("Mushaf touch must lie inside the current application window",visibleWindow.contains(point[0],point[1]));
@@ -484,6 +493,15 @@ public final class AtlasDiscriminantInstrumentedTest {
         assertEquals("Each inline QCF excerpt must resolve its own exact-word clip", "true",clipResult.get());
     }
 
+    private static void assertSelectedVerse(ActivityScenario<AtlasDiscriminantActivity> scenario,
+            com.quransafeguard.hifz.core.VerseRef expected)throws Exception{
+        AtomicReference<com.quransafeguard.hifz.core.VerseRef> actual=new AtomicReference<>();
+        scenario.onActivity(a->actual.set(a.selectedTafsirVerseForTest()));
+        if(!expected.equals(actual.get()))
+            HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("endurance-exact-verse-touch-failure.png");
+        assertEquals("Real injected touch must select its requested original QCF polygon",expected,actual.get());
+    }
+
     private static void awaitBothTafsirs(ActivityScenario<AtlasDiscriminantActivity> scenario)throws Exception{
         AtomicBoolean loaded=new AtomicBoolean();
         for(int poll=0;poll<100;poll++){
@@ -526,9 +544,9 @@ public final class AtlasDiscriminantInstrumentedTest {
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);
                 tapQcfPage(scenario,0,false,pair.first);waitForSelectedTafsir(scenario,0);
-                scenario.onActivity(v->assertEquals(pair.first,v.selectedTafsirVerseForTest()));
+                assertSelectedVerse(scenario,pair.first);
                 tapQcfPage(scenario,1,true,pair.second);waitForSelectedTafsir(scenario,1);
-                scenario.onActivity(v->assertEquals(pair.second,v.selectedTafsirVerseForTest()));
+                assertSelectedVerse(scenario,pair.second);
                 assertContextPanesVisible(scenario);awaitBothTafsirs(scenario);
                 if(cycle<requestedRotations){
                     AtomicReference<MapQcfThumbnails[]> old=new AtomicReference<>();

@@ -44,11 +44,13 @@ if [ "$phase" = navigation ]; then
 elif [ "$phase" = tafsir ]; then
   # Target the reproduced surah-title gap first; its smoke operation has its own
   # metric phase and is never counted among the 200 endurance operations.
-  gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
-    -Pandroid.testInstrumentationRunnerArguments.class="$class.AtlasDiscriminantInstrumentedTest#enduranceTafsirRotationsAndQcfDisposal" \
-    -Pandroid.testInstrumentationRunnerArguments.atlasEndurance=true \
-    -Pandroid.testInstrumentationRunnerArguments.atlasTafsirCycles=1 \
-    -Pandroid.testInstrumentationRunnerArguments.atlasTafsirStartIndex=26
+  for exact_case in 26 21; do
+    gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
+      -Pandroid.testInstrumentationRunnerArguments.class="$class.AtlasDiscriminantInstrumentedTest#enduranceTafsirRotationsAndQcfDisposal" \
+      -Pandroid.testInstrumentationRunnerArguments.atlasEndurance=true \
+      -Pandroid.testInstrumentationRunnerArguments.atlasTafsirCycles=1 \
+      -Pandroid.testInstrumentationRunnerArguments.atlasTafsirStartIndex="$exact_case"
+  done
   gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
     -Pandroid.testInstrumentationRunnerArguments.class="$class.AtlasDiscriminantInstrumentedTest#enduranceTafsirRotationsAndQcfDisposal,$class.AtlasDiscriminantInstrumentedTest#changingCaseImmediatelyClearsOldQcfExcerpts,$class.AtlasDiscriminantInstrumentedTest#exactVerseInEitherAuthenticQcfPageOpensItsOwnTafsir" \
     -Pandroid.testInstrumentationRunnerArguments.atlasEndurance=true
