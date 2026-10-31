@@ -531,10 +531,20 @@ public final class AtlasDiscriminantActivity extends Activity {
             &&visible.height()==tafsirHeading.getHeight();
     }
     boolean bothQcfPagesFullyVisibleForTest(){
+        // Android WebView can return false from getGlobalVisibleRect() during
+        // landscape compositing even when its *returned rectangle* is complete.
+        // Require real visibility, exact measured bounds and containment in the
+        // visible parent ScrollView. Never accept clipped or hidden QCF pages.
+        android.graphics.Rect viewport=new android.graphics.Rect();
+        if(comparisonScroll==null||!comparisonScroll.isShown()
+                ||!comparisonScroll.getGlobalVisibleRect(viewport)||viewport.isEmpty())return false;
         for(MapQcfThumbnails page:new MapQcfThumbnails[]{left,right}){
+            if(page==null||!page.isShown()||page.getAlpha()<=0f)return false;
             android.graphics.Rect visible=new android.graphics.Rect();
-            if(page==null||!page.getGlobalVisibleRect(visible)||visible.width()!=page.getWidth()
-                ||visible.height()!=page.getHeight())return false;
+            page.getGlobalVisibleRect(visible);
+            if(visible.isEmpty()||visible.width()!=page.getWidth()
+                    ||visible.height()!=page.getHeight()||!viewport.contains(visible))
+                return false;
         }
         return true;
     }
