@@ -112,16 +112,22 @@ public final class AtlasDiscriminantSourceContractTest {
     @Test public void fullJalalaynOnBothSidesAndTrueQcfWords() throws Exception {
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
         String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
-        assertTrue(activity.contains("loadBothTafsirs(c);"));
+        assertTrue(activity.contains("loadBothTafsirs(selectedLeftVerse,selectedRightVerse);"));
         assertTrue(activity.contains("tafsirRepository.load(verse)"));
-        assertTrue(activity.contains("loadOneTafsir(c.first,leftTafsir,token)"));
-        assertTrue(activity.contains("loadOneTafsir(c.second,rightTafsir,token)"));
+        assertTrue(activity.contains("loadOneTafsir(first,leftTafsir,0,leftToken)"));
+        assertTrue(activity.contains("loadOneTafsir(second,rightTafsir,1,rightToken)"));
+        assertTrue(activity.contains("selectExactTafsir(0,page,new VerseRef(surah,ayah))"));
+        assertTrue(activity.contains("selectExactTafsir(1,page,new VerseRef(surah,ayah))"));
         assertTrue(activity.contains("leftTafsir.setVisibility(side==0?View.VISIBLE:View.GONE)"));
         assertTrue(activity.contains("rightTafsir.setVisibility(side==1?View.VISIBLE:View.GONE)"));
         assertTrue(activity.contains("tafsirPanel.setVisibility(View.VISIBLE)"));
         assertTrue(activity.contains("if(lateralTafsir)workspace.addView(tafsirPanel"));
         assertFalse("Tafsir must not be buried below the page comparison",activity.contains("tafsirColumn(tafsirs)"));
-        assertTrue(activity.contains("token!=tafsirRequest"));
+        assertTrue(activity.contains("token!=(side==0?leftTafsirRequest:rightTafsirRequest)"));
+        String qcf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java");
+        assertTrue(qcf.contains("poly.isPointInFill(point)"));
+        assertTrue(qcf.contains("generation==fullGeneration"));
+        assertTrue(qcf.contains("listener.onVerseChosen(page,surah,ayah)"));
         assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,entry.firstWordIndices,"));
         assertTrue(catalog.contains("new Entry(2,63,2,93"));
         assertFalse(activity.contains("new HifzPrefs("));
