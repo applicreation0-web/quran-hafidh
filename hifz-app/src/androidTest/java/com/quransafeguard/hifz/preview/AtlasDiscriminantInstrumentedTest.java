@@ -109,7 +109,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                         +" leftLayoutRequested="+a.qcfViewsForTest()[0].isLayoutRequested()
                         +" rightLayoutRequested="+a.qcfViewsForTest()[1].isLayoutRequested()
                         +" bothVisible="+a.bothQcfPagesFullyVisibleForTest()
-                        +" scrollY="+((android.widget.ScrollView)a.qcfViewsForTest()[0].getParent().getParent()).getScrollY()
+                        +" scrollY="+a.comparisonScrollYForTest()
                         +" firstSize="+a.qcfViewsForTest()[0].getWidth()+"x"+a.qcfViewsForTest()[0].getHeight()
                         +" secondSize="+a.qcfViewsForTest()[1].getWidth()+"x"+a.qcfViewsForTest()[1].getHeight()
                         +" headingVisible="+a.tafsirHeadingVisibleForTest()
