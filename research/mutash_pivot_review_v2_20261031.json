@@ -18,7 +18,9 @@
     "manuallyPrioritized": 10,
     "automaticallyApproved": 0,
     "currentPivotTouchingAnchor": 266,
-    "noAnchorOf3AmongFourCandidates": 4
+    "noAnchorOf3AmongFourCandidates": 4,
+    "additionalCuratedApprovedCases": 12,
+    "approvedCandidateUIOmissions": 5
   },
   "rows": [
     {
@@ -9338,7 +9340,46 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "ajouter_un_second_repere",
+        "segments": [
+          {
+            "leftIndices": [
+              2
+            ],
+            "rightIndices": [
+              2
+            ],
+            "leftCanonicalWords": [
+              "یَعۡمَلۡ"
+            ],
+            "rightCanonicalWords": [
+              "عَمِلَ"
+            ],
+            "why": "Différence verbale au début"
+          },
+          {
+            "leftIndices": [
+              11
+            ],
+            "rightIndices": [
+              10
+            ],
+            "leftCanonicalWords": [
+              "فَأُو۟لَـٰۤىِٕكَ"
+            ],
+            "rightCanonicalWords": [
+              "فَلَنُحۡیِیَنَّهُۥ"
+            ],
+            "why": "Nouvelle bifurcation après « مِنْ ذَكَرٍ أَوْ أُنْثَىٰ وَهُوَ مُؤْمِنٌ »"
+          }
+        ],
+        "editorialNote": "L'index actuel ne signale que le premier risque, pas la divergence après la formule commune.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 121,
@@ -9645,7 +9686,33 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "preciser_groupe",
+        "segments": [
+          {
+            "leftIndices": [
+              6,
+              7
+            ],
+            "rightIndices": [
+              3
+            ],
+            "leftCanonicalWords": [
+              "فَسَوۡفَ",
+              "یَأۡتِیهِمۡ"
+            ],
+            "rightCanonicalWords": [
+              "فَسَیَأۡتِیهِمۡ"
+            ],
+            "why": "فَسَوْفَ يَأْتِيهِمْ opposé au seul verbe فَسَيَأْتِيهِمْ"
+          }
+        ],
+        "editorialNote": "Ne pas découper فسوف comme si ce mot formait à lui seul toute la différence.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 125,
@@ -11038,7 +11105,27 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "omission",
+        "segments": [
+          {
+            "leftIndices": [
+              4
+            ],
+            "rightIndices": [],
+            "leftCanonicalWords": [
+              "ٱلدُّنۡیَا"
+            ],
+            "rightCanonicalWords": [],
+            "why": "ٱلدُّنۡیَا présent en 11:60, absent en 11:99 après فِي هَٰذِهِ"
+          }
+        ],
+        "editorialNote": "Ne jamais surligner le mot commun لعنة comme un substitut.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 143,
@@ -11213,7 +11300,27 @@
       },
       "commonAnchorCandidates": [],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "omission",
+        "segments": [
+          {
+            "leftIndices": [
+              1
+            ],
+            "rightIndices": [],
+            "leftCanonicalWords": [
+              "قِیلَ"
+            ],
+            "rightCanonicalWords": [],
+            "why": "قِيلَ présent seulement en 39:72"
+          }
+        ],
+        "editorialNote": "Le mot ادخلوا appartient aux DEUX passages : ne pas le faire passer pour le mot différent.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 146,
@@ -11371,7 +11478,33 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "preciser_groupe",
+        "segments": [
+          {
+            "leftIndices": [
+              20,
+              21
+            ],
+            "rightIndices": [
+              13
+            ],
+            "leftCanonicalWords": [
+              "مِن",
+              "مُّضۡغَةࣲ"
+            ],
+            "rightCanonicalWords": [
+              "یُخۡرِجُكُمۡ"
+            ],
+            "why": "مِن مُّضْغَةٍ face à يُخْرِجُكُمْ après « ثُمَّ »"
+          }
+        ],
+        "editorialNote": "L'omission de مِن dans le libellé actuel rend le repère incomplet.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 148,
@@ -11540,7 +11673,27 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "omission",
+        "segments": [
+          {
+            "leftIndices": [
+              11
+            ],
+            "rightIndices": [],
+            "leftCanonicalWords": [
+              "هُوَ"
+            ],
+            "rightCanonicalWords": [],
+            "why": "هُوَ présent en 22:62, absent en 31:30 avant الباطل"
+          }
+        ],
+        "editorialNote": "Le mot الباطل est commun, ce n'est pas un substitut de هو.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 150,
@@ -12422,7 +12575,31 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "insertion",
+        "segments": [
+          {
+            "leftIndices": [],
+            "rightIndices": [
+              18,
+              19,
+              20
+            ],
+            "leftCanonicalWords": [],
+            "rightCanonicalWords": [
+              "وَلَا",
+              "یَنظُرُ",
+              "إِلَیۡهِمۡ"
+            ],
+            "why": "وَلَا يَنظُرُ إِلَيْهِمْ seulement dans 3:77, avant يوم القيامة"
+          }
+        ],
+        "editorialNote": "Le mot يوم est commun, non substitué.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 162,
@@ -14257,7 +14434,29 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "insertion",
+        "segments": [
+          {
+            "leftIndices": [],
+            "rightIndices": [
+              5,
+              6
+            ],
+            "leftCanonicalWords": [],
+            "rightCanonicalWords": [
+              "وَمَا",
+              "بَیۡنَهُمَا"
+            ],
+            "why": "وَمَا بَيْنَهُمَا ajouté en 25:59 après والأرض"
+          }
+        ],
+        "editorialNote": "Le mot والأرض existe dans les DEUX versets. Surlignage actuel à corriger.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 186,
@@ -15107,7 +15306,31 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "conserver",
+        "segments": [
+          {
+            "leftIndices": [
+              5
+            ],
+            "rightIndices": [
+              5
+            ],
+            "leftCanonicalWords": [
+              "قَالُوا۟"
+            ],
+            "rightCanonicalWords": [
+              "بَیِّنَـٰتࣲ"
+            ],
+            "why": "قَالُوا۟ face à بَيِّنَـٰتࣲ après la formule « تتلى عليهم آياتنا »"
+          }
+        ],
+        "editorialNote": "L'alignement lexical automatique ne doit pas écraser ce choix déjà pertinent.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 198,
@@ -15192,7 +15415,33 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "conserver",
+        "segments": [
+          {
+            "leftIndices": [
+              6
+            ],
+            "rightIndices": [
+              13,
+              14
+            ],
+            "leftCanonicalWords": [
+              "وَطُبِعَ"
+            ],
+            "rightCanonicalWords": [
+              "وَطَبَعَ",
+              "ٱللَّهُ"
+            ],
+            "why": "وَطُبِعَ passif face à وَطَبَعَ اللَّهُ actif"
+          }
+        ],
+        "editorialNote": "Le contraste vocalisé actif/passif reste déterminant ; la seconde expression peut inclure Allah pour le sens.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 199,
@@ -15277,7 +15526,44 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "doubler_repere",
+        "segments": [
+          {
+            "leftIndices": [],
+            "rightIndices": [
+              7
+            ],
+            "leftCanonicalWords": [],
+            "rightCanonicalWords": [
+              "وَٱلۡمُؤۡمِنُونَۖ"
+            ],
+            "why": "وَٱلۡمُؤۡمِنُونَ présent seulement en 9:105 après ورسوله"
+          },
+          {
+            "leftIndices": [
+              21,
+              22
+            ],
+            "rightIndices": [
+              8
+            ],
+            "leftCanonicalWords": [
+              "ثُمَّ",
+              "تُرَدُّونَ"
+            ],
+            "rightCanonicalWords": [
+              "وَسَتُرَدُّونَ"
+            ],
+            "why": "ثُمَّ تُرَدُّونَ face à وَسَتُرَدُّونَ"
+          }
+        ],
+        "editorialNote": "Deux dangers distincts : insertion puis différence de transition verbale.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 200,
@@ -21728,7 +22014,35 @@
         }
       ],
       "manualKeywordProposal": null,
-      "automaticApproval": false
+      "automaticApproval": false,
+      "curatedAdditionalReview": {
+        "decision": "conserver_inversion",
+        "segments": [
+          {
+            "leftIndices": [
+              11,
+              14
+            ],
+            "rightIndices": [
+              11,
+              13
+            ],
+            "leftCanonicalWords": [
+              "وَٱدۡخُلُوا۟",
+              "وَقُولُوا۟"
+            ],
+            "rightCanonicalWords": [
+              "وَقُولُوا۟",
+              "وَٱدۡخُلُوا۟"
+            ],
+            "why": "L'ordre de « ادخلوا / قولوا » est inversé"
+          }
+        ],
+        "editorialNote": "Ne pas remplacer cette inversion par la première divergence détectée automatiquement.",
+        "requiresQcfRecheck": true,
+        "requiresFrenchGlossRecheck": true,
+        "changeNotAppliedToRuntime": true
+      }
     },
     {
       "auditId": 294,
