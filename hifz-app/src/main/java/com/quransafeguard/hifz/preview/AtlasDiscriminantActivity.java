@@ -299,11 +299,6 @@ public final class AtlasDiscriminantActivity extends Activity {
 
     private void fitVisiblePages(){
         if(pagePair==null||comparisonScroll==null)return;
-        android.graphics.Rect visible=new android.graphics.Rect();
-        int viewportHeight=comparisonScroll.getHeight();
-        if(comparisonScroll.getGlobalVisibleRect(visible))
-            viewportHeight=Math.min(viewportHeight,visible.height());
-        if(viewportHeight<=pageHeaderHeight)return;
         if(selectedTafsir>=0&&!lateralTafsir&&workspace.getHeight()>0){
             int available=workspace.getHeight();
             int panelHeight=Math.min(Math.max(Ui.dp(this,180),Math.round(available*0.40f)),
@@ -311,6 +306,11 @@ public final class AtlasDiscriminantActivity extends Activity {
             LinearLayout.LayoutParams panelParams=(LinearLayout.LayoutParams)tafsirPanel.getLayoutParams();
             if(panelParams.height!=panelHeight){panelParams.height=panelHeight;tafsirPanel.setLayoutParams(panelParams);}
         }
+        android.graphics.Rect visible=new android.graphics.Rect();
+        int viewportHeight=comparisonScroll.getHeight();
+        if(comparisonScroll.getGlobalVisibleRect(visible))
+            viewportHeight=Math.min(viewportHeight,visible.height());
+        if(viewportHeight<=pageHeaderHeight)return;
         // The entire physical 345:550 page always fits in its own viewport;
         // links and the optional detail strips remain reachable below it.
         int natural=Math.round(Math.max(1,(comparisonScroll.getWidth()-Ui.dp(this,18))/2f)*550f/345f);
