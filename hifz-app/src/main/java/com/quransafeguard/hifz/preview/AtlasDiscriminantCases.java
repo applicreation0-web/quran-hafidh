@@ -90,6 +90,7 @@ final class AtlasDiscriminantCases {
         new Entry(4,1,7,189,"Variation de mot ou de particule","4:1","7:189","","al-Abbad · 57","https://quranpedia.app/books/b10901/s4.html",new int[]{10},new int[]{7},77,175,57),
         new Entry(7,189,39,6,"Variation de mot ou de particule","7:189","39:6","","al-Abbad · 58","https://quranpedia.app/books/b10901/s4.html",new int[]{7},new int[]{5},175,459,58),
         new Entry(5,2,48,29,"Variation de mot ou de particule","5:2","48:29","","al-Abbad · 61","https://quranpedia.app/books/b10901/s4.html",new int[]{22},new int[]{17},106,515,61),
+        new Entry(13,18,39,47,"Bifurcation après tronc commun","13:18","39:47","","al-Abbad · 62","https://quranpedia.app/books/b10901/s4.html",new int[]{20},new int[]{13,14,15},251,463,62),
         new Entry(5,44,5,45,"Variation de mot ou de particule","5:44","5:45","","al-Abbad · 63","https://quranpedia.app/books/b10901/s4.html",new int[]{41},new int[]{31},115,115,63),
         new Entry(5,45,5,47,"Variation de mot ou de particule","5:45","5:47","","al-Abbad · 64","https://quranpedia.app/books/b10901/s4.html",new int[]{31},new int[]{16},115,116,64),
         new Entry(5,62,5,63,"Variation de mot ou de particule","5:62","5:63","","al-Abbad · 65","https://quranpedia.app/books/b10901/s4.html",new int[]{13},new int[]{13},118,118,65),
