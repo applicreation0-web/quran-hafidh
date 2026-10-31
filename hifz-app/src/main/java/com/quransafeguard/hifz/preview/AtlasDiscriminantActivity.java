@@ -516,6 +516,22 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     int comparisonScrollYForTest(){return comparisonScroll==null?0:comparisonScroll.getScrollY();}
+    String qcfViewportDetailForTest(){
+        android.graphics.Rect scrollBounds=new android.graphics.Rect();
+        android.graphics.Rect scrollLocal=new android.graphics.Rect();
+        android.graphics.Rect pairBounds=new android.graphics.Rect();
+        boolean scrollGlobal=comparisonScroll.getGlobalVisibleRect(scrollBounds);
+        boolean scrollInside=comparisonScroll.getLocalVisibleRect(scrollLocal);
+        pagePair.getGlobalVisibleRect(pairBounds);
+        return "scrollGlobal="+scrollGlobal+" scrollLocal="+scrollInside
+            +" scrollMeasured="+comparisonScroll.getWidth()+"x"+comparisonScroll.getHeight()
+            +" scrollBounds="+scrollBounds+" localBounds="+scrollLocal
+            +" pairMeasured="+pagePair.getWidth()+"x"+pagePair.getHeight()
+            +" pairTop="+pagePair.getTop()+" pairBounds="+pairBounds
+            +" workspace="+workspace.getWidth()+"x"+workspace.getHeight()
+            +" tafsir="+tafsirPanel.getWidth()+"x"+tafsirPanel.getHeight()
+            +" lateral="+lateralTafsir+" selectedTafsir="+selectedTafsir;
+    }
     int selectedTafsirForTest(){return selectedTafsir;}
     String tafsirTabLabelForTest(int side){
         return (side==0?firstTafsirTab:secondTafsirTab).getText().toString();

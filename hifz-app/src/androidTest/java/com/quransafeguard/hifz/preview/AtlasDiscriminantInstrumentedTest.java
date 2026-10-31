@@ -126,7 +126,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                         +" root="+root.getWidth()+"x"+root.getHeight()
                         +" visibleWindow="+visibleWindow
                         +" bounds="+java.util.Arrays.toString(bounds)
-                        +" clipDiagnostic="+clips);
+                        +" clipDiagnostic="+clips
+                        +" viewport="+a.qcfViewportDetailForTest());
                     boolean same=ready&&java.util.Arrays.equals(previous,bounds)&&window.equals(previousWindow);
                     if(!same)stableSince=android.os.SystemClock.uptimeMillis();
                     stableFrames=same?stableFrames+1:0;

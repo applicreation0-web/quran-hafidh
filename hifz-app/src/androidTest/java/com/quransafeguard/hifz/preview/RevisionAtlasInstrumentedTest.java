@@ -246,7 +246,13 @@ public final class RevisionAtlasInstrumentedTest {
                     assertEquals(0,field(a,"currentMask"));
                     assertEquals(new VerseRef(30,37),field(a,"discriminantVerse"));
                 });
-                Thread.sleep(1100L);assertTrue(clock.get().elapsedMs()>=paused+900L);
+                // Require resumed progression even if a busy emulator delays frames.
+                long resumeDeadline=android.os.SystemClock.uptimeMillis()+5000L;
+                while(clock.get().elapsedMs()<paused+900L
+                        &&android.os.SystemClock.uptimeMillis()<resumeDeadline)
+                    Thread.sleep(100L);
+                assertTrue("Passive revision clock must resume after returning from Atlas",
+                    clock.get().elapsedMs()>=paused+900L);
                 // onPause legitimately checkpoints elapsed time. Compare progression separately.
                 JSONObject after=snapshot(c);
                 String elapsedKey=HifzPrefs.elapsedKey(HifzSessionActivity.MURAJAAH);
