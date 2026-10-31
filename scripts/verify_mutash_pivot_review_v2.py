@@ -57,7 +57,7 @@ def main():
     admitted = [e for e in rows if e["decision"] in ("retenu", "corrigé")]
     pending = [e for e in rows if e["decision"] == "à arbitrer"]
     excluded = [e for e in rows if e["decision"] == "exclu"]
-    assert (len(admitted), len(pending), len(excluded)) == (278, 10, 6)
+    assert (len(admitted), len(pending), len(excluded)) == (279, 9, 6)
     assert approved["approvedCount"] == len(admitted)
     approved_ids = {r["auditId"] for r in approved["entries"]}
     assert approved_ids == {r["auditId"] for r in admitted}
@@ -113,7 +113,7 @@ def main():
     assert (manual, additional) == (10, 12)
     assert review["summary"]["manuallyPrioritized"] == manual
     assert review["summary"]["additionalCuratedApprovedCases"] == additional
-    print(f"PASS — 294 source decisions; 278 approved preserved; 10 pending; 6 excluded; "
+    print(f"PASS — 294 source decisions; 279 approved preserved; 9 pending; 6 excluded; "
           f"{manual} pending proposals; {additional} approved-case reviews; "
           "zero automatic admission, no runtime modification")
 
