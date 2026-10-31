@@ -11,8 +11,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        surface: [phone, boox]
-        shard: [0, 1, 2, 3]
+        include:
+          - { surface: phone, size: 1080x1920, density: 420, shard: 0 }
+          - { surface: phone, size: 1080x1920, density: 420, shard: 1 }
+          - { surface: phone, size: 1080x1920, density: 420, shard: 2 }
+          - { surface: phone, size: 1080x1920, density: 420, shard: 3 }
+          - { surface: boox, size: 1404x1872, density: 226, shard: 0 }
+          - { surface: boox, size: 1404x1872, density: 226, shard: 1 }
+          - { surface: boox, size: 1404x1872, density: 226, shard: 2 }
+          - { surface: boox, size: 1404x1872, density: 226, shard: 3 }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -40,11 +47,7 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: |
-            surface="${{ matrix.surface }}"
-            shard="${{ matrix.shard }}"
-            if [ "$surface" = phone ]; then size=1080x1920; density=420; else size=1404x1872; density=226; fi
-            bash scripts/run_1179_finalisation_android_audit.sh "$surface" "$size" "$density" catalogue "$shard"
+          script: bash scripts/run_1179_finalisation_android_audit.sh ${{ matrix.surface }} ${{ matrix.size }} ${{ matrix.density }} catalogue ${{ matrix.shard }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
