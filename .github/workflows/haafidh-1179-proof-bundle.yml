@@ -1,0 +1,70 @@
+name: Haafidh 1.17.9 existing-proof collection (NO APK NO RELEASE)
+on:
+  push:
+    branches: [audit/haafidh-1179-proof-bundle-20261031]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  collect-existing-proofs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wait only for already-running upstream tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/collect_1179_endurance_proofs.py wait
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41246852263
+          pattern: endurance-*
+          path: evidence/navigation-run
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41249576279
+          pattern: endurance-*
+          path: evidence/final-tafsir-run
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41247855731
+          pattern: endurance-*
+          path: evidence/system-attempt-1
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41248834140
+          pattern: endurance-*
+          path: evidence/system-attempt-2
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41212783170
+          name: haafidh-1179-finalisation-JVM-NO-APK
+          path: evidence/baseline-jvm
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41212783170
+          name: haafidh-1179-isolated-preserved-NO-APK
+          path: evidence/baseline-preserved
+      - name: Summarize and checksum existing evidence, no test rerun
+        run: python3 scripts/collect_1179_endurance_proofs.py collect
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-1179-existing-proof-bundle-NO-APK
+          path: |
+            QURAN_HAAFIDH_1179_RAW_PROOFS_NO_APK.zip
+            evidence/final-summary.json
+            evidence/*-memory.csv
+            evidence/MANIFEST_SHA256.json
+            evidence/jobs.json
+          retention-days: 90
