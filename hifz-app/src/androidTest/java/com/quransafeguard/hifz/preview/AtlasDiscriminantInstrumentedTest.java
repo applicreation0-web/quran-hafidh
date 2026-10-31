@@ -342,6 +342,60 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
+    /** Verifies real QCF polygon hit-testing selects a verse other than the pair anchor,
+     *  retains the independent original Jalalayn body and survives recreation. */
+    @Test public void exactVerseInEitherAuthenticQcfPageOpensItsOwnTafsir() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(
+                pairIntent(context,exactPairIndex(2,63,2,93)))){
+            waitForQcf(scenario);
+            String last="";
+            for(int side=0;side<2;side++){
+                final int position=side,anchorAyah=side==0?63:93;
+                String js="(function(){var svg=document.querySelector('.paper svg');if(!svg)return '';"
+                    +"var paths=svg.querySelectorAll('path.ayahPolygon');for(var i=0;i<paths.length;i++){"
+                    +"var p=paths[i],surah=Number(p.getAttribute('surah')),ayah=Number(p.getAttribute('ayah'));"
+                    +"if(surah!==2||ayah==="+anchorAyah+")continue;"
+                    +"var box=p.getBBox(),m=p.getScreenCTM();if(!m)continue;"
+                    +"for(var x=1;x<6;x++)for(var y=1;y<6;y++){var local=svg.createSVGPoint();"
+                    +"local.x=box.x+box.width*x/6;local.y=box.y+box.height*y/6;"
+                    +"if(p.isPointInFill(local)){var touch=local.matrixTransform(m);"
+                    +"readPage(currentSvgPage,{clientX:touch.x,clientY:touch.y});return surah+':'+ayah;}}}"
+                    +"return '';})()";
+                java.util.concurrent.CountDownLatch latch=new java.util.concurrent.CountDownLatch(1);
+                AtomicReference<String> result=new AtomicReference<>("");
+                scenario.onActivity(a->a.qcfViewsForTest()[position].evaluateJavascript(js,
+                    value->{result.set(value);latch.countDown();}));
+                assertTrue("Original SVG polygon tap must respond",latch.await(8,java.util.concurrent.TimeUnit.SECONDS));
+                String chosen=new org.json.JSONArray("["+result.get()+"]").getString(0);
+                assertFalse("A different ayah polygon must be available",chosen.isEmpty());
+                assertNotEquals("Must select a different ayah, not the fixed comparison anchor",
+                    "2:"+anchorAyah,chosen);
+                AtomicBoolean loaded=new AtomicBoolean();
+                for(int poll=0;poll<70;poll++){
+                    scenario.onActivity(a->{
+                        com.quransafeguard.hifz.core.VerseRef verse=a.selectedTafsirVerseForTest();
+                        loaded.set(a.selectedTafsirForTest()==position&&verse!=null
+                            &&chosen.equals(verse.toString())
+                            &&a.tafsirTextsForTest()[position].length()>100);
+                    });
+                    if(loaded.get())break;
+                    Thread.sleep(100L);
+                }
+                assertTrue("The actual selected QCF verse must load its own original Jalalayn",loaded.get());
+                last=chosen;
+            }
+            final String preserved=last;
+            scenario.recreate();waitForQcf(scenario);
+            scenario.onActivity(a->{
+                assertEquals("Second QCF side remains selected",1,a.selectedTafsirForTest());
+                assertEquals("Exact selected verse survives recreation",
+                    preserved,a.selectedTafsirVerseForTest().toString());
+                assertTrue(a.tafsirPanelVisibleForTest());
+            });
+        }
+    }
+
     /** A delayed new render must never expose the previous pair's excerpt. */
     @Test public void changingCaseImmediatelyClearsOldQcfExcerpts()throws Exception{
         Context context=ApplicationProvider.getApplicationContext();
