@@ -5,17 +5,17 @@
   "wordIndexBase": 1,
   "geometrySpace": "viewBox 0 0 345 550",
   "counts": {
-    "retenu": 199,
+    "retenu": 200,
     "corrigé": 79,
-    "à arbitrer": 10,
+    "à arbitrer": 9,
     "exclu": 6
   },
-  "approvedCount": 278,
+  "approvedCount": 279,
   "verification": {
     "textSource": "scripts/data/quran-uthmani-tanzil.txt",
     "textSha256": "0a5926f8e27b8961e619f2d473db9c5466186ab2b56207c964a043336b174a7d",
     "geometrySource": "quran-ws/quran-svg-elements v1.1.2",
-    "editorialDecisionsSha256": "b939ed9f31073ceb5767b7933fd5589c142efd11ebc189f17b2e68cf9dfd8908",
+    "editorialDecisionsSha256": "435518709b6dcd9048e96f5b14f2a7f4f9be71b5bc32e0d0e8033d4fd5504d63",
     "supplementaryDecisionsSha256": "1fdd3664d5b7e409391ac7c97d41be62b082452a0bdba0d88db83877a1bf1121",
     "geometrySha256": {
       "hifz-app/src/main/word-source/quran-ws-v1.1.2/word-boxes-001-150.json": "37f1721049d0ae01441b27ddbf65586bfb09b50ae3f4daa5f361e6e34c74f527",
@@ -5882,8 +5882,8 @@
       "sourceUrl": "https://quranpedia.app/books/b10901/s4.html",
       "source": "al-Abbad",
       "priority": "P1",
-      "decision": "à arbitrer",
-      "reason": "Pivot des extraits à arbitrer: longues parties communes mais insertion à cadrer précisément.",
+      "decision": "retenu",
+      "reason": "Décision éditoriale du 31 octobre : bifurcation audible après huit mots communs ; retenir la proposition A أُولَـٰئِكَ et la proposition B مِن سُوۤءِ ٱلۡعَذَابِ, non le seul مِن. Origine al-ʿAbbād s4, pages imprimées 41–42 ; indices QCF vérifiés 251 et 463.",
       "originalCandidate": {
         "verset_A": "الرعد:18",
         "verset_B": "الزمر:47",
@@ -5899,7 +5899,105 @@
       ],
       "printedPagesSecond": [
         42
-      ]
+      ],
+      "kind": "Bifurcation après tronc commun",
+      "sourceEvidence": {
+        "firstQuoted": true,
+        "secondQuoted": true,
+        "chapter": "s4.html"
+      },
+      "firstWordIndices": [
+        20
+      ],
+      "secondWordIndices": [
+        13,
+        14,
+        15
+      ],
+      "firstWords": [
+        "أُو۟لَـٰۤىِٕكَ"
+      ],
+      "secondWords": [
+        "مِن",
+        "سُوۤءِ",
+        "ٱلۡعَذَابِ"
+      ],
+      "firstPage": 251,
+      "secondPage": 463,
+      "firstGeometry": [
+        {
+          "wordIndex": 20,
+          "word": "أُو۟لَـٰۤىِٕكَ",
+          "page": 251,
+          "box": [
+            296.03,
+            506.17,
+            333.7,
+            541.59
+          ]
+        }
+      ],
+      "secondGeometry": [
+        {
+          "wordIndex": 13,
+          "word": "مِن",
+          "page": 463,
+          "box": [
+            80.24,
+            492.23,
+            97.56,
+            504.55
+          ]
+        },
+        {
+          "wordIndex": 14,
+          "word": "سُوۤءِ",
+          "page": 463,
+          "box": [
+            52.45,
+            483.93,
+            76.92,
+            504.93
+          ]
+        },
+        {
+          "wordIndex": 15,
+          "word": "ٱلۡعَذَابِ",
+          "page": 463,
+          "box": [
+            5.79,
+            478.65,
+            49.07,
+            508.06
+          ]
+        }
+      ],
+      "firstContext": {
+        "startWordIndex": 17,
+        "words": [
+          "مَعَهُۥ",
+          "لَٱفۡتَدَوۡا۟",
+          "بِهِۦۤۚ",
+          "أُو۟لَـٰۤىِٕكَ",
+          "لَهُمۡ",
+          "سُوۤءُ",
+          "ٱلۡحِسَابِ"
+        ]
+      },
+      "secondContext": {
+        "startWordIndex": 10,
+        "words": [
+          "مَعَهُۥ",
+          "لَٱفۡتَدَوۡا۟",
+          "بِهِۦ",
+          "مِن",
+          "سُوۤءِ",
+          "ٱلۡعَذَابِ",
+          "یَوۡمَ",
+          "ٱلۡقِیَـٰمَةِۚ",
+          "وَبَدَا"
+        ]
+      }
     },
     {
       "auditId": 63,
