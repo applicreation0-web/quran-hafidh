@@ -39,7 +39,8 @@ public final class AtlasDiscriminantActivity extends Activity {
     private QcfAtlasVerseStrips strips;
     private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
     private TafsirRepository tafsirRepository;
-    private int tafsirRequest;
+    private int leftTafsirRequest,rightTafsirRequest;
+    private VerseRef selectedLeftVerse,selectedRightVerse;
     private TextView leftTafsir,rightTafsir,tafsirHeading;
     private LinearLayout tafsirPanel;
     private ScrollView tafsirScroll,comparisonScroll;
@@ -68,6 +69,12 @@ public final class AtlasDiscriminantActivity extends Activity {
                 getIntent().getIntExtra(EXTRA_CASE_INDEX,caseIndices.get(0));
             if(!caseIndices.contains(selectedIndex))selectedIndex=caseIndices.get(0);
             selectedTafsir=state==null?-1:state.getInt("tafsirSide",-1);
+            if(state!=null){
+                String savedLeft=state.getString("tafsirLeftVerse","");
+                String savedRight=state.getString("tafsirRightVerse","");
+                if(!savedLeft.isEmpty())selectedLeftVerse=GeometryRepository.parseVerse(savedLeft);
+                if(!savedRight.isEmpty())selectedRightVerse=GeometryRepository.parseVerse(savedRight);
+            }
             build();
             render();
         } catch (Exception unavailable) {
@@ -136,6 +143,9 @@ public final class AtlasDiscriminantActivity extends Activity {
         left=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
             @Override public void onPageChosen(int page){selectTafsir(0);}
             @Override public void onOpenReading(int page){selectTafsir(0);}
+            @Override public void onVerseChosen(int page,int surah,int ayah){
+                selectExactTafsir(0,page,new VerseRef(surah,ayah));
+            }
             @Override public void onRendered(int page,boolean success){
                 if(page!=currentLeftPage)return;
                 leftPageStatus=success?1:-1;
@@ -146,6 +156,9 @@ public final class AtlasDiscriminantActivity extends Activity {
         right=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
             @Override public void onPageChosen(int page){selectTafsir(1);}
             @Override public void onOpenReading(int page){selectTafsir(1);}
+            @Override public void onVerseChosen(int page,int surah,int ayah){
+                selectExactTafsir(1,page,new VerseRef(surah,ayah));
+            }
             @Override public void onRendered(int page,boolean success){
                 if(page!=currentRightPage)return;
                 rightPageStatus=success?1:-1;
@@ -236,6 +249,15 @@ public final class AtlasDiscriminantActivity extends Activity {
         return tab;
     }
 
+    private void selectExactTafsir(int side,int page,VerseRef verse){
+        if(verse==null||page!=(side==0?currentLeftPage:currentRightPage)
+                ||geometry.pageForVerse(verse)!=page)return;
+        VerseRef old=side==0?selectedLeftVerse:selectedRightVerse;
+        if(side==0)selectedLeftVerse=verse;else selectedRightVerse=verse;
+        if(!verse.equals(old))loadContextualTafsir(side,verse);
+        selectTafsir(side);
+    }
+
     private void selectTafsir(int side){
         if(side<0||side>1)return;
         selectedTafsir=side;
@@ -245,7 +267,8 @@ public final class AtlasDiscriminantActivity extends Activity {
         firstTafsirTab.setSelected(side==0);secondTafsirTab.setSelected(side==1);
         firstTafsirTab.setBackgroundColor(side==0?Ui.LINE:Ui.PAPER);
         secondTafsirTab.setBackgroundColor(side==1?Ui.LINE:Ui.PAPER);
-        VerseRef verse=side==0?current().first:current().second;
+        VerseRef verse=side==0?selectedLeftVerse:selectedRightVerse;
+        if(verse==null)verse=side==0?current().first:current().second;
         tafsirHeading.setText("Tafsīr al-Jalālayn · "+verse+" · anglais");
         tafsirScroll.scrollTo(0,0);
         if(!lateralTafsir){
@@ -282,17 +305,24 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(params.height!=height){params.height=height;pagePair.setLayoutParams(params);}
     }
 
-    private void loadBothTafsirs(AtlasDiscriminantCases.Entry c){
-        final int token=++tafsirRequest;
+    private void loadBothTafsirs(VerseRef first,VerseRef second){
+        final int leftToken=++leftTafsirRequest,rightToken=++rightTafsirRequest;
         leftTafsir.setText("Chargement du Tafsīr al-Jalālayn…");
         rightTafsir.setText("Chargement du Tafsīr al-Jalālayn…");
         tafsirIo.execute(()->{
-            loadOneTafsir(c.first,leftTafsir,token);
-            loadOneTafsir(c.second,rightTafsir,token);
+            loadOneTafsir(first,leftTafsir,0,leftToken);
+            loadOneTafsir(second,rightTafsir,1,rightToken);
         });
     }
 
-    private void loadOneTafsir(VerseRef verse,TextView target,int token){
+    private void loadContextualTafsir(int side,VerseRef verse){
+        TextView target=side==0?leftTafsir:rightTafsir;
+        final int token=side==0?++leftTafsirRequest:++rightTafsirRequest;
+        target.setText("Chargement du Tafsīr al-Jalālayn…");
+        tafsirIo.execute(()->loadOneTafsir(verse,target,side,token));
+    }
+
+    private void loadOneTafsir(VerseRef verse,TextView target,int side,int token){
         TafsirRepository.Entry entry=null;
         try {entry=tafsirRepository.load(verse);}
         catch(Exception unavailable){android.util.Log.w("HaafidhAtlasTafsir",
@@ -301,7 +331,8 @@ public final class AtlasDiscriminantActivity extends Activity {
             ?"Tafsīr al-Jalālayn indisponible pour ce verset."
             :BaqaraPilotScreen.renderExistingJalalayn(entry);
         runOnUiThread(()->{
-            if(disposed||isFinishing()||token!=tafsirRequest)return;
+            if(disposed||isFinishing()
+                    ||token!=(side==0?leftTafsirRequest:rightTafsirRequest))return;
             target.setText(result);
         });
     }
@@ -333,6 +364,10 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(currentLeftPage<1||currentLeftPage>604||currentRightPage<1||currentRightPage>604)
             throw new IllegalStateException("Invalid QCF page");
 
+        if(selectedLeftVerse==null||geometry.pageForVerse(selectedLeftVerse)!=currentLeftPage)
+            selectedLeftVerse=c.first;
+        if(selectedRightVerse==null||geometry.pageForVerse(selectedRightVerse)!=currentRightPage)
+            selectedRightVerse=c.second;
         leftHeader.setText(QuranSurahNames.name(c.first.getSurah())+" · "+c.first+" · p."+currentLeftPage);
         rightHeader.setText(QuranSurahNames.name(c.second.getSurah())+" · "+c.second+" · p."+currentRightPage);
         // BOOX: never decode two 600 KB original SVG pages and two crops simultaneously.
@@ -354,8 +389,8 @@ public final class AtlasDiscriminantActivity extends Activity {
         previousCase.setEnabled(position>0);nextCase.setEnabled(position+1<caseIndices.size());
         firstTafsirTab.setText(c.first.toString());
         secondTafsirTab.setText(c.second.toString());
+        loadBothTafsirs(selectedLeftVerse,selectedRightVerse);
         if(selectedTafsir>=0)selectTafsir(selectedTafsir);
-        loadBothTafsirs(c);
         leftRead.setText("Lire "+c.first+" en Lecture");
         rightRead.setText("Lire "+c.second+" en Lecture");
         String origin=getIntent().getStringExtra(EXTRA_ORIGIN);
@@ -368,7 +403,8 @@ public final class AtlasDiscriminantActivity extends Activity {
     private void moveCase(int direction){
         int next=caseIndices.indexOf(selectedIndex)+direction;
         if(next<0||next>=caseIndices.size())return;
-        selectedIndex=caseIndices.get(next);render();
+        selectedIndex=caseIndices.get(next);
+        selectedLeftVerse=null;selectedRightVerse=null;render();
     }
 
     private void showRightAfterLeft(){
@@ -465,6 +501,8 @@ public final class AtlasDiscriminantActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle state){
         state.putInt("caseIndex",selectedIndex);
         state.putInt("tafsirSide",selectedTafsir);
+        if(selectedLeftVerse!=null)state.putString("tafsirLeftVerse",selectedLeftVerse.toString());
+        if(selectedRightVerse!=null)state.putString("tafsirRightVerse",selectedRightVerse.toString());
         super.onSaveInstanceState(state);
     }
     /** Chromium WebViews must be removed from the view hierarchy before destroy().
