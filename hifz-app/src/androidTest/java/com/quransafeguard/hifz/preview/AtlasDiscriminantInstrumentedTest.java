@@ -77,6 +77,7 @@ public final class AtlasDiscriminantInstrumentedTest {
         ActivityScenario<AtlasDiscriminantActivity> scenario,boolean contextual)throws Exception{
         java.util.concurrent.CountDownLatch settled=new java.util.concurrent.CountDownLatch(1);
         AtomicReference<Rect[]> result=new AtomicReference<>();
+        AtomicReference<String> lastFrame=new AtomicReference<>("No pre-draw frame observed");
         AtomicReference<android.view.ViewTreeObserver.OnPreDrawListener> observer=new AtomicReference<>();
         scenario.onActivity(a->{
             View root=a.getWindow().getDecorView();
@@ -99,6 +100,20 @@ public final class AtlasDiscriminantInstrumentedTest {
                         &&!root.isLayoutRequested()&&a.bothQcfPagesFullyVisibleForTest()
                         &&(!contextual||a.tafsirHeadingVisibleForTest());
                     for(MapQcfThumbnails page:a.qcfViewsForTest())ready&=!page.isLayoutRequested();
+                    // Failure diagnostics only: preserve every strict visual gate.
+                    lastFrame.set("activityFocus="+a.hasWindowFocus()
+                        +" rootFocus="+root.hasWindowFocus()
+                        +" attached="+root.isAttachedToWindow()
+                        +" insetsReady="+(insets!=null)
+                        +" rootLayoutRequested="+root.isLayoutRequested()
+                        +" leftLayoutRequested="+a.qcfViewsForTest()[0].isLayoutRequested()
+                        +" rightLayoutRequested="+a.qcfViewsForTest()[1].isLayoutRequested()
+                        +" bothVisible="+a.bothQcfPagesFullyVisibleForTest()
+                        +" headingVisible="+a.tafsirHeadingVisibleForTest()
+                        +" orientation="+orientation
+                        +" root="+root.getWidth()+"x"+root.getHeight()
+                        +" visibleWindow="+visibleWindow
+                        +" bounds="+java.util.Arrays.toString(bounds));
                     boolean same=ready&&java.util.Arrays.equals(previous,bounds)&&window.equals(previousWindow);
                     if(!same)stableSince=android.os.SystemClock.uptimeMillis();
                     stableFrames=same?stableFrames+1:0;
@@ -119,7 +134,7 @@ public final class AtlasDiscriminantInstrumentedTest {
         scenario.onActivity(a->a.getWindow().getDecorView().getViewTreeObserver()
             .removeOnPreDrawListener(observer.get()));
         assertTrue("Focused activity, orientation, insets and complete QCF pages must settle after layout: "+
-            java.util.Arrays.toString(result.get()),ready);
+            java.util.Arrays.toString(result.get())+"; final pre-draw: "+lastFrame.get(),ready);
         return result.get();
     }
 
