@@ -204,7 +204,7 @@ public final class RevisionAtlasInstrumentedTest {
         assertTrue(done.await(10,TimeUnit.SECONDS));return result.get();
     }
     @Test public void passiveNestedComparisonPausesClockAndRestoresExactSessionAndBackup()throws Exception{
-        Context c=ApplicationProvider.getApplicationContext();JSONObject original=HifzBackup.export(c);
+        Context c=ApplicationProvider.getApplicationContext();new HifzPrefs(c);JSONObject original=HifzBackup.export(c);
         Instrumentation ins=InstrumentationRegistry.getInstrumentation();
         Instrumentation.ActivityMonitor atlas=ins.addMonitor(AtlasDiscriminantActivity.class.getName(),null,false);
         Instrumentation.ActivityMonitor lecture=ins.addMonitor(StudyReaderActivity.class.getName(),null,false);
@@ -258,7 +258,7 @@ public final class RevisionAtlasInstrumentedTest {
         }finally{ins.removeMonitor(atlas);ins.removeMonitor(lecture);HifzBackup.restore(c,original);}
     }
     @Test public void activeHasNoHintUntilRealValidationAndKeepsMaskAcrossRecreation()throws Exception{
-        Context c=ApplicationProvider.getApplicationContext();JSONObject original=HifzBackup.export(c);
+        Context c=ApplicationProvider.getApplicationContext();new HifzPrefs(c);JSONObject original=HifzBackup.export(c);
         Instrumentation ins=InstrumentationRegistry.getInstrumentation();
         Instrumentation.ActivityMonitor atlas=ins.addMonitor(AtlasDiscriminantActivity.class.getName(),null,false);
         try{
