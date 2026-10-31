@@ -5,17 +5,17 @@
   "wordIndexBase": 1,
   "geometrySpace": "viewBox 0 0 345 550",
   "counts": {
-    "retenu": 199,
+    "retenu": 200,
     "corrigé": 79,
-    "à arbitrer": 10,
+    "à arbitrer": 9,
     "exclu": 6
   },
-  "approvedCount": 278,
+  "approvedCount": 279,
   "verification": {
     "textSource": "scripts/data/quran-uthmani-tanzil.txt",
     "textSha256": "0a5926f8e27b8961e619f2d473db9c5466186ab2b56207c964a043336b174a7d",
     "geometrySource": "quran-ws/quran-svg-elements v1.1.2",
-    "editorialDecisionsSha256": "b939ed9f31073ceb5767b7933fd5589c142efd11ebc189f17b2e68cf9dfd8908",
+    "editorialDecisionsSha256": "435518709b6dcd9048e96f5b14f2a7f4f9be71b5bc32e0d0e8033d4fd5504d63",
     "supplementaryDecisionsSha256": "1fdd3664d5b7e409391ac7c97d41be62b082452a0bdba0d88db83877a1bf1121",
     "geometrySha256": {
       "hifz-app/src/main/word-source/quran-ws-v1.1.2/word-boxes-001-150.json": "37f1721049d0ae01441b27ddbf65586bfb09b50ae3f4daa5f361e6e34c74f527",
@@ -1676,6 +1676,33 @@
         "ٱللَّهِ"
       ],
       "kind": "Variation de mot ou de particule",
+      "source": "al-Abbad",
+      "sourceUrl": "https://quranpedia.app/books/b10901/s4.html",
+      "priority": "P1"
+    },
+    {
+      "auditId": 62,
+      "first": "13:18",
+      "second": "39:47",
+      "firstPage": 251,
+      "secondPage": 463,
+      "firstWordIndices": [
+        20
+      ],
+      "secondWordIndices": [
+        13,
+        14,
+        15
+      ],
+      "firstWords": [
+        "أُو۟لَـٰۤىِٕكَ"
+      ],
+      "secondWords": [
+        "مِن",
+        "سُوۤءِ",
+        "ٱلۡعَذَابِ"
+      ],
+      "kind": "Bifurcation après tronc commun",
       "source": "al-Abbad",
       "sourceUrl": "https://quranpedia.app/books/b10901/s4.html",
       "priority": "P1"
