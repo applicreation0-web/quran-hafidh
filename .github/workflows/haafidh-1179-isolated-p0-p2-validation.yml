@@ -1,7 +1,7 @@
 name: Haafidh 1.17.9 isolated P0-P2 validation (NO APK, NO RELEASE)
 on:
   push:
-    branches: [fix/haafidh-1179-preserved-test-fixture-20261031]
+    branches: [work/haafidh-1179-p1-279-20261031]
   workflow_dispatch:
 permissions:
   contents: read
@@ -40,6 +40,7 @@ jobs:
           bash scripts/fetch_mushaf_pages.sh
           python scripts/materialize_mutash_catalogue.py --check
           python scripts/verify_mutash_catalogue.py
+          python scripts/verify_mutash_pivot_review_v2.py
       - name: JVM behavioral, source, long horizon and restoration contracts
         run: |
           sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
