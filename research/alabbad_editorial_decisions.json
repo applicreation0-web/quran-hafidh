@@ -1662,8 +1662,30 @@
       "sourceUrl": "https://quranpedia.app/books/b10901/s4.html",
       "source": "al-Abbad",
       "priority": "P1",
-      "decision": "à arbitrer",
-      "reason": "Pivot des extraits à arbitrer: longues parties communes mais insertion à cadrer précisément."
+      "decision": "retenu",
+      "reason": "Décision éditoriale du 31 octobre : bifurcation audible après huit mots communs ; retenir la proposition A أُولَـٰئِكَ et la proposition B مِن سُوۤءِ ٱلۡعَذَابِ, non le seul مِن. Origine al-ʿAbbād s4, pages imprimées 41–42 ; indices QCF vérifiés 251 et 463.",
+      "kind": "Bifurcation après tronc commun",
+      "firstWordIndices": [
+        20
+      ],
+      "secondWordIndices": [
+        13,
+        14,
+        15
+      ],
+      "firstWords": [
+        "أُو۟لَـٰۤىِٕكَ"
+      ],
+      "secondWords": [
+        "مِن",
+        "سُوۤءِ",
+        "ٱلۡعَذَابِ"
+      ],
+      "sourceEvidence": {
+        "firstQuoted": true,
+        "secondQuoted": true,
+        "chapter": "s4.html"
+      }
     },
     {
       "auditId": 63,
