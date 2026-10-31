@@ -520,7 +520,8 @@ public final class AtlasDiscriminantActivity extends Activity {
             detachQcf(left);
             detachQcf(right);
             detachQcf(strips);
-            tafsirRequest++;
+            leftTafsirRequest++;
+            rightTafsirRequest++;
             tafsirIo.shutdownNow();
         }
         super.onDestroy();
