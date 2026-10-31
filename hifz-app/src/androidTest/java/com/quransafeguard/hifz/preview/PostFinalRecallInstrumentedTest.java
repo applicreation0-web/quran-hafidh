@@ -143,6 +143,13 @@ public final class PostFinalRecallInstrumentedTest {
         SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
         assertTrue(raw.edit().clear().commit());
         try {
+            new HifzPrefs(c); // Bootstrap schema, then seed the historical user cadence.
+            assertTrue(raw.edit()
+                .putString("programStartDate","2026-09-21")
+                .putBoolean("sevenDayProgrammeMigratedV1",true)
+                .putString("weeklyProgramTransitionsV1",
+                    "[{\"from\":\"2026-10-23\",\"mode\":\"RECOMMENDED\"}]")
+                .commit());
             HifzPrefs prefs=new HifzPrefs(c);
             GeometryRepository geometry=GeometryRepository.get(c);
             // Make both Itqan sources fail before row rendering. They must
