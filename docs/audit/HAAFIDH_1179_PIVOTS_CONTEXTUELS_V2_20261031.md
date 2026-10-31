@@ -1,13 +1,13 @@
 # Quran Haafidh 1.17.9 — Audit des mots discriminants V2 (sans mutation runtime)
 
-**Statut : revue éditoriale et technique, NON intégrée à l'APK, aucun changement Hifz.**
+**Statut : revue éditoriale V2 historique ; cas 62 explicitement admis sur la branche d'intégration 279, autres propositions non automatiquement promues ; aucun changement Hifz.**
 
 - Branche dérivée : `work/haafidh-1179-pivots-review-20261031`
 - Base exacte Work : `326c64ace61762ae226fa812cf286966d95c5929`
 - Rapport détaillé : `research/mutash_pivot_review_v2_20261031.json`
 - Entrée : `research/alabbad_audit_294.json` + `scripts/data/quran-uthmani-tanzil.txt`
-- Périmètre conservé : **294 dossiers**, dont **278 admis**, **10 en attente**, **6 exclus**.
-- Contrôle textuel : les 278 jeux d'indices actuels concordent avec le texte coranique local, après exclusion correcte des ornements de page (`۞`) du comptage des mots.
+- Périmètre conservé : **294 dossiers**, dont **279 admis**, **9 en attente**, **6 exclus**.
+- Contrôle textuel : les 279 jeux d'indices actuels concordent avec le texte coranique local, après exclusion correcte des ornements de page (`۞`) du comptage des mots.
 - Le fichier de revue **ne modifie pas** `research/alabbad_catalogue_approved.json`, `AtlasDiscriminantCases.java`, le schéma Hifz ou les sauvegardes.
 
 ## Principe éditorial — priorité à l'erreur possible à l'oral
@@ -24,12 +24,12 @@ Le premier caractère ou le premier mot différent **n'est pas nécessairement**
 
 Ne pas générer de commentaire religieux automatique. Un pivot n'est admis qu'après contrôle **des mots source, du contexte, de la référence du livre, des coordonnées des mots QCF et du rendu Android**.
 
-## Dix dossiers laissés en attente : orientation V2, non encore approuvée
+## Dix dossiers examinés : cas 62 admis, neuf dossiers sans admission automatique
 
 | N° | Versets | Repère arabe V2 (source authentique) | Risque principal |
 |---|---|---|---|
 | 46 | 40:85 ↔ 48:23 | `فِي عِبَادِهِ` / `مِن قَبْلُ` | Ne pas choisir seulement `سُنَّتَ` / `سُنَّةَ` : la graphie n'isole pas une divergence orale nette dans l'enchaînement. Provenance transpage à finaliser. |
-| 62 | 13:18 ↔ 39:47 | `أُولَٰئِكَ` / `مِن سُوءِ الْعَذَابِ` | Suite différente après huit mots communs; `مِن` seul est trop générique. |
+| 62 | 13:18 ↔ 39:47 | `أُولَٰئِكَ` / `مِن سُوءِ الْعَذَابِ` | **ADMIS le 31/10, pages QCF 251 / 463, mots 20 / 13–15** : suite différente après huit mots communs; `مِن` seul est trop générique. |
 | 137 | 8:41 ↔ 59:7 | `إِن كُنتُمْ` / `كَيْ لَا` | Bifurcation après sept mots communs; seconde citation à attribuer à la bonne page. |
 | 138 | 8:53 ↔ 13:11 | `وَأَنَّ` / `وَإِذَا` | Après `حَتَّىٰ يُغَيِّرُوا مَا بِأَنْفُسِهِمْ`, deux continuations distinctes. |
 | 176 | 35:25 ↔ 22:42 | `كَذَّبَ` / `كَذَّبَتْ` | Terminaison distincte après trois mots communs; vérifier provenance. |
@@ -39,7 +39,7 @@ Ne pas générer de commentaire religieux automatique. Un pivot n'est admis qu'a
 | 212 | 39:52 ↔ 42:12 | `إِنَّ فِي ذَٰلِكَ` / `إِنَّهُ بِكُلِّ شَيْءٍ عَلِيمٌ` | Après cinq mots communs; souligner la première bifurcation, mais conserver assez de contexte pour une traduction intelligible. |
 | 221 | 21:16 ↔ 44:38 | `السَّمَاءَ` / `السَّمَاوَاتِ` | Singulier / pluriel **avant** la fin commune. |
 
-Les positions de mots proposées, par référence coranique et comptage 1-based, figurent dans le JSON. **Aucune des dix entrées n'est promue automatiquement** : la provenance de l'ouvrage et les glosses françaises sont encore à approuver.
+Les positions de mots proposées, par référence coranique et comptage 1-based, figurent dans le JSON. **Le cas 62 a été promu explicitement à la suite de l'arbitrage déjà enregistré**, après contrôle des mots coraniques et coordonnées QCF. Les neuf autres cas restent hors catalogue jusqu'à certification de leur provenance et de leurs gloses ; aucune promotion automatique.
 
 ## Douze cas ADMIS à revoir en priorité
 
