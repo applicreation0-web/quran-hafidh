@@ -536,8 +536,9 @@ public final class AtlasDiscriminantActivity extends Activity {
         // Require real visibility, exact measured bounds and containment in the
         // visible parent ScrollView. Never accept clipped or hidden QCF pages.
         android.graphics.Rect viewport=new android.graphics.Rect();
-        if(comparisonScroll==null||!comparisonScroll.isShown()
-                ||!comparisonScroll.getGlobalVisibleRect(viewport)||viewport.isEmpty())return false;
+        if(comparisonScroll==null||!comparisonScroll.isShown())return false;
+        comparisonScroll.getGlobalVisibleRect(viewport);
+        if(viewport.isEmpty())return false;
         for(MapQcfThumbnails page:new MapQcfThumbnails[]{left,right}){
             if(page==null||!page.isShown()||page.getAlpha()<=0f)return false;
             android.graphics.Rect visible=new android.graphics.Rect();
