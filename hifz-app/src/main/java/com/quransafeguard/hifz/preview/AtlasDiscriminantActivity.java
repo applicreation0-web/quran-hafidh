@@ -98,7 +98,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         int dpHeight=(int)(getResources().getDisplayMetrics().heightPixels/density);
         int dpWidth=(int)(getResources().getDisplayMetrics().widthPixels/density);
         boolean compact=dpHeight<740;
-        lateralTafsir=dpWidth>=900;
+        lateralTafsir=dpWidth>=900 || (getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE && dpWidth>=680);
         LinearLayout root=Ui.column(this);
         root.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));
         root.setBackgroundColor(Ui.PAPER);
