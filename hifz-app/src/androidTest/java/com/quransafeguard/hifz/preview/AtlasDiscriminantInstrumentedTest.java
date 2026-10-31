@@ -83,15 +83,28 @@ public final class AtlasDiscriminantInstrumentedTest {
             android.view.ViewTreeObserver.OnPreDrawListener listener=new android.view.ViewTreeObserver.OnPreDrawListener(){
                 private Rect[] previous;
                 private int stableFrames;
+                private String previousWindow;
+                private long stableSince;
                 @Override public boolean onPreDraw(){
                     Rect[] bounds=a.qcfPageBoundsForTest();
-                    boolean ready=!root.isLayoutRequested()&&a.bothQcfPagesFullyVisibleForTest()
+                    Rect visibleWindow=new Rect();root.getWindowVisibleDisplayFrame(visibleWindow);
+                    android.view.WindowInsets insets=root.getRootWindowInsets();
+                    int orientation=a.getResources().getConfiguration().orientation;
+                    boolean portrait=orientation==android.content.res.Configuration.ORIENTATION_PORTRAIT;
+                    String window=orientation+":"+root.getDisplay().getRotation()+":"+
+                        root.getWidth()+":"+root.getHeight()+":"+visibleWindow+":"+insets;
+                    boolean ready=a.hasWindowFocus()&&root.hasWindowFocus()&&root.isAttachedToWindow()
+                        &&insets!=null&&!visibleWindow.isEmpty()
+                        &&(portrait?root.getHeight()>=root.getWidth():root.getWidth()>=root.getHeight())
+                        &&!root.isLayoutRequested()&&a.bothQcfPagesFullyVisibleForTest()
                         &&(!contextual||a.tafsirHeadingVisibleForTest());
                     for(MapQcfThumbnails page:a.qcfViewsForTest())ready&=!page.isLayoutRequested();
-                    stableFrames=ready&&java.util.Arrays.equals(previous,bounds)?stableFrames+1:0;
-                    previous=bounds;
+                    boolean same=ready&&java.util.Arrays.equals(previous,bounds)&&window.equals(previousWindow);
+                    if(!same)stableSince=android.os.SystemClock.uptimeMillis();
+                    stableFrames=same?stableFrames+1:0;
+                    previous=bounds;previousWindow=window;
                     result.set(bounds);
-                    if(stableFrames>=4){
+                    if(stableFrames>=4&&android.os.SystemClock.uptimeMillis()-stableSince>=250L){
                         root.getViewTreeObserver().removeOnPreDrawListener(this);
                         settled.countDown();
                     }else root.postInvalidateOnAnimation();
@@ -102,10 +115,10 @@ public final class AtlasDiscriminantInstrumentedTest {
             root.getViewTreeObserver().addOnPreDrawListener(listener);
             root.postInvalidateOnAnimation();
         });
-        boolean ready=settled.await(5,java.util.concurrent.TimeUnit.SECONDS);
+        boolean ready=settled.await(10,java.util.concurrent.TimeUnit.SECONDS);
         scenario.onActivity(a->a.getWindow().getDecorView().getViewTreeObserver()
             .removeOnPreDrawListener(observer.get()));
-        assertTrue("Complete QCF pages and contextual heading must settle after layout: "+
+        assertTrue("Focused activity, orientation, insets and complete QCF pages must settle after layout: "+
             java.util.Arrays.toString(result.get()),ready);
         return result.get();
     }
@@ -172,15 +185,46 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
-    private static void tapScreen(int x,int y){
+    /** Resolve screen coordinates from the current focused window after rotation/insets settle. */
+    private static void tapQcfPage(ActivityScenario<AtlasDiscriminantActivity> scenario,
+        int side,boolean contextual)throws Exception{
+        waitForStablePageBounds(scenario,contextual);
         Instrumentation instrument=InstrumentationRegistry.getInstrumentation();
+        instrument.waitForIdleSync();
+        int[] point=new int[2];
+        AtomicReference<android.os.IBinder> windowToken=new AtomicReference<>();
+        scenario.onActivity(a->{
+            View root=a.getWindow().getDecorView();
+            assertTrue("The Atlas activity must own input focus before a Mushaf touch",a.hasWindowFocus());
+            assertTrue(root.hasWindowFocus());
+            MapQcfThumbnails page=a.qcfViewsForTest()[side];
+            assertTrue(a.bothQcfPagesFullyVisibleForTest());
+            assertFalse(root.isLayoutRequested());assertFalse(page.isLayoutRequested());
+            // getGlobalVisibleRect is in root coordinates; input injection needs display coordinates.
+            page.getLocationOnScreen(point);
+            point[0]+=page.getWidth()/2;point[1]+=page.getHeight()/2;
+            Rect visibleWindow=new Rect();root.getWindowVisibleDisplayFrame(visibleWindow);
+            assertTrue("Mushaf touch must lie inside the current application window",visibleWindow.contains(point[0],point[1]));
+            windowToken.set(root.getWindowToken());
+            assertNotNull(windowToken.get());
+        });
         long now=android.os.SystemClock.uptimeMillis();
         android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,
-            android.view.MotionEvent.ACTION_DOWN,x,y,0);
+            android.view.MotionEvent.ACTION_DOWN,point[0],point[1],0);
         android.view.MotionEvent up=android.view.MotionEvent.obtain(now,now+80,
-            android.view.MotionEvent.ACTION_UP,x,y,0);
-        instrument.sendPointerSync(down);instrument.sendPointerSync(up);
-        down.recycle();up.recycle();instrument.waitForIdleSync();
+            android.view.MotionEvent.ACTION_UP,point[0],point[1],0);
+        down.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+        up.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+        try{
+            instrument.sendPointerSync(down);
+            scenario.onActivity(a->{
+                assertTrue("Atlas must retain input focus through the touch",a.hasWindowFocus());
+                assertSame("Rotation must not replace the window during input",windowToken.get(),
+                    a.getWindow().getDecorView().getWindowToken());
+            });
+            instrument.sendPointerSync(up);
+        }finally{down.recycle();up.recycle();}
+        instrument.waitForIdleSync();
     }
 
     private static void saveComparisonScreenshot(Context context,String label)throws Exception{
@@ -224,15 +268,13 @@ public final class AtlasDiscriminantInstrumentedTest {
             pageBounds.set(waitForStablePageBounds(scenario,false));
             Rect target=pageBounds.get()[0];
             assertFalse("First Mushaf must be directly visible",target.isEmpty());
-            tapScreen(target.centerX(),target.centerY());
+            tapQcfPage(scenario,0,false);
             waitForSelectedTafsir(scenario,0);
             assertContextPanesVisible(scenario);
             switchTafsirAndAssertPagesRetained(scenario,1,originalPages.get());
             switchTafsirAndAssertPagesRetained(scenario,0,originalPages.get());
             // The second actual source page also switches the contextual panel.
-            pageBounds.set(waitForStablePageBounds(scenario,true));
-            Rect secondPage=pageBounds.get()[1];
-            tapScreen(secondPage.centerX(),secondPage.centerY());
+            tapQcfPage(scenario,1,true);
             waitForSelectedTafsir(scenario,1);
             assertContextPanesVisible(scenario);
             scenario.onActivity(a->assertEquals(1,a.selectedTafsirForTest()));
@@ -265,8 +307,7 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertOriginalPageShapeAndWordMarks(scenario,samplePair());
             assertContextPanesVisible(scenario);
             scenario.onActivity(a->originalPages.set(a.qcfViewsForTest()));
-            Rect landscapeFirst=waitForStablePageBounds(scenario,true)[0];
-            tapScreen(landscapeFirst.centerX(),landscapeFirst.centerY());
+            tapQcfPage(scenario,0,true);
             waitForSelectedTafsir(scenario,0);
             switchTafsirAndAssertPagesRetained(scenario,1,originalPages.get());
             switchTafsirAndAssertPagesRetained(scenario,0,originalPages.get());

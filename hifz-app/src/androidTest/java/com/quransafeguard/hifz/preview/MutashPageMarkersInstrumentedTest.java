@@ -66,7 +66,7 @@ public final class MutashPageMarkersInstrumentedTest {
             String measured=js(scene,"(function(){var b=document.querySelector('#atlas-discriminant-marks button');"
                 +"var svg=b.querySelector('svg'),r=b.getBoundingClientRect(),m=document.querySelector('#mushaf').getBoundingClientRect(),s=getComputedStyle(b);"
                 +"return JSON.stringify({viewBox:svg.getAttribute('viewBox'),paths:svg.querySelectorAll('path').length,"
-                +"cssWidth:s.width,cssHeight:s.height,width:r.width,height:r.height,"
+                +"cssWidth:b.style.width,cssHeight:b.style.height,computedWidth:s.width,computedHeight:s.height,width:r.width,height:r.height,"
                 +"outside:r.right<=m.left+1||r.left>=m.right-1,buttonLeft:r.left,buttonRight:r.right,mushafLeft:m.left,mushafRight:m.right});})()");
             org.json.JSONObject metric=new org.json.JSONObject(new JSONArray("["+measured+"]").getString(0));
             assertEquals(metric.toString(),"0 0 24 24",metric.getString("viewBox"));
@@ -74,6 +74,8 @@ public final class MutashPageMarkersInstrumentedTest {
             assertEquals(metric.toString(),"44px",metric.getString("cssWidth"));
             assertEquals(metric.toString(),"44px",metric.getString("cssHeight"));
             // Fractional native WebView density may quantize a 44-CSS-pixel DOMRect.
+            assertEquals(metric.toString(),44.0,Double.parseDouble(metric.getString("computedWidth").replace("px","")),0.02);
+            assertEquals(metric.toString(),44.0,Double.parseDouble(metric.getString("computedHeight").replace("px","")),0.02);
             assertEquals(metric.toString(),44.0,metric.getDouble("width"),0.02);
             assertEquals(metric.toString(),44.0,metric.getDouble("height"),0.02);
             assertTrue(metric.toString(),metric.getBoolean("outside"));

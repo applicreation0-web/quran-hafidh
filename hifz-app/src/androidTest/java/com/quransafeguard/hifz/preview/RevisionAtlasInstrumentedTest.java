@@ -84,6 +84,53 @@ public final class RevisionAtlasInstrumentedTest {
             +" && !!document.querySelector('#hifz-exact-word-holes');})()"));
     }
 
+    private static void confirmPartialValidationWhenShown(Instrumentation ins,
+            ActiveReviewCorrectionStore corrections)throws Exception{
+        // waitForIdleSync drains the app looper, but does not wait for the new
+        // dialog window to enter the accessibility tree. A single root lookup
+        // can still describe the previous Activity window on a busy emulator.
+        long deadline=android.os.SystemClock.uptimeMillis()+15000L;
+        String observed="No accessibility root";
+        boolean clicked=false;
+        while(android.os.SystemClock.uptimeMillis()<deadline){
+            if(corrections.pending()!=null)return;
+            android.view.accessibility.AccessibilityNodeInfo root=
+                ins.getUiAutomation().getRootInActiveWindow();
+            if(root!=null){
+                StringBuilder description=new StringBuilder();
+                describeAccessibility(root,description,0);
+                observed=description.toString();
+                if(!clicked){
+                    java.util.List<android.view.accessibility.AccessibilityNodeInfo> buttons=
+                        root.findAccessibilityNodeInfosByText("Valider quand même");
+                    for(android.view.accessibility.AccessibilityNodeInfo button:buttons){
+                        if(button.isEnabled()&&button.isVisibleToUser()
+                                &&"Valider quand même".contentEquals(button.getText()==null?"":button.getText())){
+                            assertTrue("Click the real partial-validation confirmation",button.performAction(
+                                android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK));
+                            clicked=true;
+                            break;
+                        }
+                    }
+                }
+            }
+            ins.waitForIdleSync();
+            android.os.SystemClock.sleep(100L);
+        }
+        HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("atlas-partial-validation-timeout.png");
+        fail("Expected real partial-validation confirmation and persisted replay; clicked="
+            +clicked+"; last accessibility tree: "+observed);
+    }
+    private static void describeAccessibility(android.view.accessibility.AccessibilityNodeInfo node,
+            StringBuilder output,int depth){
+        if(node==null||depth>12||output.length()>6000)return;
+        output.append('[').append(node.getPackageName()).append('|').append(node.getClassName())
+            .append('|').append(node.getText()).append('|').append(node.getContentDescription())
+            .append(" enabled=").append(node.isEnabled()).append(" visible=")
+            .append(node.isVisibleToUser()).append(']');
+        for(int i=0;i<node.getChildCount();i++)describeAccessibility(node.getChild(i),output,depth+1);
+    }
+
     private static void revealWithRealTouch(HifzSessionActivity a){
         View reveal=find((View)field(a,"actions"),"Révéler");
         assertNotNull(reveal);
@@ -252,15 +299,7 @@ public final class RevisionAtlasInstrumentedTest {
                 // A small acquired corpus loops in the time-budgeted plan. Its
                 // existing partial-validation confirmation must be accepted by
                 // the real user action, never bypassed by a test-only receipt.
-                if(corrections.pending()==null){
-                    android.view.accessibility.AccessibilityNodeInfo root=ins.getUiAutomation().getRootInActiveWindow();
-                    assertNotNull("Partial validation dialog missing",root);
-                    java.util.List<android.view.accessibility.AccessibilityNodeInfo> buttons=
-                        root.findAccessibilityNodeInfosByText("Valider quand même");
-                    assertFalse("Expected the real partial-validation confirmation",buttons.isEmpty());
-                    assertTrue(buttons.get(0).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK));
-                    ins.waitForIdleSync();
-                }
+                confirmPartialValidationWhenShown(ins,corrections);
                 // Validation starts mandatory correction, not the Hifz receipt.
                 assertNotNull(corrections.pending());
                 assertEquals("READ",corrections.pending().stage);
