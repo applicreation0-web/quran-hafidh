@@ -213,6 +213,9 @@ public final class RevisionAtlasInstrumentedTest {
             try(ActivityScenario<HifzSessionActivity> s=ActivityScenario.launch(new Intent(c,HifzSessionActivity.class)
                 .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH))){
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Passive Atlas entry");
+                int cycles=Integer.parseInt(InstrumentationRegistry.getArguments().getString("atlasEnduranceCycles","1"));
+                assertTrue("Endurance cycles must be 1..300",cycles>=1&&cycles<=300);
+                for(int cycle=0;cycle<cycles;cycle++){
                 AtomicReference<HifzSessionActivity> same=new AtomicReference<>();
                 AtomicReference<SessionClock> clock=new AtomicReference<>();
                 s.onActivity(a->{
@@ -220,7 +223,7 @@ public final class RevisionAtlasInstrumentedTest {
                     a.onVerseTap(new VerseRef(30,36));
                     assertEquals(View.VISIBLE,((View)field(a,"discriminantButton")).getVisibility());
                 });
-                saveAuditCapture("atlas-revision-passive.png");
+                if(cycle==0)saveAuditCapture("atlas-revision-passive.png");
                 s.onActivity(a->a.onAtlasDiscriminantTap(new VerseRef(30,37)));
                 Activity comparison=ins.waitForMonitorWithTimeout(atlas,20000);assertNotNull(comparison);
                 ins.waitForIdleSync();
@@ -260,6 +263,13 @@ public final class RevisionAtlasInstrumentedTest {
                 after.getJSONObject("values").remove(elapsedKey);
                 assertTrue("Only resumed session time may change; no cursor, receipt or credit",
                     sameJson(afterReaderBootstrap,after));
+                EnduranceAuditMetrics.sample("navigation",cycle+1);
+                // Monitors are consumed by waitForMonitorWithTimeout; each round trip
+                // needs fresh monitors, as in the existing independent Lecture test.
+                ins.removeMonitor(atlas);ins.removeMonitor(lecture);
+                atlas=ins.addMonitor(AtlasDiscriminantActivity.class.getName(),null,false);
+                lecture=ins.addMonitor(StudyReaderActivity.class.getName(),null,false);
+                }
             }
         }finally{ins.removeMonitor(atlas);ins.removeMonitor(lecture);HifzBackup.restore(c,original);}
     }

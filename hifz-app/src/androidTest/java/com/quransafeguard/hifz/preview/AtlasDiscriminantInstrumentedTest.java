@@ -424,6 +424,70 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
+    /** Opt-in endurance. Reuses the strict real-window, DOM and original-glyph gates.
+     * A tafsir closes by leaving Atlas: there is no independent close-panel action.
+     * Detaching/destroying a WebView incorrectly makes the parent/lifecycle checks fail.
+     */
+    @Test public void enduranceTafsirRotationsAndQcfDisposal()throws Exception{
+        org.junit.Assume.assumeTrue("true".equals(
+            InstrumentationRegistry.getArguments().getString("atlasEndurance")));
+        Context context=ApplicationProvider.getApplicationContext();new HifzPrefs(context);
+        SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",0);
+        Map<String,?> before=new HashMap<>(prefs.getAll());
+        int rotations=0;
+        for(int cycle=0;cycle<200;cycle++){
+            int index=cycle%AtlasDiscriminantCases.PILOT.size();
+            AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(index);
+            AtomicReference<AtlasDiscriminantActivity> host=new AtomicReference<>();
+            AtomicReference<MapQcfThumbnails[]> pages=new AtomicReference<>();
+            try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(pairIntent(context,index))){
+                waitForQcf(scenario);
+                assertOriginalPageShapeAndWordMarks(scenario,pair);
+                assertExactQcfWords(context,pair.first,pair.firstWordIndices);
+                assertExactQcfWords(context,pair.second,pair.secondWordIndices);
+                tapQcfPage(scenario,0,false);waitForSelectedTafsir(scenario,0);
+                tapQcfPage(scenario,1,true);waitForSelectedTafsir(scenario,1);
+                assertContextPanesVisible(scenario);
+                if(cycle<100){
+                    AtomicReference<MapQcfThumbnails[]> old=new AtomicReference<>();
+                    int[] desired=new int[1];
+                    scenario.onActivity(a->{
+                        old.set(a.qcfViewsForTest());
+                        desired[0]=a.getResources().getConfiguration().orientation==
+                            android.content.res.Configuration.ORIENTATION_PORTRAIT?
+                            android.content.res.Configuration.ORIENTATION_LANDSCAPE:
+                            android.content.res.Configuration.ORIENTATION_PORTRAIT;
+                        a.setRequestedOrientation(desired[0]==android.content.res.Configuration.ORIENTATION_PORTRAIT?
+                            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT:
+                            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                    });
+                    AtomicBoolean rotated=new AtomicBoolean();
+                    for(int poll=0;poll<100;poll++){
+                        scenario.onActivity(a->rotated.set(a.getResources().getConfiguration().orientation==desired[0]
+                            &&a.qcfViewsForTest()[0]!=old.get()[0]));
+                        if(rotated.get())break;
+                        Thread.sleep(100L);
+                    }
+                    assertTrue("Rotation must replace actual QCF views",rotated.get());
+                    waitForQcf(scenario);assertContextPanesVisible(scenario);
+                    assertOriginalPageShapeAndWordMarks(scenario,pair);
+                    scenario.onActivity(a->{
+                        assertEquals(1,a.selectedTafsirForTest());
+                        for(MapQcfThumbnails view:old.get())assertNull("Old WebView must detach on rotation",view.getParent());
+                    });
+                    rotations++;
+                }
+                scenario.onActivity(a->{host.set(a);pages.set(a.qcfViewsForTest());});
+            }
+            assertTrue("Closing Atlas must destroy its host",host.get().isDestroyed());
+            for(MapQcfThumbnails view:pages.get())assertNull("Closed WebView must detach",view.getParent());
+            assertEquals("Tafsir/rotation must preserve all Hifz values",before,prefs.getAll());
+            EnduranceAuditMetrics.sample("tafsir-close",cycle+1);
+        }
+        assertEquals("100 actual orientation changes",100,rotations);
+        android.util.Log.i("HaafidhEndurance","SUMMARY tafsir_open_close=200 rotations="+rotations+" qcf_side_selections=400");
+    }
+
     /** A delayed new render must never expose the previous pair's excerpt. */
     @Test public void changingCaseImmediatelyClearsOldQcfExcerpts()throws Exception{
         Context context=ApplicationProvider.getApplicationContext();
