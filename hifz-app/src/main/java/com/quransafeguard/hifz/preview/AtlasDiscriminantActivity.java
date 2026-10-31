@@ -49,6 +49,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private TextView firstTafsirTab,secondTafsirTab;
     private int selectedTafsir=-1;
     private boolean lateralTafsir;
+    private int builtOrientation=android.content.res.Configuration.ORIENTATION_UNDEFINED;
     private TextView title, leftHeader, rightHeader;
     private TextView leftRead, rightRead, returnToSource;
     private boolean disposed;
@@ -94,6 +95,7 @@ public final class AtlasDiscriminantActivity extends Activity {
      * empty excerpt region, and two independently labelled Lecture destinations.
      */
     private void build() {
+        builtOrientation=getResources().getConfiguration().orientation;
         float density=getResources().getDisplayMetrics().density;
         int dpHeight=(int)(getResources().getDisplayMetrics().heightPixels/density);
         int dpWidth=(int)(getResources().getDisplayMetrics().widthPixels/density);
@@ -568,6 +570,27 @@ public final class AtlasDiscriminantActivity extends Activity {
     MapQcfThumbnails[] qcfViewsForTest(){return new MapQcfThumbnails[]{left,right};}
 
     int getCurrentLeftPageForTest() { return currentLeftPage; }
+
+    @Override public void onConfigurationChanged(android.content.res.Configuration config){
+        super.onConfigurationChanged(config);
+        if(disposed||pagePair==null)return;
+        if(config.orientation==builtOrientation){
+            comparisonScroll.post(this::fitVisiblePages);
+            return;
+        }
+        // Atlas handles orientation|screenSize itself in the manifest, so the
+        // Activity is NOT automatically recreated on rotation. Rebuild the actual
+        // comparison workspace to replace a stale portrait vertical Tafsir pane.
+        // Preserve the selected case, both exact Quran references and selected side.
+        // Detached Chromium WebViews must never survive into the new orientation.
+        detachQcf(left);
+        detachQcf(right);
+        detachQcf(strips);
+        ++leftTafsirRequest;
+        ++rightTafsirRequest;
+        build();
+        render();
+    }
 
     @Override protected void onSaveInstanceState(Bundle state){
         state.putInt("caseIndex",selectedIndex);
