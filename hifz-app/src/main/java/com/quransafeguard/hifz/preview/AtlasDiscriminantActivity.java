@@ -317,6 +317,20 @@ public final class AtlasDiscriminantActivity extends Activity {
         int available=Math.max(Ui.dp(this,32),viewportHeight-pageHeaderHeight-Ui.dp(this,8)
             -(selectedTafsir<0?comparisonDetailHeight:0));
         int height=Math.min(natural,available);
+        // Some phone WebViews contribute extra native bottom padding after the
+        // Jalalayn panel becomes visible. The ScrollView is at scrollY=0, yet a
+        // physically measured 728px QCF page can have only 707px visible.
+        // Cap against the ACTUAL onscreen bottom, preserving every original
+        // 345:550 SVG glyph and all strict full-visibility assertions.
+        android.graphics.Rect scrollVisible=new android.graphics.Rect();
+        if(comparisonScroll.getGlobalVisibleRect(scrollVisible)
+                &&pagePair.isAttachedToWindow()&&pagePair.getTop()>0){
+            int[] pageOnScreen=new int[2];
+            pagePair.getLocationOnScreen(pageOnScreen);
+            int trueAvailable=scrollVisible.bottom-pageOnScreen[1]-Ui.dp(this,4);
+            if(trueAvailable>=Ui.dp(this,32))
+                height=Math.min(height,trueAvailable);
+        }
         LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)pagePair.getLayoutParams();
         if(params.height!=height){params.height=height;pagePair.setLayoutParams(params);}
         // Native ScrollView can restore a stale focus scroll after contextual pane resize.
