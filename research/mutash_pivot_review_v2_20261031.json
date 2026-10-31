@@ -14,34 +14,11 @@
     "approved": 278,
     "pending": 10,
     "excluded": 6,
-    "canonicalMismatchIds": [
-      14,
-      22,
-      49,
-      57,
-      58,
-      72,
-      73,
-      80,
-      81,
-      100,
-      132,
-      133,
-      140,
-      174,
-      198,
-      200,
-      218,
-      222,
-      227,
-      228,
-      252,
-      253,
-      265,
-      274
-    ],
+    "canonicalMismatchIds": [],
     "manuallyPrioritized": 10,
-    "automaticallyApproved": 0
+    "automaticallyApproved": 0,
+    "currentPivotTouchingAnchor": 266,
+    "noAnchorOf3AmongFourCandidates": 4
   },
   "rows": [
     {
@@ -1155,7 +1132,7 @@
         "rightWords": [
           "لِلَّهِ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -1168,11 +1145,23 @@
             "كُونُوا۟",
             "قَوَّٰمِینَ"
           ],
-          "firstIndex": 7,
+          "firstIndex": 6,
           "secondIndex": 6,
           "firstWord": "بِٱلۡقِسۡطِ",
           "secondWord": "لِلَّهِ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
+        },
+        {
+          "kind": "avant",
+          "anchorLen": 1,
+          "commonAnchor": [
+            "شُهَدَاۤءَ"
+          ],
+          "firstIndex": 6,
+          "secondIndex": 6,
+          "firstWord": "بِٱلۡقِسۡطِ",
+          "secondWord": "لِلَّهِ",
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -1181,7 +1170,7 @@
             "بِمَا",
             "تَعۡمَلُونَ"
           ],
-          "firstIndex": 35,
+          "firstIndex": 34,
           "secondIndex": 24,
           "firstWord": "كَانَ",
           "secondWord": "خَبِیرُۢ",
@@ -1193,22 +1182,10 @@
           "commonAnchor": [
             "بِٱلۡقِسۡطِ"
           ],
-          "firstIndex": 8,
+          "firstIndex": 7,
           "secondIndex": 9,
           "firstWord": "شُهَدَاۤءَ",
           "secondWord": "وَلَا",
-          "matchesExistingPivot": false
-        },
-        {
-          "kind": "avant",
-          "anchorLen": 1,
-          "commonAnchor": [
-            "بِٱلۡقِسۡطِ"
-          ],
-          "firstIndex": 6,
-          "secondIndex": 7,
-          "firstWord": "قَوَّٰمِینَ",
-          "secondWord": "شُهَدَاۤءَ",
           "matchesExistingPivot": false
         }
       ],
@@ -1804,7 +1781,7 @@
         "rightWords": [
           "ٱلَّذِینَ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -1817,11 +1794,11 @@
             "عِندَ",
             "ٱللَّهِ"
           ],
-          "firstIndex": 7,
+          "firstIndex": 6,
           "secondIndex": 6,
           "firstWord": "ٱلصُّمُّ",
           "secondWord": "ٱلَّذِینَ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -1829,7 +1806,7 @@
           "commonAnchor": [
             "ٱلَّذِینَ"
           ],
-          "firstIndex": 10,
+          "firstIndex": 9,
           "secondIndex": 7,
           "firstWord": "لَا",
           "secondWord": "كَفَرُوا۟",
@@ -1841,7 +1818,7 @@
           "commonAnchor": [
             "ٱلَّذِینَ"
           ],
-          "firstIndex": 8,
+          "firstIndex": 7,
           "secondIndex": 5,
           "firstWord": "ٱلۡبُكۡمُ",
           "secondWord": "ٱللَّهِ",
@@ -1853,7 +1830,7 @@
           "commonAnchor": [
             "لَا"
           ],
-          "firstIndex": 11,
+          "firstIndex": 10,
           "secondIndex": 10,
           "firstWord": "یَعۡقِلُونَ",
           "secondWord": "یُؤۡمِنُونَ",
@@ -3805,9 +3782,29 @@
         "rightWords": [
           "فَٱنۢبَجَسَتۡ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
+        {
+          "kind": "avant",
+          "anchorLen": 9,
+          "commonAnchor": [
+            "مِنۡهُ",
+            "ٱثۡنَتَا",
+            "عَشۡرَةَ",
+            "عَیۡنࣰاۖ",
+            "قَدۡ",
+            "عَلِمَ",
+            "كُلُّ",
+            "أُنَاسࣲ",
+            "مَّشۡرَبَهُمۡۖ"
+          ],
+          "firstIndex": 9,
+          "secondIndex": 16,
+          "firstWord": "فَٱنفَجَرَتۡ",
+          "secondWord": "فَٱنۢبَجَسَتۡ",
+          "matchesExistingPivot": true
+        },
         {
           "kind": "après",
           "anchorLen": 9,
@@ -3822,33 +3819,13 @@
             "أُنَاسࣲ",
             "مَّشۡرَبَهُمۡۖ"
           ],
-          "firstIndex": 20,
+          "firstIndex": 19,
           "secondIndex": 26,
           "firstWord": "كُلُوا۟",
           "secondWord": "وَظَلَّلۡنَا",
           "matchesExistingPivot": false
         },
         {
-          "kind": "avant",
-          "anchorLen": 9,
-          "commonAnchor": [
-            "مِنۡهُ",
-            "ٱثۡنَتَا",
-            "عَشۡرَةَ",
-            "عَیۡنࣰاۖ",
-            "قَدۡ",
-            "عَلِمَ",
-            "كُلُّ",
-            "أُنَاسࣲ",
-            "مَّشۡرَبَهُمۡۖ"
-          ],
-          "firstIndex": 10,
-          "secondIndex": 16,
-          "firstWord": "فَٱنفَجَرَتۡ",
-          "secondWord": "فَٱنۢبَجَسَتۡ",
-          "matchesExistingPivot": false
-        },
-        {
           "kind": "après",
           "anchorLen": 3,
           "commonAnchor": [
@@ -3856,11 +3833,11 @@
             "بِّعَصَاكَ",
             "ٱلۡحَجَرَۖ"
           ],
-          "firstIndex": 10,
+          "firstIndex": 9,
           "secondIndex": 16,
           "firstWord": "فَٱنفَجَرَتۡ",
           "secondWord": "فَٱنۢبَجَسَتۡ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -3870,7 +3847,7 @@
             "بِّعَصَاكَ",
             "ٱلۡحَجَرَۖ"
           ],
-          "firstIndex": 6,
+          "firstIndex": 5,
           "secondIndex": 12,
           "firstWord": "فَقُلۡنَا",
           "secondWord": "أَنِ",
@@ -4435,7 +4412,7 @@
         "rightWords": [
           "وَجَعَلَ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -4449,10 +4426,23 @@
             "وَٰحِدَةࣲ"
           ],
           "firstIndex": 10,
-          "secondIndex": 8,
+          "secondIndex": 7,
           "firstWord": "وَخَلَقَ",
           "secondWord": "وَجَعَلَ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
+        },
+        {
+          "kind": "avant",
+          "anchorLen": 2,
+          "commonAnchor": [
+            "مِنۡهَا",
+            "زَوۡجَهَا"
+          ],
+          "firstIndex": 10,
+          "secondIndex": 7,
+          "firstWord": "وَخَلَقَ",
+          "secondWord": "وَجَعَلَ",
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -4465,7 +4455,7 @@
             "وَٰحِدَةࣲ"
           ],
           "firstIndex": 4,
-          "secondIndex": 2,
+          "secondIndex": 1,
           "firstWord": "رَبَّكُمُ",
           "secondWord": "هُوَ",
           "matchesExistingPivot": false
@@ -4478,22 +4468,9 @@
             "زَوۡجَهَا"
           ],
           "firstIndex": 13,
-          "secondIndex": 11,
+          "secondIndex": 10,
           "firstWord": "وَبَثَّ",
           "secondWord": "لِیَسۡكُنَ",
-          "matchesExistingPivot": false
-        },
-        {
-          "kind": "avant",
-          "anchorLen": 2,
-          "commonAnchor": [
-            "مِنۡهَا",
-            "زَوۡجَهَا"
-          ],
-          "firstIndex": 10,
-          "secondIndex": 8,
-          "firstWord": "وَخَلَقَ",
-          "secondWord": "وَجَعَلَ",
           "matchesExistingPivot": false
         }
       ],
@@ -4519,7 +4496,7 @@
         "rightWords": [
           "ثُمَّ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -4531,11 +4508,11 @@
             "نَّفۡسࣲ",
             "وَٰحِدَةࣲ"
           ],
-          "firstIndex": 8,
+          "firstIndex": 7,
           "secondIndex": 5,
           "firstWord": "وَجَعَلَ",
           "secondWord": "ثُمَّ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -4544,7 +4521,7 @@
             "مِنۡهَا",
             "زَوۡجَهَا"
           ],
-          "firstIndex": 11,
+          "firstIndex": 10,
           "secondIndex": 9,
           "firstWord": "لِیَسۡكُنَ",
           "secondWord": "وَأَنزَلَ",
@@ -4557,7 +4534,7 @@
             "مِنۡهَا",
             "زَوۡجَهَا"
           ],
-          "firstIndex": 8,
+          "firstIndex": 7,
           "secondIndex": 6,
           "firstWord": "وَجَعَلَ",
           "secondWord": "جَعَلَ",
@@ -4569,7 +4546,7 @@
           "commonAnchor": [
             "هُوَ"
           ],
-          "firstIndex": 3,
+          "firstIndex": 2,
           "secondIndex": 35,
           "firstWord": "ٱلَّذِی",
           "secondWord": "فَأَنَّىٰ",
@@ -5682,7 +5659,7 @@
         "rightWords": [
           "خَشۡیَةَ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -5693,24 +5670,11 @@
             "تَقۡتُلُوۤا۟",
             "أَوۡلَـٰدَكُم"
           ],
-          "firstIndex": 18,
+          "firstIndex": 17,
           "secondIndex": 4,
           "firstWord": "مِّنۡ",
           "secondWord": "خَشۡیَةَ",
-          "matchesExistingPivot": false
-        },
-        {
-          "kind": "après",
-          "anchorLen": 2,
-          "commonAnchor": [
-            "إِمۡلَـٰقࣲ",
-            "نَّحۡنُ"
-          ],
-          "firstIndex": 21,
-          "secondIndex": 7,
-          "firstWord": "نَرۡزُقُكُمۡ",
-          "secondWord": "نَرۡزُقُهُمۡ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -5719,10 +5683,23 @@
             "إِمۡلَـٰقࣲ",
             "نَّحۡنُ"
           ],
-          "firstIndex": 18,
+          "firstIndex": 17,
           "secondIndex": 4,
           "firstWord": "مِّنۡ",
           "secondWord": "خَشۡیَةَ",
+          "matchesExistingPivot": true
+        },
+        {
+          "kind": "après",
+          "anchorLen": 2,
+          "commonAnchor": [
+            "إِمۡلَـٰقࣲ",
+            "نَّحۡنُ"
+          ],
+          "firstIndex": 20,
+          "secondIndex": 7,
+          "firstWord": "نَرۡزُقُكُمۡ",
+          "secondWord": "نَرۡزُقُهُمۡ",
           "matchesExistingPivot": false
         },
         {
@@ -5732,7 +5709,7 @@
             "وَلَا",
             "تَقۡتُلُوا۟"
           ],
-          "firstIndex": 33,
+          "firstIndex": 32,
           "secondIndex": 3,
           "firstWord": "ٱلنَّفۡسَ",
           "secondWord": "أَوۡلَـٰدَكُمۡ",
@@ -5761,7 +5738,7 @@
         "rightWords": [
           "تَذَكَّرُونَ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -5773,11 +5750,11 @@
             "بِهِۦ",
             "لَعَلَّكُمۡ"
           ],
-          "firstIndex": 43,
+          "firstIndex": 42,
           "secondIndex": 35,
           "firstWord": "تَعۡقِلُونَ",
           "secondWord": "تَذَكَّرُونَ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -5788,7 +5765,7 @@
             "بِهِۦ",
             "لَعَلَّكُمۡ"
           ],
-          "firstIndex": 38,
+          "firstIndex": 37,
           "secondIndex": 30,
           "firstWord": "بِٱلۡحَقِّۚ",
           "secondWord": "أَوۡفُوا۟ۚ",
@@ -5801,7 +5778,7 @@
             "وَلَا",
             "تَقۡرَبُوا۟"
           ],
-          "firstIndex": 25,
+          "firstIndex": 24,
           "secondIndex": 3,
           "firstWord": "ٱلۡفَوَٰحِشَ",
           "secondWord": "مَالَ",
@@ -5813,7 +5790,7 @@
           "commonAnchor": [
             "أَلَّا"
           ],
-          "firstIndex": 10,
+          "firstIndex": 9,
           "secondIndex": 6,
           "firstWord": "تُشۡرِكُوا۟",
           "secondWord": "بِٱلَّتِی",
@@ -6269,7 +6246,7 @@
         "rightWords": [
           "أَخۡرِجُوۤا۟"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -6284,10 +6261,10 @@
             "قَالُوۤا۟"
           ],
           "firstIndex": 8,
-          "secondIndex": 9,
+          "secondIndex": 8,
           "firstWord": "أَخۡرِجُوهُم",
           "secondWord": "أَخۡرِجُوۤا۟",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -6301,7 +6278,7 @@
             "قَالُوۤا۟"
           ],
           "firstIndex": 1,
-          "secondIndex": 2,
+          "secondIndex": 1,
           "firstWord": "وَمَا",
           "secondWord": "فَمَا",
           "matchesExistingPivot": false
@@ -6317,7 +6294,7 @@
             "یَتَطَهَّرُونَ"
           ],
           "firstIndex": 8,
-          "secondIndex": 11,
+          "secondIndex": 10,
           "firstWord": "أَخۡرِجُوهُم",
           "secondWord": "لُوطࣲ",
           "matchesExistingPivot": false
@@ -6345,7 +6322,7 @@
         "rightWords": [
           "ٱقۡتُلُوهُ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -6360,11 +6337,11 @@
             "أَن",
             "قَالُوۤا۟"
           ],
-          "firstIndex": 9,
+          "firstIndex": 8,
           "secondIndex": 8,
           "firstWord": "أَخۡرِجُوۤا۟",
           "secondWord": "ٱقۡتُلُوهُ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -6372,7 +6349,7 @@
           "commonAnchor": [
             "أَن"
           ],
-          "firstIndex": 8,
+          "firstIndex": 7,
           "secondIndex": 16,
           "firstWord": "قَالُوۤا۟",
           "secondWord": "فِی",
@@ -6384,7 +6361,7 @@
           "commonAnchor": [
             "أَن"
           ],
-          "firstIndex": 6,
+          "firstIndex": 5,
           "secondIndex": 14,
           "firstWord": "إِلَّاۤ",
           "secondWord": "ٱلنَّارِۚ",
@@ -6396,7 +6373,7 @@
           "commonAnchor": [
             "مِّن"
           ],
-          "firstIndex": 13,
+          "firstIndex": 12,
           "secondIndex": 14,
           "firstWord": "قَرۡیَتِكُمۡۖ",
           "secondWord": "ٱلنَّارِۚ",
@@ -7750,7 +7727,7 @@
         "rightWords": [
           "أَهۡلِ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -7762,10 +7739,10 @@
             "عَلَىٰ"
           ],
           "firstIndex": 8,
-          "secondIndex": 11,
+          "secondIndex": 10,
           "firstWord": "مَن",
           "secondWord": "أَهۡلِ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -7776,7 +7753,7 @@
             "عَلَىٰ"
           ],
           "firstIndex": 4,
-          "secondIndex": 7,
+          "secondIndex": 6,
           "firstWord": "فَتَقُولُ",
           "secondWord": "فَقَالَتۡ",
           "matchesExistingPivot": false
@@ -7788,7 +7765,7 @@
             "مَن"
           ],
           "firstIndex": 9,
-          "secondIndex": 6,
+          "secondIndex": 5,
           "firstWord": "یَكۡفُلُهُۥۖ",
           "secondWord": "قَبۡلُ",
           "matchesExistingPivot": false
@@ -7800,7 +7777,7 @@
             "مَن"
           ],
           "firstIndex": 7,
-          "secondIndex": 4,
+          "secondIndex": 3,
           "firstWord": "عَلَىٰ",
           "secondWord": "ٱلۡمَرَاضِعَ",
           "matchesExistingPivot": false
@@ -10222,7 +10199,7 @@
         "rightWords": [
           "ٱلۡمُهۡتَدِۖ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -10235,23 +10212,10 @@
             "فَهُوَ"
           ],
           "firstIndex": 5,
-          "secondIndex": 28,
+          "secondIndex": 27,
           "firstWord": "ٱلۡمُهۡتَدِیۖ",
           "secondWord": "ٱلۡمُهۡتَدِۖ",
-          "matchesExistingPivot": false
-        },
-        {
-          "kind": "après",
-          "anchorLen": 2,
-          "commonAnchor": [
-            "وَمَن",
-            "یُضۡلِلۡ"
-          ],
-          "firstIndex": 8,
-          "secondIndex": 31,
-          "firstWord": "فَأُو۟لَـٰۤىِٕكَ",
-          "secondWord": "فَلَن",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -10261,9 +10225,22 @@
             "یُضۡلِلۡ"
           ],
           "firstIndex": 5,
-          "secondIndex": 28,
+          "secondIndex": 27,
           "firstWord": "ٱلۡمُهۡتَدِیۖ",
           "secondWord": "ٱلۡمُهۡتَدِۖ",
+          "matchesExistingPivot": true
+        },
+        {
+          "kind": "après",
+          "anchorLen": 2,
+          "commonAnchor": [
+            "وَمَن",
+            "یُضۡلِلۡ"
+          ],
+          "firstIndex": 8,
+          "secondIndex": 30,
+          "firstWord": "فَأُو۟لَـٰۤىِٕكَ",
+          "secondWord": "فَلَن",
           "matchesExistingPivot": false
         },
         {
@@ -10273,7 +10250,7 @@
             "مَن"
           ],
           "firstIndex": 2,
-          "secondIndex": 22,
+          "secondIndex": 21,
           "firstWord": "یَهۡدِ",
           "secondWord": "ءَایَـٰتِ",
           "matchesExistingPivot": false
@@ -10301,7 +10278,7 @@
         "rightWords": [
           "لَهُمۡ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -10317,11 +10294,11 @@
             "فَلَن",
             "تَجِدَ"
           ],
-          "firstIndex": 33,
+          "firstIndex": 32,
           "secondIndex": 10,
           "firstWord": "لَهُۥ",
           "secondWord": "لَهُمۡ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -10336,7 +10313,7 @@
             "فَلَن",
             "تَجِدَ"
           ],
-          "firstIndex": 24,
+          "firstIndex": 23,
           "secondIndex": 1,
           "firstWord": "مَن",
           "secondWord": "وَمَن",
@@ -10348,7 +10325,7 @@
           "commonAnchor": [
             "مِنۡ"
           ],
-          "firstIndex": 22,
+          "firstIndex": 21,
           "secondIndex": 13,
           "firstWord": "ءَایَـٰتِ",
           "secondWord": "دُونِهِۦۖ",
@@ -10360,7 +10337,7 @@
           "commonAnchor": [
             "مِنۡ"
           ],
-          "firstIndex": 20,
+          "firstIndex": 19,
           "secondIndex": 11,
           "firstWord": "ذَٰلِكَ",
           "secondWord": "أَوۡلِیَاۤءَ",
@@ -10589,7 +10566,7 @@
             "وَٱبۡنِ",
             "ٱلسَّبِیلِ"
           ],
-          "firstIndex": 17,
+          "firstIndex": 16,
           "secondIndex": 17,
           "firstWord": "إِن",
           "secondWord": "كَیۡ",
@@ -10607,7 +10584,7 @@
             "وَٱبۡنِ",
             "ٱلسَّبِیلِ"
           ],
-          "firstIndex": 9,
+          "firstIndex": 8,
           "secondIndex": 9,
           "firstWord": "خُمُسَهُۥ",
           "secondWord": "فَلِلَّهِ",
@@ -10619,7 +10596,7 @@
           "commonAnchor": [
             "مِّن"
           ],
-          "firstIndex": 6,
+          "firstIndex": 5,
           "secondIndex": 7,
           "firstWord": "شَیۡءࣲ",
           "secondWord": "أَهۡلِ",
@@ -10631,7 +10608,7 @@
           "commonAnchor": [
             "مِّن"
           ],
-          "firstIndex": 4,
+          "firstIndex": 3,
           "secondIndex": 5,
           "firstWord": "غَنِمۡتُم",
           "secondWord": "رَسُولِهِۦ",
@@ -10853,7 +10830,7 @@
         "rightWords": [
           "ضُرࣱّ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -10865,10 +10842,10 @@
             "ٱلۡإِنسَـٰنَ"
           ],
           "firstIndex": 4,
-          "secondIndex": 5,
+          "secondIndex": 4,
           "firstWord": "ٱلضُّرُّ",
           "secondWord": "ضُرࣱّ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -10877,7 +10854,7 @@
             "كَأَن"
           ],
           "firstIndex": 17,
-          "secondIndex": 18,
+          "secondIndex": 17,
           "firstWord": "لَّمۡ",
           "secondWord": "یَدۡعُوۤا۟",
           "matchesExistingPivot": false
@@ -10889,7 +10866,7 @@
             "كَأَن"
           ],
           "firstIndex": 15,
-          "secondIndex": 16,
+          "secondIndex": 15,
           "firstWord": "مَرَّ",
           "secondWord": "مَا",
           "matchesExistingPivot": false
@@ -10901,7 +10878,7 @@
             "ضُرࣲّ"
           ],
           "firstIndex": 21,
-          "secondIndex": 6,
+          "secondIndex": 5,
           "firstWord": "مَّسَّهُۥۚ",
           "secondWord": "دَعَا",
           "matchesExistingPivot": false
@@ -13357,7 +13334,7 @@
         "rightWords": [
           "كَعَرۡضِ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -13371,11 +13348,11 @@
             "وَجَنَّةٍ",
             "عَرۡضُهَا"
           ],
-          "firstIndex": 9,
+          "firstIndex": 8,
           "secondIndex": 8,
           "firstWord": "ٱلسَّمَـٰوَٰتُ",
           "secondWord": "كَعَرۡضِ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -13388,7 +13365,7 @@
             "وَجَنَّةٍ",
             "عَرۡضُهَا"
           ],
-          "firstIndex": 2,
+          "firstIndex": 1,
           "secondIndex": 1,
           "firstWord": "وَسَارِعُوۤا۟",
           "secondWord": "سَابِقُوۤا۟",
@@ -13401,7 +13378,7 @@
             "وَٱلۡأَرۡضُ",
             "أُعِدَّتۡ"
           ],
-          "firstIndex": 12,
+          "firstIndex": 11,
           "secondIndex": 12,
           "firstWord": "لِلۡمُتَّقِینَ",
           "secondWord": "لِلَّذِینَ",
@@ -13414,7 +13391,7 @@
             "وَٱلۡأَرۡضُ",
             "أُعِدَّتۡ"
           ],
-          "firstIndex": 9,
+          "firstIndex": 8,
           "secondIndex": 9,
           "firstWord": "ٱلسَّمَـٰوَٰتُ",
           "secondWord": "ٱلسَّمَاۤءِ",
@@ -15151,7 +15128,7 @@
         "rightWords": [
           "وَطَبَعَ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -15166,7 +15143,7 @@
             "وَطُبِعَ"
           ],
           "firstIndex": 7,
-          "secondIndex": 15,
+          "secondIndex": 14,
           "firstWord": "عَلَىٰ",
           "secondWord": "ٱللَّهُ",
           "matchesExistingPivot": false
@@ -15181,7 +15158,7 @@
             "لَا"
           ],
           "firstIndex": 11,
-          "secondIndex": 20,
+          "secondIndex": 19,
           "firstWord": "یَفۡقَهُونَ",
           "secondWord": "یَعۡلَمُونَ",
           "matchesExistingPivot": false
@@ -15196,7 +15173,7 @@
             "لَا"
           ],
           "firstIndex": 6,
-          "secondIndex": 15,
+          "secondIndex": 14,
           "firstWord": "وَطُبِعَ",
           "secondWord": "ٱللَّهُ",
           "matchesExistingPivot": false
@@ -15208,7 +15185,7 @@
             "عَلَىٰ"
           ],
           "firstIndex": 8,
-          "secondIndex": 5,
+          "secondIndex": 4,
           "firstWord": "قُلُوبِهِمۡ",
           "secondWord": "ٱلَّذِینَ",
           "matchesExistingPivot": false
@@ -15321,7 +15298,7 @@
         "rightWords": [
           "ٱلسَّمَـٰوَٰتِ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -15334,10 +15311,22 @@
             "مِّنَ"
           ],
           "firstIndex": 5,
-          "secondIndex": 6,
+          "secondIndex": 5,
           "firstWord": "ٱلسَّمَاۤءِ",
           "secondWord": "ٱلسَّمَـٰوَٰتِ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
+        },
+        {
+          "kind": "avant",
+          "anchorLen": 1,
+          "commonAnchor": [
+            "وَٱلۡأَرۡضِ"
+          ],
+          "firstIndex": 5,
+          "secondIndex": 5,
+          "firstWord": "ٱلسَّمَاۤءِ",
+          "secondWord": "ٱلسَّمَـٰوَٰتِ",
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -15346,7 +15335,7 @@
             "قُلۡ"
           ],
           "firstIndex": 2,
-          "secondIndex": 9,
+          "secondIndex": 8,
           "firstWord": "مَن",
           "secondWord": "ٱللَّهُۖ",
           "matchesExistingPivot": false
@@ -15358,21 +15347,9 @@
             "مَن"
           ],
           "firstIndex": 3,
-          "secondIndex": 6,
+          "secondIndex": 5,
           "firstWord": "یَرۡزُقُكُم",
           "secondWord": "ٱلسَّمَـٰوَٰتِ",
-          "matchesExistingPivot": false
-        },
-        {
-          "kind": "avant",
-          "anchorLen": 1,
-          "commonAnchor": [
-            "مَن"
-          ],
-          "firstIndex": 1,
-          "secondIndex": 4,
-          "firstWord": "قُلۡ",
-          "secondWord": "یَرۡزُقُكُم",
           "matchesExistingPivot": false
         }
       ],
@@ -16670,9 +16647,23 @@
         "rightWords": [
           "لَّكَ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
+        {
+          "kind": "après",
+          "anchorLen": 3,
+          "commonAnchor": [
+            "قَالَ",
+            "أَلَمۡ",
+            "أَقُلۡ"
+          ],
+          "firstIndex": 4,
+          "secondIndex": 4,
+          "firstWord": "إِنَّكَ",
+          "secondWord": "لَّكَ",
+          "matchesExistingPivot": true
+        },
         {
           "kind": "avant",
           "anchorLen": 5,
@@ -16684,22 +16675,8 @@
             "صَبۡرࣰا"
           ],
           "firstIndex": 3,
-          "secondIndex": 5,
+          "secondIndex": 4,
           "firstWord": "أَقُلۡ",
-          "secondWord": "لَّكَ",
-          "matchesExistingPivot": false
-        },
-        {
-          "kind": "après",
-          "anchorLen": 3,
-          "commonAnchor": [
-            "قَالَ",
-            "أَلَمۡ",
-            "أَقُلۡ"
-          ],
-          "firstIndex": 4,
-          "secondIndex": 5,
-          "firstWord": "إِنَّكَ",
           "secondWord": "لَّكَ",
           "matchesExistingPivot": false
         }
@@ -16980,7 +16957,7 @@
         "rightWords": [
           "سَاۤىِٕغࣱ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -16991,11 +16968,11 @@
             "عَذۡبࣱ",
             "فُرَاتࣱ"
           ],
-          "firstIndex": 9,
+          "firstIndex": 8,
           "secondIndex": 7,
           "firstWord": "وَهَـٰذَا",
           "secondWord": "سَاۤىِٕغࣱ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
@@ -17005,7 +16982,7 @@
             "عَذۡبࣱ",
             "فُرَاتࣱ"
           ],
-          "firstIndex": 5,
+          "firstIndex": 4,
           "secondIndex": 3,
           "firstWord": "ٱلۡبَحۡرَیۡنِ",
           "secondWord": "ٱلۡبَحۡرَانِ",
@@ -17019,7 +16996,7 @@
             "مِلۡحٌ",
             "أُجَاجࣱ"
           ],
-          "firstIndex": 12,
+          "firstIndex": 11,
           "secondIndex": 12,
           "firstWord": "وَجَعَلَ",
           "secondWord": "وَمِن",
@@ -17033,7 +17010,7 @@
             "مِلۡحٌ",
             "أُجَاجࣱ"
           ],
-          "firstIndex": 8,
+          "firstIndex": 7,
           "secondIndex": 8,
           "firstWord": "فُرَاتࣱ",
           "secondWord": "شَرَابُهُۥ",
@@ -17381,7 +17358,7 @@
         "rightWords": [
           "كَانُوا۟"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -17399,10 +17376,10 @@
             "ٱلَّذِینَ"
           ],
           "firstIndex": 10,
-          "secondIndex": 11,
+          "secondIndex": 10,
           "firstWord": "مِن",
           "secondWord": "كَانُوا۟",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -17413,7 +17390,7 @@
             "قُوَّةࣰۚ"
           ],
           "firstIndex": 16,
-          "secondIndex": 19,
+          "secondIndex": 18,
           "firstWord": "وَمَا",
           "secondWord": "وَءَاثَارࣰا",
           "matchesExistingPivot": false
@@ -17427,7 +17404,7 @@
             "قُوَّةࣰۚ"
           ],
           "firstIndex": 12,
-          "secondIndex": 15,
+          "secondIndex": 14,
           "firstWord": "وَكَانُوۤا۟",
           "secondWord": "هُمۡ",
           "matchesExistingPivot": false
@@ -17440,7 +17417,7 @@
             "ٱلۡأَرۡضِ"
           ],
           "firstIndex": 5,
-          "secondIndex": 22,
+          "secondIndex": 21,
           "firstWord": "فَیَنظُرُوا۟",
           "secondWord": "فَأَخَذَهُمُ",
           "matchesExistingPivot": false
@@ -17468,28 +17445,9 @@
         "rightWords": [
           "أَفَلَمۡ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
-        {
-          "kind": "après",
-          "anchorLen": 8,
-          "commonAnchor": [
-            "یَسِیرُوا۟",
-            "فِی",
-            "ٱلۡأَرۡضِ",
-            "فَیَنظُرُوا۟",
-            "كَیۡفَ",
-            "كَانَ",
-            "عَـٰقِبَةُ",
-            "ٱلَّذِینَ"
-          ],
-          "firstIndex": 11,
-          "secondIndex": 10,
-          "firstWord": "كَانُوا۟",
-          "secondWord": "مِن",
-          "matchesExistingPivot": false
-        },
         {
           "kind": "avant",
           "anchorLen": 8,
@@ -17503,10 +17461,29 @@
             "عَـٰقِبَةُ",
             "ٱلَّذِینَ"
           ],
-          "firstIndex": 2,
+          "firstIndex": 1,
           "secondIndex": 1,
           "firstWord": "أَوَلَمۡ",
           "secondWord": "أَفَلَمۡ",
+          "matchesExistingPivot": true
+        },
+        {
+          "kind": "après",
+          "anchorLen": 8,
+          "commonAnchor": [
+            "یَسِیرُوا۟",
+            "فِی",
+            "ٱلۡأَرۡضِ",
+            "فَیَنظُرُوا۟",
+            "كَیۡفَ",
+            "كَانَ",
+            "عَـٰقِبَةُ",
+            "ٱلَّذِینَ"
+          ],
+          "firstIndex": 10,
+          "secondIndex": 10,
+          "firstWord": "كَانُوا۟",
+          "secondWord": "مِن",
           "matchesExistingPivot": false
         },
         {
@@ -17518,7 +17495,7 @@
             "فِی",
             "ٱلۡأَرۡضِ"
           ],
-          "firstIndex": 22,
+          "firstIndex": 21,
           "secondIndex": 20,
           "firstWord": "فَأَخَذَهُمُ",
           "secondWord": "فَمَاۤ",
@@ -17533,7 +17510,7 @@
             "فِی",
             "ٱلۡأَرۡضِ"
           ],
-          "firstIndex": 17,
+          "firstIndex": 16,
           "secondIndex": 15,
           "firstWord": "مِنۡهُمۡ",
           "secondWord": "وَأَشَدَّ",
@@ -19092,7 +19069,7 @@
         "rightWords": [
           "لَىِٕنۡ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -19105,10 +19082,10 @@
             "أَیۡمَـٰنِهِمۡ"
           ],
           "firstIndex": 5,
-          "secondIndex": 6,
+          "secondIndex": 5,
           "firstWord": "لَا",
           "secondWord": "لَىِٕنۡ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -19117,7 +19094,7 @@
             "لَا"
           ],
           "firstIndex": 6,
-          "secondIndex": 11,
+          "secondIndex": 10,
           "firstWord": "یَبۡعَثُ",
           "secondWord": "تُقۡسِمُوا۟ۖ",
           "matchesExistingPivot": false
@@ -19129,7 +19106,7 @@
             "لَا"
           ],
           "firstIndex": 4,
-          "secondIndex": 9,
+          "secondIndex": 8,
           "firstWord": "أَیۡمَـٰنِهِمۡ",
           "secondWord": "قُل",
           "matchesExistingPivot": false
@@ -19141,7 +19118,7 @@
             "ٱللَّهُ"
           ],
           "firstIndex": 8,
-          "secondIndex": 16,
+          "secondIndex": 15,
           "firstWord": "مَن",
           "secondWord": "خَبِیرُۢ",
           "matchesExistingPivot": false
@@ -19169,7 +19146,7 @@
         "rightWords": [
           "جَاۤءَهُمۡ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -19182,11 +19159,11 @@
             "أَیۡمَـٰنِهِمۡ",
             "لَىِٕنۡ"
           ],
-          "firstIndex": 7,
+          "firstIndex": 6,
           "secondIndex": 6,
           "firstWord": "أَمَرۡتَهُمۡ",
           "secondWord": "جَاۤءَهُمۡ",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         }
       ],
       "manualKeywordProposal": null,
@@ -19923,7 +19900,7 @@
         "rightWords": [
           "دَمَّرَ"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -19943,32 +19920,10 @@
             "قَبۡلِهِمۡۗ"
           ],
           "firstIndex": 23,
-          "secondIndex": 13,
+          "secondIndex": 12,
           "firstWord": "وَلَدَارُ",
           "secondWord": "دَمَّرَ",
-          "matchesExistingPivot": false
-        },
-        {
-          "kind": "avant",
-          "anchorLen": 11,
-          "commonAnchor": [
-            "أَفَلَمۡ",
-            "یَسِیرُوا۟",
-            "فِی",
-            "ٱلۡأَرۡضِ",
-            "فَیَنظُرُوا۟",
-            "كَیۡفَ",
-            "كَانَ",
-            "عَـٰقِبَةُ",
-            "ٱلَّذِینَ",
-            "مِن",
-            "قَبۡلِهِمۡۗ"
-          ],
-          "firstIndex": 11,
-          "secondIndex": 1,
-          "firstWord": "ٱلۡقُرَىٰۤۗ",
-          "secondWord": "۞",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -19977,7 +19932,7 @@
             "مِن"
           ],
           "firstIndex": 4,
-          "secondIndex": 12,
+          "secondIndex": 11,
           "firstWord": "قَبۡلِكَ",
           "secondWord": "قَبۡلِهِمۡۖ",
           "matchesExistingPivot": false
@@ -19989,9 +19944,21 @@
             "مِن"
           ],
           "firstIndex": 2,
-          "secondIndex": 10,
+          "secondIndex": 9,
           "firstWord": "أَرۡسَلۡنَا",
           "secondWord": "ٱلَّذِینَ",
+          "matchesExistingPivot": false
+        },
+        {
+          "kind": "après",
+          "anchorLen": 1,
+          "commonAnchor": [
+            "مِّنۡ"
+          ],
+          "firstIndex": 10,
+          "secondIndex": 11,
+          "firstWord": "أَهۡلِ",
+          "secondWord": "قَبۡلِهِمۡۖ",
           "matchesExistingPivot": false
         }
       ],
@@ -20530,7 +20497,7 @@
         "rightWords": [
           "مَا"
         ],
-        "agreeWithCanonicalQuran": false
+        "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
         {
@@ -20544,10 +20511,10 @@
             "وَرَحۡمَتُهُۥ"
           ],
           "firstIndex": 6,
-          "secondIndex": 22,
+          "secondIndex": 21,
           "firstWord": "فِی",
           "secondWord": "مَا",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "après",
@@ -20556,7 +20523,7 @@
             "ٱللَّهِ"
           ],
           "firstIndex": 4,
-          "secondIndex": 30,
+          "secondIndex": 29,
           "firstWord": "عَلَیۡكُمۡ",
           "secondWord": "یُزَكِّی",
           "matchesExistingPivot": false
@@ -20568,7 +20535,7 @@
             "ٱللَّهِ"
           ],
           "firstIndex": 2,
-          "secondIndex": 28,
+          "secondIndex": 27,
           "firstWord": "فَضۡلُ",
           "secondWord": "وَلَـٰكِنَّ",
           "matchesExistingPivot": false
@@ -20580,7 +20547,7 @@
             "مَاۤ"
           ],
           "firstIndex": 12,
-          "secondIndex": 23,
+          "secondIndex": 22,
           "firstWord": "أَفَضۡتُمۡ",
           "secondWord": "زَكَىٰ",
           "matchesExistingPivot": false
@@ -21849,5 +21816,6 @@
       "manualKeywordProposal": null,
       "automaticApproval": false
     }
-  ]
+  ],
+  "basis": "alabbad_audit_294.json + Tanzil 6236 verses; identical orthographic token segmentation as Work's load_inputs (non-word page ornaments excluded); NFKD for anchors, no edits to Quran text"
 }
