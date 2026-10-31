@@ -257,9 +257,11 @@ public final class AtlasDiscriminantActivity extends Activity {
 
     private void selectExactTafsir(int side,int page,VerseRef verse){
         if(verse==null||page!=(side==0?currentLeftPage:currentRightPage)
-                ||geometry.pageForVerse(verse)!=page)return;
+                ||page<geometry.pageForVerse(verse)
+                ||page>MawdudiMapModel.lastPageForVerse(verse,geometry))return;
         VerseRef old=side==0?selectedLeftVerse:selectedRightVerse;
-        if(side==0)selectedLeftVerse=verse;else selectedRightVerse=verse;
+        if(side==0){selectedLeftVerse=verse;firstTafsirTab.setText(verse.toString());}
+        else {selectedRightVerse=verse;secondTafsirTab.setText(verse.toString());}
         if(!verse.equals(old))loadContextualTafsir(side,verse);
         selectTafsir(side);
     }
@@ -289,7 +291,10 @@ public final class AtlasDiscriminantActivity extends Activity {
             }
         }
         comparisonScroll.scrollTo(0,0);
-        comparisonScroll.post(this::fitVisiblePages);
+        comparisonScroll.post(()->{
+            fitVisiblePages();
+            if(comparisonScroll.getScrollY()!=0)comparisonScroll.scrollTo(0,0);
+        });
     }
 
     private void fitVisiblePages(){
@@ -314,6 +319,11 @@ public final class AtlasDiscriminantActivity extends Activity {
         int height=Math.min(natural,available);
         LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)pagePair.getLayoutParams();
         if(params.height!=height){params.height=height;pagePair.setLayoutParams(params);}
+        // Native ScrollView can restore a stale focus scroll after contextual pane resize.
+        // Keep the *full* two physical QCF pages visible initially; ordinary manual
+        // reading scroll remains available without a layout change.
+        if(selectedTafsir>=0&&comparisonScroll.getScrollY()!=0)
+            comparisonScroll.scrollTo(0,0);
     }
 
     private void loadBothTafsirs(VerseRef first,VerseRef second){
@@ -375,9 +385,11 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(currentLeftPage<1||currentLeftPage>604||currentRightPage<1||currentRightPage>604)
             throw new IllegalStateException("Invalid QCF page");
 
-        if(selectedLeftVerse==null||geometry.pageForVerse(selectedLeftVerse)!=currentLeftPage)
+        if(selectedLeftVerse==null||currentLeftPage<geometry.pageForVerse(selectedLeftVerse)
+            ||currentLeftPage>MawdudiMapModel.lastPageForVerse(selectedLeftVerse,geometry))
             selectedLeftVerse=c.first;
-        if(selectedRightVerse==null||geometry.pageForVerse(selectedRightVerse)!=currentRightPage)
+        if(selectedRightVerse==null||currentRightPage<geometry.pageForVerse(selectedRightVerse)
+            ||currentRightPage>MawdudiMapModel.lastPageForVerse(selectedRightVerse,geometry))
             selectedRightVerse=c.second;
         leftHeader.setText(QuranSurahNames.name(c.first.getSurah())+" · "+c.first+" · p."+currentLeftPage);
         rightHeader.setText(QuranSurahNames.name(c.second.getSurah())+" · "+c.second+" · p."+currentRightPage);
@@ -398,8 +410,8 @@ public final class AtlasDiscriminantActivity extends Activity {
         previousCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
         nextCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
         previousCase.setEnabled(position>0);nextCase.setEnabled(position+1<caseIndices.size());
-        firstTafsirTab.setText(c.first.toString());
-        secondTafsirTab.setText(c.second.toString());
+        firstTafsirTab.setText(selectedLeftVerse.toString());
+        secondTafsirTab.setText(selectedRightVerse.toString());
         loadBothTafsirs(selectedLeftVerse,selectedRightVerse);
         if(selectedTafsir>=0)selectTafsir(selectedTafsir);
         leftRead.setText("Lire "+c.first+" en Lecture");
@@ -490,6 +502,9 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     int selectedTafsirForTest(){return selectedTafsir;}
+    String tafsirTabLabelForTest(int side){
+        return (side==0?firstTafsirTab:secondTafsirTab).getText().toString();
+    }
     VerseRef selectedTafsirVerseForTest(){
         return selectedTafsir==0?selectedLeftVerse:selectedTafsir==1?selectedRightVerse:null;
     }

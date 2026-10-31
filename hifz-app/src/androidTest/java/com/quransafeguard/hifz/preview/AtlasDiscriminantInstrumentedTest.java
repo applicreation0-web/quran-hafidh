@@ -109,6 +109,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                         +" leftLayoutRequested="+a.qcfViewsForTest()[0].isLayoutRequested()
                         +" rightLayoutRequested="+a.qcfViewsForTest()[1].isLayoutRequested()
                         +" bothVisible="+a.bothQcfPagesFullyVisibleForTest()
+                        +" scrollY="+((android.widget.ScrollView)a.qcfViewsForTest()[0].getParent().getParent()).getScrollY()
                         +" firstSize="+a.qcfViewsForTest()[0].getWidth()+"x"+a.qcfViewsForTest()[0].getHeight()
                         +" secondSize="+a.qcfViewsForTest()[1].getWidth()+"x"+a.qcfViewsForTest()[1].getHeight()
                         +" headingVisible="+a.tafsirHeadingVisibleForTest()
@@ -385,6 +386,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                     Thread.sleep(100L);
                 }
                 assertTrue("The actual selected QCF verse must load its own original Jalalayn",loaded.get());
+                scenario.onActivity(a->assertEquals("Visible Tafsir tab must identify the touched verse",
+                    chosen,a.tafsirTabLabelForTest(position)));
                 last=chosen;
             }
             final String preserved=last;
@@ -393,6 +396,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                 assertEquals("Second QCF side remains selected",1,a.selectedTafsirForTest());
                 assertEquals("Exact selected verse survives recreation",
                     preserved,a.selectedTafsirVerseForTest().toString());
+                assertEquals("Visible Tafsir tab remains synced after recreation",
+                    preserved,a.tafsirTabLabelForTest(1));
                 assertTrue(a.tafsirPanelVisibleForTest());
             });
         }
