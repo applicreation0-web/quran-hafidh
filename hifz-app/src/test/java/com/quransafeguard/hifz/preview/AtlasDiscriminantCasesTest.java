@@ -45,4 +45,20 @@ public final class AtlasDiscriminantCasesTest {
         assertArrayEquals(new int[]{11},e.secondWordIndices);
         assertEquals(10,e.firstPage);assertEquals(14,e.secondPage);
     }
+    @Test public void approvedCase62HasAudibleContextAndAuthenticWordIndices(){
+        assertEquals("Only the explicitly admitted 279 comparisons may be published",279,
+            AtlasDiscriminantCases.CATALOGUE.size());
+        AtlasDiscriminantCases.Entry found=null;
+        for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.CATALOGUE)
+            if(entry.auditId==62)found=entry;
+        assertNotNull("Recorded editorial approval of 13:18 / 39:47 missing",found);
+        assertEquals("13:18",found.first.toString());
+        assertEquals("39:47",found.second.toString());
+        assertArrayEquals(new int[]{20},found.firstWordIndices);
+        assertArrayEquals(new int[]{13,14,15},found.secondWordIndices);
+        assertEquals(251,found.firstPage);
+        assertEquals(463,found.secondPage);
+        assertEquals("Bifurcation après tronc commun",found.kind);
+    }
+
 }
