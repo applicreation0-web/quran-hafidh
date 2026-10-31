@@ -94,6 +94,9 @@ public final class RevisionAtlasInstrumentedTest {
         boolean clicked=false;
         while(android.os.SystemClock.uptimeMillis()<deadline){
             if(corrections.pending()!=null)return;
+            // Some Google API emulator images raise an unrelated Pixel Launcher
+            // ANR above the target Activity. Click the SYSTEM "Wait" button only.
+            EmulatorLauncherAnr.resumeIfPresent(ins);
             android.view.accessibility.AccessibilityNodeInfo root=
                 ins.getUiAutomation().getRootInActiveWindow();
             if(root!=null){
