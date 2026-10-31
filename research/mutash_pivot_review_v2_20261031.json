@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "scope": "294 dossiers; 278 actuellement approuvés; revue des mots discriminants uniquement",
+  "scope": "294 dossiers; 279 actuellement approuvés; revue des mots discriminants uniquement",
   "baseSha": "326c64ace61762ae226fa812cf286966d95c5929",
   "rules": [
     "Le mot réellement dangereux pour la récitation prévaut sur la première différence calculée.",
@@ -11,13 +11,13 @@
   ],
   "summary": {
     "total": 294,
-    "approved": 278,
-    "pending": 10,
+    "approved": 279,
+    "pending": 9,
     "excluded": 6,
     "canonicalMismatchIds": [],
     "manuallyPrioritized": 10,
     "automaticallyApproved": 0,
-    "currentPivotTouchingAnchor": 266,
+    "currentPivotTouchingAnchor": 267,
     "noAnchorOf3AmongFourCandidates": 4,
     "additionalCuratedApprovedCases": 12,
     "approvedCandidateUIOmissions": 5
@@ -4791,13 +4791,25 @@
       "auditId": 62,
       "first": "13:18",
       "second": "39:47",
-      "decision": "à arbitrer",
+      "decision": "retenu",
       "sourceUrl": "https://quranpedia.app/books/b10901/s4.html",
       "existing": {
-        "leftIndices": [],
-        "rightIndices": [],
-        "leftWords": [],
-        "rightWords": [],
+        "leftIndices": [
+          20
+        ],
+        "rightIndices": [
+          13,
+          14,
+          15
+        ],
+        "leftWords": [
+          "أُو۟لَـٰۤىِٕكَ"
+        ],
+        "rightWords": [
+          "مِن",
+          "سُوۤءِ",
+          "ٱلۡعَذَابِ"
+        ],
         "agreeWithCanonicalQuran": true
       },
       "commonAnchorCandidates": [
@@ -4818,7 +4830,7 @@
           "secondIndex": 13,
           "firstWord": "أُو۟لَـٰۤىِٕكَ",
           "secondWord": "مِن",
-          "matchesExistingPivot": false
+          "matchesExistingPivot": true
         },
         {
           "kind": "avant",
