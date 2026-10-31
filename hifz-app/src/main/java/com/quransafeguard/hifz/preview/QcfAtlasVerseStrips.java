@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
  */
 final class QcfAtlasVerseStrips extends WebView {
     private static final Pattern VIEWBOX=Pattern.compile("viewBox\\s*=\\s*(['\"])([^'\"]+)\\1");
+    private static final String SAFE_LINE_CUTS_SHA256="54335a140838909f3a2d596da3aa1afc2307fb02ace042ca12ae0614cb3155f0";
     private int generation;
     private static final int CHUNK_CHARS=24_000;
     private String pendingEncoded;
@@ -93,27 +94,14 @@ final class QcfAtlasVerseStrips extends WebView {
 
     /** Immutable, 100%-QCF source. Returns empty when the geometry does not validate. */
     static String cropSvg(String source,List<WordGeometryRepository.WordBox> pageWords,
-                          VerseRef target,int[] underlineWords) {
+                          VerseRef target,int[] underlineWords,List<GeometryRepository.LineMeta> physicalLines,double[] safeCuts) {
         if(source==null||pageWords==null||target==null||underlineWords==null)return "";
         List<WordGeometryRepository.WordBox> found=new ArrayList<>();
         for(WordGeometryRepository.WordBox word:pageWords)
             if(word.surah==target.getSurah()&&word.ayah==target.getAyah())found.add(word);
         if(found.isEmpty())return "";
-        double x0=345,y0=550,x1=0,y1=0;
+        double x0=0,x1=345;
         StringBuilder clips=new StringBuilder();
-        for(WordGeometryRepository.WordBox word:found) {
-            if(!QcfExcerptWindow.includes(word.word,underlineWords))continue;
-            x0=Math.min(x0,word.x0);y0=Math.min(y0,word.y0);
-            x1=Math.max(x1,word.x1);y1=Math.max(y1,word.y1);
-        }
-        if(x1<=x0||y1<=y0)return "";
-        // Preserve the complete physical source line. Individual word rectangles
-        // can sever Arabic diacritics or leave detached fragments of neighbours.
-        // Full line context remains authentic, with only audited words underlined.
-        x0=0;x1=345;
-        x0=Math.max(0,x0-8);y0=Math.max(0,y0-8);
-        x1=Math.min(345,x1+8);y1=Math.min(550,y1+8);
-        if(x1-x0<15||y1-y0<10)return "";
         Matcher m=VIEWBOX.matcher(source);
         if(!m.find())return "";
         String[] view=m.group(2).trim().replace(',',' ').split("\\s+");
@@ -125,6 +113,9 @@ final class QcfAtlasVerseStrips extends WebView {
             if(!Double.isFinite(originX)||!Double.isFinite(originY)
                 ||Double.parseDouble(view[2])!=345||Double.parseDouble(view[3])!=550)return "";
         }catch(NumberFormatException invalid){return "";}
+        double[] rows=QcfAtlasLineWindow.bounds(pageWords,physicalLines,target,underlineWords,originY,safeCuts);
+        if(rows==null)return "";
+        double y0=rows[0],y1=rows[1];
         // The first actual KFQC page has a shifted SVG viewBox. The audited word
         // boxes are page-relative 0..345/550; translate them to the original SVG
         // coordinate origin before cropping or adding a difference underline.
@@ -161,6 +152,42 @@ final class QcfAtlasVerseStrips extends WebView {
         strokes.append("</g>");
         if(!cropped.contains("</svg>"))return "";
         return cropped.replace("</svg>",strokes+"</svg>");
+    }
+
+    /** Audited raster measurement only; the displayed vectors stay byte exact. */
+    static double[] safeLineCuts(Context context,int page,String source){
+        try(java.io.InputStream input=context.getAssets().open("mutashabihat/qcf_safe_line_cuts_v1.json");
+            java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream()){
+            byte[] block=new byte[8192];int count;
+            while((count=input.read(block))!=-1)output.write(block,0,count);
+            if(!SAFE_LINE_CUTS_SHA256.equals(sha256(output.toByteArray())))return null;
+            org.json.JSONObject root=new org.json.JSONObject(output.toString("UTF-8"));
+            if(root.getInt("schema")!=1||root.getInt("raster_scale")!=4
+                ||root.getInt("minimum_blank_band_source_units")<2
+                ||!"88bf38206b8f4cf6123d2355034953f376d2446d".equals(root.getString("source_commit")))return null;
+            org.json.JSONObject measured=root.getJSONObject("pages").getJSONObject(Integer.toString(page));
+            if(!sha256(source.getBytes(StandardCharsets.UTF_8)).equals(measured.getString("sha256")))return null;
+            org.json.JSONArray cuts=measured.getJSONArray("cuts");
+            double[] result=new double[cuts.length()];
+            for(int i=0;i<result.length;i++)result[i]=cuts.isNull(i)?Double.NaN:cuts.getDouble(i);
+            return result;
+        }catch(Exception missingAudit){return null;}
+    }
+
+    private static String sha256(byte[] bytes)throws java.security.NoSuchAlgorithmException{
+        byte[] digest=java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
+        StringBuilder hash=new StringBuilder();
+        for(byte value:digest)hash.append(String.format(Locale.ROOT,"%02x",value&255));
+        return hash.toString();
+    }
+
+    static List<GeometryRepository.LineMeta> physicalLines(GeometryRepository geometry,int page){
+        List<GeometryRepository.LineMeta> result=new ArrayList<>();
+        for(int i=0;i<geometry.lineCount();i++){
+            GeometryRepository.LineMeta line=geometry.line(i);
+            if(line.page==page)result.add(line);
+        }
+        return result;
     }
 
     String renderStatusForTest(){return renderStatus[0]+"/"+renderStatus[1];}
@@ -216,7 +243,7 @@ final class QcfAtlasVerseStrips extends WebView {
                     String full=MapQcfThumbnails.readSvg(getContext(),page);
                     String excerpt=cropSvg(full,
                         WordGeometryRepository.shared(getContext()).wordsForPage(page),
-                        verse,difference);
+                        verse,difference,physicalLines(geometry,page),safeLineCuts(getContext(),page,full));
                     if(!excerpt.isEmpty())encoded=android.util.Base64.encodeToString(
                         excerpt.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
                 }

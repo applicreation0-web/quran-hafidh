@@ -24,6 +24,70 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class ActiveReviewCorrectionInstrumentedTest {
     private static final String FORCE_STOP_PREFS="haafidh_active_replay_force_stop_fixture";
 
+    @Test public void v3BackupRestoresPartialAssistedReplayWithoutChangingHifzCredit() throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",0);
+        assertTrue(raw.edit().clear().commit());
+        try {
+            GeometryRepository geometry=GeometryRepository.get(c);
+            HifzPrefs prefs=new HifzPrefs(c);
+            assertEquals(6,raw.getInt("schema",-1));
+            assertTrue(prefs.setV6AcquiredRanges(Collections.singletonList(
+                new VerseRange(new VerseRef(30,1),new VerseRef(30,60))),geometry));
+            VerseRef start=new VerseRef(30,20),end=new VerseRef(30,40);
+            prefs.setActiveMurajaahCursor(start);
+            prefs.setActiveMurajaahActualEnd(end);
+            int firstPage=geometry.pageForVerse(end),secondPage=geometry.pageForVerse(start);
+            assertNotEquals("Fixture must span two physical pages",firstPage,secondPage);
+            ActiveReviewCorrectionStore store=new ActiveReviewCorrectionStore(raw);
+            assertTrue(store.recordReveal("2026-10-29",start,firstPage));
+            assertTrue(store.recordReveal("2026-10-29",start,secondPage));
+            assertTrue(store.recordReveal("2026-10-29",start,firstPage));
+            assertTrue(store.begin("2026-10-29",start,end,12345L,
+                ActiveReviewCorrectionPlan.select(store.revealed("2026-10-29",start)),firstPage));
+            assertTrue(store.pageReread(store.pending()));
+            assertTrue(store.pageRecalled(store.pending()));
+            assertTrue(store.pageReread(store.pending()));
+            assertTrue(store.revealDuringControl(store.pending()));
+            int acquiredLines=prefs.acquiredLineCountV6();
+            assertTrue("Fixture must contain actual acquired physical lines",acquiredLines>0);
+            String credit=raw.getString("v6AcquiredCreditLineIds",null);
+            java.util.Map<String,?> before=new java.util.HashMap<>(raw.getAll());
+            org.json.JSONObject backup=HifzBackup.export(c);
+            assertEquals(3,backup.getInt("version"));
+            for(String key:Arrays.asList("activeReviewCorrectionV2","activeReviewRevealedPagesV1")) {
+                org.json.JSONObject encoded=backup.getJSONObject("values").getJSONObject(key);
+                assertEquals("s",encoded.getString("t"));
+                assertEquals(before.get(key),encoded.getString("v"));
+            }
+            assertTrue(store.clear());
+            assertNull(store.pending());
+            assertTrue(store.revealed("2026-10-29",start).isEmpty());
+            assertEquals(backup.getJSONObject("values").length(),HifzBackup.restore(c,backup));
+            assertEquals("V3 restore must preserve every main-store progress and replay value",before,raw.getAll());
+            ActiveReviewCorrectionStore restored=new ActiveReviewCorrectionStore(raw);
+            ActiveReviewCorrectionStore.State state=restored.pending();
+            assertNotNull(state);
+            assertEquals("2026-10-29",state.date);
+            assertEquals(Arrays.asList(firstPage,secondPage),state.pages);
+            assertEquals(1,state.pageIndex);
+            assertEquals(secondPage,state.page());
+            assertEquals(firstPage,state.originPage);
+            assertEquals("RECALL",state.stage);
+            assertTrue(state.assisted);
+            assertEquals(12345L,state.activeElapsedMs);
+            assertEquals(start,state.start);
+            assertEquals(end,state.end);
+            assertEquals(Arrays.asList(firstPage,secondPage),new ArrayList<>(restored.revealed(state.date,start)));
+            assertFalse("Restore must not erase persisted assistance",restored.pageRecalled(state));
+            HifzPrefs reopened=new HifzPrefs(c);
+            assertEquals(start,reopened.activeMurajaahCursor());
+            assertEquals(end,reopened.activeMurajaahActualEnd());
+            assertEquals(acquiredLines,reopened.acquiredLineCountV6());
+            assertEquals(credit,raw.getString("v6AcquiredCreditLineIds",null));
+        } finally {assertTrue(raw.edit().clear().commit());}
+    }
+
     /** CI opt-in only: run separately, externally force-stop the target, then run forceStopVerify. */
     @Test public void forceStopPrepare() {
         org.junit.Assume.assumeTrue("true".equals(androidx.test.platform.app.InstrumentationRegistry

@@ -63,10 +63,20 @@ public final class MutashPageMarkersInstrumentedTest {
                 if("1".equals(count))break;Thread.sleep(150L);
             }
             assertEquals("One grouped contextual link", "1",count);
-            assertEquals("true",js(scene,"(function(){var b=document.querySelector('#atlas-discriminant-marks button');"
-                +"var svg=b.querySelector('svg'),r=b.getBoundingClientRect(),m=document.querySelector('#mushaf').getBoundingClientRect();"
-                +"return svg.getAttribute('viewBox')==='0 0 24 24'&&svg.querySelectorAll('path').length===2"
-                +"&&r.width>=44&&r.height>=44&&(r.right<=m.left+1||r.left>=m.right-1);})()"));
+            String measured=js(scene,"(function(){var b=document.querySelector('#atlas-discriminant-marks button');"
+                +"var svg=b.querySelector('svg'),r=b.getBoundingClientRect(),m=document.querySelector('#mushaf').getBoundingClientRect(),s=getComputedStyle(b);"
+                +"return JSON.stringify({viewBox:svg.getAttribute('viewBox'),paths:svg.querySelectorAll('path').length,"
+                +"cssWidth:s.width,cssHeight:s.height,width:r.width,height:r.height,"
+                +"outside:r.right<=m.left+1||r.left>=m.right-1,buttonLeft:r.left,buttonRight:r.right,mushafLeft:m.left,mushafRight:m.right});})()");
+            org.json.JSONObject metric=new org.json.JSONObject(new JSONArray("["+measured+"]").getString(0));
+            assertEquals(metric.toString(),"0 0 24 24",metric.getString("viewBox"));
+            assertEquals(metric.toString(),2,metric.getInt("paths"));
+            assertEquals(metric.toString(),"44px",metric.getString("cssWidth"));
+            assertEquals(metric.toString(),"44px",metric.getString("cssHeight"));
+            // Fractional native WebView density may quantize a 44-CSS-pixel DOMRect.
+            assertEquals(metric.toString(),44.0,metric.getDouble("width"),0.02);
+            assertEquals(metric.toString(),44.0,metric.getDouble("height"),0.02);
+            assertTrue(metric.toString(),metric.getBoolean("outside"));
             scene.onActivity(a->{
                 assertTrue(a.discriminantAvailableForTest());
                 // The removed bottom action is not replaced with a detached button for tests.

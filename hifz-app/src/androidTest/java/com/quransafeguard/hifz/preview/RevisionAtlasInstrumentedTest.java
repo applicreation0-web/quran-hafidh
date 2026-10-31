@@ -5,6 +5,7 @@ import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
 import android.view.View;
+import android.view.MotionEvent;
 import android.view.ViewGroup;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
@@ -81,6 +82,30 @@ public final class RevisionAtlasInstrumentedTest {
         assertEquals("A Java field of 100 is not evidence of a painted mask", "true",js(s,
             "(function(){return mask===100 && document.querySelectorAll('g.masklayer').length>0"
             +" && !!document.querySelector('#hifz-exact-word-holes');})()"));
+    }
+
+    private static void revealWithRealTouch(HifzSessionActivity a){
+        View reveal=find((View)field(a,"actions"),"Révéler");
+        assertNotNull(reveal);
+        long now=android.os.SystemClock.uptimeMillis();
+        MotionEvent down=MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,1,1,0);
+        MotionEvent up=MotionEvent.obtain(now,now,MotionEvent.ACTION_UP,1,1,0);
+        try{reveal.dispatchTouchEvent(down);reveal.dispatchTouchEvent(up);}
+        finally{down.recycle();up.recycle();}
+    }
+    private static void assertCorrectiveRecallMask(ActivityScenario<HifzSessionActivity> s)throws Exception{
+        HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Corrective recall before validation");
+        s.onActivity(a->{
+            assertEquals(100,field(a,"currentMask"));
+            assertEquals(View.GONE,((View)field(a,"discriminantButton")).getVisibility());
+            assertEquals(View.GONE,((View)field(a,"annotationOverlay")).getVisibility());
+        });
+        assertEquals("Corrective recall has a painted full-page mask without hints", "true",js(s,
+            "(function(){var m=document.querySelector('#mushaf');var layer=m.querySelector('svg g.masklayer');"
+            +"return mask===100&&m.style.visibility==='visible'&&!!layer&&layer.children.length>0"
+            +"&&protectedWordBoxes().length===0&&!layer.hasAttribute('mask')"
+            +"&&!document.querySelector('#hifz-exact-word-holes')"
+            +"&&!document.querySelector('#atlas-discriminant-marks');})()"));
     }
 
     private static void saveAuditCapture(String name)throws Exception{
@@ -183,9 +208,17 @@ public final class RevisionAtlasInstrumentedTest {
         Instrumentation.ActivityMonitor atlas=ins.addMonitor(AtlasDiscriminantActivity.class.getName(),null,false);
         try{
             HifzPrefs p=fixture(c);
+            ActiveReviewCorrectionStore corrections=new ActiveReviewCorrectionStore(c);
+            String sessionDate="2026-10-29";
+            VerseRef start=p.activeMurajaahCursor(),end=new VerseRef(30,37);
+            VerseRef passiveCursor=p.murajaahCursor();
+            int acquiredLines=p.acquiredLineCountV6();
+            String acquiredCredit=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE)
+                .getString("v6AcquiredCreditLineIds",null);
             AyahThemesCueIndex titles=recallTitleFixture(c);
             try(ActivityScenario<HifzSessionActivity> s=ActivityScenario.launch(new Intent(c,HifzSessionActivity.class)
-                .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE))){
+                .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE)
+                .putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,sessionDate))){
                 prepareRealRecallMask(s,titles);
                 assertRealRecallMask(s);
                 s.onActivity(a->{
@@ -199,6 +232,12 @@ public final class RevisionAtlasInstrumentedTest {
                 // Instrumentation.waitForMonitorWithTimeout removes its monitor even
                 // on timeout; query the monitor directly to keep observing the later launch.
                 assertNull(atlas.waitForActivityWithTimeout(500));
+                // Exercise a real reveal explicitly, so this replay is required
+                // even when private headings are installed. CI also records the
+                // initial fail-open page before the synthetic titles are injected.
+                s.onActivity(RevisionAtlasInstrumentedTest::revealWithRealTouch);
+                assertEquals(Collections.singletonList(GeometryRepository.get(c).pageForVerse(end)),
+                    new java.util.ArrayList<>(corrections.revealed(sessionDate,start)));
                 saveAuditCapture("atlas-revision-active-masked.png");
                 s.recreate();
                 prepareRealRecallMask(s,titles);
@@ -213,7 +252,7 @@ public final class RevisionAtlasInstrumentedTest {
                 // A small acquired corpus loops in the time-budgeted plan. Its
                 // existing partial-validation confirmation must be accepted by
                 // the real user action, never bypassed by a test-only receipt.
-                if(!HifzClock.today().toString().equals(p.lastActiveMurajaahDate())){
+                if(corrections.pending()==null){
                     android.view.accessibility.AccessibilityNodeInfo root=ins.getUiAutomation().getRootInActiveWindow();
                     assertNotNull("Partial validation dialog missing",root);
                     java.util.List<android.view.accessibility.AccessibilityNodeInfo> buttons=
@@ -222,8 +261,64 @@ public final class RevisionAtlasInstrumentedTest {
                     assertTrue(buttons.get(0).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK));
                     ins.waitForIdleSync();
                 }
+                // Validation starts mandatory correction, not the Hifz receipt.
+                assertNotNull(corrections.pending());
+                assertEquals("READ",corrections.pending().stage);
+                long originalElapsed=corrections.pending().activeElapsedMs;
+                assertEquals("",p.lastActiveMurajaahDate());
+                assertEquals(start,p.activeMurajaahCursor());
+                assertEquals(end,p.activeMurajaahActualEnd());
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Corrective visible reread");
+                assertEquals("true",js(s,"mask===0&&protectedWordBoxes().length===0"));
                 s.onActivity(a->{
-                    assertEquals(HifzClock.today().toString(),p.lastActiveMurajaahDate());
+                    assertEquals(View.GONE,((View)field(a,"discriminantButton")).getVisibility());
+                    assertEquals(View.GONE,((View)field(a,"annotationOverlay")).getVisibility());
+                    find((View)field(a,"actions"),"Page relue").performClick();
+                });
+                assertCorrectiveRecallMask(s);
+                s.onActivity(a->{
+                    revealWithRealTouch(a);
+                    assertTrue(corrections.pending().assisted);
+                    View done=find((View)field(a,"actions"),"Page récitée sans aide");
+                    assertFalse(done.isEnabled());
+                    done.performClick(); // The handler must reject assistance too.
+                    // A later scheduling date cannot relabel the pending replay.
+                    a.getIntent().putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,"2026-10-30");
+                });
+                assertEquals("",p.lastActiveMurajaahDate());
+                assertEquals("RECALL",corrections.pending().stage);
+                s.recreate();
+                assertCorrectiveRecallMask(s);
+                s.onActivity(a->{
+                    assertEquals(sessionDate,field(a,"sessionDate").toString());
+                    a.getIntent().putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,sessionDate);
+                    assertTrue(corrections.pending().assisted);
+                    assertEquals(originalElapsed,corrections.pending().activeElapsedMs);
+                    assertFalse(find((View)field(a,"actions"),"Page récitée sans aide").isEnabled());
+                    assertEquals(start,p.activeMurajaahCursor());
+                    assertEquals(end,p.activeMurajaahActualEnd());
+                    assertEquals("",p.lastActiveMurajaahDate());
+                    find((View)field(a,"actions"),"Recommencer la page").performClick();
+                });
+                assertEquals("READ",corrections.pending().stage);
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Restarted visible reread");
+                s.onActivity(a->find((View)field(a,"actions"),"Page relue").performClick());
+                assertCorrectiveRecallMask(s);
+                s.onActivity(a->{
+                    assertFalse(corrections.pending().assisted);
+                    View done=find((View)field(a,"actions"),"Page récitée sans aide");
+                    assertTrue("Only the painted unaided recall can finish",done.isEnabled());
+                    done.performClick();
+                    assertEquals(sessionDate,p.lastActiveMurajaahDate());
+                    assertEquals(p.activeMurajaahCorpus().next(end),p.activeMurajaahCursor());
+                    assertEquals(passiveCursor,p.murajaahCursor());
+                    assertEquals(acquiredLines,p.acquiredLineCountV6());
+                    assertEquals(acquiredCredit,c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE)
+                        .getString("v6AcquiredCreditLineIds",null));
+                    assertTrue("Correction time cannot add active credit",p.lastActiveMurajaahLabel()
+                        .endsWith("L/"+(originalElapsed/1000L)+"s"));
+                    assertNull(corrections.pending());
+                    assertTrue(corrections.revealed(sessionDate,start).isEmpty());
                     assertEquals(View.VISIBLE,((View)field(a,"discriminantButton")).getVisibility());
                 });
                 saveAuditCapture("atlas-revision-active-validated.png");

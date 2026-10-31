@@ -4,6 +4,7 @@
 Historical 1171/1176/1178 guards remain unchanged. This is a distinct, current
 baseline check, not an exemption in those older guards and not a runtime test.
 """
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -18,13 +19,14 @@ ADAPTERS = {
         "ActiveReviewCorrectionPlan", "ActiveReviewCorrectionStore",
         "AtlasDiscriminantActivity", "AtlasDiscriminantCases", "AtlasDiscriminantMarkers",
         "HifzSessionActivity", "MapQcfThumbnails", "MawdudiMapScreen", "MushafView",
-        "QcfAtlasVerseStrips", "QcfExcerptWindow", "RevisionAtlasAccess",
+        "QcfAtlasVerseStrips", "QcfAtlasLineWindow", "QcfExcerptWindow", "RevisionAtlasAccess",
         "SettingsActivity", "StudyReaderActivity", "Ui",
     )
 }
 RESOURCES = {
     "hifz-app/src/main/AndroidManifest.xml",
     "hifz-app/src/main/res/drawable/ic_ui_atlas_similar.xml",
+    "hifz-app/src/main/assets/mutashabihat/qcf_safe_line_cuts_v1.json",
 }
 SCOPES = ("hifz-core/src", "hifz-app/src/main", "hifz-app/src/private114")
 BUILD = "hifz-app/build.gradle.kts"
@@ -36,6 +38,9 @@ def git(*args):
 
 def verify(root=ROOT):
     """Compare file contents, including untracked additions, to the pinned base."""
+    cuts = root / "hifz-app/src/main/assets/mutashabihat/qcf_safe_line_cuts_v1.json"
+    assert hashlib.sha256(cuts.read_bytes()).hexdigest() == "54335a140838909f3a2d596da3aa1afc2307fb02ace042ca12ae0614cb3155f0", "Unreviewed source-raster safe-cut asset"
+
     baseline = {
         p for p in git("ls-tree", "-r", "--name-only", BASE, "--", *SCOPES)
         .decode().splitlines()

@@ -3,7 +3,6 @@ package com.quransafeguard.hifz.preview;
 import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
-import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
@@ -73,15 +72,76 @@ public final class AtlasDiscriminantInstrumentedTest {
         fail("Authentic paired QCF rendering timed out");
     }
 
+    /** Read geometry only after consecutive drawn frames, including the deferred page fit. */
+    private static Rect[] waitForStablePageBounds(
+        ActivityScenario<AtlasDiscriminantActivity> scenario,boolean contextual)throws Exception{
+        java.util.concurrent.CountDownLatch settled=new java.util.concurrent.CountDownLatch(1);
+        AtomicReference<Rect[]> result=new AtomicReference<>();
+        AtomicReference<android.view.ViewTreeObserver.OnPreDrawListener> observer=new AtomicReference<>();
+        scenario.onActivity(a->{
+            View root=a.getWindow().getDecorView();
+            android.view.ViewTreeObserver.OnPreDrawListener listener=new android.view.ViewTreeObserver.OnPreDrawListener(){
+                private Rect[] previous;
+                private int stableFrames;
+                @Override public boolean onPreDraw(){
+                    Rect[] bounds=a.qcfPageBoundsForTest();
+                    boolean ready=!root.isLayoutRequested()&&a.bothQcfPagesFullyVisibleForTest()
+                        &&(!contextual||a.tafsirHeadingVisibleForTest());
+                    for(MapQcfThumbnails page:a.qcfViewsForTest())ready&=!page.isLayoutRequested();
+                    stableFrames=ready&&java.util.Arrays.equals(previous,bounds)?stableFrames+1:0;
+                    previous=bounds;
+                    result.set(bounds);
+                    if(stableFrames>=4){
+                        root.getViewTreeObserver().removeOnPreDrawListener(this);
+                        settled.countDown();
+                    }else root.postInvalidateOnAnimation();
+                    return true;
+                }
+            };
+            observer.set(listener);
+            root.getViewTreeObserver().addOnPreDrawListener(listener);
+            root.postInvalidateOnAnimation();
+        });
+        boolean ready=settled.await(5,java.util.concurrent.TimeUnit.SECONDS);
+        scenario.onActivity(a->a.getWindow().getDecorView().getViewTreeObserver()
+            .removeOnPreDrawListener(observer.get()));
+        assertTrue("Complete QCF pages and contextual heading must settle after layout: "+
+            java.util.Arrays.toString(result.get()),ready);
+        return result.get();
+    }
+
     private static void assertContextPanesVisible(ActivityScenario<AtlasDiscriminantActivity> scenario)throws Exception{
-        AtomicBoolean ready=new AtomicBoolean();
+        waitForStablePageBounds(scenario,true);
+    }
+
+    private static void waitForSelectedTafsir(
+        ActivityScenario<AtlasDiscriminantActivity> scenario,int side)throws Exception{
+        AtomicBoolean selected=new AtomicBoolean();
         for(int attempt=0;attempt<40;attempt++){
-            scenario.onActivity(a->ready.set(a.bothQcfPagesFullyVisibleForTest()
-                &&a.tafsirHeadingVisibleForTest()));
-            if(ready.get())return;
+            scenario.onActivity(a->selected.set(a.tafsirPanelVisibleForTest()&&a.selectedTafsirForTest()==side));
+            if(selected.get())return;
             Thread.sleep(100L);
         }
-        fail("Both complete QCF localizations and the contextual tafsir heading must remain visible");
+        fail("Touching the actual QCF page must select tafsir side "+side);
+    }
+
+    private static void switchTafsirAndAssertPagesRetained(
+        ActivityScenario<AtlasDiscriminantActivity> scenario,int side,
+        MapQcfThumbnails[] originalPages)throws Exception{
+        Rect[] before=waitForStablePageBounds(scenario,true);
+        scenario.onActivity(a->{
+            View tab=findByDescription(a.getWindow().getDecorView(),side==0?
+                "Tafsīr du premier verset":"Tafsīr du second verset");
+            assertNotNull(tab);assertTrue(tab.performClick());
+        });
+        Rect[] after=waitForStablePageBounds(scenario,true);
+        scenario.onActivity(a->{
+            assertEquals(side,a.selectedTafsirForTest());
+            assertSame("Switching commentary must retain first QCF WebView",originalPages[0],a.qcfViewsForTest()[0]);
+            assertSame("Switching commentary must retain second QCF WebView",originalPages[1],a.qcfViewsForTest()[1]);
+            assertTrue(a.qcfPagesReadyForTest());
+        });
+        assertArrayEquals("Both QCF localizations must stay at the same settled bounds",before,after);
     }
 
     private static void assertOriginalPageShapeAndWordMarks(
@@ -159,39 +219,23 @@ public final class AtlasDiscriminantInstrumentedTest {
             AtomicReference<MapQcfThumbnails[]> originalPages=new AtomicReference<>();
             scenario.onActivity(a->{
                 assertFalse("No buried, permanently allocated tafsir region",a.tafsirPanelVisibleForTest());
-                pageBounds.set(a.qcfPageBoundsForTest());originalPages.set(a.qcfViewsForTest());
+                originalPages.set(a.qcfViewsForTest());
             });
+            pageBounds.set(waitForStablePageBounds(scenario,false));
             Rect target=pageBounds.get()[0];
             assertFalse("First Mushaf must be directly visible",target.isEmpty());
             tapScreen(target.centerX(),target.centerY());
-            AtomicBoolean opened=new AtomicBoolean();
-            for(int attempt=0;attempt<40;attempt++){
-                scenario.onActivity(a->opened.set(a.tafsirPanelVisibleForTest()&&a.selectedTafsirForTest()==0));
-                if(opened.get())break;
-                Thread.sleep(100L);
-            }
-            assertTrue("Touching the actual QCF page must open its contextual tafsir",opened.get());
+            waitForSelectedTafsir(scenario,0);
             assertContextPanesVisible(scenario);
-            AtomicReference<Rect[]> selectedBounds=new AtomicReference<>();
-            scenario.onActivity(a->{
-                selectedBounds.set(a.qcfPageBoundsForTest());
-                View second=findByDescription(a.getWindow().getDecorView(),"Tafsīr du second verset");
-                assertNotNull(second);assertTrue(second.performClick());
-            });
-            scenario.onActivity(a->{
-                assertEquals(1,a.selectedTafsirForTest());
-                assertSame("Switching commentary must retain first QCF WebView",originalPages.get()[0],a.qcfViewsForTest()[0]);
-                assertSame("Switching commentary must retain second QCF WebView",originalPages.get()[1],a.qcfViewsForTest()[1]);
-                assertArrayEquals("Both QCF localizations must stay at the same bounds",selectedBounds.get(),a.qcfPageBoundsForTest());
-                assertTrue(a.qcfPagesReadyForTest());
-            });
-            assertContextPanesVisible(scenario);
+            switchTafsirAndAssertPagesRetained(scenario,1,originalPages.get());
+            switchTafsirAndAssertPagesRetained(scenario,0,originalPages.get());
             // The second actual source page also switches the contextual panel.
-            scenario.onActivity(a->pageBounds.set(a.qcfPageBoundsForTest()));
+            pageBounds.set(waitForStablePageBounds(scenario,true));
             Rect secondPage=pageBounds.get()[1];
             tapScreen(secondPage.centerX(),secondPage.centerY());
-            scenario.onActivity(a->assertEquals(1,a.selectedTafsirForTest()));
+            waitForSelectedTafsir(scenario,1);
             assertContextPanesVisible(scenario);
+            scenario.onActivity(a->assertEquals(1,a.selectedTafsirForTest()));
             AtomicBoolean loaded=new AtomicBoolean();
             for(int attempt=0;attempt<40;attempt++){
                 scenario.onActivity(a->{
@@ -220,6 +264,13 @@ public final class AtlasDiscriminantInstrumentedTest {
             scenario.onActivity(a->{assertEquals(1,a.selectedTafsirForTest());assertTrue(a.tafsirPanelVisibleForTest());});
             assertOriginalPageShapeAndWordMarks(scenario,samplePair());
             assertContextPanesVisible(scenario);
+            scenario.onActivity(a->originalPages.set(a.qcfViewsForTest()));
+            Rect landscapeFirst=waitForStablePageBounds(scenario,true)[0];
+            tapScreen(landscapeFirst.centerX(),landscapeFirst.centerY());
+            waitForSelectedTafsir(scenario,0);
+            switchTafsirAndAssertPagesRetained(scenario,1,originalPages.get());
+            switchTafsirAndAssertPagesRetained(scenario,0,originalPages.get());
+            switchTafsirAndAssertPagesRetained(scenario,1,originalPages.get());
             saveComparisonScreenshot(context,profile+"-landscape-contextual");
             } finally {
                 scenario.onActivity(a->a.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT));
@@ -277,7 +328,8 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertTrue("No exact QCF word "+verse+":"+requested+" on page "+page,found);
         }
         String svg=MapQcfThumbnails.readSvg(context,page);
-        String excerpt=QcfAtlasVerseStrips.cropSvg(svg,words,verse,marked);
+        String excerpt=QcfAtlasVerseStrips.cropSvg(svg,words,verse,marked,
+            QcfAtlasVerseStrips.physicalLines(g,page),QcfAtlasVerseStrips.safeLineCuts(context,page,svg));
         assertFalse("Original QCF SVG excerpt cannot be cropped for "+verse,excerpt.isEmpty());
         assertTrue("Original Quran word glyph paths were lost for "+verse,
             excerpt.contains("ayahPolygon"));
@@ -384,7 +436,8 @@ public final class AtlasDiscriminantInstrumentedTest {
             int page=g.pageForVerse(verse);
             String original=MapQcfThumbnails.readSvg(context,page);
             String cropped=QcfAtlasVerseStrips.cropSvg(original,
-                WordGeometryRepository.shared(context).wordsForPage(page),verse,samplePair().firstWordIndices);
+                WordGeometryRepository.shared(context).wordsForPage(page),verse,samplePair().firstWordIndices,
+                QcfAtlasVerseStrips.physicalLines(g,page),QcfAtlasVerseStrips.safeLineCuts(context,page,original));
             assertFalse("The exact Quran crop must be available for 2:63",cropped.isEmpty());
             assertTrue("Exact original Quran paths must be preserved",cropped.contains("ayahPolygon"));
             assertTrue("The audited differing words must be underlined",cropped.contains("exact-word-differences"));
@@ -488,8 +541,15 @@ public final class AtlasDiscriminantInstrumentedTest {
         Context context=ApplicationProvider.getApplicationContext();
         SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
         Map<String,?> before=new HashMap<>(prefs.getAll());
-        // Each exact catalogue index must load its own pair, including shared verses.
+        // Shards partition exact indices; default invocation still checks the entire catalogue.
+        android.os.Bundle args=InstrumentationRegistry.getArguments();
+        int shard=Integer.parseInt(args.getString("catalogueShard","0"));
+        int shards=Integer.parseInt(args.getString("catalogueShards","1"));
+        assertTrue(shards>=1&&shards<=16&&shard>=0&&shard<shards);
+        int checked=0;
         for(int i=0;i<AtlasDiscriminantCases.PILOT.size();i++){
+            if(i%shards!=shard)continue;
+            checked++;
             AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(i);
             Intent intent=pairIntent(context,i);
             try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
@@ -556,8 +616,16 @@ public final class AtlasDiscriminantInstrumentedTest {
                 assertOriginalPageShapeAndWordMarks(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);
+                if(pair.auditId==49||pair.auditId==292||pair.auditId==293){
+                    AtomicReference<String> surface=new AtomicReference<>();
+                    scenario.onActivity(a->surface.set(a.getResources().getConfiguration().smallestScreenWidthDp>=600?"boox":"phone"));
+                    saveComparisonScreenshot(context,"case-"+pair.auditId+"-"+surface.get());
+                }
             }
         }
+        assertEquals("Every index in this shard must render both original pages/crops",
+            (AtlasDiscriminantCases.PILOT.size()+shards-1-shard)/shards,checked);
+        android.util.Log.i("HaafidhCatalogueAudit","shard="+shard+"/"+shards+" checked="+checked);
         assertEquals("Browsing Atlas must not alter Hifz progress",before,prefs.getAll());
     }
 
