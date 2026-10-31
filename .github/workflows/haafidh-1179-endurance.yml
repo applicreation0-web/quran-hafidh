@@ -1,7 +1,7 @@
 name: Haafidh 1.17.9 final endurance (NO APK NO RELEASE)
 on:
   push:
-    branches: [work/haafidh-1179-final-stress-20261031]
+    branches: [audit/haafidh-1179-tafsir-polygon-20261031]
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         surface: [phone, boox]
-        phase: [navigation, tafsir]
+        phase: [tafsir]
         include:
           - surface: phone
             size: 1080x1920

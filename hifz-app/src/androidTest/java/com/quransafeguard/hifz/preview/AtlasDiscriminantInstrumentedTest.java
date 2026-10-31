@@ -227,9 +227,34 @@ public final class AtlasDiscriminantInstrumentedTest {
     /** Resolve screen coordinates from the current focused window after rotation/insets settle. */
     private static void tapQcfPage(ActivityScenario<AtlasDiscriminantActivity> scenario,
         int side,boolean contextual)throws Exception{
+        tapQcfPage(scenario,side,contextual,null);
+    }
+    private static void tapQcfPage(ActivityScenario<AtlasDiscriminantActivity> scenario,
+        int side,boolean contextual,com.quransafeguard.hifz.core.VerseRef requested)throws Exception{
         waitForStablePageBounds(scenario,contextual);
         Instrumentation instrument=InstrumentationRegistry.getInstrumentation();
         instrument.waitForIdleSync();
+        // Full-page centres can fall in a surah title gap (reproduced on page 385).
+        // Resolve a point INSIDE the requested original ayah polygon, then inject
+        // a real Android touch using the current WebView CSS/display conversion.
+        AtomicReference<org.json.JSONObject> polygonPoint=new AtomicReference<>();
+        if(requested!=null){
+            java.util.concurrent.CountDownLatch found=new java.util.concurrent.CountDownLatch(1);
+            AtomicReference<String> coordinates=new AtomicReference<>();
+            String script="(function(){var svg=document.querySelector('.paper svg');if(!svg)return '';"
+                +"var p=svg.querySelector('path.ayahPolygon[surah=\""+requested.getSurah()+"\"][ayah=\""+requested.getAyah()+"\"]');if(!p)return '';"
+                +"var b=p.getBBox(),m=p.getScreenCTM();if(!m)return '';"
+                +"for(var x=1;x<12;x++)for(var y=1;y<12;y++){var local=svg.createSVGPoint();"
+                +"local.x=b.x+b.width*x/12;local.y=b.y+b.height*y/12;"
+                +"if(p.isPointInFill(local)){var q=local.matrixTransform(m);"
+                +"return JSON.stringify({x:q.x,y:q.y,w:innerWidth,h:innerHeight});}}return '';})()";
+            scenario.onActivity(a->a.qcfViewsForTest()[side].evaluateJavascript(script,
+                value->{coordinates.set(value);found.countDown();}));
+            assertTrue("Actual ayah polygon coordinate callback",found.await(10,java.util.concurrent.TimeUnit.SECONDS));
+            String decoded=new org.json.JSONArray("["+coordinates.get()+"]").getString(0);
+            assertFalse("Requested original verse polygon must contain a real touch point",decoded.isEmpty());
+            polygonPoint.set(new org.json.JSONObject(decoded));
+        }
         int[] point=new int[2];
         AtomicReference<android.os.IBinder> windowToken=new AtomicReference<>();
         scenario.onActivity(a->{
@@ -241,7 +266,12 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertFalse(root.isLayoutRequested());assertFalse(page.isLayoutRequested());
             // getGlobalVisibleRect is in root coordinates; input injection needs display coordinates.
             page.getLocationOnScreen(point);
-            point[0]+=page.getWidth()/2;point[1]+=page.getHeight()/2;
+            if(polygonPoint.get()==null){point[0]+=page.getWidth()/2;point[1]+=page.getHeight()/2;}
+            else try{
+                org.json.JSONObject q=polygonPoint.get();
+                point[0]+=(int)Math.round(q.getDouble("x")*page.getWidth()/q.getDouble("w"));
+                point[1]+=(int)Math.round(q.getDouble("y")*page.getHeight()/q.getDouble("h"));
+            }catch(org.json.JSONException invalid){throw new AssertionError(invalid);}
             Rect visibleWindow=new Rect();root.getWindowVisibleDisplayFrame(visibleWindow);
             assertTrue("Mushaf touch must lie inside the current application window",visibleWindow.contains(point[0],point[1]));
             windowToken.set(root.getWindowToken());
@@ -478,9 +508,14 @@ public final class AtlasDiscriminantInstrumentedTest {
         SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",0);
         Map<String,?> before=new HashMap<>(prefs.getAll());
         org.json.JSONObject fullBefore=RevisionAtlasInstrumentedTest.snapshot(context);
+        android.os.Bundle enduranceArgs=InstrumentationRegistry.getArguments();
+        int total=Integer.parseInt(enduranceArgs.getString("atlasTafsirCycles","200"));
+        int requestedRotations=Math.min(100,total);
+        int startIndex=Integer.parseInt(enduranceArgs.getString("atlasTafsirStartIndex","0"));
+        assertTrue(total>=1&&total<=200);assertTrue(startIndex>=0&&startIndex<AtlasDiscriminantCases.PILOT.size());
         int rotations=0;
-        for(int cycle=0;cycle<200;cycle++){
-            int index=cycle%AtlasDiscriminantCases.PILOT.size();
+        for(int cycle=0;cycle<total;cycle++){
+            int index=(startIndex+cycle)%AtlasDiscriminantCases.PILOT.size();
             AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(index);
             AtomicReference<AtlasDiscriminantActivity> host=new AtomicReference<>();
             AtomicReference<MapQcfThumbnails[]> pages=new AtomicReference<>();
@@ -490,10 +525,12 @@ public final class AtlasDiscriminantInstrumentedTest {
                 assertDisplayedQcfClips(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);
-                tapQcfPage(scenario,0,false);waitForSelectedTafsir(scenario,0);
-                tapQcfPage(scenario,1,true);waitForSelectedTafsir(scenario,1);
+                tapQcfPage(scenario,0,false,pair.first);waitForSelectedTafsir(scenario,0);
+                scenario.onActivity(v->assertEquals(pair.first,v.selectedTafsirVerseForTest()));
+                tapQcfPage(scenario,1,true,pair.second);waitForSelectedTafsir(scenario,1);
+                scenario.onActivity(v->assertEquals(pair.second,v.selectedTafsirVerseForTest()));
                 assertContextPanesVisible(scenario);awaitBothTafsirs(scenario);
-                if(cycle<100){
+                if(cycle<requestedRotations){
                     AtomicReference<MapQcfThumbnails[]> old=new AtomicReference<>();
                     int[] desired=new int[1];
                     scenario.onActivity(a->{
@@ -530,10 +567,10 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertEquals("Tafsir/rotation must preserve all Hifz values",before,prefs.getAll());
             assertTrue("Every backup store must remain unchanged during Tafsir/rotation",
                 RevisionAtlasInstrumentedTest.sameJson(fullBefore,RevisionAtlasInstrumentedTest.snapshot(context)));
-            EnduranceAuditMetrics.sample("tafsir-close",cycle+1);
+            EnduranceAuditMetrics.sample(total==200?"tafsir-close":"tafsir-smoke",cycle+1);
         }
-        assertEquals("100 actual orientation changes",100,rotations);
-        android.util.Log.i("HaafidhEndurance","SUMMARY tafsir_open_close=200 rotations="+rotations+" qcf_side_selections=400");
+        assertEquals("Actual orientation changes",requestedRotations,rotations);
+        android.util.Log.i("HaafidhEndurance","SUMMARY tafsir_open_close="+total+" rotations="+rotations+" qcf_side_selections="+(total*2));
     }
 
     /** A delayed new render must never expose the previous pair's excerpt. */
