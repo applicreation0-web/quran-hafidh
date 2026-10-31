@@ -101,6 +101,15 @@ public final class AtlasDiscriminantInstrumentedTest {
                         &&(!contextual||a.tafsirHeadingVisibleForTest());
                     for(MapQcfThumbnails page:a.qcfViewsForTest())ready&=!page.isLayoutRequested();
                     // Failure diagnostics only: preserve every strict visual gate.
+                    StringBuilder clips=new StringBuilder();
+                    for(MapQcfThumbnails page:a.qcfViewsForTest()){
+                        Rect clipped=new Rect();
+                        boolean exposed=page.getGlobalVisibleRect(clipped);
+                        clips.append(" exposed=").append(exposed)
+                            .append(" measured=").append(page.getWidth()).append('x').append(page.getHeight())
+                            .append(" visible=").append(clipped)
+                            .append(" parent=").append(page.getParent());
+                    }
                     lastFrame.set("activityFocus="+a.hasWindowFocus()
                         +" rootFocus="+root.hasWindowFocus()
                         +" attached="+root.isAttachedToWindow()
@@ -116,7 +125,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                         +" orientation="+orientation
                         +" root="+root.getWidth()+"x"+root.getHeight()
                         +" visibleWindow="+visibleWindow
-                        +" bounds="+java.util.Arrays.toString(bounds));
+                        +" bounds="+java.util.Arrays.toString(bounds)
+                        +" clipDiagnostic="+clips);
                     boolean same=ready&&java.util.Arrays.equals(previous,bounds)&&window.equals(previousWindow);
                     if(!same)stableSince=android.os.SystemClock.uptimeMillis();
                     stableFrames=same?stableFrames+1:0;
@@ -133,9 +143,19 @@ public final class AtlasDiscriminantInstrumentedTest {
             root.getViewTreeObserver().addOnPreDrawListener(listener);
             root.postInvalidateOnAnimation();
         });
-        boolean ready=settled.await(10,java.util.concurrent.TimeUnit.SECONDS);
+        // A Pixel Launcher ANR on Google API emulator must not steal the target
+        // window's focus. Recover only the exact unrelated *system* Wait dialog.
+        long deadline=android.os.SystemClock.uptimeMillis()+18000L;
+        boolean ready=false;
+        Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+        while(android.os.SystemClock.uptimeMillis()<deadline){
+            if(settled.await(200,java.util.concurrent.TimeUnit.MILLISECONDS)){ready=true;break;}
+            EmulatorLauncherAnr.resumeIfPresent(ins);
+        }
         scenario.onActivity(a->a.getWindow().getDecorView().getViewTreeObserver()
             .removeOnPreDrawListener(observer.get()));
+        if(!ready)
+            HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("atlas-qcf-viewport-failure.png");
         assertTrue("Focused activity, orientation, insets and complete QCF pages must settle after layout: "+
             java.util.Arrays.toString(result.get())+"; final pre-draw: "+lastFrame.get(),ready);
         return result.get();
