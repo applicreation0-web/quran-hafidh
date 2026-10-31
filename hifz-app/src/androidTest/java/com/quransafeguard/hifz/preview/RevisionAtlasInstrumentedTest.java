@@ -103,9 +103,14 @@ public final class RevisionAtlasInstrumentedTest {
                 if(!clicked){
                     java.util.List<android.view.accessibility.AccessibilityNodeInfo> buttons=
                         root.findAccessibilityNodeInfosByText("Valider quand même");
+                    if(buttons.isEmpty())buttons=
+                        root.findAccessibilityNodeInfosByText("VALIDER QUAND MÊME");
                     for(android.view.accessibility.AccessibilityNodeInfo button:buttons){
+                        // Android's Button textAllCaps affects accessibility text on
+                        // actual phone builds, even though the dialog source uses mixed case.
                         if(button.isEnabled()&&button.isVisibleToUser()
-                                &&"Valider quand même".contentEquals(button.getText()==null?"":button.getText())){
+                                &&"Valider quand même".equalsIgnoreCase(
+                                    button.getText()==null?"":button.getText().toString())){
                             assertTrue("Click the real partial-validation confirmation",button.performAction(
                                 android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK));
                             clicked=true;
