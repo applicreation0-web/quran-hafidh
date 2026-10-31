@@ -60,8 +60,8 @@ source-confirmés : 2:58/7:161 et 30:37/39:52. Bilan sur ces 294 dossiers :
 | retenu | 199 |
 | corrigé (pivot ou référence) | 79 |
 | exclu | 6 |
-| à arbitrer, absent du catalogue applicatif | 10 |
-| admis dans le catalogue | 278 |
+| à arbitrer, absent du catalogue applicatif | 9 |
+| admis dans le catalogue | 279 |
 
 Les numéros d’audit 1–291 correspondent exactement au CSV initial. Le numéro 292
 est exclusivement attribué à la demande utilisateur. Les suppléments 293 et 294
@@ -78,7 +78,7 @@ Ils n’ont pas été artificiellement ajoutés au décompte historique des 291.
   effectivement à la citation coranique; première suite distinctive
   وَيُجِرْكُم / وَيُؤَخِّرْكُم après ذُنُوبِكُم.
 - 46, 137 et 176 : contrôle de provenance entre chapitres incomplet; quarantaine.
-- 62 et 138 : choix du pivot local encore insuffisamment délimité; quarantaine.
+- 62 : admis par décision du 31 octobre (13:18 ↔ 39:47), indices QCF 20 / 13–15 et pages 251 / 463 ; 138 demeure hors catalogue en attente de certification de provenance.
 - 187 et 188 : texte attribué à 23:23 mêlé à celui de 7:59 dans la transcription.
 - 201 : le site reproduit deux citations identiques, alors que 10:60 et 40:61 diffèrent.
 - 221 : le site cite le singulier pour 44:38; contrôle complémentaire nécessaire.
