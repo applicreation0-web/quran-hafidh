@@ -125,7 +125,8 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse("Tafsir must not be buried below the page comparison",activity.contains("tafsirColumn(tafsirs)"));
         assertTrue(activity.contains("token!=(side==0?leftTafsirRequest:rightTafsirRequest)"));
         String qcf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java");
-        assertTrue(qcf.contains("poly.isPointInFill(point)"));
+        assertTrue(qcf.contains("poly.isPointInFill(local)"));
+        assertTrue(qcf.contains("matrix.inverse()"));
         assertTrue(qcf.contains("generation==fullGeneration"));
         assertTrue(qcf.contains("listener.onVerseChosen(page,surah,ayah)"));
         assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,entry.firstWordIndices,"));
