@@ -1,0 +1,65 @@
+name: Haafidh 1.17.9 isolated identity and historical signing guard (NO APK)
+on:
+  push:
+    branches: [audit/haafidh-1179-official-upgrade-identity-20261031]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  historical-certificate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify immutable official upgrade metadata and frozen resources
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_1179_invariants.py
+          grep -Fq 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
+          grep -Fq 'versionCode = 47' hifz-app/build.gradle.kts
+          grep -Fq 'versionName = "1.17.9"' hifz-app/build.gradle.kts
+          echo 'PASS: 1.17.9 code47, official unsuffixed release identity and frozen signing guards; no APK assembled'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Attest historical signing identity without exporting a private key
+        env:
+          HIFZ_KEYSTORE_BASE64: ${{ secrets.HIFZ_KEYSTORE_BASE64 }}
+          HIFZ_KEYSTORE_PASSWORD: ${{ secrets.HIFZ_KEYSTORE_PASSWORD }}
+          HIFZ_KEY_ALIAS: ${{ secrets.HIFZ_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/AttestHistoricalCertificate.java" <<'JAVA'
+          import java.nio.file.*;
+          import java.security.*;
+          import java.util.*;
+          public class AttestHistoricalCertificate {
+            public static void main(String[] args)throws Exception {
+              Path temporary=Path.of(args[0],"official-attestation.jks");
+              try {
+                Files.write(temporary,Base64.getMimeDecoder().decode(System.getenv("HIFZ_KEYSTORE_BASE64")));
+                KeyStore store=KeyStore.getInstance(temporary.toFile(),System.getenv("HIFZ_KEYSTORE_PASSWORD").toCharArray());
+                java.security.cert.Certificate cert=store.getCertificate(System.getenv("HIFZ_KEY_ALIAS"));
+                if(cert==null)throw new SecurityException("Historical certificate unavailable");
+                StringBuilder hex=new StringBuilder();
+                for(byte b:MessageDigest.getInstance("SHA-256").digest(cert.getEncoded()))hex.append(String.format("%02x",b&255));
+                if(!hex.toString().equals("66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14"))
+                  throw new SecurityException("Certificate does not match the official historical identity");
+                Path out=Path.of(args[0],"public-certificate-attestation");Files.createDirectories(out);
+                Files.write(out.resolve("official-public-certificate.der"),cert.getEncoded());
+                Files.writeString(out.resolve("certificate-sha256.txt"),hex+"\n");
+                System.out.println("PASS: exact historical certificate; no private key or APK exported");
+              } finally {Files.deleteIfExists(temporary);}
+            }
+          }
+          JAVA
+          java "$RUNNER_TEMP/AttestHistoricalCertificate.java" "$RUNNER_TEMP"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-1179-PUBLIC-certificate-only-NO-APK
+          path: ${{ runner.temp }}/public-certificate-attestation/
+          retention-days: 14
+          if-no-files-found: error
