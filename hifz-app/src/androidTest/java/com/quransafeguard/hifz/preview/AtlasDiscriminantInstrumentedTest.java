@@ -294,13 +294,29 @@ public final class AtlasDiscriminantInstrumentedTest {
         down.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
         up.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
         try{
-            instrument.sendPointerSync(down);
-            scenario.onActivity(a->{
-                assertTrue("Atlas must retain input focus through the touch",a.hasWindowFocus());
-                assertSame("Rotation must not replace the window during input",windowToken.get(),
-                    a.getWindow().getDecorView().getWindowToken());
-            });
-            instrument.sendPointerSync(up);
+            if(requested!=null){
+                // Endurance isolates the actual Android/WebView touch handler from
+                // Google emulator Taskbar input rejection. Original contextual tests
+                // below retain full system injection; this is not OS-input proof.
+                scenario.onActivity(a->{
+                    MapQcfThumbnails view=a.qcfViewsForTest()[side];
+                    try{
+                        float x=(float)(polygonPoint.get().getDouble("x")*view.getScale());
+                        float y=(float)(polygonPoint.get().getDouble("y")*view.getScale());
+                        down.setLocation(x,y);up.setLocation(x,y);
+                        assertTrue("WebView accepts real local Android touch down",view.dispatchTouchEvent(down));
+                        assertTrue("WebView accepts real local Android touch up",view.dispatchTouchEvent(up));
+                    }catch(org.json.JSONException invalid){throw new AssertionError(invalid);}
+                });
+            }else{
+                instrument.sendPointerSync(down);
+                scenario.onActivity(a->{
+                    assertTrue("Atlas must retain input focus through the touch",a.hasWindowFocus());
+                    assertSame("Rotation must not replace the window during input",windowToken.get(),
+                        a.getWindow().getDecorView().getWindowToken());
+                });
+                instrument.sendPointerSync(up);
+            }
         }finally{down.recycle();up.recycle();}
         instrument.waitForIdleSync();
     }

@@ -44,7 +44,7 @@ if [ "$phase" = navigation ]; then
 elif [ "$phase" = tafsir ]; then
   # Target the reproduced surah-title gap first; its smoke operation has its own
   # metric phase and is never counted among the 200 endurance operations.
-  for exact_case in 26 21; do
+  for exact_case in 26 21 9; do
     gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
       -Pandroid.testInstrumentationRunnerArguments.class="$class.AtlasDiscriminantInstrumentedTest#enduranceTafsirRotationsAndQcfDisposal" \
       -Pandroid.testInstrumentationRunnerArguments.atlasEndurance=true \
@@ -83,7 +83,7 @@ summary={'phase':phase,'completed':len(completed),'target_crash_or_anr_events':l
  'limitation':'PSS sampling and detached WebViews do not prove absence of all renderer/native leaks; no physical E-Ink test.'}
 if phase=='tafsir':
  assert 'SUMMARY tafsir_open_close=200 rotations=100 qcf_side_selections=400' in log
- summary.update(tafsir_open_close=200,rotations=100,qcf_side_selections=400,close_method='Leave Atlas; no separate panel-close control exists')
+ summary.update(tafsir_open_close=200,rotations=100,qcf_side_selections=400,close_method='Leave Atlas; no separate panel-close control exists',input_delivery='WebView-local Android MotionEvent; global system injection is NOT certified by this endurance run')
 (root/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
 print(json.dumps(summary,indent=2))
 PY
