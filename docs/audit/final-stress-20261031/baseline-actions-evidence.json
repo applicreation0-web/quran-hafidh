@@ -1,0 +1,91 @@
+{
+  "run": 41212783170,
+  "sha": "d08a97cbe307219628125431af701e6cbc40e795",
+  "jobs": [
+    {
+      "id": 124571079208,
+      "name": "catalogue-jvm",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124571509547,
+      "name": "android (phone, 1080x1920, 420)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124571509593,
+      "name": "android (boox, 1404x1872, 226)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124571509650,
+      "name": "preserved-regression",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124573263529,
+      "name": "catalogue-android (phone, 1)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124573263530,
+      "name": "catalogue-android (phone, 0)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124573263548,
+      "name": "catalogue-android (phone, 3)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124573263557,
+      "name": "catalogue-android (boox, 0)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124573263563,
+      "name": "catalogue-android (boox, 1)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124573263583,
+      "name": "catalogue-android (boox, 2)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124573263670,
+      "name": "catalogue-android (boox, 3)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 124573263702,
+      "name": "catalogue-android (phone, 2)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "jvm": {
+    "unique_cases": 949,
+    "passed": 947,
+    "skipped": 2,
+    "failed": 0,
+    "errors": 0,
+    "duplicate_cases": 0,
+    "artifact_id": 13046592397,
+    "artifact_sha256": "9c2435dfabf0270c97ce5c2db473ede96b1da9e7846af909015a99175767c213"
+  },
+  "preserved_android": 52,
+  "preserved_log_extract": "2026-10-31T15:04:49.9600194Z PASS: all production files outside the explicit 1.17.9 adapter/resource list are byte-identical to ae68ee1a46e195e9da1068aed981f3363869a4e0\n2026-10-31T15:04:49.9669383Z PASS: exact version47/1.17.9 metadata; official package, signer and seven private asset SHA guards unchanged\n2026-10-31T15:06:47.1745174Z PASS: 1243 coordinate-only cues, 1256 old-ID aliases, 77432 verified real Quran words; SHA256=5f42ca0331002c6769d37f4b0fde6dfdb3e12a7b3fd960b328710152034a5ef1\n2026-10-31T15:08:00.3751322Z Starting 52 tests on test(AVD) - 15\n2026-10-31T15:08:41.0751202Z BUILD SUCCESSFUL in 3m 50s\n2026-10-31T15:08:43.3584920Z OK (1 test)\n2026-10-31T15:08:46.0793275Z OK (1 test)\n2026-10-31T15:08:46.3794285Z OK (1 test)\n2026-10-31T15:08:49.8378859Z OK (1 test)",
+  "note": "Existing evidence re-read, not a new test run."
+}

@@ -1,0 +1,23 @@
+{
+  "status": "RUNNING_NO_RELEASE",
+  "production_sha": "d08a97cbe307219628125431af701e6cbc40e795",
+  "navigation_run": 41246852263,
+  "tafsir_run": 41249576279,
+  "proof_collection_run": 41252645644,
+  "phone_navigation": {
+    "result": "PASS",
+    "completed": 300,
+    "application_crash_anr_events": 0,
+    "peak_pss_kib": 141714
+  },
+  "remaining_jobs": [
+    124671982633,
+    124680094369,
+    124680094498
+  ],
+  "system_injection_endurance": "FAILED_ATTEMPTS_RETAINED_NOT_CERTIFIED",
+  "private_resources": "7/7 verified",
+  "apk": "NOT_PRODUCED",
+  "physical_boox": "NOT_TESTED",
+  "workspace": "Execution workspace became unavailable; continuing through connected GitHub tools."
+}

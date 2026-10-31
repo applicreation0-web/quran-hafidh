@@ -1,0 +1,17 @@
+{
+  "observed_checkout_head": "88bf38206b8f4cf6123d2355034953f376d2446d",
+  "certified_head": "d08a97cbe307219628125431af701e6cbc40e795",
+  "uncommitted_changes": [
+    {
+      "file": "ActiveReviewCorrectionInstrumentedTest.java",
+      "already_in_certified_head": true
+    },
+    {
+      "file": "AtlasDiscriminantInstrumentedTest.java",
+      "already_in_certified_head": true
+    }
+  ],
+  "additional_uncommitted_svg_patch_found": false,
+  "original_checkout_reset_or_overwritten": false,
+  "limit": "Only the accessible Work checkout was inspected. No recovery of inaccessible Work state is claimed. Execution workspace later became unavailable; tests and source were already committed on GitHub."
+}

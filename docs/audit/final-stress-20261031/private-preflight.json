@@ -1,0 +1,26 @@
+{
+  "verified_before_workspace_unavailable": {
+    "private_assets_exact_hash_matches": 7,
+    "private_assets_expected": 7,
+    "missing": 0,
+    "source": "Existing verified-private-assets directory; each file rehashed against the unchanged build guards"
+  },
+  "identity": {
+    "application_id": "com.quransafeguard.hifz",
+    "version": "1.17.9",
+    "versionCode": 47,
+    "scope": "Source/build identity; no signed candidate produced"
+  },
+  "historical_signer_sha256": "66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14",
+  "historical_key_attestation_run": 41209120644,
+  "historical_key_exported": false,
+  "accessible_nonmatching_certificate_sha256": [
+    "6843751077a6f26f1b99648d1b17b6eb1c577fd67ee55573f27b326c60e752b8",
+    "b75ba0a3dbe7c8f00c80799460d890864142b585f669dad5db468b8e2edb7aa4",
+    "85cd816f5213ae81f450146789c13ec476df54d7be8cc5f806decc9ed3f7061e"
+  ],
+  "nonmatching_keys_used": false,
+  "apk_candidate_generated": false,
+  "genuine_signed_upgrade_test_executed": false,
+  "physical_boox_test_executed": false
+}
