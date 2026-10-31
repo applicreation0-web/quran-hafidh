@@ -424,6 +424,49 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
+    private static void assertDisplayedQcfClips(ActivityScenario<AtlasDiscriminantActivity> scenario,
+            AtlasDiscriminantCases.Entry pair)throws Exception{
+        java.util.concurrent.CountDownLatch clipsChecked=new java.util.concurrent.CountDownLatch(1);
+        AtomicReference<String> clipResult=new AtomicReference<>();
+        scenario.onActivity(activity->{
+            try {
+                java.lang.reflect.Field stripsField=AtlasDiscriminantActivity.class.getDeclaredField("strips");
+                stripsField.setAccessible(true);
+                ((QcfAtlasVerseStrips)stripsField.get(activity)).evaluateJavascript(
+                    "(function(){var ids=[],prefixes=['atlas-word-window-"+
+                    pair.first.getSurah()+"-"+pair.first.getAyah()+"','atlas-word-window-"+
+                    pair.second.getSurah()+"-"+pair.second.getAyah()+"'];var expected=["+
+                    pair.firstWordIndices.length+","+pair.secondWordIndices.length+"];"
+                    +"for(var i=0;i<2;i++){var s=document.querySelector('#crop'+i+' svg');if(!s)return false;"
+                    +"var clips=s.querySelectorAll('clipPath');if(!clips.length)return false;"
+                    +"for(var j=0;j<clips.length;j++){var clip=clips[j];"
+                    +"if(!clip.id||clip.id.indexOf(prefixes[i])!==0||ids.indexOf(clip.id)>=0)return false;"
+                    +"if(document.getElementById(clip.id)!==clip)return false;ids.push(clip.id);}"
+                    +"var groups=s.querySelectorAll('g[clip-path]');if(!groups.length)return false;"
+                    +"for(var k=0;k<groups.length;k++){var ref=groups[k].getAttribute('clip-path');"
+                    +"if(!ref||ref.indexOf('url(#')!==0)return false;"
+                    +"var target=document.getElementById(ref.slice(5,-1));if(!target||!s.contains(target))return false;}"
+                    +"if(s.querySelectorAll('[id^=exact-word-differences] line').length!==expected[i])return false;}return true;})()",
+                    value->{clipResult.set(value);clipsChecked.countDown();});
+            }catch(ReflectiveOperationException invalid){throw new AssertionError(invalid);}
+        });
+        assertTrue("Paired QCF clip DOM callback missing",clipsChecked.await(10,java.util.concurrent.TimeUnit.SECONDS));
+        assertEquals("Each inline QCF excerpt must resolve its own exact-word clip", "true",clipResult.get());
+    }
+
+    private static void awaitBothTafsirs(ActivityScenario<AtlasDiscriminantActivity> scenario)throws Exception{
+        AtomicBoolean loaded=new AtomicBoolean();
+        for(int poll=0;poll<100;poll++){
+            scenario.onActivity(a->{
+                CharSequence[] texts=a.tafsirTextsForTest();
+                loaded.set(a.selectedTafsirVerseForTest()!=null&&texts[0].length()>100&&texts[1].length()>100);
+            });
+            if(loaded.get())return;
+            Thread.sleep(100L);
+        }
+        fail("Both real offline Tafsir bodies must load during endurance");
+    }
+
     /** Opt-in endurance. Reuses the strict real-window, DOM and original-glyph gates.
      * A tafsir closes by leaving Atlas: there is no independent close-panel action.
      * Detaching/destroying a WebView incorrectly makes the parent/lifecycle checks fail.
@@ -434,6 +477,7 @@ public final class AtlasDiscriminantInstrumentedTest {
         Context context=ApplicationProvider.getApplicationContext();new HifzPrefs(context);
         SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",0);
         Map<String,?> before=new HashMap<>(prefs.getAll());
+        org.json.JSONObject fullBefore=RevisionAtlasInstrumentedTest.snapshot(context);
         int rotations=0;
         for(int cycle=0;cycle<200;cycle++){
             int index=cycle%AtlasDiscriminantCases.PILOT.size();
@@ -443,11 +487,12 @@ public final class AtlasDiscriminantInstrumentedTest {
             try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(pairIntent(context,index))){
                 waitForQcf(scenario);
                 assertOriginalPageShapeAndWordMarks(scenario,pair);
+                assertDisplayedQcfClips(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);
                 tapQcfPage(scenario,0,false);waitForSelectedTafsir(scenario,0);
                 tapQcfPage(scenario,1,true);waitForSelectedTafsir(scenario,1);
-                assertContextPanesVisible(scenario);
+                assertContextPanesVisible(scenario);awaitBothTafsirs(scenario);
                 if(cycle<100){
                     AtomicReference<MapQcfThumbnails[]> old=new AtomicReference<>();
                     int[] desired=new int[1];
@@ -469,7 +514,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                         Thread.sleep(100L);
                     }
                     assertTrue("Rotation must replace actual QCF views",rotated.get());
-                    waitForQcf(scenario);assertContextPanesVisible(scenario);
+                    waitForQcf(scenario);assertContextPanesVisible(scenario);awaitBothTafsirs(scenario);
+                    assertDisplayedQcfClips(scenario,pair);
                     assertOriginalPageShapeAndWordMarks(scenario,pair);
                     scenario.onActivity(a->{
                         assertEquals(1,a.selectedTafsirForTest());
@@ -482,6 +528,8 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertTrue("Closing Atlas must destroy its host",host.get().isDestroyed());
             for(MapQcfThumbnails view:pages.get())assertNull("Closed WebView must detach",view.getParent());
             assertEquals("Tafsir/rotation must preserve all Hifz values",before,prefs.getAll());
+            assertTrue("Every backup store must remain unchanged during Tafsir/rotation",
+                RevisionAtlasInstrumentedTest.sameJson(fullBefore,RevisionAtlasInstrumentedTest.snapshot(context)));
             EnduranceAuditMetrics.sample("tafsir-close",cycle+1);
         }
         assertEquals("100 actual orientation changes",100,rotations);
@@ -789,32 +837,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 }
                 assertTrue("Both original QCF pages and excerpts must load: "+
                     pair.first+" / "+pair.second,ready.get());
-                java.util.concurrent.CountDownLatch clipsChecked=new java.util.concurrent.CountDownLatch(1);
-                AtomicReference<String> clipResult=new AtomicReference<>();
-                scenario.onActivity(activity->{
-                    try {
-                        java.lang.reflect.Field stripsField=AtlasDiscriminantActivity.class.getDeclaredField("strips");
-                        stripsField.setAccessible(true);
-                        ((QcfAtlasVerseStrips)stripsField.get(activity)).evaluateJavascript(
-                            "(function(){var ids=[],prefixes=['atlas-word-window-"+
-                            pair.first.getSurah()+"-"+pair.first.getAyah()+"','atlas-word-window-"+
-                            pair.second.getSurah()+"-"+pair.second.getAyah()+"'];var expected=["+
-                            pair.firstWordIndices.length+","+pair.secondWordIndices.length+"];"
-                            +"for(var i=0;i<2;i++){var s=document.querySelector('#crop'+i+' svg');if(!s)return false;"
-                            +"var clips=s.querySelectorAll('clipPath');if(!clips.length)return false;"
-                            +"for(var j=0;j<clips.length;j++){var clip=clips[j];"
-                            +"if(!clip.id||clip.id.indexOf(prefixes[i])!==0||ids.indexOf(clip.id)>=0)return false;"
-                            +"if(document.getElementById(clip.id)!==clip)return false;ids.push(clip.id);}"
-                            +"var groups=s.querySelectorAll('g[clip-path]');if(!groups.length)return false;"
-                            +"for(var k=0;k<groups.length;k++){var ref=groups[k].getAttribute('clip-path');"
-                            +"if(!ref||ref.indexOf('url(#')!==0)return false;"
-                            +"var target=document.getElementById(ref.slice(5,-1));if(!target||!s.contains(target))return false;}"
-                            +"if(s.querySelectorAll('[id^=exact-word-differences] line').length!==expected[i])return false;}return true;})()",
-                            value->{clipResult.set(value);clipsChecked.countDown();});
-                    }catch(ReflectiveOperationException invalid){throw new AssertionError(invalid);}
-                });
-                assertTrue("Paired QCF clip DOM callback missing",clipsChecked.await(10,java.util.concurrent.TimeUnit.SECONDS));
-                assertEquals("Each inline QCF excerpt must resolve its own exact-word clip", "true",clipResult.get());
+                assertDisplayedQcfClips(scenario,pair);
                 assertOriginalPageShapeAndWordMarks(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);

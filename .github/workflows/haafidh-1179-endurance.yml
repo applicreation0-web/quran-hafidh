@@ -7,7 +7,7 @@ permissions:
   contents: read
 concurrency:
   group: haafidh-1179-endurance-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   endurance:
     runs-on: ubuntu-latest

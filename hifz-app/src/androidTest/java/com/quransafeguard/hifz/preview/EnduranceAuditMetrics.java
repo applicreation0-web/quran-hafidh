@@ -2,6 +2,25 @@ package com.quransafeguard.hifz.preview;
 
 /** Measurements only; no arbitrary memory threshold is presented as leak proof. */
 final class EnduranceAuditMetrics {
+    static void awaitRendered(android.app.Instrumentation ins,android.app.Activity activity)throws Exception{
+        java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
+        for(int poll=0;poll<100;poll++){
+            ins.runOnMainSync(()->{
+                if(activity instanceof AtlasDiscriminantActivity){
+                    AtlasDiscriminantActivity atlas=(AtlasDiscriminantActivity)activity;
+                    ready.set(atlas.qcfPagesReadyForTest()&&atlas.qcfStripsReadyForTest());
+                }else try{
+                    java.lang.reflect.Field field=activity.getClass().getDeclaredField("mushaf");
+                    field.setAccessible(true);Object mushaf=field.get(activity);
+                    java.lang.reflect.Field shown=MushafView.class.getDeclaredField("pageShown");
+                    shown.setAccessible(true);ready.set(shown.getBoolean(mushaf));
+                }catch(ReflectiveOperationException error){throw new AssertionError(error);}
+            });
+            if(ready.get())return;
+            android.os.SystemClock.sleep(100L);
+        }
+        org.junit.Assert.fail("Actual QCF DOM must render on every nested endurance visit");
+    }
     static void sample(String phase,int completed){
         android.os.Debug.MemoryInfo info=new android.os.Debug.MemoryInfo();
         android.os.Debug.getMemoryInfo(info);

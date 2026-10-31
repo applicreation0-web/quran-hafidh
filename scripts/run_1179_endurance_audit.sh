@@ -61,6 +61,8 @@ pattern=r'phase='+('navigation' if phase=='navigation' else 'tafsir-close')+r' c
 completed=set(map(int,re.findall(pattern,log)))
 expected=300 if phase=='navigation' else 200
 assert completed==set(range(1,expected+1)),f'Incomplete evidence: {len(completed)}/{expected}; logcat may have truncated'
+assert 'am_proc_start' in events and 'com.quransafeguard.hifz.ibnkathirtest' in events,'Missing usable target lifecycle event evidence'
+assert '--------- beginning of' in log,'Missing live logcat collector evidence'
 failures=[line for line in events.splitlines() if re.search(r'am_(crash|anr)',line) and 'com.quransafeguard.hifz.ibnkathirtest' in line]
 assert not failures,failures
 measurements=[dict(zip(('pss_kib','native_alloc_bytes','java_used_bytes'),map(int,m)))

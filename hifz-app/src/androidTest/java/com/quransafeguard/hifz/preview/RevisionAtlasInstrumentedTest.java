@@ -48,7 +48,7 @@ public final class RevisionAtlasInstrumentedTest {
         p.setActiveMurajaahPage(g.pageForVerse(new VerseRef(30,37)));
         return p;
     }
-    private static JSONObject snapshot(Context c)throws Exception{
+    static JSONObject snapshot(Context c)throws Exception{
         JSONObject result=HifzBackup.export(c);result.remove("exportedAtEpochMs");return result;
     }
 
@@ -181,7 +181,7 @@ public final class RevisionAtlasInstrumentedTest {
             while((n=in.read(bytes))!=-1)out.write(bytes,0,n);
         }
     }
-    private static boolean sameJson(Object a,Object b)throws Exception{
+    static boolean sameJson(Object a,Object b)throws Exception{
         if(a instanceof JSONObject && b instanceof JSONObject){
             JSONObject x=(JSONObject)a,y=(JSONObject)b;
             if(x.length()!=y.length())return false;
@@ -226,6 +226,7 @@ public final class RevisionAtlasInstrumentedTest {
                 if(cycle==0)saveAuditCapture("atlas-revision-passive.png");
                 s.onActivity(a->a.onAtlasDiscriminantTap(new VerseRef(30,37)));
                 Activity comparison=ins.waitForMonitorWithTimeout(atlas,20000);assertNotNull(comparison);
+                EnduranceAuditMetrics.awaitRendered(ins,comparison);
                 ins.waitForIdleSync();
                 long paused=clock.get().elapsedMs();JSONObject before=snapshot(c);
                 Thread.sleep(1400L);
@@ -234,6 +235,7 @@ public final class RevisionAtlasInstrumentedTest {
                 int page=GeometryRepository.get(c).pageForVerse(new VerseRef(30,37));
                 ins.runOnMainSync(()->invoke(comparison,"openReader",new Class<?>[]{boolean.class,int.class},true,page));
                 Activity reader=ins.waitForMonitorWithTimeout(lecture,20000);assertNotNull(reader);
+                EnduranceAuditMetrics.awaitRendered(ins,reader);
                 ins.waitForIdleSync();
                 JSONObject afterReaderBootstrap=snapshot(c);
                 assertTrue("Nested Lecture must preserve every Hifz backup store",sameJson(before,afterReaderBootstrap));
