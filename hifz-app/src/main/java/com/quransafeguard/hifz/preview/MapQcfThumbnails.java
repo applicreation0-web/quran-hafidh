@@ -21,6 +21,8 @@ final class MapQcfThumbnails extends WebView {
  interface Listener {
   void onPageChosen(int page);
   default void onOpenReading(int page){onPageChosen(page);}
+  /** Exact original SVG polygon hit; non-Atlas listeners retain their existing behavior. */
+  default void onVerseChosen(int page,int surah,int ayah){onOpenReading(page);}
   default void onRendered(int page, boolean success){}
  }
  private String renderKey="";
@@ -237,10 +239,16 @@ final class MapQcfThumbnails extends WebView {
    .append(start).append(",Math.min(").append(end).append("-count+1,").append(selected).append("-Math.floor(count/2)));nav.querySelectorAll('button').forEach(b=>b.hidden=Number(b.textContent)<first||Number(b.textContent)>=first+count);}")
    .append("var touch=null,ignoreClick=0;document.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});")
    .append("document.addEventListener('touchend',e=>{if(!touch)return;var dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){e.preventDefault();ignoreClick=Date.now()+400;MapPages.step(dx>0?1:-1);}});")
-   .append("function readPage(p){if(Date.now()>ignoreClick)MapPages.open(p);}function choosePage(p){if(Date.now()>ignoreClick)MapPages.choose(p);}</script></head><body>");
+   .append("function readPage(p,e){if(Date.now()<=ignoreClick)return;if(!inlineQcf){MapPages.open(p);return;}")
+   .append("var svg=document.querySelector('.paper svg');if(!svg)return;var ctm=svg.getScreenCTM();if(!ctm)return;")
+   .append("var point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;point=point.matrixTransform(ctm.inverse());")
+   .append("var polygons=svg.querySelectorAll('path.ayahPolygon');for(var i=polygons.length-1;i>=0;i--){var poly=polygons[i];")
+   .append("if(typeof poly.isPointInFill==='function'&&poly.isPointInFill(point)){var surah=Number(poly.getAttribute('surah')),ayah=Number(poly.getAttribute('ayah'));")
+   .append("if(surah>=1&&surah<=114&&ayah>=1){MapPages.verse(p,surah,ayah,fullGeneration);}return;}}")
+   .append("}function choosePage(p){if(Date.now()>ignoreClick)MapPages.choose(p);}</script></head><body>");
   html.append("<main class='tile selected'><div class='paper' role='button' tabindex='0' aria-label='").append(atlasSinglePageCompact?"Tafsīr de la page ":"Lecture page ")
       .append(selected).append("' onclick='readPage(").append(selected)
-      .append(")'>");
+      .append(",event)'>");
   if (!atlasSinglePageCompact)
    html.append("<img alt='Page ").append(selected).append(" entière' onload='fit()'>");
   else
@@ -373,5 +381,14 @@ final class MapQcfThumbnails extends WebView {
   @JavascriptInterface public void step(int delta){post(()->MapQcfThumbnails.this.step(delta));}
   @JavascriptInterface public void choose(int page){if(page>=start&&page<=end)post(()->{if(!disposed&&page>=start&&page<=end&&listener!=null)listener.onPageChosen(page);});}
   @JavascriptInterface public void open(int page){if(page>=start&&page<=end)post(()->{if(!disposed&&page>=start&&page<=end&&listener!=null)listener.onOpenReading(page);});}
+  /** Fail closed if the tapped polygon belongs to a stale generation or page. */
+  @JavascriptInterface public void verse(int page,int surah,int ayah,int generation){
+   if(page<1||page>604||surah<1||surah>114||ayah<1)return;
+   post(()->{
+    if(!disposed&&atlasSinglePageCompact&&!mosaicMode&&generation==fullGeneration
+        &&page==selected&&listener!=null)
+     listener.onVerseChosen(page,surah,ayah);
+   });
+  }
  }
 }
