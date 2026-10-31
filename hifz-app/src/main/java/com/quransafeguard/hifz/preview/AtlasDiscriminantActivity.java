@@ -479,6 +479,9 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     int selectedTafsirForTest(){return selectedTafsir;}
+    VerseRef selectedTafsirVerseForTest(){
+        return selectedTafsir==0?selectedLeftVerse:selectedTafsir==1?selectedRightVerse:null;
+    }
     boolean tafsirPanelVisibleForTest(){return tafsirPanel!=null&&tafsirPanel.getVisibility()==View.VISIBLE;}
     boolean lateralTafsirForTest(){return lateralTafsir;}
     boolean tafsirHeadingVisibleForTest(){
