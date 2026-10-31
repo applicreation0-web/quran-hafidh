@@ -501,6 +501,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         startActivity(intent);
     }
 
+    int comparisonScrollYForTest(){return comparisonScroll==null?0:comparisonScroll.getScrollY();}
     int selectedTafsirForTest(){return selectedTafsir;}
     String tafsirTabLabelForTest(int side){
         return (side==0?firstTafsirTab:secondTafsirTab).getText().toString();
