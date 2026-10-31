@@ -33,7 +33,7 @@ test_class=com.quransafeguard.hifz.preview.ActiveReviewCorrectionInstrumentedTes
 for phase in Prepare Verify; do
     adb shell am instrument -w -r -e activeReplayForceStop true -e class "$test_class#forceStop$phase" "$runner" > "$audit_dir/$surface-force-stop-$phase.txt"
     cat "$audit_dir/$surface-force-stop-$phase.txt"
-    if ! rg -q 'OK \(1 test\)' "$audit_dir/$surface-force-stop-$phase.txt"; then
+    if ! grep -Eq 'OK \(1 test\)' "$audit_dir/$surface-force-stop-$phase.txt"; then
         echo "Force-stop $phase failed" >&2; exit 1
     fi
     if [ "$phase" = Prepare ]; then adb shell am force-stop "$target"; fi

@@ -120,6 +120,10 @@ public final class AtlasDiscriminantActivity extends Activity {
         root.addView(top,new LinearLayout.LayoutParams(-1,Ui.dp(this,48)));
         workspace=lateralTafsir?Ui.row(this):Ui.column(this);
         root.addView(workspace,new LinearLayout.LayoutParams(-1,0,1f));
+        // Re-fit QCF after the Tafsir pane changes the real viewport, not before it.
+        workspace.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{
+            if(comparisonScroll!=null)comparisonScroll.post(this::fitVisiblePages);
+        });
         ScrollView contentScroll=new ScrollView(this);
         comparisonScroll=contentScroll;
         contentScroll.setFillViewport(false);
@@ -216,6 +220,8 @@ public final class AtlasDiscriminantActivity extends Activity {
             Ui.dp(this,Math.max(180,dpHeight*2/5))));
         // No empty commentary region until a Mushaf is selected.
         tafsirPanel.setVisibility(selectedTafsir<0?View.GONE:View.VISIBLE);
+        tafsirPanel.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->
+            comparisonScroll.post(this::fitVisiblePages));
 
         LinearLayout bottom=Ui.row(this);bottom.setGravity(Gravity.CENTER_VERTICAL);
         returnToSource=text("",compact?13:14,false);
@@ -287,7 +293,12 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     private void fitVisiblePages(){
-        if(pagePair==null||comparisonScroll==null||comparisonScroll.getHeight()<=pageHeaderHeight)return;
+        if(pagePair==null||comparisonScroll==null)return;
+        android.graphics.Rect visible=new android.graphics.Rect();
+        int viewportHeight=comparisonScroll.getHeight();
+        if(comparisonScroll.getGlobalVisibleRect(visible))
+            viewportHeight=Math.min(viewportHeight,visible.height());
+        if(viewportHeight<=pageHeaderHeight)return;
         if(selectedTafsir>=0&&!lateralTafsir&&workspace.getHeight()>0){
             int available=workspace.getHeight();
             int panelHeight=Math.min(Math.max(Ui.dp(this,180),Math.round(available*0.40f)),
@@ -298,7 +309,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         // The entire physical 345:550 page always fits in its own viewport;
         // links and the optional detail strips remain reachable below it.
         int natural=Math.round(Math.max(1,(comparisonScroll.getWidth()-Ui.dp(this,18))/2f)*550f/345f);
-        int available=Math.max(Ui.dp(this,32),comparisonScroll.getHeight()-pageHeaderHeight-Ui.dp(this,4)
+        int available=Math.max(Ui.dp(this,32),viewportHeight-pageHeaderHeight-Ui.dp(this,8)
             -(selectedTafsir<0?comparisonDetailHeight:0));
         int height=Math.min(natural,available);
         LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)pagePair.getLayoutParams();

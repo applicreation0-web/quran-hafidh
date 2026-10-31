@@ -109,6 +109,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                         +" leftLayoutRequested="+a.qcfViewsForTest()[0].isLayoutRequested()
                         +" rightLayoutRequested="+a.qcfViewsForTest()[1].isLayoutRequested()
                         +" bothVisible="+a.bothQcfPagesFullyVisibleForTest()
+                        +" firstSize="+a.qcfViewsForTest()[0].getWidth()+"x"+a.qcfViewsForTest()[0].getHeight()
+                        +" secondSize="+a.qcfViewsForTest()[1].getWidth()+"x"+a.qcfViewsForTest()[1].getHeight()
                         +" headingVisible="+a.tafsirHeadingVisibleForTest()
                         +" orientation="+orientation
                         +" root="+root.getWidth()+"x"+root.getHeight()
