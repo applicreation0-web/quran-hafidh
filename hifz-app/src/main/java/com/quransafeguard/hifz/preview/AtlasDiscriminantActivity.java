@@ -229,7 +229,9 @@ public final class AtlasDiscriminantActivity extends Activity {
             new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         tafsirPanel.addView(tabs);
         tafsirHeading=text("",14,true);
-        tafsirHeading.setPadding(0,Ui.dp(this,6),0,Ui.dp(this,8));
+        tafsirHeading.setSingleLine(true);
+        tafsirHeading.setEllipsize(TextUtils.TruncateAt.END);
+        tafsirHeading.setPadding(0,Ui.dp(this,4),0,Ui.dp(this,4));
         tafsirPanel.addView(tafsirHeading);
         leftTafsir=tafsirText();rightTafsir=tafsirText();
         LinearLayout tafsirBodies=Ui.column(this);
@@ -238,7 +240,10 @@ public final class AtlasDiscriminantActivity extends Activity {
         // The original al-Jalalayn commentary remains completely unaltered.
         tafsirSnippetHost=Ui.column(this);
         tafsirPivotCaption=text("",12,true);
-        tafsirPivotCaption.setPadding(Ui.dp(this,4),Ui.dp(this,5),0,0);
+        tafsirPivotCaption.setPadding(Ui.dp(this,4),0,0,0);
+        // This verbal caption is accessibility metadata, not another screen row:
+        // the exact original-QCF pivot underlines already carry the visual cue.
+        tafsirPivotCaption.setVisibility(View.GONE);
         tafsirSnippetHost.addView(tafsirPivotCaption);
         tafsirBodies.addView(tafsirSnippetHost);
         tafsirBodies.addView(leftTafsir);tafsirBodies.addView(rightTafsir);
@@ -309,7 +314,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         secondTafsirTab.setBackgroundColor(side==1?Ui.LINE:Ui.PAPER);
         VerseRef verse=side==0?selectedLeftVerse:selectedRightVerse;
         if(verse==null)verse=side==0?current().first:current().second;
-        tafsirHeading.setText("Tafsīr al-Jalālayn · "+verse+" · anglais · correspondance uniquement");
+        tafsirHeading.setText("Tafsīr al-Jalālayn · "+verse+" · anglais");
         tafsirScroll.scrollTo(0,0);
         if(!lateralTafsir){
             // Keep commentary in a separate pane: opening it never scrolls the
@@ -340,10 +345,9 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(strips==null||stripHome==null||tafsirSnippetHost==null)return;
         boolean readingTafsir=side>=0;
         LinearLayout destination=readingTafsir?tafsirSnippetHost:stripHome;
-        int height=readingTafsir
-            ?(getResources().getConfiguration().orientation==
-                android.content.res.Configuration.ORIENTATION_LANDSCAPE?116:110)
-            :defaultStripHeightDp;
+        // Keep two complete original-QCF pivot lines within the shorter mobile
+        // Tafsir viewport; BOOX keeps its larger 110dp strip.
+        int height=readingTafsir?(lateralTafsir?110:72):defaultStripHeightDp;
         if(strips.getParent()!=destination){
             if(strips.getParent() instanceof ViewGroup)
                 ((ViewGroup)strips.getParent()).removeView(strips);
@@ -368,7 +372,8 @@ public final class AtlasDiscriminantActivity extends Activity {
             tafsirPivotCaption.setText(AtlasDiscriminantOmissions.explicitlyAbsent(pair,side==0)
                 ?"Absence en "+active+" · repère QCF contextuel, non souligné"
                 :"Mot(s) de bifurcation souligné(s) · QCF "+active);
-            tafsirPivotCaption.setVisibility(View.VISIBLE);
+            tafsirPivotCaption.setVisibility(View.GONE);
+            strips.setContentDescription(tafsirPivotCaption.getText());
         }else{
             tafsirPivotCaption.setVisibility(View.GONE);
         }
@@ -690,8 +695,21 @@ public final class AtlasDiscriminantActivity extends Activity {
     boolean tafsirPivotEmbeddedForTest(){
         return selectedTafsir>=0 && strips!=null && strips.getParent()==tafsirSnippetHost
             && strips.tafsirFocusSideForTest()==selectedTafsir
-            && tafsirPivotCaption.getVisibility()==View.VISIBLE;
+            && !TextUtils.isEmpty(strips.getContentDescription());
     }
+    /** The actual Jalalayn text, not just its tabs and QCF pivot, must appear
+     * in the initial viewport on phone and BOOX. */
+    boolean tafsirTextVisibleForTest(){
+        if(selectedTafsir<0||tafsirScroll==null)return false;
+        TextView text=selectedTafsir==0?leftTafsir:rightTafsir;
+        if(text==null||text.getVisibility()!=View.VISIBLE||text.getText().length()<100)return false;
+        android.graphics.Rect viewport=new android.graphics.Rect(),visible=new android.graphics.Rect();
+        tafsirScroll.getGlobalVisibleRect(viewport);
+        text.getGlobalVisibleRect(visible);
+        return !viewport.isEmpty()&&!visible.isEmpty()&&viewport.intersect(visible)
+            &&viewport.height()>=Ui.dp(this,16);
+    }
+
     boolean tafsirPairLockedForTest(){
         AtlasDiscriminantCases.Entry pair=current();
         return pair.first.equals(selectedLeftVerse) && pair.second.equals(selectedRightVerse)
