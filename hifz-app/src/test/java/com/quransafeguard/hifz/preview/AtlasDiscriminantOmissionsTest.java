@@ -38,10 +38,35 @@ public final class AtlasDiscriminantOmissionsTest {
         assertTrue("Exactly one side absent: "+id,(left.length==0)!=(right.length==0));
     }
 
+    @Test public void completeQcfWordGroupsAreReviewedDisplayOnly() {
+        assertGroup(124,new int[]{6,7},new int[]{3});
+        assertGroup(147,new int[]{20,21},new int[]{13});
+    }
+
+    private void assertGroup(int id,int[] left,int[] right) {
+        AtlasDiscriminantCases.Entry entry=byId(id);
+        assertEquals("Bifurcation : groupe de mots",AtlasDiscriminantOmissions.relation(entry));
+        assertArrayEquals(left,AtlasDiscriminantOmissions.actualDifference(entry,true));
+        assertArrayEquals(right,AtlasDiscriminantOmissions.actualDifference(entry,false));
+        assertArrayEquals(left,AtlasDiscriminantOmissions.cropAnchor(entry,true));
+        assertArrayEquals(right,AtlasDiscriminantOmissions.cropAnchor(entry,false));
+        assertFalse(AtlasDiscriminantOmissions.explicitlyAbsent(entry,true));
+        assertFalse(AtlasDiscriminantOmissions.explicitlyAbsent(entry,false));
+        // This presentation adapter cannot mutate the approved 279-case catalogue.
+        if(id==124){
+            assertArrayEquals(new int[]{6},entry.firstWordIndices);
+            assertArrayEquals(new int[]{3},entry.secondWordIndices);
+        }else{
+            assertArrayEquals(new int[]{21},entry.firstWordIndices);
+            assertArrayEquals(new int[]{13},entry.secondWordIndices);
+        }
+    }
+
     @Test public void otherApprovedPairsAndBaqaraPriorityStayByteForByteStable() {
         assertEquals(279,AtlasDiscriminantCases.CATALOGUE.size());
         for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.CATALOGUE) {
-            if(entry.auditId==142||entry.auditId==145||entry.auditId==149
+            if(entry.auditId==124||entry.auditId==147
+                    ||entry.auditId==142||entry.auditId==145||entry.auditId==149
                     ||entry.auditId==161||entry.auditId==185)continue;
             assertEquals(entry.kind,AtlasDiscriminantOmissions.relation(entry));
             assertArrayEquals(entry.firstWordIndices,AtlasDiscriminantOmissions.actualDifference(entry,true));
