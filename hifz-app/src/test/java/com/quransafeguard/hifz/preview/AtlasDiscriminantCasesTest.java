@@ -46,7 +46,7 @@ public final class AtlasDiscriminantCasesTest {
         assertEquals(10,e.firstPage);assertEquals(14,e.secondPage);
     }
     @Test public void approvedCase62HasAudibleContextAndAuthenticWordIndices(){
-        assertEquals("Only the explicitly admitted 279 comparisons may be published",279,
+        assertEquals("279 prior approvals plus separately admitted case 295, no other promotion",280,
             AtlasDiscriminantCases.CATALOGUE.size());
         AtlasDiscriminantCases.Entry found=null;
         for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.CATALOGUE)
