@@ -422,16 +422,25 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
-    /** Verifies real QCF polygon hit-testing selects a verse other than the pair anchor,
-     *  retains the independent original Jalalayn body and survives recreation. */
-    @Test public void exactVerseInEitherAuthenticQcfPageOpensItsOwnTafsir() throws Exception {
+    /**
+     * The two ORIGINAL QCF pages can contain many neighbouring ayat.
+     * A tap on any other polygon must not silently replace the two fixed
+     * al-Jalalayn references inside a memorisation correspondence.
+     */
+    @Test public void onlyTwoComparedAyatMayOpenPairLockedTafsir() throws Exception {
         Context context=ApplicationProvider.getApplicationContext();
+        AtlasDiscriminantCases.Entry pair=samplePair();
         try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(
                 pairIntent(context,exactPairIndex(2,63,2,93)))){
             waitForQcf(scenario);
-            String last="";
             for(int side=0;side<2;side++){
                 final int position=side,anchorAyah=side==0?63:93;
+                AtomicReference<Integer> wasSelected=new AtomicReference<>();
+                scenario.onActivity(a->{
+                    wasSelected.set(a.selectedTafsirForTest());
+                    assertTrue("Only the canonical two verses may be referenced",
+                        a.tafsirPairLockedForTest());
+                });
                 String js="(function(){var svg=document.querySelector('.paper svg');if(!svg)return '';"
                     +"var paths=svg.querySelectorAll('path.ayahPolygon');for(var i=0;i<paths.length;i++){"
                     +"var p=paths[i],surah=Number(p.getAttribute('surah')),ayah=Number(p.getAttribute('ayah'));"
@@ -446,36 +455,38 @@ public final class AtlasDiscriminantInstrumentedTest {
                 AtomicReference<String> result=new AtomicReference<>("");
                 scenario.onActivity(a->a.qcfViewsForTest()[position].evaluateJavascript(js,
                     value->{result.set(value);latch.countDown();}));
-                assertTrue("Original SVG polygon tap must respond",latch.await(8,java.util.concurrent.TimeUnit.SECONDS));
-                String chosen=new org.json.JSONArray("["+result.get()+"]").getString(0);
-                assertFalse("A different ayah polygon must be available",chosen.isEmpty());
-                assertNotEquals("Must select a different ayah, not the fixed comparison anchor",
-                    "2:"+anchorAyah,chosen);
-                AtomicBoolean loaded=new AtomicBoolean();
-                for(int poll=0;poll<70;poll++){
-                    scenario.onActivity(a->{
-                        com.quransafeguard.hifz.core.VerseRef verse=a.selectedTafsirVerseForTest();
-                        loaded.set(a.selectedTafsirForTest()==position&&verse!=null
-                            &&chosen.equals(verse.toString())
-                            &&a.tafsirTextsForTest()[position].length()>100);
-                    });
-                    if(loaded.get())break;
-                    Thread.sleep(100L);
-                }
-                assertTrue("The actual selected QCF verse must load its own original Jalalayn",loaded.get());
-                scenario.onActivity(a->assertEquals("Visible Tafsir tab must identify the touched verse",
-                    chosen,a.tafsirTabLabelForTest(position)));
-                last=chosen;
+                assertTrue("Original QCF polygon callback must respond",
+                    latch.await(8,java.util.concurrent.TimeUnit.SECONDS));
+                String neighbor=new org.json.JSONArray("["+result.get()+"]").getString(0);
+                assertFalse("A different ayah must share this physical Quran page",neighbor.isEmpty());
+                assertNotEquals("Nonpaired ayah was not actually selected",
+                    "2:"+anchorAyah,neighbor);
+                Thread.sleep(250L);
+                scenario.onActivity(a->{
+                    assertEquals("A neighbouring ayah may not open/replace the Tafsir",
+                        (int)wasSelected.get(),a.selectedTafsirForTest());
+                    assertTrue("Both locked references must remain unchanged",a.tafsirPairLockedForTest());
+                });
+                com.quransafeguard.hifz.core.VerseRef canonical=
+                    position==0?pair.first:pair.second;
+                tapQcfPage(scenario,position,wasSelected.get()>=0,canonical);
+                waitForSelectedTafsir(scenario,position);
+                scenario.onActivity(a->{
+                    assertEquals("The Tafsir must display the exact corresponding ayah",
+                        canonical,a.selectedTafsirVerseForTest());
+                    assertTrue("Actual underlined QCF pivot must move inside Tafsir",
+                        a.tafsirPivotEmbeddedForTest());
+                    assertTrue(a.tafsirPairLockedForTest());
+                });
             }
-            final String preserved=last;
             scenario.recreate();waitForQcf(scenario);
             scenario.onActivity(a->{
-                assertEquals("Second QCF side remains selected",1,a.selectedTafsirForTest());
-                assertEquals("Exact selected verse survives recreation",
-                    preserved,a.selectedTafsirVerseForTest().toString());
-                assertEquals("Visible Tafsir tab remains synced after recreation",
-                    preserved,a.tafsirTabLabelForTest(1));
-                assertTrue(a.tafsirPanelVisibleForTest());
+                assertEquals("The same canonical right Tafsir survives recreation",
+                    pair.second,a.selectedTafsirVerseForTest());
+                assertEquals(pair.first.toString(),a.tafsirTabLabelForTest(0));
+                assertEquals(pair.second.toString(),a.tafsirTabLabelForTest(1));
+                assertTrue(a.tafsirPivotEmbeddedForTest());
+                assertTrue(a.tafsirPairLockedForTest());
             });
         }
     }
