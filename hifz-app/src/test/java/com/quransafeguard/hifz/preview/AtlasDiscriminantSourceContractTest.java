@@ -81,7 +81,9 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse(thumbnails.contains("paths<20"));
         assertFalse(excerpts.contains("length<20"));
         assertTrue(excerpts.contains("MapQcfThumbnails.readSvg(getContext(),page)"));
-        assertTrue(excerpts.contains("WordGeometryRepository.shared(getContext()).wordsForPage(page)"));
+        assertTrue("Exact Quran word boxes must be read from the original geometry repository",
+            excerpts.contains("WordGeometryRepository.shared(getContext())")
+                && excerpts.contains("words.wordsForPage(page)"));
         assertTrue(excerpts.contains("lastPageForVerse(verse,geometry)==page"));
         assertTrue("Broken QCF annotations must never be guessed",
             excerpts.contains("return \"\"; // no guess for invalid source annotations")
