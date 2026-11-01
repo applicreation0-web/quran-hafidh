@@ -14,6 +14,10 @@ final class AtlasDiscriminantOmissions {
 
     static int[] actualDifference(AtlasDiscriminantCases.Entry entry, boolean first) {
         switch (entry.auditId) {
+            case 124: // 6:5: فسوف يأتيهم, 26:6: فسيأتيهم (one complete phrase each).
+                return first ? new int[]{6,7} : new int[]{3};
+            case 147: // 22:5: من مضغة, 40:67: يخرجكم.
+                return first ? new int[]{20,21} : new int[]{13};
             case 142: // 11:60 has الدنيا; 11:99 does not (لعنة is shared).
             case 145: // 39:72 has قيل; 40:76 does not (ادخلوا is shared).
             case 149: // 22:62 has هو; 31:30 does not (الباطل is shared).
@@ -36,6 +40,8 @@ final class AtlasDiscriminantOmissions {
         // On the side with a real inserted phrase, include all of its words in
         // the local QCF crop; on the absent side only, use the original common
         // word as a location anchor without highlighting it.
+        if(entry.auditId==124 || entry.auditId==147)
+            return actualDifference(entry,first);
         if(!first && (entry.auditId==161 || entry.auditId==185))
             return actualDifference(entry,false);
         return (first ? entry.firstWordIndices : entry.secondWordIndices).clone();
@@ -46,6 +52,8 @@ final class AtlasDiscriminantOmissions {
     }
 
     static String relation(AtlasDiscriminantCases.Entry entry) {
+        if(entry.auditId==124 || entry.auditId==147)
+            return "Bifurcation : groupe de mots";
         return explicitlyAbsent(entry, true) || explicitlyAbsent(entry, false)
             ? "Ajout / omission" : entry.kind;
     }
