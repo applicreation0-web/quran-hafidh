@@ -133,7 +133,10 @@ final class QcfAtlasVerseStrips extends WebView {
             +"qcfNodes[i]=original;"
             +"requestAnimationFrame(function(){requestAnimationFrame(function(){"
             +"if(qcfNodes[0]&&qcfNodes[1]&&!fitPairedQcf()){requestAnimationFrame(fitPairedQcf);}"
-            +"var box=original.getBoundingClientRect();QcfStrip.stripStatus(i,g,box.width>20&&box.height>10);});});"
+            +"var box=original.getBoundingClientRect(),vb=original.viewBox.baseVal;"
+            +"var sourceReady=vb&&vb.width>0&&vb.height>0&&original.querySelector('path.ayahPolygon');"
+            +"var visualReady=focusedSide>=0&&focusedSide!==i?sourceReady:(box.width>20&&box.height>10);"
+            +"QcfStrip.stripStatus(i,g,!!visualReady);});});"
             +"}catch(e){target.textContent='Extrait QCF indisponible — ouvrir le Muṣḥaf';QcfStrip.stripStatus(i,g,false);}}"
             +"addEventListener('load',()=>{focusQcf(focusedSide);QcfStrip.render(0,gen);});"
             +"</script></body></html>";
