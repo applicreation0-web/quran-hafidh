@@ -208,7 +208,7 @@ public final class AtlasDiscriminantSourceContractTest {
                 && activity.contains("BaqaraPilotScreen.renderExistingJalalayn(entry)"));
         assertTrue("Display source-QCF words inside the Tafsir without generating Arabic",
             activity.contains("movePivotIntoTafsir(side);")
-                && activity.contains("tafsirSnippetHost.addView(strips")
+                && activity.contains("destination.addView(strips,readingTafsir?1:0,")
                 && strips.contains("setTafsirFocusSide(int side)")
                 && strips.contains("data-qcf-tafsir-focus"));
         assertTrue("The same source QCF WebView must be reused, never duplicated",
