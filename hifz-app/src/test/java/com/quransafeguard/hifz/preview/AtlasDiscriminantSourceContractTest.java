@@ -134,6 +134,15 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse(activity.contains("new HifzPrefs("));
     }
 
+    @Test public void atlasRelationIsVisibleOnTheScreenWithoutInventedArabicOrCommentary() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        assertTrue("Relation must remain visible without opening a dialog",
+            activity.contains("relationLine.setText(\"Relation · \"+AtlasDiscriminantOmissions.relation(c))"));
+        assertTrue("Relation is accessible on BOOX without another button",
+            activity.contains("relationLine.setContentDescription(\"Type de relation entre les versets\")"));
+        assertFalse("Relation must not affect Hifz stores",
+            activity.contains("new HifzPrefs("));
+    }
     @Test public void relationDialogNeverShowsAnEmptyDescriptionOrInventedGloss() throws Exception {
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
         assertTrue("Use the existing individually reviewed relation kind",
