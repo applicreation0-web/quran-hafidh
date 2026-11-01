@@ -363,13 +363,13 @@ public final class AtlasDiscriminantInstrumentedTest {
             pageBounds.set(waitForStablePageBounds(scenario,false));
             Rect target=pageBounds.get()[0];
             assertFalse("First Mushaf must be directly visible",target.isEmpty());
-            tapQcfPage(scenario,0,false);
+            tapQcfPage(scenario,0,false,samplePair().first);
             waitForSelectedTafsir(scenario,0);
             assertContextPanesVisible(scenario);
             switchTafsirAndAssertPagesRetained(scenario,1,originalPages.get());
             switchTafsirAndAssertPagesRetained(scenario,0,originalPages.get());
             // The second actual source page also switches the contextual panel.
-            tapQcfPage(scenario,1,true);
+            tapQcfPage(scenario,1,true,samplePair().second);
             waitForSelectedTafsir(scenario,1);
             assertContextPanesVisible(scenario);
             scenario.onActivity(a->assertEquals(1,a.selectedTafsirForTest()));
@@ -402,7 +402,7 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertOriginalPageShapeAndWordMarks(scenario,samplePair());
             assertContextPanesVisible(scenario);
             scenario.onActivity(a->originalPages.set(a.qcfViewsForTest()));
-            tapQcfPage(scenario,0,true);
+            tapQcfPage(scenario,0,true,samplePair().first);
             waitForSelectedTafsir(scenario,0);
             switchTafsirAndAssertPagesRetained(scenario,1,originalPages.get());
             switchTafsirAndAssertPagesRetained(scenario,0,originalPages.get());
