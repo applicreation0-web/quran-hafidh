@@ -218,8 +218,9 @@ public final class AtlasDiscriminantInstrumentedTest {
             String[] box=parts[0].trim().split("\\s+");
             assertEquals("Original QCF page width must remain 345",345,Double.parseDouble(box[2]),0.001);
             assertEquals("Original QCF page height must remain 550",550,Double.parseDouble(box[3]),0.001);
-            assertEquals("Full page highlights must match the audited side",side==0?
-                expected.firstWordIndices.length:expected.secondWordIndices.length,Integer.parseInt(parts[1]));
+            assertEquals("QCF underlines reflect real present words, never a common-word anchor",
+                AtlasDiscriminantOmissions.actualDifference(expected,side==0).length,
+                Integer.parseInt(parts[1]));
             side++;
         }
     }
