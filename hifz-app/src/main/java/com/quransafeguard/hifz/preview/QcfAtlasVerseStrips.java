@@ -133,6 +133,12 @@ final class QcfAtlasVerseStrips extends WebView {
         double[] rows=QcfAtlasLineWindow.bounds(pageWords,physicalLines,target,windowAnchors,originY,safeCuts);
         if(rows==null)return "";
         double y0=rows[0],y1=rows[1];
+        // Reframe only this *source SVG crop* around exact audited QCF word boxes.
+        // Full 345:550 page views elsewhere are never changed, and no glyph is rebuilt.
+        // Fail open to the entire 345-unit line when geometry/line safety is uncertain.
+        double[] xWindow=horizontalWordWindow(pageWords,physicalLines,target,
+            windowAnchors,originY,y0,y1);
+        x0=xWindow[0];x1=xWindow[1];
         // The first actual KFQC page has a shifted SVG viewBox. The audited word
         // boxes are page-relative 0..345/550; translate them to the original SVG
         // coordinate origin before cropping or adding a difference underline.
@@ -141,8 +147,8 @@ final class QcfAtlasVerseStrips extends WebView {
         String cropped=source.substring(0,m.start())+vb+source.substring(m.end());
         // Clip at the page edge and outside the complete selected source lines.
         clips.append(String.format(Locale.ROOT,
-            "<rect x='%.2f' y='%.2f' width='345' height='%.2f'/>",
-            originX,originY+y0,y1-y0));
+            "<rect x='%.2f' y='%.2f' width='%.2f' height='%.2f'/>",
+            originX+x0,originY+y0,x1-x0,y1-y0));
         int rootStart=cropped.indexOf("<svg");
         int rootEnd=rootStart<0?-1:cropped.indexOf('>',rootStart);
         if(rootEnd<0||!cropped.contains("</svg>"))return "";
@@ -169,6 +175,79 @@ final class QcfAtlasVerseStrips extends WebView {
         strokes.append("</g>");
         if(!cropped.contains("</svg>"))return "";
         return cropped.replace("</svg>",strokes+"</svg>");
+    }
+
+    /**
+     * Optional horizontal focus on the original page's QCF word rectangles.
+     * We do not transliterate, reflow or paint a single Arabic character.
+     * Always keep a source-context word on each side, and fall back to the
+     * complete 345-unit physical row on ambiguous/trans-line geometries.
+     */
+    static double[] horizontalWordWindow(List<WordGeometryRepository.WordBox> words,
+            List<GeometryRepository.LineMeta> lines, VerseRef verse,int[] anchors,
+            double originY,double y0,double y1) {
+        final double[] full={0,345};
+        if(words==null||lines==null||verse==null||anchors==null||anchors.length==0)
+            return full;
+        int row=-1,min=Integer.MAX_VALUE,max=0;
+        for(int index:anchors){
+            WordGeometryRepository.WordBox matched=null;
+            for(WordGeometryRepository.WordBox w:words)
+                if(w.surah==verse.getSurah()&&w.ayah==verse.getAyah()&&w.word==index){
+                    matched=w;break;
+                }
+            if(matched==null)return full;
+            int found=-1;
+            double cy=(matched.y0+matched.y1)/2+originY;
+            for(int i=0;i<lines.size();i++)
+                if(cy>=lines.get(i).top&&cy<lines.get(i).bottom){
+                    if(found>=0)return full;found=i;
+                }
+            if(found<0||(row>=0&&found!=row))return full;
+            row=found;min=Math.min(min,index);max=Math.max(max,index);
+        }
+        // A line-window forced to retain neighbouring rows must stay complete
+        // horizontally; otherwise an unrelated Quran word could be clipped.
+        int physicalRows=0;
+        for(GeometryRepository.LineMeta line:lines){
+            double cy=(line.top+line.bottom)/2-originY;
+            if(cy>=y0&&cy<=y1)physicalRows++;
+        }
+        if(physicalRows!=1)return full;
+        double left=345,right=0;
+        for(WordGeometryRepository.WordBox w:words){
+            if(w.surah!=verse.getSurah()||w.ayah!=verse.getAyah()
+                    ||w.word<min-1||w.word>max+1)continue;
+            double cy=(w.y0+w.y1)/2+originY;
+            if(cy<lines.get(row).top||cy>=lines.get(row).bottom)continue;
+            left=Math.min(left,w.x0);right=Math.max(right,w.x1);
+        }
+        if(!Double.isFinite(left)||!Double.isFinite(right)||right<=left)return full;
+        left=Math.max(0,left-8);right=Math.min(345,right+8);
+        // Never bisect any other source word box touched by the crop edge.
+        for(int iter=0;iter<words.size();iter++){
+            boolean extended=false;
+            for(WordGeometryRepository.WordBox w:words){
+                double cy=(w.y0+w.y1)/2+originY;
+                if(cy<lines.get(row).top||cy>=lines.get(row).bottom)continue;
+                if(w.x0<left&&w.x1>left){
+                    left=Math.max(0,w.x0-3);extended=true;
+                }
+                if(w.x0<right&&w.x1>right){
+                    right=Math.min(345,w.x1+3);extended=true;
+                }
+            }
+            if(!extended)break;
+        }
+        if(right-left<35||right-left>255)return full;
+        for(int index:anchors){
+            boolean inside=false;
+            for(WordGeometryRepository.WordBox w:words)
+                if(w.surah==verse.getSurah()&&w.ayah==verse.getAyah()
+                        &&w.word==index&&w.x0>=left&&w.x1<=right){inside=true;break;}
+            if(!inside)return full;
+        }
+        return new double[]{left,right};
     }
 
     /** Audited raster measurement only; the displayed vectors stay byte exact. */
