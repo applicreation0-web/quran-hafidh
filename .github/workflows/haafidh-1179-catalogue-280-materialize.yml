@@ -4,7 +4,7 @@ on:
     branches: [work/haafidh-1179-mutash-280-20261101]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   generate-reviewed-catalogue:
     runs-on: ubuntu-latest
@@ -42,6 +42,16 @@ jobs:
           assert a['entries'][-1]['printedPagesFirst']==[124]
           assert a['entries'][-1]['printedPagesSecond']==[124]
           PY
+      - name: Commit generated and verified catalogue data only
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add research/alabbad_audit_294.json research/alabbad_audit_294.csv research/alabbad_catalogue_approved.json
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java
+          if git diff --cached --quiet; then echo "No generated delta: unexpected"; exit 1; fi
+          git diff --cached --stat
+          git commit -m "Materialize source-verified 280-case catalogue including only case 295"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
       - uses: actions/upload-artifact@v4
         if: success()
         with:
