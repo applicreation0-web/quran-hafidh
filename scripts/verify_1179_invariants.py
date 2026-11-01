@@ -23,6 +23,11 @@ ADAPTERS = {
         "SettingsActivity", "StudyReaderActivity", "Ui",
     )
 }
+# Only this exact reviewed visual-only blob is admitted beyond the 1.17.9
+# adapter allowlist. Never broadly allow MainActivity or Hifz state changes.
+FROZEN_VISUAL_ONLY_BLOBS = {
+    JAVA + "MainActivity.java": "8c30c355903072570af001556516d3c4b097924e",
+}
 RESOURCES = {
     "hifz-app/src/main/AndroidManifest.xml",
     "hifz-app/src/main/res/drawable/ic_ui_atlas_similar.xml",
@@ -60,6 +65,13 @@ def verify(root=ROOT):
             continue
         changed.append(path)
         if path not in ADAPTERS | RESOURCES:
+            frozen_blob = FROZEN_VISUAL_ONLY_BLOBS.get(path)
+            if frozen_blob is not None and new is not None:
+                actual_blob = hashlib.sha1(
+                    b"blob " + str(len(new)).encode() + b"\\0" + new
+                ).hexdigest()
+                if actual_blob == frozen_blob:
+                    continue
             errors.append("Protected production file differs from 1.17.8: " + path)
     # Official identity/signing/private SHA guards cannot change under a version bump.
     old_build = git("show", BASE + ":" + BUILD)
