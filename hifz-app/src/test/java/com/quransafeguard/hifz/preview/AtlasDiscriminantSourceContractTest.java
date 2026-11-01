@@ -134,6 +134,21 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse(activity.contains("new HifzPrefs("));
     }
 
+    @Test public void relationDialogNeverShowsAnEmptyDescriptionOrInventedGloss() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        assertTrue("Use the existing individually reviewed relation kind",
+            activity.contains("Type de relation : "));
+        assertTrue("Both Quran references must show canonical pivot positions",
+            activity.contains("wordPositions(c.firstWordIndices)")
+                && activity.contains("wordPositions(c.secondWordIndices)"));
+        assertTrue("Never generate religious commentary to fill missing editorial prose",
+            activity.contains("if(!TextUtils.isEmpty(c.explanation))"));
+        assertTrue("Retain the exact editorial source provenance",
+            activity.contains("description.append(\"\\nSource : \").append(c.source)"));
+        assertFalse("Do not synthesize a French Quran word gloss from unverified text",
+            activity.contains("autoTranslatePivots("));
+    }
+
     @Test public void noExternalCorpusOrGeneratedExplanations() throws Exception {
         String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
