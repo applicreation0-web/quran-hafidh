@@ -264,6 +264,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         VerseRef old=side==0?selectedLeftVerse:selectedRightVerse;
         if(side==0){selectedLeftVerse=verse;firstTafsirTab.setText(verse.toString());}
         else {selectedRightVerse=verse;secondTafsirTab.setText(verse.toString());}
+        updateReadingLinkLabels();
         if(!verse.equals(old))loadContextualTafsir(side,verse);
         selectTafsir(side);
     }
@@ -430,8 +431,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         secondTafsirTab.setText(selectedRightVerse.toString());
         loadBothTafsirs(selectedLeftVerse,selectedRightVerse);
         if(selectedTafsir>=0)selectTafsir(selectedTafsir);
-        leftRead.setText("Lire "+c.first+" en Lecture");
-        rightRead.setText("Lire "+c.second+" en Lecture");
+        updateReadingLinkLabels();
         String origin=getIntent().getStringExtra(EXTRA_ORIGIN);
         String label="Révision active".equals(origin)?"Révision active":
             "Révision passive".equals(origin)?"Révision passive":"Lecture";
@@ -530,9 +530,21 @@ public final class AtlasDiscriminantActivity extends Activity {
         return value.toString();
     }
 
+    private void updateReadingLinkLabels(){
+        AtlasDiscriminantCases.Entry c=current();
+        VerseRef first=selectedLeftVerse==null?c.first:selectedLeftVerse;
+        VerseRef second=selectedRightVerse==null?c.second:selectedRightVerse;
+        leftRead.setText("Lire "+first+" en Lecture");
+        rightRead.setText("Lire "+second+" en Lecture");
+    }
+
     private void openReader(boolean first,int page){
         AtlasDiscriminantCases.Entry c=current();
-        VerseRef target=first?c.first:c.second;
+        // The link follows the real QCF ayah chosen for contextual Jalalayn,
+        // rather than silently jumping back to the fixed pair anchor.
+        VerseRef target=first
+            ?(selectedLeftVerse==null?c.first:selectedLeftVerse)
+            :(selectedRightVerse==null?c.second:selectedRightVerse);
         int min=geometry.pageForVerse(target);
         int max=MawdudiMapModel.lastPageForVerse(target,geometry);
         int shown=Math.max(min,Math.min(max,page));
