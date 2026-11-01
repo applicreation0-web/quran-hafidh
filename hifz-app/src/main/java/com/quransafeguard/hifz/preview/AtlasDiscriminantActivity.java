@@ -456,7 +456,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private static CharSequence renderPairOnlyJalalayn(TafsirRepository.Entry entry){
         CharSequence source=BaqaraPilotScreen.renderExistingJalalayn(entry);
         String attribution=entry.metadataLine();
-        String prefix=attribution.isEmpty()?"":attribution+"\\n\\n";
+        String prefix=attribution.isEmpty()?"":attribution+"\n\n";
         if(prefix.isEmpty()||!source.toString().startsWith(prefix))return source;
         return new android.text.SpannableStringBuilder(source).delete(0,prefix.length());
     }
