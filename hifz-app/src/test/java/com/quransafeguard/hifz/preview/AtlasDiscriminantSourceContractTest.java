@@ -139,8 +139,8 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue("Use the existing individually reviewed relation kind",
             activity.contains("Type de relation : "));
         assertTrue("Both Quran references must show canonical pivot positions",
-            activity.contains("wordPositions(c.firstWordIndices)")
-                && activity.contains("wordPositions(c.secondWordIndices)"));
+            activity.contains("wordPositions(AtlasDiscriminantOmissions.actualDifference(c,true))")
+                && activity.contains("wordPositions(AtlasDiscriminantOmissions.actualDifference(c,false))"));
         assertTrue("Never generate religious commentary to fill missing editorial prose",
             activity.contains("if(!TextUtils.isEmpty(c.explanation))"));
         assertTrue("Retain the exact editorial source provenance",
