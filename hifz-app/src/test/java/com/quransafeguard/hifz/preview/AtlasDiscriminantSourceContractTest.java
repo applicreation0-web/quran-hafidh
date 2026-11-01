@@ -144,6 +144,17 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse("Relation must not affect Hifz stores",
             activity.contains("new HifzPrefs("));
     }
+    @Test public void secondPivotUsesOriginalQcfWithNoFakeSubstitutionAndIsDestroyed() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        String selectors=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantOmissions.java");
+        assertTrue(activity.contains("AtlasDiscriminantOmissions.secondaryDifference(entry,true)"));
+        assertTrue(activity.contains("AtlasDiscriminantOmissions.secondaryCropAnchor(entry,false)"));
+        assertTrue(activity.contains("detachQcf(secondaryStrips)"));
+        assertTrue(activity.contains("secondaryStrips.clearComparison()"));
+        assertTrue(selectors.contains("if(entry.auditId==199)return first?new int[0]:new int[]{7}"));
+        assertFalse(activity.contains("new HifzPrefs("));
+    }
+
     @Test public void relationDialogNeverShowsAnEmptyDescriptionOrInventedGloss() throws Exception {
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
         assertTrue("Use the existing individually reviewed relation kind",

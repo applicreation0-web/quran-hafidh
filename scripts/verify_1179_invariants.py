@@ -27,9 +27,9 @@ ADAPTERS = {
 # adapter allowlist. Never broadly allow MainActivity or Hifz state changes.
 FROZEN_VISUAL_ONLY_BLOBS = {
     JAVA + "MainActivity.java": "8c30c355903072570af001556516d3c4b097924e",
-    # Individually reviewed display-only groups 124/147 and omissions 142/145/149/161/185.
+    # Individually reviewed double pivots 120/199, groups 124/147 and omissions 142/145/149/161/185.
     # Exact blob pin remains fail-closed; no broad Atlas/main/Hifz exemption.
-    JAVA + "AtlasDiscriminantOmissions.java": "6d915dd27297dea7c6210c85c56328e0b89a5258",
+    JAVA + "AtlasDiscriminantOmissions.java": "66ab2bb776e93ae6fa5c8492912e509665047316",
 }
 RESOURCES = {
     "hifz-app/src/main/AndroidManifest.xml",

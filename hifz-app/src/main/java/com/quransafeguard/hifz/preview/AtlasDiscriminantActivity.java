@@ -36,7 +36,9 @@ public final class AtlasDiscriminantActivity extends Activity {
     private int selectedIndex;
     private GeometryRepository geometry;
     private MapQcfThumbnails left, right;
-    private QcfAtlasVerseStrips strips;
+    private QcfAtlasVerseStrips strips,secondaryStrips;
+    private LinearLayout secondaryHost;
+    private TextView secondaryCaption;
     private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
     private TafsirRepository tafsirRepository;
     private int leftTafsirRequest,rightTafsirRequest;
@@ -205,8 +207,14 @@ public final class AtlasDiscriminantActivity extends Activity {
         strips.setOnRendered(()->{
             if(!disposed&&leftPageStatus==1&&rightPageStatus==1&&strips.bothRenderedForTest())
                 strips.setAlpha(1f);
+            if(!disposed)showSecondaryStripsAfterPrimary();
         });
         body.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?90:108)));
+        // Created lazily only for the two independently reviewed double pivots.
+        // Ordinary 279-catalogue comparison retains exactly one pair of QCF strips.
+        secondaryHost=Ui.column(this);
+        secondaryHost.setVisibility(View.GONE);
+        body.addView(secondaryHost);
         tafsirPanel=Ui.column(this);
         tafsirPanel.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,4));
         LinearLayout tabs=Ui.row(this);
@@ -402,6 +410,11 @@ public final class AtlasDiscriminantActivity extends Activity {
         // frame readiness callbacks, while making every old glyph transparent.
         strips.setAlpha(0f);
         strips.clearComparison();
+        if(secondaryStrips!=null){
+            secondaryStrips.setAlpha(0f);
+            secondaryStrips.clearComparison();
+        }
+        if(secondaryHost!=null)secondaryHost.setVisibility(View.GONE);
         AtlasDiscriminantCases.Entry c=current();
         if(c.first.equals(c.second))throw new IllegalStateException("Self-comparison forbidden");
         currentLeftPage=geometry.pageForVerse(c.first);
@@ -477,6 +490,41 @@ public final class AtlasDiscriminantActivity extends Activity {
                 AtlasDiscriminantOmissions.actualDifference(entry,false),
                 AtlasDiscriminantOmissions.cropAnchor(entry,false));
         }
+    }
+    private void showSecondaryStripsAfterPrimary(){
+        AtlasDiscriminantCases.Entry entry=current();
+        if(!AtlasDiscriminantOmissions.hasSecondary(entry.auditId)
+                ||secondaryHost==null||leftPageStatus!=1||rightPageStatus!=1)return;
+        if(secondaryStrips==null){
+            secondaryCaption=text("",13,true);
+            secondaryCaption.setGravity(Gravity.CENTER);
+            secondaryHost.addView(secondaryCaption,
+                new LinearLayout.LayoutParams(-1,Ui.dp(this,29)));
+            secondaryStrips=new QcfAtlasVerseStrips(this);
+            secondaryStrips.setOnRendered(()->{
+                if(!disposed&&secondaryStrips!=null&&secondaryStrips.bothRenderedForTest())
+                    secondaryStrips.setAlpha(1f);
+            });
+            secondaryHost.addView(secondaryStrips,
+                new LinearLayout.LayoutParams(-1,Ui.dp(this,108)));
+        }
+        secondaryCaption.setText(entry.auditId==199
+            ?"Ajout en 9:105 · absent en 9:94"
+            :"Seconde bifurcation après l’amorce commune");
+        secondaryHost.setVisibility(View.VISIBLE);
+        secondaryStrips.setAlpha(0f);
+        secondaryStrips.show(entry.first,currentLeftPage,
+            AtlasDiscriminantOmissions.secondaryDifference(entry,true),
+            AtlasDiscriminantOmissions.secondaryCropAnchor(entry,true),
+            entry.second,currentRightPage,
+            AtlasDiscriminantOmissions.secondaryDifference(entry,false),
+            AtlasDiscriminantOmissions.secondaryCropAnchor(entry,false));
+    }
+
+    boolean qcfSecondaryReadyForTest(){
+        if(!AtlasDiscriminantOmissions.hasSecondary(current().auditId))return true;
+        return secondaryStrips!=null&&secondaryStrips.bothRenderedForTest()
+            &&secondaryStrips.getVisibility()==View.VISIBLE&&secondaryStrips.getAlpha()>0f;
     }
     boolean qcfStripsVisibleForTest(){return strips!=null&&strips.getVisibility()==View.VISIBLE&&strips.getAlpha()>0f;}
     int qcfStripsGenerationForTest(){return strips.generationForTest();}
@@ -640,6 +688,8 @@ public final class AtlasDiscriminantActivity extends Activity {
         detachQcf(left);
         detachQcf(right);
         detachQcf(strips);
+        detachQcf(secondaryStrips);
+        secondaryStrips=null;
         ++leftTafsirRequest;
         ++rightTafsirRequest;
         build();
@@ -668,6 +718,7 @@ public final class AtlasDiscriminantActivity extends Activity {
             detachQcf(left);
             detachQcf(right);
             detachQcf(strips);
+            detachQcf(secondaryStrips);
             leftTafsirRequest++;
             rightTafsirRequest++;
             tafsirIo.shutdownNow();

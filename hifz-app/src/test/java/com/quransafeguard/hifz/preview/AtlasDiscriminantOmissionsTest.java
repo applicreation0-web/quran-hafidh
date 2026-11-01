@@ -62,10 +62,33 @@ public final class AtlasDiscriminantOmissionsTest {
         }
     }
 
+    @Test public void twoIndependentQcfPivotsNeverFabricateAnOppositeWord(){
+        AtlasDiscriminantCases.Entry first=byId(120);
+        assertEquals("Deux bifurcations",AtlasDiscriminantOmissions.relation(first));
+        assertArrayEquals(new int[]{2},AtlasDiscriminantOmissions.actualDifference(first,true));
+        assertArrayEquals(new int[]{2},AtlasDiscriminantOmissions.actualDifference(first,false));
+        assertArrayEquals(new int[]{11},AtlasDiscriminantOmissions.secondaryDifference(first,true));
+        assertArrayEquals(new int[]{10},AtlasDiscriminantOmissions.secondaryDifference(first,false));
+        AtlasDiscriminantCases.Entry addition=byId(199);
+        assertEquals("Ajout puis bifurcation",AtlasDiscriminantOmissions.relation(addition));
+        assertArrayEquals(new int[]{21,22},AtlasDiscriminantOmissions.actualDifference(addition,true));
+        assertArrayEquals(new int[]{8},AtlasDiscriminantOmissions.actualDifference(addition,false));
+        assertArrayEquals(new int[0],AtlasDiscriminantOmissions.secondaryDifference(addition,true));
+        assertArrayEquals(new int[]{7},AtlasDiscriminantOmissions.secondaryDifference(addition,false));
+        assertArrayEquals(new int[]{20},AtlasDiscriminantOmissions.secondaryCropAnchor(addition,true));
+        assertArrayEquals(new int[]{7},AtlasDiscriminantOmissions.secondaryCropAnchor(addition,false));
+        assertTrue(AtlasDiscriminantOmissions.hasSecondary(120));
+        assertTrue(AtlasDiscriminantOmissions.hasSecondary(199));
+        assertFalse(AtlasDiscriminantOmissions.hasSecondary(124));
+        assertArrayEquals(new int[]{21},addition.firstWordIndices);
+        assertArrayEquals(new int[]{8},addition.secondWordIndices);
+    }
+
     @Test public void otherApprovedPairsAndBaqaraPriorityStayByteForByteStable() {
         assertEquals(279,AtlasDiscriminantCases.CATALOGUE.size());
         for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.CATALOGUE) {
-            if(entry.auditId==124||entry.auditId==147
+            if(entry.auditId==120||entry.auditId==199
+                    ||entry.auditId==124||entry.auditId==147
                     ||entry.auditId==142||entry.auditId==145||entry.auditId==149
                     ||entry.auditId==161||entry.auditId==185)continue;
             assertEquals(entry.kind,AtlasDiscriminantOmissions.relation(entry));

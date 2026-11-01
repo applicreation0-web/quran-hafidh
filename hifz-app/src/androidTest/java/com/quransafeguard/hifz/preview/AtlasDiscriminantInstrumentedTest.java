@@ -913,6 +913,19 @@ public final class AtlasDiscriminantInstrumentedTest {
                 assertOriginalPageShapeAndWordMarks(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);
+                if(pair.auditId==120||pair.auditId==199){
+                    AtomicBoolean readyExtra=new AtomicBoolean(false);
+                    for(int attempt=0;attempt<60;attempt++){
+                        scenario.onActivity(a->readyExtra.set(a.qcfSecondaryReadyForTest()));
+                        if(readyExtra.get())break;
+                        Thread.sleep(100L);
+                    }
+                    assertTrue("Two genuine QCF pivot strips must render for case "+pair.auditId,
+                        readyExtra.get());
+                    String device=context.getResources().getConfiguration().smallestScreenWidthDp>=600?
+                        "boox":"phone";
+                    saveComparisonScreenshot(context,"case-"+pair.auditId+"-two-pivots-"+device);
+                }
                 if(pair.auditId==49||pair.auditId==292||pair.auditId==293){
                     AtomicReference<String> surface=new AtomicReference<>();
                     scenario.onActivity(a->surface.set(a.getResources().getConfiguration().smallestScreenWidthDp>=600?"boox":"phone"));
