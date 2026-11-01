@@ -33,6 +33,11 @@ final class AtlasDiscriminantOmissions {
      * but never pass that anchor to the underline painter.
      */
     static int[] cropAnchor(AtlasDiscriminantCases.Entry entry, boolean first) {
+        // On the side with a real inserted phrase, include all of its words in
+        // the local QCF crop; on the absent side only, use the original common
+        // word as a location anchor without highlighting it.
+        if(!first && (entry.auditId==161 || entry.auditId==185))
+            return actualDifference(entry,false);
         return (first ? entry.firstWordIndices : entry.secondWordIndices).clone();
     }
 
