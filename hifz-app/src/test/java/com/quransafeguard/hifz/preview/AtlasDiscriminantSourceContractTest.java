@@ -83,7 +83,9 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(excerpts.contains("MapQcfThumbnails.readSvg(getContext(),page)"));
         assertTrue(excerpts.contains("WordGeometryRepository.shared(getContext()).wordsForPage(page)"));
         assertTrue(excerpts.contains("lastPageForVerse(verse,geometry)==page"));
-        assertTrue(excerpts.contains("return \"\"; // no guess for invalid source annotations"));
+        assertTrue("Broken QCF annotations must never be guessed",
+            excerpts.contains("return \"\"; // no guess for invalid source annotations")
+                && excerpts.contains("if(rows==null)return \"\";"));
         assertTrue(activity.contains("left.showPages("));
         assertTrue(activity.contains("right.showPages("));
         // Excerpts must load only after both full-size QCF thumbnails reported image.onload.
@@ -190,7 +192,7 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(actual.contains("case 149:"));
         assertTrue(actual.contains("case 161:"));
         assertTrue(actual.contains("case 185:"));
-        assertTrue(crops.contains("windowAnchors,originY,safeCuts"));
+        assertTrue(crops.contains("selection.wordNumbers(),originY,safeCuts"));
         assertTrue(crops.contains("for(int index:visualFocus)")
             && crops.contains("if(underlineWords.length>0)"));
         assertTrue("Omission side must keep the same QCF fade without fake words",
@@ -200,6 +202,25 @@ public final class AtlasDiscriminantSourceContractTest {
             crops.contains("if(underlineWords.length==0)return cropped.replace"));
         assertFalse("No textual fake substitution is allowed for a missing Quran word",
             actual.contains("new int[]{1} : new int[]{1}"));
+    }
+
+    @Test public void bothQcfSidesHaveAnIdenticalRealWordContextBeforeAndAfterThePivot()throws Exception{
+        String qcf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
+        String balance=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfPivotBalance.java");
+        assertTrue(qcf.contains("QcfPivotBalance.paired("));
+        assertTrue(qcf.contains("data-qcf-before-words")&&qcf.contains("data-qcf-after-words"));
+        assertTrue(qcf.contains("data-qcf-visible-words")&&qcf.contains("data-qcf-pivot-words"));
+        assertTrue("Visible Arabic words must be unmodified authentic QCF source paths",
+            qcf.contains("atlas-balanced-words-")&&qcf.contains("word.x0")&&qcf.contains("word.y1"));
+        assertTrue("Both sides reduce to the shortest physically safe context",
+            balance.contains("Math.min(a.availableBefore,a.availableAfter)")
+                && balance.contains("Math.min(b.availableBefore,b.availableAfter)")
+                && balance.contains("int shared=Math.min(MAX_CONTEXT"));
+        assertTrue("Exactly the same number of before and after words is enforced",
+            balance.contains("this.before=amount;this.after=amount")
+                && balance.contains("new Selection[]{first,second}"));
+        assertFalse("No arbitrary extra words may be reconstructed from Arabic strings",
+            qcf.contains("textContent=arabic")||qcf.contains("fillText("));
     }
 
     @Test public void fullPageTafsirAcceptsExactPageAyatWithoutUnrelatedFallback() throws Exception {
