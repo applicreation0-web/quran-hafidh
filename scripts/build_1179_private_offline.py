@@ -50,8 +50,10 @@ def digest(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def command(args: list[str], *, env: dict[str, str] | None = None) -> str:
-    result = subprocess.run(args, text=True, capture_output=True, env=env, check=False)
+def command(args: list[str], *, env: dict[str, str] | None = None,
+            cwd: Path | None = None) -> str:
+    result = subprocess.run(args, text=True, capture_output=True, env=env,
+                            cwd=cwd, check=False)
     if result.returncode != 0:
         # Never print external command output: paths, signing data or assets may
         # be embedded in Gradle/aapt stderr in the trusted private environment.
@@ -197,7 +199,7 @@ def main() -> None:
     # Gradle's verifyPrivateReleaseInputs checks the official signer and all
     # seven SHA-256s BEFORE its guarded :hifz-app:packageRelease task.
     command(["gradle", "--offline", "--no-daemon", ":hifz-app:assembleRelease"],
-            env=environment)
+            env=environment, cwd=source)
     output_folder = source / "hifz-app/build-private114/outputs/apk/release"
     built = [x for x in output_folder.glob("*-release.apk") if x.is_file()]
     if len(built) != 1:
