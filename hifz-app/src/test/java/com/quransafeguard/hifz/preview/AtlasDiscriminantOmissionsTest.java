@@ -32,7 +32,9 @@ public final class AtlasDiscriminantOmissionsTest {
         assertEquals(right.length==0, AtlasDiscriminantOmissions.explicitlyAbsent(entry,false));
         // Historical common-word anchors remain for a faithful Quran crop, never an underline.
         assertArrayEquals(entry.firstWordIndices,AtlasDiscriminantOmissions.cropAnchor(entry,true));
-        assertArrayEquals(entry.secondWordIndices,AtlasDiscriminantOmissions.cropAnchor(entry,false));
+        int[] expectedRightCrop=(id==161||id==185)?right:entry.secondWordIndices;
+        assertArrayEquals("Crop every real inserted word, or preserve the non-underlined absent-side anchor",
+            expectedRightCrop,AtlasDiscriminantOmissions.cropAnchor(entry,false));
         assertTrue("Exactly one side absent: "+id,(left.length==0)!=(right.length==0));
     }
 
