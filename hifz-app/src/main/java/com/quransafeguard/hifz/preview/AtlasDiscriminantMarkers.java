@@ -27,6 +27,8 @@ final class AtlasDiscriminantMarkers {
     /** Session callers supply only their permitted exact-page/corpus references. */
     static void show(MushafView view,JSONArray rows) {
         String js="(function(){"+
+            // Clear observers when changing page or suppressing active recall hints.
+            "if(window.__haafidhAtlasMarkerDispose){window.__haafidhAtlasMarkerDispose();window.__haafidhAtlasMarkerDispose=null;}"+
             "var old=document.getElementById('atlas-discriminant-marks');if(old)old.remove();"+
             "var host=document.getElementById('box'),m=document.getElementById('mushaf');"+
             "if(!host||!m)return;"+
@@ -66,6 +68,20 @@ final class AtlasDiscriminantMarkers {
             "btn.addEventListener('click',function(event){event.stopPropagation();"+
             "HifzNative.comparisonTap(Number(p[0]),Number(p[1]));});"+
             "root.appendChild(btn);"+
+            // The QCF page can finish native WebView fitting AFTER the first page
+            // measure. Always realign the button against the actual current page;
+            // otherwise a BOOX landscape/portrait switch can overlay Quran ink.
+            "var realign=function(){var f=host.getBoundingClientRect(),q=m.getBoundingClientRect();"+
+            "var l=q.left-f.left,r=f.right-q.right;"+
+            "var lane=l>=46?'left':r>=46?'right':null;"+
+            "if(!lane){btn.style.visibility='hidden';return;}"+
+            "btn.style.visibility='visible';"+
+            "btn.style.left=(lane==='left'?l-46:q.right-f.left+2)+'px';};"+
+            "var observer=typeof ResizeObserver==='function'?new ResizeObserver(function(){requestAnimationFrame(realign);}):null;"+
+            "if(observer){observer.observe(host);observer.observe(m);}"+
+            "window.addEventListener('resize',realign,{passive:true});"+
+            "window.__haafidhAtlasMarkerDispose=function(){if(observer)observer.disconnect();window.removeEventListener('resize',realign);};"+
+            "realign();requestAnimationFrame(function(){realign();requestAnimationFrame(realign);});"+
             "})();";
         view.evaluateJavascript(js,null);
     }
