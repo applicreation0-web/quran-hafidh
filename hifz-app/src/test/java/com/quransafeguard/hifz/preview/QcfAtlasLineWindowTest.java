@@ -37,6 +37,29 @@ public final class QcfAtlasLineWindowTest {
             lines(),new VerseRef(2,63),new int[]{9},0,
             new double[]{0,Double.NaN,77,550}),0.001);
     }
+    @Test public void sourceWordWindowMagnifiesVerifiedSingleRowWithoutClippingNeighbours(){
+        List<WordGeometryRepository.WordBox> words=Arrays.asList(
+            new WordGeometryRepository.WordBox("2:63:6",272,10,307,30),
+            new WordGeometryRepository.WordBox("2:63:7",236,10,267,30),
+            new WordGeometryRepository.WordBox("2:63:8",197,10,232,30),
+            new WordGeometryRepository.WordBox("2:63:9",148,10,192,30),
+            new WordGeometryRepository.WordBox("2:63:10",110,10,143,30),
+            new WordGeometryRepository.WordBox("2:63:11",65,10,105,30),
+            new WordGeometryRepository.WordBox("2:64:1",20,10,60,30));
+        double[] window=QcfAtlasVerseStrips.horizontalWordWindow(words,lines(),
+            new VerseRef(2,63),new int[]{8,9},0,0,39);
+        assertTrue("A verified Quran phrase should be larger than an entire page line",
+            window[1]-window[0]<255);
+        assertTrue("Never cut the neighbouring canonical source word",window[0]<110);
+        assertTrue(window[1]>267);
+        assertArrayEquals("Two physical rows must revert to unmodified full Quran width",
+            new double[]{0,345},QcfAtlasVerseStrips.horizontalWordWindow(words,lines(),
+                new VerseRef(2,63),new int[]{8,9},0,0,79),0.001);
+        assertArrayEquals("Invalid Quran word index must not make a guessed crop",
+            new double[]{0,345},QcfAtlasVerseStrips.horizontalWordWindow(words,lines(),
+                new VerseRef(2,63),new int[]{99},0,0,39),0.001);
+    }
+
     @Test public void missingPhysicalAssignmentFailsClosed(){
         assertNull(QcfAtlasLineWindow.bounds(Arrays.asList(
             word("2:63:9",150,180)),lines(),new VerseRef(2,63),new int[]{9},0,new double[]{0,35,80,550}));
