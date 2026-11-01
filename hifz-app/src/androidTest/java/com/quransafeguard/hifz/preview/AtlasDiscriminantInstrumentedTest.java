@@ -733,20 +733,24 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
-    /** Detect blank QCF panels or broken-image alt text even when WebView exists. */
-    private static void assertInkIsVisible(Bitmap shot,Rect visible,String description) {
+    /** True pixel gate: original QCF glyphs must paint, not just create SVG DOM. */
+    private static boolean inkVisible(Bitmap shot,Rect visible) {
+        if(shot==null||visible==null)return false;
         int left=Math.max(0,visible.left),top=Math.max(0,visible.top);
         int right=Math.min(shot.getWidth(),visible.right),bottom=Math.min(shot.getHeight(),visible.bottom);
-        assertTrue(description+" missing viewport",right-left>40&&bottom-top>20);
+        if(right-left<=40||bottom-top<=20)return false;
         int dark=0,samples=0;
         for(int y=top+8;y<bottom-8;y+=3)for(int x=left+8;x<right-8;x+=3) {
             int px=shot.getPixel(x,y);
             if(Color.red(px)<125&&Color.green(px)<125&&Color.blue(px)<125)dark++;
             samples++;
         }
-        assertTrue(description+" rendered blank / a broken-image placeholder: only "
-            +dark+" ink pixels across "+samples+" samples",
-            dark*1000 >= samples*12); // at least 1.2% substantial QCF glyph ink
+        return samples>0&&dark*1000 >= samples*12; // preserve 1.2% real glyph-ink gate
+    }
+
+    private static void assertInkIsVisible(Bitmap shot,Rect visible,String description) {
+        assertTrue(description+" rendered blank / clipped / missing its genuine QCF glyph ink",
+            inkVisible(shot,visible));
     }
 
     @Test public void pilotOpensAuthenticPairedMushafAndKeepsProgressUntouched() throws Exception {
@@ -792,20 +796,32 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertFalse("The exact Quran crop must be available for 2:63",cropped.isEmpty());
             assertTrue("Exact original Quran paths must be preserved",cropped.contains("ayahPolygon"));
             assertTrue("The audited differing words must be underlined",cropped.contains("exact-word-differences"));
-            Bitmap shot=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
-            assertNotNull("Must capture a genuine emulator comparison frame",shot);
-            assertTrue(shot.getWidth()>100&&shot.getHeight()>100);
             Rect[] pageBounds=bounds.get();
             assertNotNull(pageBounds);
-            assertInkIsVisible(shot,pageBounds[0],"Left KFQC page");
-            assertInkIsVisible(shot,pageBounds[1],"Right KFQC page");
             AtomicReference<Rect[]> croppedBounds=new AtomicReference<>();
             scenario.onActivity(activity->croppedBounds.set(activity.qcfCropBoundsForTest()));
             Rect[] crop=croppedBounds.get();
-            if(crop!=null&&crop.length==2){
-                assertInkIsVisible(shot,crop[0],"Left exact QCF comparison strip");
-                assertInkIsVisible(shot,crop[1],"Right exact QCF comparison strip");
+            assertNotNull("Both genuine source QCF excerpts need a measured viewport",crop);
+            assertEquals(2,crop.length);
+            // Chromium may report valid SVG geometry one compositing frame
+            // before the underlying WebView's pixels appear. Sample *real*
+            // screenshots until BOTH exact Quran excerpts are visible together;
+            // do not accept a DOM callback or a white placeholder as success.
+            Bitmap shot=null;
+            for(int paintAttempt=0;paintAttempt<24;paintAttempt++){
+                Bitmap frame=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+                if(frame!=null&&inkVisible(frame,pageBounds[0])&&inkVisible(frame,pageBounds[1])
+                        &&inkVisible(frame,crop[0])&&inkVisible(frame,crop[1])){
+                    shot=frame;break;
+                }
+                if(frame!=null)frame.recycle();
+                Thread.sleep(250L);
             }
+            assertNotNull("Both authentic QCF word excerpts must be visibly painted in the SAME actual screenshot",shot);
+            assertInkIsVisible(shot,pageBounds[0],"Left KFQC page");
+            assertInkIsVisible(shot,pageBounds[1],"Right KFQC page");
+            assertInkIsVisible(shot,crop[0],"Left exact QCF comparison strip");
+            assertInkIsVisible(shot,crop[1],"Right exact QCF comparison strip");
             // MediaStore retains the audit photo if Gradle uninstalls the test APK.
             // No Android storage permission; only a new image authored by this app.
             ContentValues entry=new ContentValues();
