@@ -50,7 +50,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private int selectedTafsir=-1;
     private boolean lateralTafsir;
     private int builtOrientation=android.content.res.Configuration.ORIENTATION_UNDEFINED;
-    private TextView title, leftHeader, rightHeader;
+    private TextView title, leftHeader, rightHeader, relationLine;
     private TextView leftRead, rightRead, returnToSource;
     private boolean disposed;
     private int currentLeftPage, currentRightPage;
@@ -120,6 +120,14 @@ public final class AtlasDiscriminantActivity extends Activity {
         top.addView(previousCase,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         top.addView(nextCase,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         root.addView(top,new LinearLayout.LayoutParams(-1,Ui.dp(this,48)));
+        // Visible, read-only classification: the relation must not be buried
+        // behind the information dialog. No synthesized Quranic wording.
+        relationLine=text("",compact?13:15,true);
+        relationLine.setGravity(Gravity.CENTER);
+        relationLine.setSingleLine(true);
+        relationLine.setEllipsize(TextUtils.TruncateAt.END);
+        relationLine.setContentDescription("Type de relation entre les versets");
+        root.addView(relationLine,new LinearLayout.LayoutParams(-1,Ui.dp(this,34)));
         workspace=lateralTafsir?Ui.row(this):Ui.column(this);
         root.addView(workspace,new LinearLayout.LayoutParams(-1,0,1f));
         // Re-fit QCF after the Tafsir pane changes the real viewport, not before it.
@@ -424,6 +432,7 @@ public final class AtlasDiscriminantActivity extends Activity {
             c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
 
         int position=caseIndices.indexOf(selectedIndex);
+        relationLine.setText("Relation · "+AtlasDiscriminantOmissions.relation(c));
         title.setText(c.first+" ↔ "+c.second+(caseIndices.size()>1?
             " · "+(position+1)+"/"+caseIndices.size():""));
         previousCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
