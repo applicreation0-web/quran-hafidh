@@ -28,6 +28,7 @@ final class QcfAtlasVerseStrips extends WebView {
     private int pendingGen,pendingSide,pendingNext;
     private boolean disposed;
     private Runnable renderedListener;
+    private int tafsirFocusSide=-1; // -1: symmetric pair; 0/1: the exact QCF pivot for selected Tafsir
     private VerseRef left, right;
     private int pageLeft,pageRight;
     private int[] wordsLeft,wordsRight,cropAnchorsLeft,cropAnchorsRight;
@@ -47,6 +48,14 @@ final class QcfAtlasVerseStrips extends WebView {
     }
 
     void setOnRendered(Runnable listener){renderedListener=listener;}
+    /** Reuse the ONE authenticated QCF excerpt WebView in Tafsir: never decode
+     * another 600KB Quran SVG or generate Arabic text for a badge. */
+    void setTafsirFocusSide(int side){
+        if(side< -1||side>1)throw new IllegalArgumentException("Invalid Tafsir side");
+        tafsirFocusSide=side;
+        if(!disposed)evaluateJavascript("if(window.focusQcf)focusQcf("+side+");",null);
+    }
+    int tafsirFocusSideForTest(){return tafsirFocusSide;}
     /** Invalidate old bridge callbacks before any new comparison label is shown. */
     void clearComparison(){
         ++generation;pendingEncoded=null;renderStatus[0]=0;renderStatus[1]=0;
@@ -81,11 +90,19 @@ final class QcfAtlasVerseStrips extends WebView {
             +"span{font:12px sans-serif;color:#524f49;text-align:center}</style></head>"
             +"<body><main><section><div class='crop' id='crop0'><span>Chargement de l'extrait QCF…</span></div></section>"
             +"<section><div class='crop' id='crop1'><span>Chargement de l'extrait QCF…</span></div></section></main>"
-            +"<script>var gen="+gen+";var parts=[],expect=0,activeSide=-1,qcfNodes=[null,null];"
+            +"<script>var gen="+gen+";var parts=[],expect=0,activeSide=-1,qcfNodes=[null,null],focusedSide="+tafsirFocusSide+";"
             // Paired source SVGs use one and ONLY one physical pixel/source-unit
             // ratio. Independent 100% SVG fitting had enlarged one pivot more
             // than its counterpart, making memorisation comparisons misleading.
-            +"function fitPairedQcf(){if(!qcfNodes[0]||!qcfNodes[1])return false;"
+            +"function fitPairedQcf(){"
+            +"if(focusedSide>=0){var one=qcfNodes[focusedSide],slot=document.getElementById('crop'+focusedSide);"
+            +"if(!one||!slot)return false;var oneBox=one.viewBox.baseVal;"
+            +"if(!oneBox||oneBox.width<=0||oneBox.height<=0||slot.clientWidth<=0||slot.clientHeight<=0)return false;"
+            +"var zoom=Math.min(slot.clientWidth/oneBox.width,slot.clientHeight/oneBox.height);"
+            +"one.style.width=(oneBox.width*zoom).toFixed(3)+'px';"
+            +"one.style.height=(oneBox.height*zoom).toFixed(3)+'px';"
+            +"one.setAttribute('data-qcf-tafsir-focus',''+focusedSide);return true;}"
+            +"if(!qcfNodes[0]||!qcfNodes[1])return false;"
             +"var dims=[],scale=Infinity;for(var i=0;i<2;i++){var node=qcfNodes[i],vb=node.viewBox.baseVal;"
             +"var box=document.getElementById('crop'+i);if(!box||!vb||vb.width<=0||vb.height<=0||box.clientWidth<=0||box.clientHeight<=0)return false;"
             +"dims.push({w:vb.width,h:vb.height});scale=Math.min(scale,box.clientWidth/vb.width,box.clientHeight/vb.height);}"
@@ -93,6 +110,12 @@ final class QcfAtlasVerseStrips extends WebView {
             +"for(var j=0;j<2;j++){var el=qcfNodes[j];"
             +"el.style.width=(dims[j].w*scale).toFixed(3)+'px';el.style.height=(dims[j].h*scale).toFixed(3)+'px';"
             +"el.setAttribute('data-qcf-shared-scale',scale.toFixed(8));}return true;}"
+            +"function focusQcf(side){focusedSide=side;var main=document.querySelector('main');"
+            +"if(!main)return;main.style.gridTemplateColumns=side<0?'1fr 1fr':'1fr';"
+            +"var a=document.getElementById('crop0').parentNode,b=document.getElementById('crop1').parentNode;"
+            +"a.style.display=(side<0||side===0)?'flex':'none';"
+            +"b.style.display=(side<0||side===1)?'flex':'none';"
+            +"requestAnimationFrame(function(){requestAnimationFrame(fitPairedQcf);});}"
             +"addEventListener('resize',function(){requestAnimationFrame(fitPairedQcf);});"
             +"addEventListener('load',function(){if(window.ResizeObserver){var ro=new ResizeObserver(fitPairedQcf);"
             +"ro.observe(document.getElementById('crop0'));ro.observe(document.getElementById('crop1'));}});"
@@ -112,7 +135,7 @@ final class QcfAtlasVerseStrips extends WebView {
             +"if(qcfNodes[0]&&qcfNodes[1]&&!fitPairedQcf()){requestAnimationFrame(fitPairedQcf);}"
             +"var box=original.getBoundingClientRect();QcfStrip.stripStatus(i,g,box.width>20&&box.height>10);});});"
             +"}catch(e){target.textContent='Extrait QCF indisponible — ouvrir le Muṣḥaf';QcfStrip.stripStatus(i,g,false);}}"
-            +"addEventListener('load',()=>QcfStrip.render(0,gen));"
+            +"addEventListener('load',()=>{focusQcf(focusedSide);QcfStrip.render(0,gen);});"
             +"</script></body></html>";
         loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
     }
