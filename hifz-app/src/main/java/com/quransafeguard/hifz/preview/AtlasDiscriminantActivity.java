@@ -225,7 +225,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         firstTafsirTab=tafsirTab(0);secondTafsirTab=tafsirTab(1);
         tabs.addView(firstTafsirTab,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
         tabs.addView(secondTafsirTab,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
-        tabs.addView(Ui.iconButton(this,"","Fermer le Tafsīr",v->closeTafsir()),
+        tabs.addView(Ui.iconButton(this,"","Fermer le Tafsir",v->closeTafsir()),
             new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         tafsirPanel.addView(tabs);
         tafsirHeading=text("",14,true);
