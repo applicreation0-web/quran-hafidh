@@ -206,7 +206,7 @@ public final class AtlasDiscriminantSourceContractTest {
 
     @Test public void bothQcfSidesHaveAnIdenticalRealWordContextBeforeAndAfterThePivot()throws Exception{
         String qcf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
-        String balance=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfPivotBalance.java");
+        String balance=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
         assertTrue(qcf.contains("QcfPivotBalance.paired("));
         assertTrue(qcf.contains("data-qcf-before-words")&&qcf.contains("data-qcf-after-words"));
         assertTrue(qcf.contains("data-qcf-visible-words")&&qcf.contains("data-qcf-pivot-words"));
