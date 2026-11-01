@@ -30,7 +30,7 @@ final class QcfAtlasVerseStrips extends WebView {
     private Runnable renderedListener;
     private VerseRef left, right;
     private int pageLeft,pageRight;
-    private int[] wordsLeft,wordsRight;
+    private int[] wordsLeft,wordsRight,cropAnchorsLeft,cropAnchorsRight;
     private final int[] renderStatus=new int[2];
 
     QcfAtlasVerseStrips(Context context) {
@@ -57,10 +57,18 @@ final class QcfAtlasVerseStrips extends WebView {
     int generationForTest(){return generation;}
 
     void show(VerseRef a,int aPage,int[] aWords,VerseRef b,int bPage,int[] bWords) {
+        show(a,aPage,aWords,aWords,b,bPage,bWords,bWords);
+    }
+
+    void show(VerseRef a,int aPage,int[] aWords,int[] aCropAnchors,
+              VerseRef b,int bPage,int[] bWords,int[] bCropAnchors) {
+        if(aWords==null||bWords==null||aCropAnchors==null||bCropAnchors==null)
+            throw new IllegalArgumentException("QCF difference and location arrays are required");
         if(disposed || a==null || b==null || aPage<1 || aPage>604 || bPage<1 || bPage>604)
             throw new IllegalArgumentException("Invalid paired Quran excerpt");
         left=a;right=b;pageLeft=aPage;pageRight=bPage;
         wordsLeft=aWords.clone();wordsRight=bWords.clone();
+        cropAnchorsLeft=aCropAnchors.clone();cropAnchorsRight=bCropAnchors.clone();
         int gen=++generation;
         pendingEncoded=null;
         renderStatus[0]=0;renderStatus[1]=0;
@@ -95,7 +103,14 @@ final class QcfAtlasVerseStrips extends WebView {
     /** Immutable, 100%-QCF source. Returns empty when the geometry does not validate. */
     static String cropSvg(String source,List<WordGeometryRepository.WordBox> pageWords,
                           VerseRef target,int[] underlineWords,List<GeometryRepository.LineMeta> physicalLines,double[] safeCuts) {
-        if(source==null||pageWords==null||target==null||underlineWords==null)return "";
+        return cropSvg(source,pageWords,target,underlineWords,underlineWords,physicalLines,safeCuts);
+    }
+
+    static String cropSvg(String source,List<WordGeometryRepository.WordBox> pageWords,
+                          VerseRef target,int[] underlineWords,int[] windowAnchors,
+                          List<GeometryRepository.LineMeta> physicalLines,double[] safeCuts) {
+        if(source==null||pageWords==null||target==null||underlineWords==null||windowAnchors==null
+                ||windowAnchors.length==0)return "";
         List<WordGeometryRepository.WordBox> found=new ArrayList<>();
         for(WordGeometryRepository.WordBox word:pageWords)
             if(word.surah==target.getSurah()&&word.ayah==target.getAyah())found.add(word);
@@ -113,7 +128,9 @@ final class QcfAtlasVerseStrips extends WebView {
             if(!Double.isFinite(originX)||!Double.isFinite(originY)
                 ||Double.parseDouble(view[2])!=345||Double.parseDouble(view[3])!=550)return "";
         }catch(NumberFormatException invalid){return "";}
-        double[] rows=QcfAtlasLineWindow.bounds(pageWords,physicalLines,target,underlineWords,originY,safeCuts);
+        // An absence is not a Quran word: crop around the approved common
+        // anchor, but underline only genuinely present contrast words.
+        double[] rows=QcfAtlasLineWindow.bounds(pageWords,physicalLines,target,windowAnchors,originY,safeCuts);
         if(rows==null)return "";
         double y0=rows[0],y1=rows[1];
         // The first actual KFQC page has a shifted SVG viewBox. The audited word
@@ -234,6 +251,7 @@ final class QcfAtlasVerseStrips extends WebView {
             VerseRef verse=side==0?left:right;
             int page=side==0?pageLeft:pageRight;
             int[] difference=side==0?wordsLeft:wordsRight;
+            int[] window=side==0?cropAnchorsLeft:cropAnchorsRight;
             String encoded="";
             try{
                 GeometryRepository geometry=GeometryRepository.get(getContext());
@@ -243,7 +261,7 @@ final class QcfAtlasVerseStrips extends WebView {
                     String full=MapQcfThumbnails.readSvg(getContext(),page);
                     String excerpt=cropSvg(full,
                         WordGeometryRepository.shared(getContext()).wordsForPage(page),
-                        verse,difference,physicalLines(geometry,page),safeLineCuts(getContext(),page,full));
+                        verse,difference,window,physicalLines(geometry,page),safeLineCuts(getContext(),page,full));
                     if(!excerpt.isEmpty())encoded=android.util.Base64.encodeToString(
                         excerpt.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
                 }
