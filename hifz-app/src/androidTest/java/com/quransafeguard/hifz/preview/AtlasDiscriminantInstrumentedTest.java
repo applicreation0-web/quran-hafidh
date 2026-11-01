@@ -420,6 +420,17 @@ public final class AtlasDiscriminantInstrumentedTest {
             scenario.onActivity(a->{assertEquals(1,a.selectedTafsirForTest());assertTrue(a.tafsirPanelVisibleForTest());});
             assertOriginalPageShapeAndWordMarks(scenario,samplePair());
             assertContextPanesVisible(scenario);
+            AtomicBoolean landscapeCommentary=new AtomicBoolean();
+            for(int attempt=0;attempt<35;attempt++){
+                scenario.onActivity(a->landscapeCommentary.set(
+                    a.tafsirFirstCommentaryLineVisibleForTest()));
+                if(landscapeCommentary.get())break;
+                Thread.sleep(100L);
+            }
+            if(!landscapeCommentary.get())
+                saveComparisonScreenshot(context,profile+"-landscape-commentary-hidden");
+            assertTrue("The first actual Jalalayn commentary line must fit below the authentic QCF pivot in landscape",
+                landscapeCommentary.get());
             scenario.onActivity(a->originalPages.set(a.qcfViewsForTest()));
             tapQcfPage(scenario,0,true,samplePair().first);
             waitForSelectedTafsir(scenario,0);
