@@ -91,7 +91,7 @@ public final class MutashPageMarkersInstrumentedTest {
                 afterRefit=js(scene,"(function(){var b=document.querySelector('#atlas-discriminant-marks button');"+
                     "var m=document.getElementById('mushaf');if(!b||!m)return 'false';"+
                     "var r=b.getBoundingClientRect(),q=m.getBoundingClientRect();"+
-                    "return String(r.width>43&&r.height>43&&(r.right<=q.left+1||r.left>=q.right-1));})()");
+                    "return (r.width>43&&r.height>43&&(r.right<=q.left+1||r.left>=q.right-1));})()");
                 if("true".equals(afterRefit)){alignedAfterRefit=true;break;}
                 Thread.sleep(100L);
             }
