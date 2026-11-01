@@ -13,9 +13,9 @@ public final class QcfPivotBalanceTest {
         List<WordGeometryRepository.WordBox> boxes=new ArrayList<>();
         for(int i=1;i<=count;i++){
             // Fake geometry is a unit-test fixture, never rendered as Quran.
-            double x=10+(i-1)%7*42,y=10+(i-1)/7*35;
+            double x=10+(i-1)%7*33,y=10+(i-1)/7*35;
             boxes.add(new WordGeometryRepository.WordBox(
-                surah+":"+ayah+":"+i,x,y,x+35,y+27));
+                surah+":"+ayah+":"+i,x,y,x+27,y+27));
         }
         return boxes;
     }
