@@ -15,10 +15,11 @@ public final class BooxMenuHierarchySourceContractTest {
         return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
     }
 
-    @Test public void sixLargeHifzModesHaveReadableDistinctSecondLine() throws Exception {
+    @Test public void sixLargeHifzModesKeepAccessibleNamesWithoutCaptionsBeneathIcons() throws Exception {
         String home = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(home.contains("TextView subtitle = Ui.menuSubline(this, pathSubtitle(label))"));
-        assertTrue(home.contains("tile.addView(subtitle)"));
+        assertFalse(home.contains("TextView subtitle = Ui.menuSubline(this, pathSubtitle(label))"));
+        assertFalse(home.contains("tile.addView(subtitle)"));
+        assertTrue(home.contains("tile.setContentDescription(label+\" · \"+pathSubtitle(label)+\" · \"+state);"));
         assertTrue("The visible title must precede the large pictogram",
             home.indexOf("tile.addView(name);") < home.indexOf("tile.addView(iconView, iconLayout);"));
         assertTrue("Both historical finales require their own distinguishable icons",
