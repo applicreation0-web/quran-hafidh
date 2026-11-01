@@ -393,6 +393,15 @@ public final class AtlasDiscriminantInstrumentedTest {
                 HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("haafidh-tafsir-hidden-text.png");
             assertTrue("Actual al-Jalalayn commentary must be visible under the compact QCF pivot, without requiring initial scroll",
                 firstVisibleJalalayn.get());
+            AtomicBoolean paragraph=new AtomicBoolean();
+            for(int attempt=0;attempt<30;attempt++){
+                scenario.onActivity(a->paragraph.set(a.tafsirCommentaryVisibleForTest()));
+                if(paragraph.get())break;
+                Thread.sleep(100L);
+            }
+            if(!paragraph.get())saveComparisonScreenshot(context,"commentary-below-viewport");
+            assertTrue("The first paragraph of the actual Jalalayn commentary, not only its bibliographic heading, must be visible without scrolling",
+                paragraph.get());
             String profile=context.getResources().getConfiguration().smallestScreenWidthDp>=600?"boox":"phone";
             saveComparisonScreenshot(context,profile+"-portrait-contextual");
             scenario.recreate();waitForQcf(scenario);
@@ -831,7 +840,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 Thread.sleep(250L);
             }
             if(shot==null)
-                HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("haafidh-qcf-pixel-gate-diagnostic.png");
+                saveComparisonScreenshot(context,"qcf-pixel-gate-diagnostic");
             assertNotNull("Both authentic QCF word excerpts must be visibly painted in the SAME actual screenshot",shot);
             assertInkIsVisible(shot,pageBounds[0],"Left KFQC page");
             assertInkIsVisible(shot,pageBounds[1],"Right KFQC page");
