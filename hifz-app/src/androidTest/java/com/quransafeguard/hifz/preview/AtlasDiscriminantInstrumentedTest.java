@@ -685,6 +685,12 @@ public final class AtlasDiscriminantInstrumentedTest {
                     +"var view=s.viewBox.baseVal,rect=s.getBoundingClientRect();"
                     +"if(!s.hasAttribute('data-qcf-shared-scale')||view.width<=0||view.height<=0)return false;"
                     +"var glyphScale=rect.width/view.width;"
+                    +"if(s.getAttribute('data-qcf-focus-centered')!=='true')return false;"
+                    +"var fx=+s.getAttribute('data-qcf-focus-x'),fy=+s.getAttribute('data-qcf-focus-y');"
+                    +"var box=document.getElementById('crop'+i).getBoundingClientRect();"
+                    +"if(!isFinite(fx)||!isFinite(fy)||!box.width||!box.height)return false;"
+                    +"if(Math.abs(rect.left+fx*glyphScale-(box.left+box.width/2))>8)return false;"
+                    +"if(Math.abs(rect.top+fy*glyphScale-(box.top+box.height/2))>8)return false;"
                     +"if(i===0)window.__qcfCompareScale=glyphScale;"
                     +"else if(Math.abs(glyphScale-window.__qcfCompareScale)>0.015)return false;"
                     +"for(var j=0;j<clips.length;j++){var clip=clips[j];"
@@ -858,8 +864,13 @@ public final class AtlasDiscriminantInstrumentedTest {
                 excerpt.contains("fill-opacity='0.22'")
                     &&excerpt.contains("fill-opacity='0.36'"));
         }else{
+            assertTrue("Both sides must use the same fade; omission also has authentic QCF context",
+                excerpt.contains("id='atlas-comparison-pivot-tone'")
+                    && excerpt.contains("fill-opacity='0.36'"));
             assertFalse("Absent words must never receive a fabricated grey pivot box",
-                excerpt.contains("id='atlas-comparison-pivot-tone'"));
+                excerpt.contains("fill-opacity='0.22'"));
+            assertTrue("Absent side must be labelled only in comparison crop metadata",
+                excerpt.contains("data-qcf-omission='true'"));
         }
     }
     /** Finds the actual Atlas navigation button by its stable accessible label. */
