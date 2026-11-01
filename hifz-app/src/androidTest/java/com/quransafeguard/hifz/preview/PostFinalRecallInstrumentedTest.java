@@ -23,6 +23,9 @@ public final class PostFinalRecallInstrumentedTest {
         assertTrue(raw.edit().clear().commit());
         try {
             HifzPrefs prefs=new HifzPrefs(c);
+            // Synthetic state must contain the historical programme start date.
+            // Never modify the user bootstrap or infer a credit from this fixture.
+            assertTrue(raw.edit().putString("programStartDate","2026-09-21").commit());
             GeometryRepository geometry=GeometryRepository.get(c);
             ArrayList<String> lines=new ArrayList<>(geometry.lineIdsOnPage(16));
             lines.addAll(geometry.lineIdsOnPage(520));
