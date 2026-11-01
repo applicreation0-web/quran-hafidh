@@ -750,6 +750,23 @@ public final class AtlasDiscriminantActivity extends Activity {
             &&commentaryLineY>=viewport.top-Ui.dp(this,18);
     }
 
+    /** Landscape acceptance checks first real commentary line, never just
+     * a visible Jalalayn edition label. */
+    boolean tafsirFirstCommentaryLineVisibleForTest(){
+        if(!tafsirTextVisibleForTest())return false;
+        TextView text=selectedTafsir==0?leftTafsir:rightTafsir;
+        android.text.Layout layout=text.getLayout();
+        if(layout==null||layout.getLineCount()<1)return false;
+        android.graphics.Rect viewport=new android.graphics.Rect();
+        if(!tafsirScroll.getGlobalVisibleRect(viewport)||viewport.isEmpty())return false;
+        int[] screen=new int[2];
+        text.getLocationOnScreen(screen);
+        int center=screen[1]+text.getTotalPaddingTop()+
+            (layout.getLineTop(0)+layout.getLineBottom(0))/2;
+        return center>viewport.top+Ui.dp(this,2)
+            &&center<viewport.bottom-Ui.dp(this,10);
+    }
+
     boolean tafsirPairLockedForTest(){
         AtlasDiscriminantCases.Entry pair=current();
         return pair.first.equals(selectedLeftVerse) && pair.second.equals(selectedRightVerse)
