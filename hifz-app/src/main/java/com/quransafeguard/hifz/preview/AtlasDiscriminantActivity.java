@@ -126,7 +126,6 @@ public final class AtlasDiscriminantActivity extends Activity {
         relationLine.setGravity(Gravity.CENTER);
         relationLine.setSingleLine(true);
         relationLine.setEllipsize(TextUtils.TruncateAt.END);
-        relationLine.setContentDescription("Type de relation entre les versets");
         root.addView(relationLine,new LinearLayout.LayoutParams(-1,Ui.dp(this,34)));
         workspace=lateralTafsir?Ui.row(this):Ui.column(this);
         root.addView(workspace,new LinearLayout.LayoutParams(-1,0,1f));
@@ -432,7 +431,9 @@ public final class AtlasDiscriminantActivity extends Activity {
             c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
 
         int position=caseIndices.indexOf(selectedIndex);
-        relationLine.setText("Relation · "+AtlasDiscriminantOmissions.relation(c));
+        String relationText="Relation · "+AtlasDiscriminantOmissions.relation(c);
+        relationLine.setText(relationText);
+        relationLine.setContentDescription(relationText);
         title.setText(c.first+" ↔ "+c.second+(caseIndices.size()>1?
             " · "+(position+1)+"/"+caseIndices.size():""));
         previousCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
