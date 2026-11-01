@@ -1,12 +1,13 @@
 package com.quransafeguard.hifz.preview;
 
 /**
- * Display-only corrections of five already admitted al-Abbad comparisons.
- * Their original catalogue entries retain their provenance and old anchor
- * positions; the QCF underlines must NOT mark shared words as substitutions.
- *
- * Individually reviewed in research/mutash_pivot_review_v2_20261031.json:
- * 142, 145, 149 (word absent on right); 161, 185 (phrase absent on left).
+ * Display-only corrections of seven already admitted al-Abbad comparisons.
+ * The approved 279-case catalogue and original word anchors remain unchanged.
+ * Five additions/omissions must NOT underline common words as substitutes.
+ * Two grouped pivots must underline complete canonical source expressions.
+ * Reviewed in research/mutash_pivot_review_v2_20261031.json:
+ * 124,147 (complete word groups); 142,145,149 (word absent on right);
+ * 161,185 (phrase absent on left).
  * No generated Quran, no French gloss, no changes to Hifz engines or credits.
  */
 final class AtlasDiscriminantOmissions {
