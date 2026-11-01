@@ -408,8 +408,10 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(selectedRightVerse==null||currentRightPage<geometry.pageForVerse(selectedRightVerse)
             ||currentRightPage>MawdudiMapModel.lastPageForVerse(selectedRightVerse,geometry))
             selectedRightVerse=c.second;
-        leftHeader.setText(QuranSurahNames.name(c.first.getSurah())+" · "+c.first+" · p."+currentLeftPage);
-        rightHeader.setText(QuranSurahNames.name(c.second.getSurah())+" · "+c.second+" · p."+currentRightPage);
+        leftHeader.setText(QuranSurahNames.name(c.first.getSurah())+" · "+c.first+" · p."+currentLeftPage
+            +(AtlasDiscriminantOmissions.explicitlyAbsent(c,true)?" · absent":""));
+        rightHeader.setText(QuranSurahNames.name(c.second.getSurah())+" · "+c.second+" · p."+currentRightPage
+            +(AtlasDiscriminantOmissions.explicitlyAbsent(c,false)?" · absent":""));
         // BOOX: never decode two 600 KB original SVG pages and two crops simultaneously.
         // Load the second page only after the first confirms a real image.onload;
         // otherwise one failed image could hide a missing QCF resource indefinitely.
@@ -417,7 +419,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         right.cancelPendingAtlasRender();
         right.setVisibility(View.INVISIBLE);
         // Highlights the exact original SVG ayah polygon.
-        left.setAtlasWordDifferences(c.first,c.firstWordIndices);
+        left.setAtlasWordDifferences(c.first,AtlasDiscriminantOmissions.actualDifference(c,true));
         left.showPages(currentLeftPage,currentLeftPage,currentLeftPage,
             c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
 
@@ -450,7 +452,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(rightPageStatus!=0)return;
         AtlasDiscriminantCases.Entry c=current();
         right.setVisibility(View.VISIBLE);
-        right.setAtlasWordDifferences(c.second,c.secondWordIndices);
+        right.setAtlasWordDifferences(c.second,AtlasDiscriminantOmissions.actualDifference(c,false));
         right.showPages(currentRightPage,currentRightPage,currentRightPage,
             c.second.getSurah(),c.second.getAyah(),c.second.getAyah(),false);
     }
@@ -458,8 +460,12 @@ public final class AtlasDiscriminantActivity extends Activity {
     private void showStripsAfterPages() {
         if(leftPageStatus==1 && rightPageStatus==1 && strips!=null){
             AtlasDiscriminantCases.Entry entry=current();
-            strips.show(entry.first,currentLeftPage,entry.firstWordIndices,
-                entry.second,currentRightPage,entry.secondWordIndices);
+            strips.show(entry.first,currentLeftPage,
+                AtlasDiscriminantOmissions.actualDifference(entry,true),
+                AtlasDiscriminantOmissions.cropAnchor(entry,true),
+                entry.second,currentRightPage,
+                AtlasDiscriminantOmissions.actualDifference(entry,false),
+                AtlasDiscriminantOmissions.cropAnchor(entry,false));
         }
     }
     boolean qcfStripsVisibleForTest(){return strips!=null&&strips.getVisibility()==View.VISIBLE&&strips.getAlpha()>0f;}
@@ -503,11 +509,12 @@ public final class AtlasDiscriminantActivity extends Activity {
      */
     private void showExplanation(){
         AtlasDiscriminantCases.Entry c=current();
-        StringBuilder description=new StringBuilder("Type de relation : ").append(c.kind)
+        StringBuilder description=new StringBuilder("Type de relation : ")
+            .append(AtlasDiscriminantOmissions.relation(c))
             .append("\n\n").append(c.first).append(" · mot(s) ")
-            .append(wordPositions(c.firstWordIndices))
+            .append(wordPositions(AtlasDiscriminantOmissions.actualDifference(c,true)))
             .append("\n").append(c.second).append(" · mot(s) ")
-            .append(wordPositions(c.secondWordIndices));
+            .append(wordPositions(AtlasDiscriminantOmissions.actualDifference(c,false)));
         if(!TextUtils.isEmpty(c.explanation))
             description.append("\n\n").append(c.explanation);
         description.append("\n\nLes différences sont soulignées dans le Muṣḥaf QCF original.")
@@ -521,7 +528,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     private static String wordPositions(int[] indices){
-        if(indices==null||indices.length==0)return "non précisés";
+        if(indices==null||indices.length==0)return "absent";
         StringBuilder value=new StringBuilder();
         for(int index:indices){
             if(value.length()>0)value.append(", ");
