@@ -439,12 +439,26 @@ public final class AtlasDiscriminantActivity extends Activity {
             "Jalalayn unavailable for "+verse,unavailable);}
         final CharSequence result=entry==null
             ?"Tafsīr al-Jalālayn indisponible pour ce verset."
-            :BaqaraPilotScreen.renderExistingJalalayn(entry);
+            :renderPairOnlyJalalayn(entry);
         runOnUiThread(()->{
             if(disposed||isFinishing()
                     ||token!=(side==0?leftTafsirRequest:rightTafsirRequest))return;
             target.setText(result);
         });
+    }
+
+    /**
+     * Attribution is already pinned above the two canonical Tafsir tabs.
+     * Keep every original Jalalayn commentary run/note/style unchanged but
+     * omit the duplicate bibliography line inside this compact pair-only pane.
+     * Other Atlas/Lecture Jalalayn renderers are not affected.
+     */
+    private static CharSequence renderPairOnlyJalalayn(TafsirRepository.Entry entry){
+        CharSequence source=BaqaraPilotScreen.renderExistingJalalayn(entry);
+        String attribution=entry.metadataLine();
+        String prefix=attribution.isEmpty()?"":attribution+"\\n\\n";
+        if(prefix.isEmpty()||!source.toString().startsWith(prefix))return source;
+        return new android.text.SpannableStringBuilder(source).delete(0,prefix.length());
     }
 
     private AtlasDiscriminantCases.Entry current(){
