@@ -347,7 +347,17 @@ public final class AtlasDiscriminantActivity extends Activity {
         LinearLayout destination=readingTafsir?tafsirSnippetHost:stripHome;
         // Keep two complete original-QCF pivot lines within the shorter mobile
         // Tafsir viewport; BOOX keeps its larger 110dp strip.
-        int height=readingTafsir?(lateralTafsir?110:72):defaultStripHeightDp;
+        // Narrow phone landscape has a lateral Tafsir column but only ~400dp
+        // of physical screen height. A 110dp Quran strip hid all commentary.
+        // Keep the authentic QCF crop, with 58dp on that short landscape;
+        // BOOX landscape keeps its original 110dp.
+        int screenHeightDp=(int)(getResources().getDisplayMetrics().heightPixels
+            /getResources().getDisplayMetrics().density);
+        boolean shortLandscape=lateralTafsir
+            &&getResources().getConfiguration().orientation==
+                android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            &&screenHeightDp<600;
+        int height=readingTafsir?(shortLandscape?58:(lateralTafsir?110:72)):defaultStripHeightDp;
         if(strips.getParent()!=destination){
             if(strips.getParent() instanceof ViewGroup)
                 ((ViewGroup)strips.getParent()).removeView(strips);
