@@ -79,6 +79,24 @@ public final class MutashPageMarkersInstrumentedTest {
             assertEquals(metric.toString(),44.0,metric.getDouble("width"),0.02);
             assertEquals(metric.toString(),44.0,metric.getDouble("height"),0.02);
             assertTrue(metric.toString(),metric.getBoolean("outside"));
+            // The reader's actual QCF viewport can be refitted by delayed WebView
+            // rendering. The chain must follow the new outside gutter, not its
+            // stale pre-fit absolute coordinate; never touch Quran SVG paths.
+            assertEquals("true",js(scene,
+                "document.getElementById('mushaf').style.width="+
+                "'min(calc(100vw - 156px),calc((100vh - 4px) * 345 / 550))';true"));
+            boolean alignedAfterRefit=false;
+            String afterRefit="";
+            for(int attempt=0;attempt<30;attempt++){
+                afterRefit=js(scene,"(function(){var b=document.querySelector('#atlas-discriminant-marks button');"+
+                    "var m=document.getElementById('mushaf');if(!b||!m)return 'false';"+
+                    "var r=b.getBoundingClientRect(),q=m.getBoundingClientRect();"+
+                    "return String(r.width>43&&r.height>43&&(r.right<=q.left+1||r.left>=q.right-1));})()");
+                if("true".equals(afterRefit)){alignedAfterRefit=true;break;}
+                Thread.sleep(100L);
+            }
+            assertTrue("Two-chain icon must remain strictly outside original QCF after live page-width refit: "
+                +afterRefit,alignedAfterRefit);
             scene.onActivity(a->{
                 assertTrue(a.discriminantAvailableForTest());
                 // The removed bottom action is not replaced with a detached button for tests.
