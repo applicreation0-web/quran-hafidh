@@ -495,14 +495,39 @@ public final class AtlasDiscriminantActivity extends Activity {
             +" tafsir="+(leftTafsir!=null&&rightTafsir!=null?"paired":"unavailable");
     }
 
+    /**
+     * Short, factual explanation from individually approved editorial metadata.
+     * The 279 historical "explanation" fields are deliberately empty: never
+     * fill them with invented religious commentary or automatically translated
+     * Arabic. Show the audited relation and exact source-word positions instead.
+     */
     private void showExplanation(){
         AtlasDiscriminantCases.Entry c=current();
+        StringBuilder description=new StringBuilder("Type de relation : ").append(c.kind)
+            .append("\n\n").append(c.first).append(" · mot(s) ")
+            .append(wordPositions(c.firstWordIndices))
+            .append("\n").append(c.second).append(" · mot(s) ")
+            .append(wordPositions(c.secondWordIndices));
+        if(!TextUtils.isEmpty(c.explanation))
+            description.append("\n\n").append(c.explanation);
+        description.append("\n\nLes différences sont soulignées dans le Muṣḥaf QCF original.")
+            .append("\nSource : ").append(c.source);
+        if(!TextUtils.isEmpty(c.sourceUrl))description.append("\n").append(c.sourceUrl);
         new AlertDialog.Builder(this)
-            .setTitle("Indice de distinction · "+c.first+" / "+c.second)
-            .setMessage(c.explanation+"\n\nRéférence : "+c.source+
-                "\n"+c.sourceUrl+"\n\nLes versets sont visibles dans le Muṣḥaf QCF original.")
+            .setTitle("Versets ressemblants · "+c.first+" / "+c.second)
+            .setMessage(description.toString())
             .setPositiveButton("Fermer",null)
             .show();
+    }
+
+    private static String wordPositions(int[] indices){
+        if(indices==null||indices.length==0)return "non précisés";
+        StringBuilder value=new StringBuilder();
+        for(int index:indices){
+            if(value.length()>0)value.append(", ");
+            value.append(index);
+        }
+        return value.toString();
     }
 
     private void openReader(boolean first,int page){
