@@ -68,7 +68,7 @@ def verify(root=ROOT):
             frozen_blob = FROZEN_VISUAL_ONLY_BLOBS.get(path)
             if frozen_blob is not None and new is not None:
                 actual_blob = hashlib.sha1(
-                    b"blob " + str(len(new)).encode() + b"\\0" + new
+                    b"blob " + str(len(new)).encode() + bytes([0]) + new
                 ).hexdigest()
                 if actual_blob == frozen_blob:
                     continue
