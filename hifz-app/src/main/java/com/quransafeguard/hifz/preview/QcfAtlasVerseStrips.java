@@ -160,6 +160,18 @@ final class QcfAtlasVerseStrips extends WebView {
                           List<GeometryRepository.LineMeta> physicalLines,double[] safeCuts) {
         if(source==null||pageWords==null||target==null||underlineWords==null||windowAnchors==null
                 ||windowAnchors.length==0)return "";
+        try {
+            int[] focus=underlineWords.length==0?windowAnchors:underlineWords;
+            return cropSvg(source,pageWords,target,underlineWords,windowAnchors,
+                physicalLines,safeCuts,QcfPivotBalance.single(pageWords,target,focus));
+        }catch(IllegalArgumentException invalid){return "";} // no guess for invalid source annotations
+    }
+
+    private static String cropSvg(String source,List<WordGeometryRepository.WordBox> pageWords,
+                          VerseRef target,int[] underlineWords,int[] windowAnchors,
+                          List<GeometryRepository.LineMeta> physicalLines,double[] safeCuts,
+                          QcfPivotBalance.Selection selection) {
+        if(source==null||pageWords==null||target==null||selection==null)return "";
         List<WordGeometryRepository.WordBox> found=new ArrayList<>();
         for(WordGeometryRepository.WordBox word:pageWords)
             if(word.surah==target.getSurah()&&word.ayah==target.getAyah())found.add(word);
@@ -179,14 +191,14 @@ final class QcfAtlasVerseStrips extends WebView {
         }catch(NumberFormatException invalid){return "";}
         // An absence is not a Quran word: crop around the approved common
         // anchor, but underline only genuinely present contrast words.
-        double[] rows=QcfAtlasLineWindow.bounds(pageWords,physicalLines,target,windowAnchors,originY,safeCuts);
+        double[] rows=QcfAtlasLineWindow.bounds(pageWords,physicalLines,target,selection.wordNumbers(),originY,safeCuts);
         if(rows==null)return "";
         double y0=rows[0],y1=rows[1];
         // Reframe only this *source SVG crop* around exact audited QCF word boxes.
         // Full 345:550 page views elsewhere are never changed, and no glyph is rebuilt.
         // Fail open to the entire 345-unit line when geometry/line safety is uncertain.
         double[] xWindow=horizontalWordWindow(pageWords,physicalLines,target,
-            windowAnchors,originY,y0,y1);
+            selection.wordNumbers(),originY,y0,y1);
         x0=xWindow[0];x1=xWindow[1];
         // The first actual KFQC page has a shifted SVG viewBox. The audited word
         // boxes are page-relative 0..345/550; translate them to the original SVG
@@ -202,10 +214,24 @@ final class QcfAtlasVerseStrips extends WebView {
         int rootEnd=rootStart<0?-1:cropped.indexOf('>',rootStart);
         if(rootEnd<0||!cropped.contains("</svg>"))return "";
         String clipId="atlas-word-window-"+target.getSurah()+"-"+target.getAyah();
+        String selectedClipId="atlas-balanced-words-"+target.getSurah()+"-"+target.getAyah();
+        StringBuilder visibleBoxes=new StringBuilder();
+        for(WordGeometryRepository.WordBox word:selection.words){
+            // Original vector ink is only revealed at the verified equal-count
+            // QCF word boxes, with a 2.7-unit harakat/diacritics safety margin.
+            double xL=Math.max(x0,word.x0-2.7),xR=Math.min(x1,word.x1+2.7);
+            double yT=Math.max(y0,word.y0-2.7),yB=Math.min(y1,word.y1+2.7);
+            if(xR<=xL||yB<=yT||word.x0<x0||word.x1>x1||word.y0<y0||word.y1>y1)
+                return "";
+            visibleBoxes.append(String.format(Locale.ROOT,
+                "<rect x='%.2f' y='%.2f' width='%.2f' height='%.2f'/>",
+                originX+xL,originY+yT,xR-xL,yB-yT));
+        }
         cropped=cropped.substring(0,rootEnd+1)
-            +"<defs><clipPath id='"+clipId+"'>"+clips+"</clipPath></defs>"
-            +"<g clip-path='url(#"+clipId+")'>"+cropped.substring(rootEnd+1)
-                .replace("</svg>","</g></svg>");
+            +"<defs><clipPath id='"+clipId+"'>"+clips+"</clipPath>"
+            +"<clipPath id='"+selectedClipId+"'>"+visibleBoxes+"</clipPath></defs>"
+            +"<g clip-path='url(#"+clipId+")'><g clip-path='url(#"+selectedClipId+")'>"
+            +cropped.substring(rootEnd+1).replace("</svg>","</g></g></svg>");
         // Change the intrinsic SVG aspect ratio as well; no stretched / reflowed glyphs.
         cropped=cropped.replaceFirst("width='345' height='550'",
             String.format(Locale.ROOT,"width='%.2f' height='%.2f'",x1-x0,y1-y0));
@@ -213,27 +239,19 @@ final class QcfAtlasVerseStrips extends WebView {
         // On a true omission, the common-word anchor supplies a position only;
         // it is NEVER painted as a missing replacement or underlined.
         int[] visualFocus=underlineWords.length==0?windowAnchors:underlineWords;
-        double focusX0=Double.POSITIVE_INFINITY,focusX1=Double.NEGATIVE_INFINITY;
-        double focusY0=Double.POSITIVE_INFINITY,focusY1=Double.NEGATIVE_INFINITY;
-        StringBuilder pivotTint=new StringBuilder();
-        StringBuilder focusHoles=new StringBuilder();
+        StringBuilder pivotTint=new StringBuilder(),focusHoles=new StringBuilder();
         StringBuilder strokes=new StringBuilder("<g id='exact-word-differences' fill='none' stroke='#121211' stroke-width='0.85'>");
         for(int index:visualFocus){
-            if(index<1)return "";
             WordGeometryRepository.WordBox matching=null;
             for(WordGeometryRepository.WordBox w:found)
                 if(w.word==index){matching=w;break;}
             if(matching==null)return "";
-            focusX0=Math.min(focusX0,matching.x0);focusX1=Math.max(focusX1,matching.x1);
-            focusY0=Math.min(focusY0,matching.y0);focusY1=Math.max(focusY1,matching.y1);
-            double rectX=Math.max(x0,matching.x0-1.7);
-            double rectY=Math.max(y0,matching.y0-1.4);
-            double rectR=Math.min(x1,matching.x1+1.7);
-            double rectB=Math.min(y1,matching.y1+1.4);
-            if(rectR<=rectX||rectB<=rectY)return "";
+            double xL=Math.max(x0,matching.x0-1.7),yT=Math.max(y0,matching.y0-1.4);
+            double xR=Math.min(x1,matching.x1+1.7),yB=Math.min(y1,matching.y1+1.4);
+            if(xR<=xL||yB<=yT)return "";
             String geometry=String.format(Locale.ROOT,
                 "x='%.2f' y='%.2f' width='%.2f' height='%.2f'",
-                originX+rectX,originY+rectY,rectR-rectX,rectB-rectY);
+                originX+xL,originY+yT,xR-xL,yB-yT);
             focusHoles.append("<rect ").append(geometry).append(" fill='black'/>");
             if(underlineWords.length>0){
                 pivotTint.append("<rect ").append(geometry)
@@ -244,17 +262,15 @@ final class QcfAtlasVerseStrips extends WebView {
                     originX+matching.x0,originY+y,originX+matching.x1,originY+y));
             }
         }
-        if(!Double.isFinite(focusX0)||!Double.isFinite(focusX1)
-                ||focusX1<=focusX0||focusY1<=focusY0
-                ||focusX0<x0||focusX1>x1||focusY0<y0||focusY1>y1)return "";
-        // Inset only the selected comparison excerpt. Full 345:550 Mushaf
-        // pages, original SVG glyph paths and page highlights remain unchanged.
         String attributes=String.format(Locale.ROOT,
             " data-qcf-focus-x='%.2f' data-qcf-focus-y='%.2f'"
             +" data-qcf-focus-w='%.2f' data-qcf-focus-h='%.2f'"
+            +" data-qcf-before-words='%d' data-qcf-after-words='%d'"
+            +" data-qcf-visible-words='%d' data-qcf-pivot-words='%d'"
             +" data-qcf-omission='%s'",
-            (focusX0+focusX1)/2-x0,(focusY0+focusY1)/2-y0,
-            focusX1-focusX0,focusY1-focusY0,
+            selection.centerX-x0,selection.centerY-y0,
+            selection.width,selection.height,
+            selection.before,selection.after,selection.words.size(),selection.pivotWords,
             underlineWords.length==0?"true":"false");
         cropped=cropped.replaceFirst("<svg","<svg"+attributes);
         strokes.append("</g>");
@@ -435,9 +451,16 @@ final class QcfAtlasVerseStrips extends WebView {
                 if(geometry.pageForVerse(verse)==page
                     && MawdudiMapModel.lastPageForVerse(verse,geometry)==page){
                     String full=MapQcfThumbnails.readSvg(getContext(),page);
-                    String excerpt=cropSvg(full,
-                        WordGeometryRepository.shared(getContext()).wordsForPage(page),
-                        verse,difference,window,physicalLines(geometry,page),safeLineCuts(getContext(),page,full));
+                    // A single verified count governs both Quran excerpts.
+                    WordGeometryRepository words=WordGeometryRepository.shared(getContext());
+                    QcfPivotBalance.Selection[] balanced=QcfPivotBalance.paired(
+                        words.wordsForPage(pageLeft),left,
+                        wordsLeft.length==0?cropAnchorsLeft:wordsLeft,
+                        words.wordsForPage(pageRight),right,
+                        wordsRight.length==0?cropAnchorsRight:wordsRight);
+                    String excerpt=cropSvg(full,words.wordsForPage(page),
+                        verse,difference,window,physicalLines(geometry,page),
+                        safeLineCuts(getContext(),page,full),balanced[side]);
                     if(!excerpt.isEmpty())encoded=android.util.Base64.encodeToString(
                         excerpt.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
                 }
