@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Fail closed on 1.17.10 worktree changes outside reviewed 1.17.8 UI adapters.
+
+Historical 1171/1176/1178 guards remain unchanged. This is a distinct, current
+baseline check, not an exemption in those older guards and not a runtime test.
+"""
+import hashlib
+from pathlib import Path
+import subprocess
+import sys
+
+BASE = "ae68ee1a46e195e9da1068aed981f3363869a4e0"
+ROOT = Path(__file__).resolve().parents[1]
+JAVA = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/"
+# Reviewed surface only: all other production files, including persistence,
+# migrations, initializers, schedulers, geometry and Quran assets, stay byte exact.
+ADAPTERS = {
+    JAVA + name + ".java" for name in (
+        "ActiveReviewCorrectionPlan", "ActiveReviewCorrectionStore",
+        "AtlasDiscriminantActivity", "AtlasDiscriminantCases", "AtlasDiscriminantMarkers",
+        "HifzSessionActivity", "MapQcfThumbnails", "MawdudiMapScreen", "MushafView",
+        "QcfAtlasVerseStrips", "QcfAtlasLineWindow", "QcfExcerptWindow", "RevisionAtlasAccess",
+        "SettingsActivity", "StudyReaderActivity", "Ui",
+    )
+}
+# Only this exact reviewed visual-only blob is admitted beyond the 1.17.10
+# adapter allowlist. Never broadly allow MainActivity or Hifz state changes.
+FROZEN_VISUAL_ONLY_BLOBS = {
+    JAVA + "MainActivity.java": "8c30c355903072570af001556516d3c4b097924e",
+    # Individually reviewed double pivots 120/199, groups 124/147 and omissions 142/145/149/161/185.
+    # Exact blob pin remains fail-closed; no broad Atlas/main/Hifz exemption.
+    JAVA + "AtlasDiscriminantOmissions.java": "66ab2bb776e93ae6fa5c8492912e509665047316",
+}
+RESOURCES = {
+    "hifz-app/src/main/AndroidManifest.xml",
+    "hifz-app/src/main/res/drawable/ic_ui_atlas_similar.xml",
+    "hifz-app/src/main/assets/mutashabihat/qcf_safe_line_cuts_v1.json",
+}
+SCOPES = ("hifz-core/src", "hifz-app/src/main", "hifz-app/src/private114")
+BUILD = "hifz-app/build.gradle.kts"
+
+
+def git(*args):
+    return subprocess.check_output(["git", *args], cwd=ROOT)
+
+
+def verify(root=ROOT):
+    """Compare file contents, including untracked additions, to the pinned base."""
+    cuts = root / "hifz-app/src/main/assets/mutashabihat/qcf_safe_line_cuts_v1.json"
+    assert hashlib.sha256(cuts.read_bytes()).hexdigest() == "54335a140838909f3a2d596da3aa1afc2307fb02ace042ca12ae0614cb3155f0", "Unreviewed source-raster safe-cut asset"
+
+    baseline = {
+        p for p in git("ls-tree", "-r", "--name-only", BASE, "--", *SCOPES)
+        .decode().splitlines()
+    }
+    actual = {
+        str(p.relative_to(root))
+        for scope in SCOPES
+        for p in (root / scope).rglob("*")
+        if p.is_file()
+    }
+    errors = []
+    changed = []
+    for path in sorted(baseline | actual):
+        old = git("show", BASE + ":" + path) if path in baseline else None
+        new = (root / path).read_bytes() if path in actual else None
+        if old == new:
+            continue
+        changed.append(path)
+        if path not in ADAPTERS | RESOURCES:
+            frozen_blob = FROZEN_VISUAL_ONLY_BLOBS.get(path)
+            if frozen_blob is not None and new is not None:
+                actual_blob = hashlib.sha1(
+                    b"blob " + str(len(new)).encode() + bytes([0]) + new
+                ).hexdigest()
+                if actual_blob == frozen_blob:
+                    continue
+            errors.append("Protected production file differs from 1.17.8: " + path)
+    # Official identity/signing/private SHA guards cannot change under a version bump.
+    old_build = git("show", BASE + ":" + BUILD)
+    expected = old_build.replace(b'versionCode = 46', b'versionCode = 48').replace(
+        b'versionName = "1.17.8"', b'versionName = "1.17.10"'
+    )
+    if (root / BUILD).read_bytes() != expected:
+        errors.append("Build differs beyond exact 1.17.10/code47 metadata update")
+    return changed, errors
+
+
+def main():
+    changed, errors = verify()
+    for error in errors:
+        print("FAIL: " + error, file=sys.stderr)
+    if errors:
+        return 1
+    print("PASS: all production files outside the explicit 1.17.10 adapter/resource list are byte-identical to " + BASE)
+    print("PASS: exact version48/1.17.10 metadata; official package, signer and seven private asset SHA guards unchanged")
+    print("REVIEWED ADAPTER/RESOURCE DELTAS: " + ", ".join(changed))
+    print("LIMIT: adapter allowlisting is not runtime or signed-upgrade evidence; run fresh JVM/Android and physical upgrade checks")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
