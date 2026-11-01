@@ -70,17 +70,32 @@ final class ActiveReviewCorrectionStore {
             if(values.length()<1||values.length()>604)
                 throw new IllegalArgumentException("Invalid page count");
             List<Integer> pages=new ArrayList<>();
-            for(int i=0;i<values.length();i++)pages.add(values.getInt(i));
+            for(int i=0;i<values.length();i++)pages.add(strictInt(values.get(i)));
             return new State(doc.getString("date"),
                 GeometryRepository.parseVerse(doc.getString("start")),
                 GeometryRepository.parseVerse(doc.getString("end")),
-                doc.getLong("activeElapsedMs"),pages,
-                doc.getInt("originPage"),doc.getInt("pageIndex"),doc.getString("stage"),
+                strictLong(doc.get("activeElapsedMs")),pages,
+                strictInt(doc.get("originPage")),strictInt(doc.get("pageIndex")),doc.getString("stage"),
                 doc.optBoolean("assisted",false));
         }catch(Exception invalid){
             // Never silently delete a damaged checkpoint or advance the Hifz cursor.
             throw new IllegalStateException("État de reprise des pages à vérifier ; données conservées.",invalid);
         }
+    }
+
+    /** JSONObject.getInt/getLong coerce fractional numbers and numeric strings.
+     * Disk checkpoints contain integral JSON numbers only: fail closed on damage,
+     * retaining the original bytes instead of silently changing page/time/index. */
+    private static long strictLong(Object value){
+        if(!(value instanceof Integer)&&!(value instanceof Long))
+            throw new IllegalArgumentException("Non-integral checkpoint number");
+        return ((Number)value).longValue();
+    }
+    private static int strictInt(Object value){
+        long number=strictLong(value);
+        if(number<Integer.MIN_VALUE||number>Integer.MAX_VALUE)
+            throw new IllegalArgumentException("Checkpoint number out of range");
+        return (int)number;
     }
 
     boolean begin(String date,VerseRef start,VerseRef end,long elapsed,List<Integer> pages,int originPage){
@@ -141,7 +156,7 @@ final class ActiveReviewCorrectionStore {
             JSONArray values=doc.getJSONArray("pages");
             LinkedHashSet<Integer> pages=new LinkedHashSet<>();
             for(int i=0;i<values.length();i++){
-                int page=values.getInt(i);
+                int page=strictInt(values.get(i));
                 if(page<1||page>604||!pages.add(page))
                     throw new IllegalArgumentException("Malformed revealed page list");
             }
