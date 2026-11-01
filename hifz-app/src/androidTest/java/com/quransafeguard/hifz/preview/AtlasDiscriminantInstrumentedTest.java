@@ -323,6 +323,7 @@ public final class AtlasDiscriminantInstrumentedTest {
     }
 
     private static void saveComparisonScreenshot(Context context,String label)throws Exception{
+        EmulatorLauncherAnr.requireApplicationForeground(InstrumentationRegistry.getInstrumentation());
         Bitmap screenshot=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
         assertNotNull(screenshot);
         ContentValues values=new ContentValues();
@@ -567,10 +568,10 @@ public final class AtlasDiscriminantInstrumentedTest {
 
     /**
      * The two ORIGINAL QCF pages can contain many neighbouring ayat.
-     * A tap on any other polygon must not silently replace the two fixed
-     * al-Jalalayn references inside a memorisation correspondence.
+     * Every polygon opens its own commentary. Canonical pair tabs remain
+     * available to return to either compared verse.
      */
-    @Test public void onlyTwoComparedAyatMayOpenPairLockedTafsir() throws Exception {
+    @Test public void fullPageAyatOpenExactTafsirAndPairTabsRemainCanonical() throws Exception {
         Context context=ApplicationProvider.getApplicationContext();
         AtlasDiscriminantCases.Entry pair=samplePair();
         try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(
@@ -606,9 +607,9 @@ public final class AtlasDiscriminantInstrumentedTest {
                     "2:"+anchorAyah,neighbor);
                 Thread.sleep(250L);
                 scenario.onActivity(a->{
-                    assertEquals("A neighbouring ayah may not open/replace the Tafsir",
-                        (int)wasSelected.get(),a.selectedTafsirForTest());
-                    assertTrue("Both locked references must remain unchanged",a.tafsirPairLockedForTest());
+                    assertEquals("A neighbouring ayah opens the clicked side",position,a.selectedTafsirForTest());
+                    assertEquals("Exact touched full-page ayah",neighbor,a.selectedTafsirVerseForTest().toString());
+                    assertFalse("Canonical pivot must not be shown as the neighboring ayah",a.tafsirPivotEmbeddedForTest());
                 });
                 com.quransafeguard.hifz.core.VerseRef canonical=
                     position==0?pair.first:pair.second;
@@ -978,6 +979,7 @@ public final class AtlasDiscriminantInstrumentedTest {
             // do not accept a DOM callback or a white placeholder as success.
             Bitmap shot=null;
             for(int paintAttempt=0;paintAttempt<24;paintAttempt++){
+                EmulatorLauncherAnr.requireApplicationForeground(InstrumentationRegistry.getInstrumentation());
                 Bitmap frame=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
                 if(frame!=null&&inkVisible(frame,pageBounds[0])&&inkVisible(frame,pageBounds[1])
                         &&inkVisible(frame,crop[0])&&inkVisible(frame,crop[1])){
