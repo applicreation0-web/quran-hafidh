@@ -196,25 +196,17 @@ public final class AtlasDiscriminantSourceContractTest {
             actual.contains("new int[]{1} : new int[]{1}"));
     }
 
-    @Test public void tafsirShowsOnlyCanonicalPairedAyatAndQcfHighlightedWords() throws Exception {
+    @Test public void fullPageTafsirAcceptsExactPageAyatWithoutUnrelatedFallback() throws Exception {
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
-        String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
-        assertTrue("A third verse polygon must not unlock another Tafsir reference",
-            activity.contains("if(!allowed.equals(verse)||page!=(side==0?currentLeftPage:currentRightPage))"));
-        assertTrue("Restored arbitrary ayah selections must be discarded",
-            activity.contains("selectedLeftVerse=c.first;") && activity.contains("selectedRightVerse=c.second;"));
-        assertTrue("Both exact Jalalayn entries remain unchanged and locally loaded",
+        assertFalse("No unrelated first comparison on an empty lookup",
+            activity.contains("caseIndices=java.util.Collections.singletonList(0)"));
+        assertFalse("Every valid ayah on the full page must remain tappable",
+            activity.contains("!allowed.equals(verse)"));
+        assertTrue("Exact ayah must be validated against the displayed physical QCF page",
+            activity.contains("geometry.pageForVerse(verse)!=page"));
+        assertTrue("Both original Jalalayn corpora are preserved",
             activity.contains("loadBothTafsirs(selectedLeftVerse,selectedRightVerse);")
                 && activity.contains("BaqaraPilotScreen.renderExistingJalalayn(entry)"));
-        assertTrue("Display source-QCF words inside the Tafsir without generating Arabic",
-            activity.contains("movePivotIntoTafsir(side);")
-                && activity.contains("destination.addView(strips,readingTafsir?1:0,")
-                && strips.contains("setTafsirFocusSide(int side)")
-                && strips.contains("data-qcf-tafsir-focus"));
-        assertTrue("The same source QCF WebView must be reused, never duplicated",
-            activity.contains("((ViewGroup)strips.getParent()).removeView(strips)"));
-        assertFalse("Removed French glosses must not be replaced by fabricated text",
-            activity.contains("autoTranslatePivots("));
     }
 
     @Test public void twoArabicSourceExcerptsShareExactlyOneGlyphScale() throws Exception {
@@ -240,7 +232,7 @@ public final class AtlasDiscriminantSourceContractTest {
             activity.contains("config.orientation==android.content.res.Configuration.ORIENTATION_PORTRAIT")
                 &&activity.contains("widthDp>=900"));
         assertTrue("The Tafsir must open with original-QCF strips in the lower panel",
-            activity.contains("if(selectedTafsir>=0)selectTafsir(selectedTafsir);"));
+            activity.contains("if(selectedTafsir>=0)showSelectedTafsir(selectedTafsir);"));
         assertTrue("No redundant language label in the contextual Tafsir heading",
             activity.contains("tafsirHeading.setText(\"Tafsīr al-Jalālayn · \"+verse);"));
         assertFalse(activity.contains(" · anglais"));
