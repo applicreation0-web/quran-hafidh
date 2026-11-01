@@ -5,18 +5,18 @@
   "wordIndexBase": 1,
   "geometrySpace": "viewBox 0 0 345 550",
   "counts": {
-    "retenu": 200,
+    "retenu": 201,
     "corrigé": 79,
     "à arbitrer": 9,
     "exclu": 6
   },
-  "approvedCount": 279,
+  "approvedCount": 280,
   "verification": {
     "textSource": "scripts/data/quran-uthmani-tanzil.txt",
     "textSha256": "0a5926f8e27b8961e619f2d473db9c5466186ab2b56207c964a043336b174a7d",
     "geometrySource": "quran-ws/quran-svg-elements v1.1.2",
     "editorialDecisionsSha256": "435518709b6dcd9048e96f5b14f2a7f4f9be71b5bc32e0d0e8033d4fd5504d63",
-    "supplementaryDecisionsSha256": "1fdd3664d5b7e409391ac7c97d41be62b082452a0bdba0d88db83877a1bf1121",
+    "supplementaryDecisionsSha256": "44ad1dc05edf852624aaa501fa21fa531c746c6f79ce2c222cf23ddf7cfd2fd2",
     "geometrySha256": {
       "hifz-app/src/main/word-source/quran-ws-v1.1.2/word-boxes-001-150.json": "37f1721049d0ae01441b27ddbf65586bfb09b50ae3f4daa5f361e6e34c74f527",
       "hifz-app/src/main/word-source/quran-ws-v1.1.2/word-boxes-151-300.json": "82ab15a84837622a48cad186989bfc156c19ea313a6614fbdce6d4eb3aece8b1",
@@ -125,6 +125,8 @@
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/459.svg.br": "6d50f4a68e2f85368dc42f07e342a6f90e4fcea71d4fdbe9e689f515264df41e",
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/106.svg.br": "7ea4719e9801ca2015c339b3516e39c325b5df295f5381b202317c273637feef",
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/515.svg.br": "dbe930bcef4e5a97feb6ef7edadb94967fa8faf90d335a55a450bd80f4b9968b",
+      "app/src/main/assets/mushaf/hafs/kfqc/svg-br/251.svg.br": "2f40796f96d88903af46296b0bee42a1b76d80f8109b8ae6a9a5cfa8dcb29136",
+      "app/src/main/assets/mushaf/hafs/kfqc/svg-br/463.svg.br": "36662ab0fccda018478bcf5250af42ec2ecbc5e02dc17fbe4d2b9ecb708b7c1d",
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/115.svg.br": "4fc1ef8e03af36725117dfdeff122c6b0d8059ced81ae25793f33f7cabd422ad",
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/116.svg.br": "6dcf8a939830d5f824b94fc8077c402ff3b583b32abab510e8498c24b5c70583",
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/118.svg.br": "689c2e9e1b9ee114f3ccd474e9bff4192c70d522caff264f4c53a16040c7e232",
@@ -339,7 +341,9 @@
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/542.svg.br": "2fc22ec5b7e415018af4b2d21f7fc930e73a0a122e46ebff8d00afcbe84cbbb2",
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/544.svg.br": "1b9f77ddda9ba8e051b3290970612de1e56174472f3a4bafb43475045d6a0a55",
       "app/src/main/assets/mushaf/hafs/kfqc/svg-br/554.svg.br": "9eeda1d6063edf101d33307a823b9d2c11db61d8fa37af1ed7b1a1631a96f1d3",
-      "app/src/main/assets/mushaf/hafs/kfqc/svg-br/014.svg.br": "8587d67adda3ca1ca53606b9e97b2680f6592560bf32a3237e2f1519622d0b90"
+      "app/src/main/assets/mushaf/hafs/kfqc/svg-br/014.svg.br": "8587d67adda3ca1ca53606b9e97b2680f6592560bf32a3237e2f1519622d0b90",
+      "app/src/main/assets/mushaf/hafs/kfqc/svg-br/390.svg.br": "359dc7d10f134536f21f0320bee5201431deb4a003078e5bff7d75823eee000a",
+      "app/src/main/assets/mushaf/hafs/kfqc/svg-br/522.svg.br": "f59ed0147f500c38d0383b7f509649af43461586033ec3372b82c756e2b65646"
     },
     "tokenization": "Remove U+200A and U+2060, omit nonletter stop signs, remove prepended four-word basmala except surahs1/9. All admitted verse token counts equal QCF sidecar counts. 15:7 mismatch is excluded from admission.",
     "limitation": "SVG files contain paths, no machine-readable word text. Geometry and canonical textual alignment are verified; this is not a claim of independent visual inspection of every glyph.",
@@ -6769,6 +6773,29 @@
       "kind": "Variation de mot ou de particule",
       "source": "al-Abbad",
       "sourceUrl": "https://quranpedia.app/books/b10901/s11.html",
+      "priority": "P1"
+    },
+    {
+      "auditId": 295,
+      "first": "28:40",
+      "second": "51:40",
+      "firstPage": 390,
+      "secondPage": 522,
+      "firstWordIndices": [
+        6
+      ],
+      "secondWordIndices": [
+        6
+      ],
+      "firstWords": [
+        "فَٱنظُرۡ"
+      ],
+      "secondWords": [
+        "وَهُوَ"
+      ],
+      "kind": "Même amorce, bifurcation",
+      "source": "al-Abbad",
+      "sourceUrl": "https://quranpedia.app/books/b10901/s14.html",
       "priority": "P1"
     }
   ]

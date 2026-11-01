@@ -310,7 +310,8 @@ final class AtlasDiscriminantCases {
         new Entry(65,4,65,5,"Même amorce, bifurcation","65:4","65:5","","al-Abbad · 291","https://quranpedia.app/books/b10901/s14.html",new int[]{24},new int[]{9},558,558,291),
         new Entry(2,63,2,93,"Même amorce, bifurcation","2:63","2:93","","Ajout explicite de l’utilisateur · 292","",new int[]{11},new int[]{11},10,14,292),
         new Entry(2,58,7,161,"Variation de mot ou de particule","2:58","7:161","","al-Abbad · 293","https://quranpedia.app/books/b10901/s1.html",new int[]{11,14},new int[]{11,13},9,171,293),
-        new Entry(30,37,39,52,"Variation de mot ou de particule","30:37","39:52","","al-Abbad · 294","https://quranpedia.app/books/b10901/s11.html",new int[]{2},new int[]{2},408,464,294)
+        new Entry(30,37,39,52,"Variation de mot ou de particule","30:37","39:52","","al-Abbad · 294","https://quranpedia.app/books/b10901/s11.html",new int[]{2},new int[]{2},408,464,294),
+        new Entry(28,40,51,40,"Même amorce, bifurcation","28:40","51:40","","al-Abbad · 295","https://quranpedia.app/books/b10901/s14.html",new int[]{6},new int[]{6},390,522,295)
     ));
     /** Legacy internal name retained for existing callers; contains the complete approved catalogue. */
     static final List<Entry> PILOT=CATALOGUE;
