@@ -203,6 +203,12 @@ final class QcfAtlasVerseStrips extends WebView {
         // Change the intrinsic SVG aspect ratio as well; no stretched / reflowed glyphs.
         cropped=cropped.replaceFirst("width='345' height='550'",
             String.format(Locale.ROOT,"width='%.2f' height='%.2f'",x1-x0,y1-y0));
+        // VISUAL OVERLAY ONLY in the original QCF COMPARISON EXCERPTS.
+        // Full Mushaf SVGs, glyph paths, word indices and recitation pages
+        // remain byte-for-byte unchanged. On an absent-word side, do not
+        // invent a marked pivot or fade an innocent common-word anchor.
+        StringBuilder pivotTint=new StringBuilder();
+        StringBuilder focusHoles=new StringBuilder();
         StringBuilder strokes=new StringBuilder("<g id='exact-word-differences' fill='none' stroke='#121211' stroke-width='0.85'>");
         for(int index:underlineWords){
             if(index<1)return ""; // no guess for invalid source annotations
@@ -210,6 +216,19 @@ final class QcfAtlasVerseStrips extends WebView {
             for(WordGeometryRepository.WordBox w:found)
                 if(w.word==index){matching=w;break;}
             if(matching==null)return ""; // source word count must match audited QCF sidecar
+            // Anchored to VERIFIED individual word boxes: never tint entire
+            // Quran lines, verses or neighboring source words.
+            double focusX=Math.max(x0,matching.x0-1.7);
+            double focusY=Math.max(y0,matching.y0-1.4);
+            double focusRight=Math.min(x1,matching.x1+1.7);
+            double focusBottom=Math.min(y1,matching.y1+1.4);
+            if(focusRight<=focusX||focusBottom<=focusY)return "";
+            String geometry=String.format(Locale.ROOT,
+                "x='%.2f' y='%.2f' width='%.2f' height='%.2f'",
+                originX+focusX,originY+focusY,focusRight-focusX,focusBottom-focusY);
+            pivotTint.append("<rect ").append(geometry)
+                .append(" rx='1.5' fill='#b9b9b9' fill-opacity='0.22'/>");
+            focusHoles.append("<rect ").append(geometry).append(" fill='black'/>");
             double y=Math.min(549,matching.y1+1.5);
             strokes.append(String.format(Locale.ROOT,
                 "<line x1='%.2f' y1='%.2f' x2='%.2f' y2='%.2f'/>",
@@ -217,7 +236,21 @@ final class QcfAtlasVerseStrips extends WebView {
         }
         strokes.append("</g>");
         if(!cropped.contains("</svg>"))return "";
-        return cropped.replace("</svg>",strokes+"</svg>");
+        if(underlineWords.length==0)return cropped.replace("</svg>",strokes+"</svg>");
+        String maskId="atlas-comparison-pivot-mask-"+target.getSurah()+"-"+target.getAyah();
+        // An alpha paper veil on surrounding words creates a subtle fade.
+        // The exact selected word boxes remain clear, with light-grey tint.
+        String focus="<defs><mask id='"+maskId+"' maskUnits='userSpaceOnUse'>"
+            +String.format(Locale.ROOT,
+                "<rect x='%.2f' y='%.2f' width='%.2f' height='%.2f' fill='white'/>",
+                originX+x0,originY+y0,x1-x0,y1-y0)
+            +focusHoles+"</mask></defs>"
+            +"<g id='atlas-comparison-pivot-tone'>"+pivotTint
+            +String.format(Locale.ROOT,
+                "<rect x='%.2f' y='%.2f' width='%.2f' height='%.2f' fill='#faf8f0' fill-opacity='0.36' mask='url(#%s)'/>",
+                originX+x0,originY+y0,x1-x0,y1-y0,maskId)
+            +"</g>";
+        return cropped.replace("</svg>",focus+strokes+"</svg>");
     }
 
     /**

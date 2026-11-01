@@ -70,11 +70,18 @@ final class AtlasDiscriminantOmissions {
     }
 
     static String relation(AtlasDiscriminantCases.Entry entry) {
-        if(entry.auditId==120)return "Deux bifurcations";
-        if(entry.auditId==199)return "Ajout puis bifurcation";
+        if(entry.auditId==120)return "Deux différences successives";
+        if(entry.auditId==199)return "Ajout puis mot pivot";
         if(entry.auditId==124 || entry.auditId==147)
-            return "Bifurcation : groupe de mots";
-        return explicitlyAbsent(entry, true) || explicitlyAbsent(entry, false)
-            ? "Ajout / omission" : entry.kind;
+            return "Groupe de mots différent";
+        if(explicitlyAbsent(entry,true)||explicitlyAbsent(entry,false))
+            return "Ajout / omission";
+        // Editorial relationship label only: canonical 279 entries stay frozen.
+        if("Variation de mot ou de particule".equals(entry.kind))
+            return "Mot pivot différent";
+        if("Même amorce, bifurcation".equals(entry.kind)
+                ||"Bifurcation après tronc commun".equals(entry.kind))
+            return "Même début, suite différente";
+        return entry.kind;
     }
 }

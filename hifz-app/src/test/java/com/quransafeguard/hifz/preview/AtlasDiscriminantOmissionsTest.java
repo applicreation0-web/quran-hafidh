@@ -45,7 +45,7 @@ public final class AtlasDiscriminantOmissionsTest {
 
     private void assertGroup(int id,int[] left,int[] right) {
         AtlasDiscriminantCases.Entry entry=byId(id);
-        assertEquals("Bifurcation : groupe de mots",AtlasDiscriminantOmissions.relation(entry));
+        assertEquals("Groupe de mots différent",AtlasDiscriminantOmissions.relation(entry));
         assertArrayEquals(left,AtlasDiscriminantOmissions.actualDifference(entry,true));
         assertArrayEquals(right,AtlasDiscriminantOmissions.actualDifference(entry,false));
         assertArrayEquals(left,AtlasDiscriminantOmissions.cropAnchor(entry,true));
@@ -64,13 +64,13 @@ public final class AtlasDiscriminantOmissionsTest {
 
     @Test public void twoIndependentQcfPivotsNeverFabricateAnOppositeWord(){
         AtlasDiscriminantCases.Entry first=byId(120);
-        assertEquals("Deux bifurcations",AtlasDiscriminantOmissions.relation(first));
+        assertEquals("Deux différences successives",AtlasDiscriminantOmissions.relation(first));
         assertArrayEquals(new int[]{2},AtlasDiscriminantOmissions.actualDifference(first,true));
         assertArrayEquals(new int[]{2},AtlasDiscriminantOmissions.actualDifference(first,false));
         assertArrayEquals(new int[]{11},AtlasDiscriminantOmissions.secondaryDifference(first,true));
         assertArrayEquals(new int[]{10},AtlasDiscriminantOmissions.secondaryDifference(first,false));
         AtlasDiscriminantCases.Entry addition=byId(199);
-        assertEquals("Ajout puis bifurcation",AtlasDiscriminantOmissions.relation(addition));
+        assertEquals("Ajout puis mot pivot",AtlasDiscriminantOmissions.relation(addition));
         assertArrayEquals(new int[]{21,22},AtlasDiscriminantOmissions.actualDifference(addition,true));
         assertArrayEquals(new int[]{8},AtlasDiscriminantOmissions.actualDifference(addition,false));
         assertArrayEquals(new int[0],AtlasDiscriminantOmissions.secondaryDifference(addition,true));
@@ -91,7 +91,10 @@ public final class AtlasDiscriminantOmissionsTest {
                     ||entry.auditId==124||entry.auditId==147
                     ||entry.auditId==142||entry.auditId==145||entry.auditId==149
                     ||entry.auditId==161||entry.auditId==185)continue;
-            assertEquals(entry.kind,AtlasDiscriminantOmissions.relation(entry));
+            String expected="Variation de mot ou de particule".equals(entry.kind)
+                ?"Mot pivot différent":"Même début, suite différente";
+            assertEquals("The reviewed catalogue is immutable; only the display label changes",
+                expected,AtlasDiscriminantOmissions.relation(entry));
             assertArrayEquals(entry.firstWordIndices,AtlasDiscriminantOmissions.actualDifference(entry,true));
             assertArrayEquals(entry.secondWordIndices,AtlasDiscriminantOmissions.actualDifference(entry,false));
             assertFalse(AtlasDiscriminantOmissions.explicitlyAbsent(entry,true));

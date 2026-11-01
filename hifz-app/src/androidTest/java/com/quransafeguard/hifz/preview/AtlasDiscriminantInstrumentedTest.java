@@ -354,6 +354,14 @@ public final class AtlasDiscriminantInstrumentedTest {
             assertTrue("Portrait layout must be exercised",portrait.get());
             waitForQcf(scenario);
             assertOriginalPageShapeAndWordMarks(scenario,samplePair());
+            scenario.onActivity(a->{
+                if(a.getResources().getConfiguration().smallestScreenWidthDp>=600){
+                    assertTrue("Portrait BOOX must reserve the whole width for QCF",
+                        a.booxPortraitTafsirForTest());
+                    assertFalse("Tafsir must not occupy the third QCF column in BOOX portrait",
+                        a.lateralTafsirForTest());
+                }
+            });
             AtomicReference<Rect[]> pageBounds=new AtomicReference<>();
             AtomicReference<MapQcfThumbnails[]> originalPages=new AtomicReference<>();
             scenario.onActivity(a->{
@@ -366,6 +374,11 @@ public final class AtlasDiscriminantInstrumentedTest {
             tapQcfPage(scenario,0,false,samplePair().first);
             waitForSelectedTafsir(scenario,0);
             assertContextPanesVisible(scenario);
+            scenario.onActivity(a->{
+                if(a.booxPortraitTafsirForTest())
+                    assertTrue("Real original QCF pages must sit ABOVE Tafsir on BOOX portrait",
+                        a.tafsirBelowBothPagesForTest());
+            });
             switchTafsirAndAssertPagesRetained(scenario,1,originalPages.get());
             switchTafsirAndAssertPagesRetained(scenario,0,originalPages.get());
             // The second actual source page also switches the contextual panel.
@@ -704,6 +717,16 @@ public final class AtlasDiscriminantInstrumentedTest {
         int renderedLines=excerpt.split("<line x1=", -1).length-1;
         assertEquals("Wrong number of QCF discriminant underlines for "+verse,
             marked.length,renderedLines);
+        if(marked.length>0){
+            assertTrue("Only comparison QCF excerpts may tint selected source word boxes",
+                excerpt.contains("id='atlas-comparison-pivot-tone'"));
+            assertTrue("Both the grey selected word and surrounding fade must use geometry",
+                excerpt.contains("fill-opacity='0.22'")
+                    &&excerpt.contains("fill-opacity='0.36'"));
+        }else{
+            assertFalse("Absent words must never receive a fabricated grey pivot box",
+                excerpt.contains("id='atlas-comparison-pivot-tone'"));
+        }
     }
     /** Finds the actual Atlas navigation button by its stable accessible label. */
     private static View findByDescriptionPrefix(View root,String prefix){

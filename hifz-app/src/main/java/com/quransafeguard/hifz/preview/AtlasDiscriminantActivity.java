@@ -50,7 +50,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private int pageHeaderHeight,comparisonDetailHeight,defaultStripHeightDp;
     private TextView firstTafsirTab,secondTafsirTab;
     private int selectedTafsir=-1;
-    private boolean lateralTafsir;
+    private boolean lateralTafsir,booxPortraitTafsir;
     private int builtOrientation=android.content.res.Configuration.ORIENTATION_UNDEFINED;
     private TextView title, leftHeader, rightHeader, relationLine;
     private TextView returnToSource;
@@ -102,7 +102,12 @@ public final class AtlasDiscriminantActivity extends Activity {
         int dpHeight=(int)(getResources().getDisplayMetrics().heightPixels/density);
         int dpWidth=(int)(getResources().getDisplayMetrics().widthPixels/density);
         boolean compact=dpHeight<740;
-        lateralTafsir=dpWidth>=900 || (getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE && dpWidth>=680);
+        boolean landscape=getResources().getConfiguration().orientation==
+            android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        // Portrait BOOX: full-width original 345:550 pages ABOVE Tafsir.
+        // Landscape BOOX and phone retain the contextual lateral pane.
+        booxPortraitTafsir=!landscape&&dpWidth>=900;
+        lateralTafsir=landscape&&dpWidth>=680;
         LinearLayout root=Ui.column(this);
         root.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));
         root.setBackgroundColor(Ui.PAPER);
@@ -321,8 +326,7 @@ public final class AtlasDiscriminantActivity extends Activity {
             // two source pages out of the upper comparison viewport.
             int available=workspace.getHeight();
             if(available>0){
-                int desired=Math.max(Ui.dp(this,210),Math.round(available*0.52f));
-                int panelHeight=Math.min(desired,Math.round(available*0.58f));
+                int panelHeight=contextualTafsirHeight(available);
                 LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)tafsirPanel.getLayoutParams();
                 params.height=panelHeight;tafsirPanel.setLayoutParams(params);
             }
@@ -389,12 +393,23 @@ public final class AtlasDiscriminantActivity extends Activity {
         }
     }
 
+    private int contextualTafsirHeight(int available){
+        if(booxPortraitTafsir){
+            // Preserve ~70% of the actual BOOX portrait height for BOTH enlarged,
+            // fully visible original QCF pages. Commentary scrolls in its lower
+            // 30% zone, so none of the 15-line SVG geometry is distorted.
+            return Math.min(Math.max(Ui.dp(this,250),Math.round(available*0.30f)),
+                Math.round(available*0.35f));
+        }
+        return Math.min(Math.max(Ui.dp(this,210),Math.round(available*0.52f)),
+            Math.round(available*0.58f));
+    }
+
     private void fitVisiblePages(){
         if(pagePair==null||comparisonScroll==null)return;
         if(selectedTafsir>=0&&!lateralTafsir&&workspace.getHeight()>0){
             int available=workspace.getHeight();
-            int panelHeight=Math.min(Math.max(Ui.dp(this,210),Math.round(available*0.52f)),
-                Math.round(available*0.58f));
+            int panelHeight=contextualTafsirHeight(available);
             LinearLayout.LayoutParams panelParams=(LinearLayout.LayoutParams)tafsirPanel.getLayoutParams();
             if(panelParams.height!=panelHeight){panelParams.height=panelHeight;tafsirPanel.setLayoutParams(panelParams);}
         }
@@ -774,6 +789,16 @@ public final class AtlasDiscriminantActivity extends Activity {
             && pair.second.toString().equals(secondTafsirTab.getText().toString());
     }
     boolean lateralTafsirForTest(){return lateralTafsir;}
+    boolean booxPortraitTafsirForTest(){return booxPortraitTafsir;}
+    boolean tafsirBelowBothPagesForTest(){
+        if(!booxPortraitTafsir||selectedTafsir<0||tafsirPanel.getVisibility()!=View.VISIBLE)
+            return false;
+        int[] lower=new int[2],upper=new int[2];
+        tafsirPanel.getLocationOnScreen(lower);
+        pagePair.getLocationOnScreen(upper);
+        return lower[1]>=upper[1]+pagePair.getHeight()
+            &&pagePair.getWidth()>Ui.dp(this,600);
+    }
     boolean tafsirHeadingVisibleForTest(){
         android.graphics.Rect visible=new android.graphics.Rect();
         return tafsirHeading!=null&&tafsirHeading.getGlobalVisibleRect(visible)

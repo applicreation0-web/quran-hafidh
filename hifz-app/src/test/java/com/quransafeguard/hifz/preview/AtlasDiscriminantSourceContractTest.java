@@ -230,6 +230,27 @@ public final class AtlasDiscriminantSourceContractTest {
             strips.contains("data-qcf-shared-scale"));
     }
 
+    @Test public void booxPortraitUsesFullWidthPagesAboveTafsirWithoutReflow() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        assertTrue(activity.contains("booxPortraitTafsir=!landscape&&dpWidth>=900"));
+        assertTrue(activity.contains("lateralTafsir=landscape&&dpWidth>=680"));
+        assertTrue(activity.contains("contextualTafsirHeight(available)"));
+        assertTrue(activity.contains("Math.round(available*0.30f)"));
+        assertTrue(activity.contains("boolean tafsirBelowBothPagesForTest()"));
+        assertTrue(activity.contains("345:550"));
+    }
+
+    @Test public void onlyComparisonExtractsHaveSubtlePivotTintAndSurroundingFade() throws Exception {
+        String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
+        String mushaf=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MapQcfThumbnails.java");
+        assertTrue(strips.contains("atlas-comparison-pivot-tone"));
+        assertTrue(strips.contains("fill-opacity='0.22'"));
+        assertTrue(strips.contains("fill-opacity='0.36'"));
+        assertTrue(strips.contains("if(underlineWords.length==0)return cropped.replace"));
+        assertFalse("Never add the excerpt-only pivot tint to complete 15-line QCF pages",
+            mushaf.contains("atlas-comparison-pivot-tone"));
+    }
+
     @Test public void pivotMagnifierKeepsOriginalArabicAndFailsSafeToFullQcfRow() throws Exception {
         String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
         assertTrue(strips.contains("horizontalWordWindow(pageWords,physicalLines,target,"));
