@@ -730,12 +730,12 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(!tafsirTextVisibleForTest()||tafsirScroll==null)return false;
         TextView text=selectedTafsir==0?leftTafsir:rightTafsir;
         android.text.Layout layout=text.getLayout();
-        if(layout==null||layout.getLineCount()<5)return false;
+        if(layout==null||layout.getLineCount()<3)return false;
         android.graphics.Rect viewport=new android.graphics.Rect();
         if(!tafsirScroll.getGlobalVisibleRect(viewport)||viewport.isEmpty())return false;
         int[] position=new int[2];
         text.getLocationOnScreen(position);
-        int commentaryLineY=position[1]+text.getTotalPaddingTop()+layout.getLineTop(4);
+        int commentaryLineY=position[1]+text.getTotalPaddingTop()+layout.getLineTop(2);
         return commentaryLineY<viewport.bottom-Ui.dp(this,14)
             &&commentaryLineY>=viewport.top-Ui.dp(this,18);
     }
