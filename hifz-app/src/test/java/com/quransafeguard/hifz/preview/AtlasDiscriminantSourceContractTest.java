@@ -196,6 +196,19 @@ public final class AtlasDiscriminantSourceContractTest {
             actual.contains("new int[]{1} : new int[]{1}"));
     }
 
+    @Test public void twoArabicSourceExcerptsShareExactlyOneGlyphScale() throws Exception {
+        String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
+        assertTrue("Both QCF viewBoxes must contribute to a shared pixel/source-unit scale",
+            strips.contains("function fitPairedQcf()")
+                && strips.contains("scale=Math.min(scale,box.clientWidth/vb.width,box.clientHeight/vb.height)"));
+        assertTrue(strips.contains("el.style.width=(dims[j].w*scale).toFixed(3)+'px'"));
+        assertTrue(strips.contains("el.style.height=(dims[j].h*scale).toFixed(3)+'px'"));
+        assertFalse("Independent 100% source SVG zoom must not return",
+            strips.contains("section svg{display:block;width:100%;height:100%"));
+        assertTrue("A longer passage may remain smaller in *area*, but never in glyph scale",
+            strips.contains("data-qcf-shared-scale"));
+    }
+
     @Test public void pivotMagnifierKeepsOriginalArabicAndFailsSafeToFullQcfRow() throws Exception {
         String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
         assertTrue(strips.contains("horizontalWordWindow(pageWords,physicalLines,target,"));
