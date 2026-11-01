@@ -196,6 +196,27 @@ public final class AtlasDiscriminantSourceContractTest {
             actual.contains("new int[]{1} : new int[]{1}"));
     }
 
+    @Test public void tafsirShowsOnlyCanonicalPairedAyatAndQcfHighlightedWords() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
+        assertTrue("A third verse polygon must not unlock another Tafsir reference",
+            activity.contains("if(!allowed.equals(verse)||page!=(side==0?currentLeftPage:currentRightPage))"));
+        assertTrue("Restored arbitrary ayah selections must be discarded",
+            activity.contains("selectedLeftVerse=c.first;") && activity.contains("selectedRightVerse=c.second;"));
+        assertTrue("Both exact Jalalayn entries remain unchanged and locally loaded",
+            activity.contains("loadBothTafsirs(selectedLeftVerse,selectedRightVerse);")
+                && activity.contains("BaqaraPilotScreen.renderExistingJalalayn(entry)"));
+        assertTrue("Display source-QCF words inside the Tafsir without generating Arabic",
+            activity.contains("movePivotIntoTafsir(side);")
+                && activity.contains("tafsirSnippetHost.addView(strips")
+                && strips.contains("setTafsirFocusSide(int side)")
+                && strips.contains("data-qcf-tafsir-focus"));
+        assertTrue("The same source QCF WebView must be reused, never duplicated",
+            activity.contains("((ViewGroup)strips.getParent()).removeView(strips)"));
+        assertFalse("Removed French glosses must not be replaced by fabricated text",
+            activity.contains("autoTranslatePivots("));
+    }
+
     @Test public void twoArabicSourceExcerptsShareExactlyOneGlyphScale() throws Exception {
         String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
         assertTrue("Both QCF viewBoxes must contribute to a shared pixel/source-unit scale",
@@ -237,7 +258,7 @@ public final class AtlasDiscriminantSourceContractTest {
                 && activity.contains("rightHeader.setOnClickListener(v->openReader(false,currentRightPage))"));
         assertTrue("Real Quran vector excerpts receive the freed vertical area",
             activity.contains("stripHeightDp=compact?130:(dpHeight>=1000?205:158)")
-                && activity.contains("body.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,stripHeightDp)))"));
+                && activity.contains("stripHome.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,stripHeightDp)))"));
         assertTrue("Reader destinations must follow the genuine QCF verse selected for Tafsir",
             activity.contains("updateContextualHeaders();")
                 && activity.contains("selectedLeftVerse==null?c.first:selectedLeftVerse")
