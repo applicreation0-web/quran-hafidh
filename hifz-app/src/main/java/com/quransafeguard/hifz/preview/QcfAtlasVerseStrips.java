@@ -166,7 +166,9 @@ final class QcfAtlasVerseStrips extends WebView {
             int[] focus=underlineWords.length==0?windowAnchors:underlineWords;
             return cropSvg(source,pageWords,target,underlineWords,windowAnchors,
                 physicalLines,safeCuts,QcfPivotBalance.single(pageWords,target,focus));
-        }catch(IllegalArgumentException invalid){return "";} // no guess for invalid source annotations
+        }catch(IllegalArgumentException invalid){
+            return ""; // no guess for invalid source annotations
+        }
     }
 
     private static String cropSvg(String source,List<WordGeometryRepository.WordBox> pageWords,
