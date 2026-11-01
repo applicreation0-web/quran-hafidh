@@ -12,6 +12,28 @@ public final class ActiveReviewCorrectionStoreTest {
     private final VerseRef start = new VerseRef(30,37), end = new VerseRef(30,38);
     private final ActiveReviewCorrectionStore store = new ActiveReviewCorrectionStore(disk);
 
+    @Test public void fractionalCheckpointNumbersFailClosedWithoutRewritingTheBackup() throws Exception {
+        for(String key:Arrays.asList("activeElapsedMs","originPage","pageIndex","pages")){
+            disk.edit().clear().commit();
+            assertTrue(store.begin("2026-10-29",start,end,12000L,Arrays.asList(408),409));
+            org.json.JSONObject doc=new org.json.JSONObject(disk.getString("activeReviewCorrectionV2",""));
+            if("pages".equals(key))doc.put(key,new org.json.JSONArray().put(408.75));
+            else doc.put(key,"pageIndex".equals(key)?0.75:408.75);
+            String corrupt=doc.toString();
+            disk.edit().putString("activeReviewCorrectionV2",corrupt).commit();
+            try {store.pending();fail("Fractional "+key+" must not silently truncate");}
+            catch(IllegalStateException expected){assertEquals(corrupt,disk.getString("activeReviewCorrectionV2",""));}
+        }
+    }
+
+    @Test public void fractionalRevealedPageCannotBecomeAnotherValidPage() throws Exception {
+        String corrupt=new org.json.JSONObject().put("date","2026-10-29").put("start",start.toString())
+            .put("pages",new org.json.JSONArray().put(408.75)).toString();
+        disk.edit().putString("activeReviewRevealedPagesV1",corrupt).commit();
+        try {store.revealed("2026-10-29",start);fail("Fractional page must fail closed");}
+        catch(IllegalStateException expected){assertEquals(corrupt,disk.getString("activeReviewRevealedPagesV1",""));}
+    }
+
     @Test public void legitimateCorpusWrapMayEndBeforeItsStartingVerse() {
         assertTrue(store.begin("2026-10-29",end,start,12000L,Arrays.asList(408),409));
         assertEquals(end,store.pending().start);
