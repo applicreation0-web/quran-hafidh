@@ -357,6 +357,53 @@ public final class AtlasDiscriminantInstrumentedTest {
         });
     }
 
+    /** BOOX launches directly into the requested first-verse Tafsir under BOTH
+     * full-size authentic pages, with a genuine emulator screenshot. Closing it
+     * is a user choice and must survive Android activity recreation. */
+    @Test public void booxPortraitDefaultTafsirOpensAndManualCloseSurvivesRecreation()throws Exception{
+        Context context=ApplicationProvider.getApplicationContext();
+        try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(
+                pairIntent(context,exactPairIndex(2,63,2,93)))){
+            waitForQcf(scenario);
+            AtomicBoolean boox=new AtomicBoolean();
+            scenario.onActivity(a->{
+                boox.set(a.booxPortraitTafsirForTest());
+                if(boox.get()){
+                    assertTrue("BOOX portrait should open Tafsir on first arrival",
+                        a.tafsirPanelVisibleForTest());
+                    assertEquals(0,a.selectedTafsirForTest());
+                    assertEquals("2:63",a.selectedTafsirVerseForTest().toString());
+                    assertTrue(a.tafsirPairLockedForTest());
+                    assertTrue(a.tafsirBelowBothPagesForTest());
+                    assertEquals("Tafsīr al-Jalālayn · 2:63",a.tafsirHeadingTextForTest());
+                }else{
+                    assertFalse("Phone/landscape should keep contextual Tafsir closed on first arrival",
+                        a.tafsirPanelVisibleForTest());
+                    assertEquals(-1,a.selectedTafsirForTest());
+                }
+            });
+            if(boox.get()){
+                awaitBothTafsirs(scenario);
+                assertContextPanesVisible(scenario);
+                saveComparisonScreenshot(context,"boox-portrait-default-tafsir");
+                scenario.onActivity(a->{
+                    View close=findByDescription(a.getWindow().getDecorView(),"Fermer le Tafsir");
+                    assertNotNull(close);
+                    assertTrue(close.performClick());
+                    assertEquals(-1,a.selectedTafsirForTest());
+                });
+                scenario.recreate();
+                waitForQcf(scenario);
+                scenario.onActivity(a->{
+                    assertTrue(a.booxPortraitTafsirForTest());
+                    assertFalse("Manual close must survive activity recreation",
+                        a.tafsirPanelVisibleForTest());
+                    assertEquals(-1,a.selectedTafsirForTest());
+                });
+            }
+        }
+    }
+
     /** Run on phone and BOOX profiles: page touch, retained localizations and rotation. */
     @Test public void mushafTapOpensContextualTafsirAndSwitchPreservesBothQcfPages()throws Exception{
         Context context=ApplicationProvider.getApplicationContext();
