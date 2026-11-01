@@ -363,7 +363,7 @@ public final class MainActivity extends android.app.Activity {
         tile.setPadding(Ui.dp(this, 3), Ui.dp(this, 12), Ui.dp(this, 3), Ui.dp(this, 12));
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(2, 112);
-        tile.setMinimumHeight(Ui.dp(this, sideDp + 54));
+        tile.setMinimumHeight(Ui.dp(this, sideDp + 22));
         int drawable = largeIconFor(role);
         if (drawable == 0) drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
@@ -375,13 +375,9 @@ public final class MainActivity extends android.app.Activity {
             icon.setPadding(0, 0, 0, 0);
             tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
-        TextView title = Ui.bookText(this, display, 19f, true);
-        if (wideBoox()) title.setTextSize(23f);
-        title.setGravity(Gravity.CENTER);
-        title.setMaxLines(1);
-        title.setPadding(0, Ui.dp(this, 4), 0, 0);
-        tile.addView(title);
-        tile.setContentDescription(role);
+        // No labels beneath the four large home pictograms, per the BOOX
+        // memory-palace interface contract. Keep the full spoken destination.
+        tile.setContentDescription(display);
         tile.setClickable(true);
         tile.setFocusable(true);
         tile.setOnClickListener(listener);
@@ -399,7 +395,7 @@ public final class MainActivity extends android.app.Activity {
         tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(2, 124);
-        tile.setMinimumHeight(Ui.dp(this, sideDp + 84));
+        tile.setMinimumHeight(Ui.dp(this, sideDp + 52));
         String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
             : "Stabilisation".equals(label) ? "Stabiliser"
             : "Révision".equals(label) ? "Réviser" : label;
@@ -425,12 +421,8 @@ public final class MainActivity extends android.app.Activity {
         TextView cue = Ui.text(this, state, 15f, false);
         cue.setVisibility(View.GONE);
         tile.addView(cue);
-        // A real short subtitle belongs under each large Hifz glyph, not in an invisible state label.
-        TextView subtitle = Ui.menuSubline(this, pathSubtitle(label));
-        subtitle.setGravity(Gravity.CENTER);
-        subtitle.setMaxLines(2);
-        subtitle.setPadding(0, Ui.dp(this, 3), 0, 0);
-        tile.addView(subtitle);
+        // No visible caption beneath Hifz pictograms; the title is ABOVE
+        // the icon and a semantic subtitle remains available to accessibility.
         tile.setContentDescription(label+" · "+pathSubtitle(label)+" · "+state);
         tile.setClickable(true);
         tile.setFocusable(true);
