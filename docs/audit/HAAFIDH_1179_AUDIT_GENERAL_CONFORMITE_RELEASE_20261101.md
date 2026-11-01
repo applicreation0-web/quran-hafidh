@@ -14,7 +14,7 @@
 | 279 paires admises ; neuf hors catalogue, six exclues ; aucun arbitrage automatique | **OK base certifiée** | `AtlasDiscriminantCases.java`, `research/alabbad_catalogue_approved.json`, vérification catalogue |
 | Cas particulier 13:18 ↔ 39:47 (ID 62), 2:63 ↔ 2:93, intra/inter-sourate | **OK base certifiée** | indices canon/QCF, tests dédiés |
 | Deux véritables pages Mushaf QCF Médine 345×550 ; pas de reflow | **OK sur Android émulé** | `MapQcfThumbnails.java`, 604 pages locales SVG, app teste proportions/contours |
-| Extraits côte à côte, réduire aux différences utiles sans faux mot coranique | **CORRIGÉ sur branche conformité, CI à valider** | `QcfAtlasVerseStrips.java` + `AtlasDiscriminantOmissions.java`, sixieme source? cinq cas définis précisément ci-dessous |
+| Extraits côte à côte, réduire aux différences utiles sans faux mot coranique | **CORRIGÉ sur branche conformité, CI à valider** | `QcfAtlasVerseStrips.java` + `AtlasDiscriminantOmissions.java`, cinq cas précisément identifiés ci-dessous |
 | Soulignements et mots pivots QCF agrandis, lignes sans coupure | **PARTIEL** | vrai SVG QCF et recadrages vecteurs, tailles/ghosting à contrôler physiquement ; pas de mutation des glyphes originaux |
 | Rapport explicite du type de relation et des mots discriminants sans pavé ni texte artificiel | **CORRIGÉ sur branche conformité, CI à valider** | dialogue : type, références, indices et source. 279 descriptions religieuses sont vides par choix de ne pas inventer de commentaire |
 | Ajout/omission : ne pas souligner un mot commun comme substitut ; « absent » côté manquant | **CORRIGÉ par projection d'affichage, CI à valider** | cas 142,145,149,161,185 ; ancre de recadrage ≠ mot souligné. Source éditoriale d'origine conservée |
