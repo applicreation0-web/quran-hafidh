@@ -143,7 +143,7 @@ public final class AtlasDiscriminantSourceContractTest {
     @Test public void atlasRelationIsVisibleOnTheScreenWithoutInventedArabicOrCommentary() throws Exception {
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
         assertTrue("Relation must remain visible without opening a dialog",
-            activity.contains("String relationText=\"Relation · \"+AtlasDiscriminantOmissions.relation(c)")
+            activity.contains("String relationText=\"Relation · \"+displayRelation(c)")
                 && activity.contains("relationLine.setText(relationText)"));
         assertTrue("Relation is accessible on BOOX without another button",
             activity.contains("relationLine.setContentDescription(relationText)"));
@@ -228,6 +228,16 @@ public final class AtlasDiscriminantSourceContractTest {
             strips.contains("section svg{display:block;width:100%;height:100%"));
         assertTrue("A longer passage may remain smaller in *area*, but never in glyph scale",
             strips.contains("data-qcf-shared-scale"));
+    }
+
+    @Test public void relationVocabularyIsOnlyAnAtlasPresentationAdapter() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        String frozen=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantOmissions.java");
+        assertTrue(activity.contains("static String displayRelation(AtlasDiscriminantCases.Entry entry)"));
+        assertTrue(activity.contains("return \"Mot pivot différent\""));
+        assertTrue(activity.contains("return \"Même début, suite différente\""));
+        assertTrue(activity.contains("return \"Ajout puis mot pivot\""));
+        assertTrue(frozen.contains("if(entry.auditId==120)return \"Deux bifurcations\""));
     }
 
     @Test public void booxPortraitUsesFullWidthPagesAboveTafsirWithoutReflow() throws Exception {

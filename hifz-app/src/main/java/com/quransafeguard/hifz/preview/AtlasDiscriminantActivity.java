@@ -490,6 +490,20 @@ public final class AtlasDiscriminantActivity extends Activity {
         return AtlasDiscriminantCases.PILOT.get(selectedIndex);
     }
 
+    /** Only presentation vocabulary changes. The frozen 279-case audit and
+     * protected 1.17.8 AtlasDiscriminantOmissions adapter stay byte exact. */
+    static String displayRelation(AtlasDiscriminantCases.Entry entry){
+        String raw=AtlasDiscriminantOmissions.relation(entry);
+        if("Deux bifurcations".equals(raw))return "Deux différences successives";
+        if("Ajout puis bifurcation".equals(raw))return "Ajout puis mot pivot";
+        if("Bifurcation : groupe de mots".equals(raw))return "Groupe de mots différent";
+        if("Variation de mot ou de particule".equals(raw))return "Mot pivot différent";
+        if("Même amorce, bifurcation".equals(raw)
+                ||"Bifurcation après tronc commun".equals(raw))
+            return "Même début, suite différente";
+        return raw;
+    }
+
     private void render() {
         // Never retain a previous pair's glyphs under the new reference labels.
         // Keep the WebView attached/visible so Chromium can complete animation
@@ -525,7 +539,7 @@ public final class AtlasDiscriminantActivity extends Activity {
             c.first.getSurah(),c.first.getAyah(),c.first.getAyah(),false);
 
         int position=caseIndices.indexOf(selectedIndex);
-        String relationText="Relation · "+AtlasDiscriminantOmissions.relation(c);
+        String relationText="Relation · "+displayRelation(c);
         relationLine.setText(relationText);
         relationLine.setContentDescription(relationText);
         title.setText(c.first+" ↔ "+c.second+(caseIndices.size()>1?
@@ -650,7 +664,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private void showExplanation(){
         AtlasDiscriminantCases.Entry c=current();
         StringBuilder description=new StringBuilder("Type de relation : ")
-            .append(AtlasDiscriminantOmissions.relation(c))
+            .append(displayRelation(c))
             .append("\n\n").append(c.first).append(" · mot(s) ")
             .append(wordPositions(AtlasDiscriminantOmissions.actualDifference(c,true)))
             .append("\n").append(c.second).append(" · mot(s) ")
