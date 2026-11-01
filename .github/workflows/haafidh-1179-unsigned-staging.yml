@@ -1,0 +1,70 @@
+name: Quran Haafidh 1.17.9 audited CODE-ONLY UNSIGNED release staging
+on:
+  push:
+    branches: [stage/haafidh-1179-unsigned-20261101]
+permissions:
+  contents: read
+jobs:
+  code-only-unsigned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Verify exact audited code and unchanged Hifz core
+        run: |
+          set -euo pipefail
+          git checkout --detach 7b15d509d24c496c7c2ee2cee7d463167f569a8a
+          test "$(git rev-parse HEAD)" = "7b15d509d24c496c7c2ee2cee7d463167f569a8a"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          python3 scripts/verify_1179_invariants.py
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: android-actions/setup-android@v3
+        with: {packages: ''}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '9.5.0'}
+      - name: Fetch only public authentic QCF assets
+        run: |
+          set -euo pipefail
+          python3 -m pip install brotli
+          bash scripts/fetch_mushaf_pages.sh
+          python3 scripts/verify_mutash_catalogue.py
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Assemble UNSIGNED source-only release
+        env:
+          AYAH_THEMES_PRIVATE_114: "1"
+          HIFZ_PRIVATE_RELEASE_UPGRADE: "1"
+        run: |
+          set -euo pipefail
+          test -z "$(printenv HIFZ_KEYSTORE_PATH || true)"
+          test -z "$(printenv HIFZ_KEYSTORE_PASSWORD || true)"
+          test -z "$(printenv HIFZ_KEY_PASSWORD || true)"
+          gradle --no-daemon --max-workers=2 :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs
+          APK=hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep "^package: name='com.quransafeguard.hifz' versionCode='47' versionName='1.17.9' "
+          python3 - <<'PY'
+          import pathlib,zipfile,re
+          path=pathlib.Path("hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk")
+          with zipfile.ZipFile(path) as z:
+              n=set(z.namelist())
+              assert z.testzip() is None
+              assert len([p for p in n if re.fullmatch(r"assets/mushaf/hafs/kfqc/svg-br/\d{3}\.svg\.br",p)])==604
+              assert not any(p.startswith(("assets/atlas_private/","assets/ayah_themes_private/")) for p in n)
+              assert "assets/atlas/atlas_display_catalog_v1.json" not in n
+          print("PASS: 604 authentic QCF; no private resources or signer")
+          PY
+          echo "SOURCE_SHA=7b15d509d24c496c7c2ee2cee7d463167f569a8a" > hifz-app/build-private114/outputs/apk/release/CODE_ONLY_SOURCE_PIN.txt
+          echo "NOT SIGNED; PRIVATE RESOURCES MISSING; NOT INSTALLABLE" >> hifz-app/build-private114/outputs/apk/release/CODE_ONLY_SOURCE_PIN.txt
+          sha256sum "$APK" >> hifz-app/build-private114/outputs/apk/release/CODE_ONLY_SOURCE_PIN.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HAAFIDH-1179-CODE-ONLY-UNSIGNED-NOT-INSTALLABLE
+          path: |
+            hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk
+            hifz-app/build-private114/outputs/apk/release/CODE_ONLY_SOURCE_PIN.txt
+          if-no-files-found: error
+          retention-days: 14
