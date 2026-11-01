@@ -37,8 +37,8 @@ public final class AtlasDiscriminantActivity extends Activity {
     private GeometryRepository geometry;
     private MapQcfThumbnails left, right;
     private QcfAtlasVerseStrips strips,secondaryStrips;
-    private LinearLayout secondaryHost;
-    private TextView secondaryCaption;
+    private LinearLayout secondaryHost,stripHome,tafsirSnippetHost;
+    private TextView secondaryCaption,tafsirPivotCaption;
     private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
     private TafsirRepository tafsirRepository;
     private int leftTafsirRequest,rightTafsirRequest;
@@ -47,7 +47,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private LinearLayout tafsirPanel;
     private ScrollView tafsirScroll,comparisonScroll;
     private LinearLayout workspace,pagePair;
-    private int pageHeaderHeight,comparisonDetailHeight;
+    private int pageHeaderHeight,comparisonDetailHeight,defaultStripHeightDp;
     private TextView firstTafsirTab,secondTafsirTab;
     private int selectedTafsir=-1;
     private boolean lateralTafsir;
@@ -159,6 +159,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         // Spend the reclaimed 48dp on genuine enlarged QCF word excerpts,
         // not on extra navigation bars; full physical pages remain proportional.
         int stripHeightDp=compact?130:(dpHeight>=1000?205:158);
+        defaultStripHeightDp=stripHeightDp;
         comparisonDetailHeight=Ui.dp(this,stripHeightDp);
 
         LinearLayout pair=Ui.row(this);
@@ -210,24 +211,36 @@ public final class AtlasDiscriminantActivity extends Activity {
                 strips.setAlpha(1f);
             if(!disposed)showSecondaryStripsAfterPrimary();
         });
-        body.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,stripHeightDp)));
+        stripHome=Ui.column(this);
+        body.addView(stripHome);
+        stripHome.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,stripHeightDp)));
         // Created lazily only for the two independently reviewed double pivots.
         // Ordinary 279-catalogue comparison retains exactly one pair of QCF strips.
         secondaryHost=Ui.column(this);
         secondaryHost.setVisibility(View.GONE);
-        body.addView(secondaryHost);
+        stripHome.addView(secondaryHost);
         tafsirPanel=Ui.column(this);
         tafsirPanel.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,4));
         LinearLayout tabs=Ui.row(this);
         firstTafsirTab=tafsirTab(0);secondTafsirTab=tafsirTab(1);
         tabs.addView(firstTafsirTab,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
         tabs.addView(secondTafsirTab,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
+        tabs.addView(Ui.iconButton(this,"","Fermer le Tafsīr",v->closeTafsir()),
+            new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         tafsirPanel.addView(tabs);
         tafsirHeading=text("",14,true);
         tafsirHeading.setPadding(0,Ui.dp(this,6),0,Ui.dp(this,8));
         tafsirPanel.addView(tafsirHeading);
         leftTafsir=tafsirText();rightTafsir=tafsirText();
         LinearLayout tafsirBodies=Ui.column(this);
+        // Move (never duplicate) the already decoded authentic-QCF difference
+        // excerpts into this scrollable pane only when Tafsir is requested.
+        // The original al-Jalalayn commentary remains completely unaltered.
+        tafsirSnippetHost=Ui.column(this);
+        tafsirPivotCaption=text("",12,true);
+        tafsirPivotCaption.setPadding(Ui.dp(this,4),Ui.dp(this,5),0,0);
+        tafsirSnippetHost.addView(tafsirPivotCaption);
+        tafsirBodies.addView(tafsirSnippetHost);
         tafsirBodies.addView(leftTafsir);tafsirBodies.addView(rightTafsir);
         tafsirScroll=new ScrollView(this);
         tafsirScroll.addView(tafsirBodies,new ScrollView.LayoutParams(-1,-2));
@@ -274,20 +287,20 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     private void selectExactTafsir(int side,int page,VerseRef verse){
-        if(verse==null||page!=(side==0?currentLeftPage:currentRightPage)
-                ||page<geometry.pageForVerse(verse)
-                ||page>MawdudiMapModel.lastPageForVerse(verse,geometry))return;
-        VerseRef old=side==0?selectedLeftVerse:selectedRightVerse;
-        if(side==0){selectedLeftVerse=verse;firstTafsirTab.setText(verse.toString());}
-        else {selectedRightVerse=verse;secondTafsirTab.setText(verse.toString());}
-        updateContextualHeaders();
-        if(!verse.equals(old))loadContextualTafsir(side,verse);
+        if(verse==null||side<0||side>1)return;
+        AtlasDiscriminantCases.Entry pair=current();
+        VerseRef allowed=side==0?pair.first:pair.second;
+        // Pair-locked Tafsir: other ayah polygons on these physical QCF pages
+        // are NOT part of this correspondance and may never switch its source.
+        if(!allowed.equals(verse)||page!=(side==0?currentLeftPage:currentRightPage))
+            return;
         selectTafsir(side);
     }
 
     private void selectTafsir(int side){
         if(side<0||side>1)return;
         selectedTafsir=side;
+        movePivotIntoTafsir(side);
         tafsirPanel.setVisibility(View.VISIBLE);
         leftTafsir.setVisibility(side==0?View.VISIBLE:View.GONE);
         rightTafsir.setVisibility(side==1?View.VISIBLE:View.GONE);
@@ -296,7 +309,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         secondTafsirTab.setBackgroundColor(side==1?Ui.LINE:Ui.PAPER);
         VerseRef verse=side==0?selectedLeftVerse:selectedRightVerse;
         if(verse==null)verse=side==0?current().first:current().second;
-        tafsirHeading.setText("Tafsīr al-Jalālayn · "+verse+" · anglais");
+        tafsirHeading.setText("Tafsīr al-Jalālayn · "+verse+" · anglais · correspondance uniquement");
         tafsirScroll.scrollTo(0,0);
         if(!lateralTafsir){
             // Keep commentary in a separate pane: opening it never scrolls the
@@ -314,6 +327,51 @@ public final class AtlasDiscriminantActivity extends Activity {
             fitVisiblePages();
             if(comparisonScroll.getScrollY()!=0)comparisonScroll.scrollTo(0,0);
         });
+    }
+
+    private void closeTafsir(){
+        selectedTafsir=-1;
+        movePivotIntoTafsir(-1);
+        tafsirPanel.setVisibility(View.GONE);
+        comparisonScroll.post(this::fitVisiblePages);
+    }
+
+    private void movePivotIntoTafsir(int side){
+        if(strips==null||stripHome==null||tafsirSnippetHost==null)return;
+        boolean readingTafsir=side>=0;
+        LinearLayout destination=readingTafsir?tafsirSnippetHost:stripHome;
+        int height=readingTafsir
+            ?(getResources().getConfiguration().orientation==
+                android.content.res.Configuration.ORIENTATION_LANDSCAPE?116:110)
+            :defaultStripHeightDp;
+        if(strips.getParent()!=destination){
+            if(strips.getParent() instanceof ViewGroup)
+                ((ViewGroup)strips.getParent()).removeView(strips);
+            destination.addView(strips,readingTafsir?1:0,
+                new LinearLayout.LayoutParams(-1,Ui.dp(this,height)));
+        }else{
+            LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)strips.getLayoutParams();
+            if(params.height!=Ui.dp(this,height)){
+                params.height=Ui.dp(this,height);strips.setLayoutParams(params);
+            }
+        }
+        if(secondaryHost!=null&&secondaryHost.getParent()!=destination){
+            if(secondaryHost.getParent() instanceof ViewGroup)
+                ((ViewGroup)secondaryHost.getParent()).removeView(secondaryHost);
+            destination.addView(secondaryHost);
+        }
+        strips.setTafsirFocusSide(side);
+        if(secondaryStrips!=null)secondaryStrips.setTafsirFocusSide(side);
+        if(readingTafsir){
+            AtlasDiscriminantCases.Entry pair=current();
+            VerseRef active=side==0?pair.first:pair.second;
+            tafsirPivotCaption.setText(AtlasDiscriminantOmissions.explicitlyAbsent(pair,side==0)
+                ?"Absence en "+active+" · repère QCF contextuel, non souligné"
+                :"Mot(s) de bifurcation souligné(s) · QCF "+active);
+            tafsirPivotCaption.setVisibility(View.VISIBLE);
+        }else{
+            tafsirPivotCaption.setVisibility(View.GONE);
+        }
     }
 
     private void fitVisiblePages(){
@@ -369,13 +427,6 @@ public final class AtlasDiscriminantActivity extends Activity {
         });
     }
 
-    private void loadContextualTafsir(int side,VerseRef verse){
-        TextView target=side==0?leftTafsir:rightTafsir;
-        final int token=side==0?++leftTafsirRequest:++rightTafsirRequest;
-        target.setText("Chargement du Tafsīr al-Jalālayn…");
-        tafsirIo.execute(()->loadOneTafsir(verse,target,side,token));
-    }
-
     private void loadOneTafsir(VerseRef verse,TextView target,int side,int token){
         TafsirRepository.Entry entry=null;
         try {entry=tafsirRepository.load(verse);}
@@ -413,12 +464,10 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(currentLeftPage<1||currentLeftPage>604||currentRightPage<1||currentRightPage>604)
             throw new IllegalStateException("Invalid QCF page");
 
-        if(selectedLeftVerse==null||currentLeftPage<geometry.pageForVerse(selectedLeftVerse)
-            ||currentLeftPage>MawdudiMapModel.lastPageForVerse(selectedLeftVerse,geometry))
-            selectedLeftVerse=c.first;
-        if(selectedRightVerse==null||currentRightPage<geometry.pageForVerse(selectedRightVerse)
-            ||currentRightPage>MawdudiMapModel.lastPageForVerse(selectedRightVerse,geometry))
-            selectedRightVerse=c.second;
+        // The pair is canonical and immutable even after restore/rotation/case switching:
+        // never carry arbitrary adjacent-ayah Tafsir references across comparisons.
+        selectedLeftVerse=c.first;
+        selectedRightVerse=c.second;
         updateContextualHeaders();
         // BOOX: never decode two 600 KB original SVG pages and two crops simultaneously.
         // Load the second page only after the first confirms a real image.onload;
@@ -489,6 +538,7 @@ public final class AtlasDiscriminantActivity extends Activity {
             secondaryHost.addView(secondaryCaption,
                 new LinearLayout.LayoutParams(-1,Ui.dp(this,29)));
             secondaryStrips=new QcfAtlasVerseStrips(this);
+            secondaryStrips.setTafsirFocusSide(selectedTafsir);
             secondaryStrips.setOnRendered(()->{
                 if(!disposed&&secondaryStrips!=null&&secondaryStrips.bothRenderedForTest())
                     secondaryStrips.setAlpha(1f);
@@ -637,6 +687,17 @@ public final class AtlasDiscriminantActivity extends Activity {
         return selectedTafsir==0?selectedLeftVerse:selectedTafsir==1?selectedRightVerse:null;
     }
     boolean tafsirPanelVisibleForTest(){return tafsirPanel!=null&&tafsirPanel.getVisibility()==View.VISIBLE;}
+    boolean tafsirPivotEmbeddedForTest(){
+        return selectedTafsir>=0 && strips!=null && strips.getParent()==tafsirSnippetHost
+            && strips.tafsirFocusSideForTest()==selectedTafsir
+            && tafsirPivotCaption.getVisibility()==View.VISIBLE;
+    }
+    boolean tafsirPairLockedForTest(){
+        AtlasDiscriminantCases.Entry pair=current();
+        return pair.first.equals(selectedLeftVerse) && pair.second.equals(selectedRightVerse)
+            && pair.first.toString().equals(firstTafsirTab.getText().toString())
+            && pair.second.toString().equals(secondTafsirTab.getText().toString());
+    }
     boolean lateralTafsirForTest(){return lateralTafsir;}
     boolean tafsirHeadingVisibleForTest(){
         android.graphics.Rect visible=new android.graphics.Rect();
