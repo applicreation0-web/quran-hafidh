@@ -158,8 +158,12 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(activity.contains("c.explanation"));
         assertTrue(activity.contains("c.sourceUrl"));
         assertFalse(activity.contains("class RelationRail extends View"));
-        assertTrue(activity.contains("leftRead.setText(\"Lire \"+c.first+\" en Lecture\")"));
-        assertTrue(activity.contains("rightRead.setText(\"Lire \"+c.second+\" en Lecture\")"));
+        assertTrue(activity.contains("leftRead.setText(\"Lire \"+first+\" en Lecture\")"));
+        assertTrue(activity.contains("rightRead.setText(\"Lire \"+second+\" en Lecture\")"));
+        assertTrue("Reader destinations must follow the genuine QCF verse selected for Tafsir",
+            activity.contains("updateReadingLinkLabels();")
+                && activity.contains("selectedLeftVerse==null?c.first:selectedLeftVerse")
+                && activity.contains("selectedRightVerse==null?c.second:selectedRightVerse"));
         assertTrue("QCF page fit is recomputed when the contextual Tafsir is opened",
             activity.contains("comparisonScroll.post(this::fitVisiblePages)"));
         assertFalse(activity.contains("position.setText("));
