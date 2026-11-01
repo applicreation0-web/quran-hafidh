@@ -1,0 +1,120 @@
+{
+  "schema": "haafidh-1179-closure-v1",
+  "date": "2026-11-01",
+  "scope": "Close recovered Work automated validation; do not declare signed/private physical release complete",
+  "status": "AUTOMATED_WORK_CLOSED__PRIVATE_DELIVERY_NO_GO",
+  "production": {
+    "repository": "applicreation0-web/quran-hafidh",
+    "branch": "work/haafidh-1179-p1-279-20261031",
+    "sha": "d08a97cbe307219628125431af701e6cbc40e795",
+    "version": "1.17.9",
+    "version_code": 47,
+    "application_id": "com.quransafeguard.hifz"
+  },
+  "recovered": {
+    "branch": "audit/haafidh-1179-proof-bundle-20261031",
+    "sha": "fd4403353a6d0b22e7a6894bf1c95ba0438d13a2",
+    "source_diff": "6 commits beyond certified head; tests/workflows/scripts only, production code unchanged",
+    "local_svg_patch": "No extra uncommitted SVG patch found in accessible Work checkout; inaccessible workspace cannot be certified",
+    "work_ui": "Cannot stop or close remote Work UI from GitHub"
+  },
+  "evidence": {
+    "baseline_ci": {
+      "run_id": 41212783170,
+      "result": "SUCCESS",
+      "jobs": "12/12",
+      "includes": "JVM/contracts, phone + BOOX UI, preserved-regression, 8 catalogue shards"
+    },
+    "signer_identity": {
+      "run_id": 41209120644,
+      "result": "SUCCESS",
+      "certificate_sha256": "66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14",
+      "private_key_exported": false
+    },
+    "endurance_navigation": {
+      "run_id": 41246852263,
+      "overall_run": "FAILURE (early Tafsir jobs failed)",
+      "phone_job": "SUCCESS",
+      "boox_job": "SUCCESS",
+      "cycles_per_profile": 300
+    },
+    "endurance_tafsir": {
+      "run_id": 41249576279,
+      "overall_run": "SUCCESS",
+      "phone_job": "SUCCESS",
+      "boox_job": "SUCCESS",
+      "cycles_per_profile": 200,
+      "rotations_per_profile": 100,
+      "qcf_side_selections_per_profile": 400,
+      "delivery_method": "WebView-local Android MotionEvent, not system-injected endurance"
+    },
+    "proof_collection": {
+      "run_id": 41252645644,
+      "result": "SUCCESS",
+      "artifact_id": 13062102713,
+      "artifact_name": "haafidh-1179-existing-proof-bundle-NO-APK",
+      "artifact_size_bytes": 48576318,
+      "inner_proof_bundle_sha256": "0bc41fcb809bfccd9cad7c3d46196216cb7dde3394cfbdd1827634bd7f698018"
+    },
+    "crashes_or_app_anr_in_measured_endurance": 0,
+    "memory_kib": [
+      {
+        "surface": "phone",
+        "phase": "navigation",
+        "pss_first": 120656,
+        "pss_last": 139532,
+        "pss_peak": 141714
+      },
+      {
+        "surface": "boox",
+        "phase": "navigation",
+        "pss_first": 125841,
+        "pss_last": 131208,
+        "pss_peak": 156292
+      },
+      {
+        "surface": "phone",
+        "phase": "tafsir",
+        "pss_first": 89188,
+        "pss_last": 114671,
+        "pss_peak": 151923
+      },
+      {
+        "surface": "boox",
+        "phase": "tafsir",
+        "pss_first": 94936,
+        "pss_last": 108712,
+        "pss_peak": 153993
+      }
+    ],
+    "limitations": [
+      "PSS/heap observations do not prove absence of all native or WebView renderer leaks",
+      "System-injected screen touch endurance was not certified: emulator Taskbar rejected touch injection",
+      "No signed 1.17.9 APK exists",
+      "No in-place upgrade from existing official signed version tested",
+      "No physical BOOX E-Ink acceptance"
+    ]
+  },
+  "private_inputs": {
+    "resources": "7/7 SHA-256 matched in previous Work environment; source material not stored or exported here",
+    "keystore": "Historical cert attested in GitHub CI but no private key available in this chat",
+    "candidate_apk": "NOT_CREATED",
+    "boox_physical": "NOT_TESTED"
+  },
+  "next_gates": [
+    "Treat evidence as frozen; do not rerun baseline or endurance without new source changes",
+    "Certify physical/system touch via controlled test or explicitly document and accept residual risk before any GO",
+    "Produce private signed candidate only in trusted environment with the original signer and all 7 protected resources",
+    "Verify actual candidate package/version/certificate against installed official APK and perform non-destructive in-place upgrade check",
+    "Validate original and updated backup snapshots, Sabqi/Itqan finals, masks, timers, full QCF pages and E-Ink ghosting on physical BOOX",
+    "Issue final private-delivery GO only after the above checks; never publish publicly"
+  ],
+  "prohibits": [
+    "No artificial Hifz credit",
+    "No change to engine/initializations",
+    "No public APK or GitHub release",
+    "No debug/mismatching signer",
+    "No uninstall or data clearance",
+    "Do not claim Work UI session stopped"
+  ]
+}
