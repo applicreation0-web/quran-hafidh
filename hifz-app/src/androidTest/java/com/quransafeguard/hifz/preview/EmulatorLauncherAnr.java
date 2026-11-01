@@ -18,6 +18,14 @@ final class EmulatorLauncherAnr {
         instrumentation.waitForIdleSync();
         AccessibilityNodeInfo root=instrumentation.getUiAutomation().getRootInActiveWindow();
         org.junit.Assert.assertNotNull("No foreground window for audit capture",root);
+        // Only the explicitly identified unrelated Pixel Launcher ANR may be dismissed.
+        // Other overlays (including application errors) keep the capture blocked.
+        if("android".equals(String.valueOf(root.getPackageName()))
+                &&resumeIfPresent(instrumentation)){
+            instrumentation.waitForIdleSync();
+            root=instrumentation.getUiAutomation().getRootInActiveWindow();
+            org.junit.Assert.assertNotNull("No foreground app after launcher ANR recovery",root);
+        }
         org.junit.Assert.assertEquals("System/launcher overlay blocks the audited application",
             instrumentation.getTargetContext().getPackageName(),String.valueOf(root.getPackageName()));
     }
