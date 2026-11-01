@@ -196,6 +196,16 @@ public final class AtlasDiscriminantSourceContractTest {
             actual.contains("new int[]{1} : new int[]{1}"));
     }
 
+    @Test public void pivotMagnifierKeepsOriginalArabicAndFailsSafeToFullQcfRow() throws Exception {
+        String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
+        assertTrue(strips.contains("horizontalWordWindow(pageWords,physicalLines,target,"));
+        assertTrue(strips.contains("if(physicalRows!=1)return full;"));
+        assertTrue(strips.contains("if(right-left<35||right-left>255)return full;"));
+        assertTrue(strips.contains("source.substring(0,m.start())"));
+        assertTrue(strips.contains("stroke='#121211'"));
+        assertFalse(strips.contains("new android.graphics.Typeface"));
+    }
+
     @Test public void noExternalCorpusOrGeneratedExplanations() throws Exception {
         String catalog=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantCases.java");
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
@@ -205,10 +215,18 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(activity.contains("c.explanation"));
         assertTrue(activity.contains("c.sourceUrl"));
         assertFalse(activity.contains("class RelationRail extends View"));
-        assertTrue(activity.contains("leftRead.setText(\"Lire \"+first+\" en Lecture\")"));
-        assertTrue(activity.contains("rightRead.setText(\"Lire \"+second+\" en Lecture\")"));
+        assertFalse("Two bulky Lecture rows must not compete with source QCF words",
+            activity.contains("LinearLayout readingLinks=Ui.row(this)"));
+        assertFalse(activity.contains("leftRead.setText("));
+        assertFalse(activity.contains("rightRead.setText("));
+        assertTrue("Two accessible Quran headers retain exact-verse navigation",
+            activity.contains("leftHeader.setOnClickListener(v->openReader(true,currentLeftPage))")
+                && activity.contains("rightHeader.setOnClickListener(v->openReader(false,currentRightPage))"));
+        assertTrue("Real Quran vector excerpts receive the freed vertical area",
+            activity.contains("stripHeightDp=compact?130:(dpHeight>=1000?205:158)")
+                && activity.contains("body.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,stripHeightDp)))"));
         assertTrue("Reader destinations must follow the genuine QCF verse selected for Tafsir",
-            activity.contains("updateReadingLinkLabels();")
+            activity.contains("updateContextualHeaders();")
                 && activity.contains("selectedLeftVerse==null?c.first:selectedLeftVerse")
                 && activity.contains("selectedRightVerse==null?c.second:selectedRightVerse"));
         assertTrue("QCF page fit is recomputed when the contextual Tafsir is opened",
