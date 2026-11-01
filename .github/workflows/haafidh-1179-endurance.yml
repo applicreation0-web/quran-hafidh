@@ -1,7 +1,7 @@
 name: Haafidh 1.17.9 final endurance (NO APK NO RELEASE)
 on:
   push:
-    branches: [audit/haafidh-1179-tafsir-polygon-20261031]
+    branches: [audit/haafidh-1179-tafsir-polygon-20261031, audit/haafidh-1179-visual-endurance-20261101]
   workflow_dispatch:
 permissions:
   contents: read
@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
       - name: Pin tested production code to the certified head
         run: |
-          git diff --exit-code d08a97cbe307219628125431af701e6cbc40e795 -- hifz-core/src hifz-app/src/main hifz-app/src/private114 hifz-app/build.gradle.kts
+          git diff --exit-code 5a5a690c67bda26923df360a52555f6d5449aa07 -- hifz-core/src hifz-app/src/main hifz-app/src/private114 hifz-app/build.gradle.kts
           test -z "${HIFZ_PRIVATE_RELEASE_UPGRADE:-}"
           test -z "${HIFZ_KEYSTORE_PATH:-}"
           python3 scripts/verify_1179_invariants.py
