@@ -1,0 +1,33 @@
+name: Haafidh 1.17.9 pinned Android public build-tools export (NO APK)
+on:
+  push:
+    branches: [stage/haafidh-1179-unsigned-20261101]
+    paths: ['.github/workflows/haafidh-1179-export-build-tools.yml']
+permissions:
+  contents: read
+jobs:
+  toolchain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Retrieve exact public Android build tools used by 1.17.9
+        run: |
+          set -euo pipefail
+          sdkmanager 'build-tools;36.0.0'
+          mkdir -p "$RUNNER_TEMP/android36"
+          cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" "$RUNNER_TEMP/android36/"
+          cp "$ANDROID_HOME/build-tools/36.0.0/aapt" "$RUNNER_TEMP/android36/"
+          cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" "$RUNNER_TEMP/android36/"
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" "$RUNNER_TEMP/android36/"
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib64/libc++.so" "$RUNNER_TEMP/android36/"
+          sha256sum "$RUNNER_TEMP/android36/"* > "$RUNNER_TEMP/android36/SHA256SUMS"
+          echo "PASS PUBLIC SIGNING TOOLCHAIN; NO APK, no private data"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HAAFIDH-1179-PUBLIC-ANDROID-36-BUILD-TOOLS
+          path: ${{ runner.temp }}/android36/
+          retention-days: 3
+          if-no-files-found: error
