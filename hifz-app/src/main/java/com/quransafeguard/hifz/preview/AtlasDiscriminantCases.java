@@ -365,6 +365,6 @@ final class AtlasDiscriminantCases {
         int index=indexFor(surah,ayah);return index<0?null:PILOT.get(index);
     }
     static int preferredIndex(int surah,int ayah) {
-        int index=indexFor(surah,ayah);return index<0?0:index;
+        return indexFor(surah,ayah);
     }
 }
