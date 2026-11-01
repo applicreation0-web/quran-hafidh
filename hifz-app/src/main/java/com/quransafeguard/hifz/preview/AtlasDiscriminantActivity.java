@@ -53,7 +53,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private boolean lateralTafsir;
     private int builtOrientation=android.content.res.Configuration.ORIENTATION_UNDEFINED;
     private TextView title, leftHeader, rightHeader, relationLine;
-    private TextView leftRead, rightRead, returnToSource;
+    private TextView returnToSource;
     private boolean disposed;
     private int currentLeftPage, currentRightPage;
     private int leftPageStatus, rightPageStatus; // 0 pending, +1 decoded, -1 failed
@@ -147,11 +147,19 @@ public final class AtlasDiscriminantActivity extends Activity {
         leftHeader=text("",compact?12:13.5f,true);
         rightHeader=text("",compact?12:13.5f,true);
         leftHeader.setGravity(Gravity.CENTER);rightHeader.setGravity(Gravity.CENTER);
-        heads.addView(leftHeader,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?35:40),1));
-        heads.addView(rightHeader,new LinearLayout.LayoutParams(0,Ui.dp(this,compact?35:40),1));
+        // The exact verse header replaces a whole redundant "Lire ... en Lecture"
+        // row. Clicking it retains direct navigation; the QCF page itself opens Tafsir.
+        leftHeader.setOnClickListener(v->openReader(true,currentLeftPage));
+        rightHeader.setOnClickListener(v->openReader(false,currentRightPage));
+        leftHeader.setClickable(true);rightHeader.setClickable(true);
+        heads.addView(leftHeader,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
+        heads.addView(rightHeader,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
         body.addView(heads);
-        pageHeaderHeight=Ui.dp(this,compact?35:40);
-        comparisonDetailHeight=Ui.dp(this,48+(compact?90:108));
+        pageHeaderHeight=Ui.dp(this,48);
+        // Spend the reclaimed 48dp on genuine enlarged QCF word excerpts,
+        // not on extra navigation bars; full physical pages remain proportional.
+        int stripHeightDp=compact?130:(dpHeight>=1000?205:158);
+        comparisonDetailHeight=Ui.dp(this,stripHeightDp);
 
         LinearLayout pair=Ui.row(this);
         pagePair=pair;
@@ -195,13 +203,6 @@ public final class AtlasDiscriminantActivity extends Activity {
         int pairedHeight=Math.min(natural,cap);
         body.addView(pair,new LinearLayout.LayoutParams(-1,pairedHeight));
 
-        LinearLayout readingLinks=Ui.row(this);
-        leftRead=readingLink(true);
-        rightRead=readingLink(false);
-        readingLinks.addView(leftRead,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
-        readingLinks.addView(rightRead,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
-        body.addView(readingLinks);
-
         // A short source-vector context stays beside the same two localizations.
         strips=new QcfAtlasVerseStrips(this);
         strips.setOnRendered(()->{
@@ -209,7 +210,7 @@ public final class AtlasDiscriminantActivity extends Activity {
                 strips.setAlpha(1f);
             if(!disposed)showSecondaryStripsAfterPrimary();
         });
-        body.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,compact?90:108)));
+        body.addView(strips,new LinearLayout.LayoutParams(-1,Ui.dp(this,stripHeightDp)));
         // Created lazily only for the two independently reviewed double pivots.
         // Ordinary 279-catalogue comparison retains exactly one pair of QCF strips.
         secondaryHost=Ui.column(this);
@@ -279,7 +280,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         VerseRef old=side==0?selectedLeftVerse:selectedRightVerse;
         if(side==0){selectedLeftVerse=verse;firstTafsirTab.setText(verse.toString());}
         else {selectedRightVerse=verse;secondTafsirTab.setText(verse.toString());}
-        updateReadingLinkLabels();
+        updateContextualHeaders();
         if(!verse.equals(old))loadContextualTafsir(side,verse);
         selectTafsir(side);
     }
@@ -390,16 +391,6 @@ public final class AtlasDiscriminantActivity extends Activity {
         });
     }
 
-    private TextView readingLink(boolean first){
-        TextView link=text("",14f,true);
-        link.setGravity(Gravity.CENTER);
-        link.setPaintFlags(link.getPaintFlags()|android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-        link.setContentDescription(first?"Ouvrir le premier verset en Lecture":
-            "Ouvrir le second verset en Lecture");
-        link.setOnClickListener(v->openReader(first,first?currentLeftPage:currentRightPage));
-        return link;
-    }
-
     private AtlasDiscriminantCases.Entry current(){
         return AtlasDiscriminantCases.PILOT.get(selectedIndex);
     }
@@ -428,10 +419,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(selectedRightVerse==null||currentRightPage<geometry.pageForVerse(selectedRightVerse)
             ||currentRightPage>MawdudiMapModel.lastPageForVerse(selectedRightVerse,geometry))
             selectedRightVerse=c.second;
-        leftHeader.setText(QuranSurahNames.name(c.first.getSurah())+" · "+c.first+" · p."+currentLeftPage
-            +(AtlasDiscriminantOmissions.explicitlyAbsent(c,true)?" · absent":""));
-        rightHeader.setText(QuranSurahNames.name(c.second.getSurah())+" · "+c.second+" · p."+currentRightPage
-            +(AtlasDiscriminantOmissions.explicitlyAbsent(c,false)?" · absent":""));
+        updateContextualHeaders();
         // BOOX: never decode two 600 KB original SVG pages and two crops simultaneously.
         // Load the second page only after the first confirms a real image.onload;
         // otherwise one failed image could hide a missing QCF resource indefinitely.
@@ -456,7 +444,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         secondTafsirTab.setText(selectedRightVerse.toString());
         loadBothTafsirs(selectedLeftVerse,selectedRightVerse);
         if(selectedTafsir>=0)selectTafsir(selectedTafsir);
-        updateReadingLinkLabels();
+        updateContextualHeaders();
         String origin=getIntent().getStringExtra(EXTRA_ORIGIN);
         String label="Révision active".equals(origin)?"Révision active":
             "Révision passive".equals(origin)?"Révision passive":"Lecture";
@@ -595,12 +583,17 @@ public final class AtlasDiscriminantActivity extends Activity {
         return value.toString();
     }
 
-    private void updateReadingLinkLabels(){
+    private void updateContextualHeaders(){
+        if(leftHeader==null||rightHeader==null)return;
         AtlasDiscriminantCases.Entry c=current();
         VerseRef first=selectedLeftVerse==null?c.first:selectedLeftVerse;
         VerseRef second=selectedRightVerse==null?c.second:selectedRightVerse;
-        leftRead.setText("Lire "+first+" en Lecture");
-        rightRead.setText("Lire "+second+" en Lecture");
+        leftHeader.setText(QuranSurahNames.name(first.getSurah())+" · "+first+" · p."+currentLeftPage+" ↗"
+            +(first.equals(c.first)&&AtlasDiscriminantOmissions.explicitlyAbsent(c,true)?" · absent":""));
+        rightHeader.setText(QuranSurahNames.name(second.getSurah())+" · "+second+" · p."+currentRightPage+" ↗"
+            +(second.equals(c.second)&&AtlasDiscriminantOmissions.explicitlyAbsent(c,false)?" · absent":""));
+        leftHeader.setContentDescription("Ouvrir le premier verset en Lecture : "+first);
+        rightHeader.setContentDescription("Ouvrir le second verset en Lecture : "+second);
     }
 
     private void openReader(boolean first,int page){
