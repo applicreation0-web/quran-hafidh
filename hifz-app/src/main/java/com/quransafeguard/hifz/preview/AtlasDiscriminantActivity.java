@@ -55,6 +55,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     private TextView title, leftHeader, rightHeader, relationLine;
     private TextView returnToSource;
     private boolean disposed;
+    private boolean pendingSecondaryJump;
     private int currentLeftPage, currentRightPage;
     private int leftPageStatus, rightPageStatus; // 0 pending, +1 decoded, -1 failed
 
@@ -539,6 +540,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     }
 
     private void render() {
+        pendingSecondaryJump=false;
         // Never retain a previous pair's glyphs under the new reference labels.
         // Keep the WebView attached/visible so Chromium can complete animation
         // frame readiness callbacks, while making every old glyph transparent.
@@ -584,6 +586,17 @@ public final class AtlasDiscriminantActivity extends Activity {
         String relationText="Relation · "+displayRelation(c);
         relationLine.setText(relationText);
         relationLine.setContentDescription(relationText);
+        if(AtlasDiscriminantOmissions.hasSecondary(c.auditId)){
+            // The second genuine QCF pivot may sit below the initial BOOX
+            // viewport. A single discoverable action jumps to it; the original
+            // full QCF pages are never resized, deformed or rewritten.
+            relationLine.append(" · Voir la 2e différence ↓");
+            relationLine.setContentDescription("Voir la deuxième différence de ce couple");
+            relationLine.setOnClickListener(v->jumpToSecondaryDifference());
+        }else{
+            relationLine.setOnClickListener(null);
+            relationLine.setClickable(false);
+        }
         title.setText(c.first+" ↔ "+c.second+(caseIndices.size()>1?
             " · "+(position+1)+"/"+caseIndices.size():""));
         previousCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
@@ -640,8 +653,10 @@ public final class AtlasDiscriminantActivity extends Activity {
             secondaryStrips=new QcfAtlasVerseStrips(this);
             secondaryStrips.setTafsirFocusSide(selectedTafsir);
             secondaryStrips.setOnRendered(()->{
-                if(!disposed&&secondaryStrips!=null&&secondaryStrips.bothRenderedForTest())
+                if(!disposed&&secondaryStrips!=null&&secondaryStrips.bothRenderedForTest()){
                     secondaryStrips.setAlpha(1f);
+                    if(pendingSecondaryJump)secondaryStrips.post(this::completeSecondaryJump);
+                }
             });
             secondaryHost.addView(secondaryStrips,
                 new LinearLayout.LayoutParams(-1,Ui.dp(this,108)));
@@ -657,6 +672,47 @@ public final class AtlasDiscriminantActivity extends Activity {
             entry.second,currentRightPage,
             AtlasDiscriminantOmissions.secondaryDifference(entry,false),
             AtlasDiscriminantOmissions.secondaryCropAnchor(entry,false));
+    }
+
+    /** User-visible access to a second source-QCF difference, without zooming
+     * the authentic 345:550 pages or exposing extra Hifz state.
+     * Works whether the pair is in comparison scroll or inside BOOX Tafsir.
+     */
+    private void jumpToSecondaryDifference(){
+        if(disposed||!AtlasDiscriminantOmissions.hasSecondary(current().auditId))return;
+        pendingSecondaryJump=true;
+        // If a neighbouring ayah's Tafsir was opened, restore this comparison's
+        // canonical side before navigating to its source-QCF pivots.
+        if(selectedTafsir>=0)selectTafsir(selectedTafsir);
+        if(secondaryStrips!=null)secondaryStrips.post(this::completeSecondaryJump);
+    }
+
+    private void completeSecondaryJump(){
+        if(disposed||!pendingSecondaryJump||secondaryCaption==null
+                ||secondaryStrips==null||secondaryHost==null
+                ||secondaryHost.getVisibility()!=View.VISIBLE
+                ||!secondaryStrips.bothRenderedForTest()
+                ||secondaryStrips.getAlpha()<=0f)return;
+        android.view.ViewParent parent=secondaryCaption.getParent();
+        ScrollView scroller=null;
+        while(parent!=null){
+            if(parent instanceof ScrollView){scroller=(ScrollView)parent;break;}
+            parent=parent.getParent();
+        }
+        if(scroller==null)return;
+        android.graphics.Rect target=new android.graphics.Rect();
+        secondaryCaption.getDrawingRect(target);
+        scroller.offsetDescendantRectToMyCoords(secondaryCaption,target);
+        pendingSecondaryJump=false;
+        scroller.smoothScrollTo(0,Math.max(0,target.top-Ui.dp(this,4)));
+    }
+
+    /** Genuine viewport clipping, not simply the existence of an SVG WebView. */
+    boolean secondaryQcfInViewportForTest(){
+        if(!qcfSecondaryReadyForTest()||secondaryStrips==null)return false;
+        android.graphics.Rect visible=new android.graphics.Rect();
+        return secondaryStrips.getGlobalVisibleRect(visible)
+            &&visible.height()>=Ui.dp(this,32);
     }
 
     boolean qcfSecondaryReadyForTest(){

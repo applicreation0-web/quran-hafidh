@@ -14,20 +14,28 @@ final class EmulatorLauncherAnr {
     /** A system dialog can satisfy a crude ink-density gate. Never certify a
      * success screenshot unless the target application actually owns the window.
      * Do not dismiss any dialog here; blocked captures remain failed evidence. */
+    /** Wait for the REAL tested application's accessible foreground window.
+     * Android 15 can briefly expose no accessibility root while transitioning
+     * from ActivityScenario's EmptyActivity to the target Activity. A null root
+     * is not a successful screenshot. Only the known Pixel Launcher ANR may be
+     * acknowledged; all other persistent windows remain a hard failure.
+     */
     static void requireApplicationForeground(Instrumentation instrumentation){
-        instrumentation.waitForIdleSync();
-        AccessibilityNodeInfo root=instrumentation.getUiAutomation().getRootInActiveWindow();
-        org.junit.Assert.assertNotNull("No foreground window for audit capture",root);
-        // Only the explicitly identified unrelated Pixel Launcher ANR may be dismissed.
-        // Other overlays (including application errors) keep the capture blocked.
-        if("android".equals(String.valueOf(root.getPackageName()))
-                &&resumeIfPresent(instrumentation)){
+        String expected=instrumentation.getTargetContext().getPackageName();
+        String observed="<no accessibility root>";
+        long deadline=android.os.SystemClock.uptimeMillis()+12000L;
+        do{
             instrumentation.waitForIdleSync();
-            root=instrumentation.getUiAutomation().getRootInActiveWindow();
-            org.junit.Assert.assertNotNull("No foreground app after launcher ANR recovery",root);
-        }
-        org.junit.Assert.assertEquals("System/launcher overlay blocks the audited application",
-            instrumentation.getTargetContext().getPackageName(),String.valueOf(root.getPackageName()));
+            AccessibilityNodeInfo root=instrumentation.getUiAutomation().getRootInActiveWindow();
+            if(root!=null){
+                observed=String.valueOf(root.getPackageName());
+                if(expected.equals(observed))return;
+                if("android".equals(observed))resumeIfPresent(instrumentation);
+            }
+            android.os.SystemClock.sleep(125L);
+        }while(android.os.SystemClock.uptimeMillis()<deadline);
+        org.junit.Assert.fail("Audited application never reached foreground for screenshot;"
+            +" expected="+expected+" last="+observed);
     }
 
     static boolean resumeIfPresent(Instrumentation instrumentation){

@@ -1177,6 +1177,20 @@ public final class AtlasDiscriminantInstrumentedTest {
                     }
                     assertTrue("Two genuine QCF pivot strips must render for case "+pair.auditId,
                         readyExtra.get());
+                    scenario.onActivity(a->{
+                        View jump=findByDescription(a.getWindow().getDecorView(),
+                            "Voir la deuxième différence de ce couple");
+                        assertNotNull("Second QCF pivot must have a discoverable action",jump);
+                        assertTrue("Second QCF pivot action must be clickable",jump.performClick());
+                    });
+                    AtomicBoolean inViewport=new AtomicBoolean(false);
+                    for(int attempt=0;attempt<70;attempt++){
+                        scenario.onActivity(a->inViewport.set(a.secondaryQcfInViewportForTest()));
+                        if(inViewport.get())break;
+                        Thread.sleep(100L);
+                    }
+                    assertTrue("Second AUTHENTIC QCF pivot must become visible after user jump: case "
+                        +pair.auditId,inViewport.get());
                     String device=context.getResources().getConfiguration().smallestScreenWidthDp>=600?
                         "boox":"phone";
                     saveComparisonScreenshot(context,"case-"+pair.auditId+"-two-pivots-"+device);
