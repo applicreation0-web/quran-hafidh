@@ -1,7 +1,7 @@
 name: Haafidh 1.17.9 complete recommendations and regression validation (NO PRIVATE APK)
 on:
   push:
-    branches: [work/haafidh-1179-final-compliance-20261101, work/haafidh-1179-visual-acceptance-20261101, work/haafidh-1179-pivot-space-20261101, work/haafidh-1179-symmetric-qcf-20261101, work/haafidh-1179-tafsir-pair-locked-20261101, work/haafidh-1179-boox-pivot-20261101]
+    branches: [work/haafidh-1179-final-compliance-20261101, work/haafidh-1179-visual-acceptance-20261101, work/haafidh-1179-pivot-space-20261101, work/haafidh-1179-symmetric-qcf-20261101, work/haafidh-1179-tafsir-pair-locked-20261101, work/haafidh-1179-boox-pivot-20261101, work/haafidh-1179-boox-tafsir-default-20261101]
   workflow_dispatch:
 permissions:
   contents: read

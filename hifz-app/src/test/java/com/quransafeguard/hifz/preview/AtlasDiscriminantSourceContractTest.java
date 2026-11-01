@@ -230,6 +230,22 @@ public final class AtlasDiscriminantSourceContractTest {
             strips.contains("data-qcf-shared-scale"));
     }
 
+    @Test public void booxPortraitTafsirDefaultsOpenButPersistsManualClosure() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        assertTrue("Only first arrival on BOOX portrait defaults to first canonical verse",
+            activity.contains("state==null?(isBooxPortraitConfiguration()?0:-1)"));
+        assertTrue("Recreation must restore the user-selected open/closed state",
+            activity.contains("state.getInt(\"tafsirSide\",-1)"));
+        assertTrue("The default must never be used for phone or landscape",
+            activity.contains("config.orientation==android.content.res.Configuration.ORIENTATION_PORTRAIT")
+                &&activity.contains("widthDp>=900"));
+        assertTrue("The Tafsir must open with original-QCF strips in the lower panel",
+            activity.contains("if(selectedTafsir>=0)selectTafsir(selectedTafsir);"));
+        assertTrue("No redundant language label in the contextual Tafsir heading",
+            activity.contains("tafsirHeading.setText(\"Tafsīr al-Jalālayn · \"+verse);"));
+        assertFalse(activity.contains(" · anglais"));
+    }
+
     @Test public void relationVocabularyIsOnlyAnAtlasPresentationAdapter() throws Exception {
         String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
         String frozen=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantOmissions.java");

@@ -71,7 +71,11 @@ public final class AtlasDiscriminantActivity extends Activity {
             selectedIndex=state!=null?state.getInt("caseIndex",caseIndices.get(0)):
                 getIntent().getIntExtra(EXTRA_CASE_INDEX,caseIndices.get(0));
             if(!caseIndices.contains(selectedIndex))selectedIndex=caseIndices.get(0);
-            selectedTafsir=state==null?-1:state.getInt("tafsirSide",-1);
+            // BOOX portrait default: the two full-width source QCF pages
+            // immediately open with the pair-locked Tafsir underneath.
+            // On rotation/recreation, ALWAYS honour the saved open/closed side.
+            selectedTafsir=state==null?(isBooxPortraitConfiguration()?0:-1):
+                state.getInt("tafsirSide",-1);
             if(state!=null){
                 String savedLeft=state.getString("tafsirLeftVerse","");
                 String savedRight=state.getString("tafsirRightVerse","");
@@ -83,6 +87,14 @@ public final class AtlasDiscriminantActivity extends Activity {
         } catch (Exception unavailable) {
             Ui.showFatal(this,"Comparaison Atlas indisponible : coordonnées QCF à vérifier.");
         }
+    }
+
+    private boolean isBooxPortraitConfiguration(){
+        android.content.res.Configuration config=getResources().getConfiguration();
+        float density=getResources().getDisplayMetrics().density;
+        int widthDp=(int)(getResources().getDisplayMetrics().widthPixels/density);
+        return config.orientation==android.content.res.Configuration.ORIENTATION_PORTRAIT
+            &&widthDp>=900;
     }
 
     private TextView text(String s,float sp,boolean bold) {
@@ -319,7 +331,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         secondTafsirTab.setBackgroundColor(side==1?Ui.LINE:Ui.PAPER);
         VerseRef verse=side==0?selectedLeftVerse:selectedRightVerse;
         if(verse==null)verse=side==0?current().first:current().second;
-        tafsirHeading.setText("Tafsīr al-Jalālayn · "+verse+" · anglais");
+        tafsirHeading.setText("Tafsīr al-Jalālayn · "+verse);
         tafsirScroll.scrollTo(0,0);
         if(!lateralTafsir){
             // Keep commentary in a separate pane: opening it never scrolls the
@@ -745,6 +757,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         return selectedTafsir==0?selectedLeftVerse:selectedTafsir==1?selectedRightVerse:null;
     }
     boolean tafsirPanelVisibleForTest(){return tafsirPanel!=null&&tafsirPanel.getVisibility()==View.VISIBLE;}
+    String tafsirHeadingTextForTest(){return tafsirHeading==null?"":tafsirHeading.getText().toString();}
     boolean tafsirPivotEmbeddedForTest(){
         return selectedTafsir>=0 && strips!=null && strips.getParent()==tafsirSnippetHost
             && strips.tafsirFocusSideForTest()==selectedTafsir

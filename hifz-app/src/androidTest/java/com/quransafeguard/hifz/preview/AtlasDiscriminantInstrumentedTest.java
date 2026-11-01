@@ -337,6 +337,26 @@ public final class AtlasDiscriminantInstrumentedTest {
         screenshot.recycle();
     }
 
+    /** The full-width BOOX portrait screen starts with the first locked Tafsir
+     * selected. Deliberately close it ONLY when checking the dedicated
+     * both-excerpts comparison-only contract, never by changing product defaults. */
+    private static void closeDefaultBooxTafsirForComparison(
+        ActivityScenario<AtlasDiscriminantActivity> scenario){
+        scenario.onActivity(a->{
+            if(!a.booxPortraitTafsirForTest())return;
+            assertTrue("BOOX portrait Tafsir opens by default",a.tafsirPanelVisibleForTest());
+            assertEquals("Initial Tafsir must show first exact compared verse",0,a.selectedTafsirForTest());
+            assertTrue("The open Tafsir must be underneath the two authentic pages",
+                a.tafsirBelowBothPagesForTest());
+            View close=findByDescription(a.getWindow().getDecorView(),"Fermer le Tafsir");
+            assertNotNull("BOOX must permit the user to return to symmetric excerpts",close);
+            assertTrue(close.performClick());
+            assertFalse("Closing should reveal the full-width comparison-only view",
+                a.tafsirPanelVisibleForTest());
+            assertEquals(-1,a.selectedTafsirForTest());
+        });
+    }
+
     /** Run on phone and BOOX profiles: page touch, retained localizations and rotation. */
     @Test public void mushafTapOpensContextualTafsirAndSwitchPreservesBothQcfPages()throws Exception{
         Context context=ApplicationProvider.getApplicationContext();
@@ -362,6 +382,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                         a.lateralTafsirForTest());
                 }
             });
+            closeDefaultBooxTafsirForComparison(scenario);
             AtomicReference<Rect[]> pageBounds=new AtomicReference<>();
             AtomicReference<MapQcfThumbnails[]> originalPages=new AtomicReference<>();
             scenario.onActivity(a->{
@@ -615,6 +636,7 @@ public final class AtlasDiscriminantInstrumentedTest {
             AtomicReference<MapQcfThumbnails[]> pages=new AtomicReference<>();
             try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(pairIntent(context,index))){
                 waitForQcf(scenario);
+                closeDefaultBooxTafsirForComparison(scenario);
                 assertOriginalPageShapeAndWordMarks(scenario,pair);
                 assertDisplayedQcfClips(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
@@ -821,11 +843,18 @@ public final class AtlasDiscriminantInstrumentedTest {
                 View root=activity.findViewById(android.R.id.content);
                 assertEquals(2,countViews(root,MapQcfThumbnails.class));
                 assertEquals(1,countViews(root,QcfAtlasVerseStrips.class));
+                if(activity.booxPortraitTafsirForTest()){
+                    assertEquals(0,activity.selectedTafsirForTest());
+                    assertTrue(activity.tafsirBelowBothPagesForTest());
+                    assertFalse("The Tafsir heading no longer needs a language label",
+                        activity.tafsirHeadingTextForTest().contains("anglais"));
+                }
                 assertEquals("2:63 must be at page mapped by real geometry",
                     GeometryRepository.get(activity).pageForVerse(
                         new com.quransafeguard.hifz.core.VerseRef(2,63)),
                     activity.getCurrentLeftPageForTest());
             });
+            closeDefaultBooxTafsirForComparison(scenario);
             AtomicBoolean ready=new AtomicBoolean(false);
             AtomicReference<Rect[]> bounds=new AtomicReference<>();
             // BOOX-safe staged decoding is not instantaneous: poll boundedly off the UI thread.
@@ -1021,6 +1050,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 }
                 assertTrue("Both original QCF pages and excerpts must load: "+
                     pair.first+" / "+pair.second,ready.get());
+                closeDefaultBooxTafsirForComparison(scenario);
                 assertDisplayedQcfClips(scenario,pair);
                 assertOriginalPageShapeAndWordMarks(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
