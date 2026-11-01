@@ -660,6 +660,19 @@ public final class AtlasDiscriminantInstrumentedTest {
             marked.length,renderedLines);
     }
     /** Finds the actual Atlas navigation button by its stable accessible label. */
+    private static View findByDescriptionPrefix(View root,String prefix){
+        CharSequence label=root.getContentDescription();
+        if(label!=null&&label.toString().startsWith(prefix))return root;
+        if(root instanceof ViewGroup){
+            ViewGroup parent=(ViewGroup)root;
+            for(int i=0;i<parent.getChildCount();i++){
+                View found=findByDescriptionPrefix(parent.getChildAt(i),prefix);
+                if(found!=null)return found;
+            }
+        }
+        return null;
+    }
+
     private static View findByDescription(View root,String description) {
         CharSequence label=root.getContentDescription();
         if(label!=null && description.contentEquals(label))return root;
@@ -876,15 +889,19 @@ public final class AtlasDiscriminantInstrumentedTest {
             Intent intent=pairIntent(context,i);
             try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(intent)){
                 scenario.onActivity(activity->{
-                    View firstLink=findByDescription(activity.getWindow().getDecorView(),
-                        "Ouvrir le premier verset en Lecture");
-                    View secondLink=findByDescription(activity.getWindow().getDecorView(),
-                        "Ouvrir le second verset en Lecture");
-                    assertNotNull("First explicit Lecture link missing",firstLink);
-                    assertNotNull("Second explicit Lecture link missing",secondLink);
+                    View firstLink=findByDescriptionPrefix(activity.getWindow().getDecorView(),
+                        "Ouvrir le premier verset en Lecture : ");
+                    View secondLink=findByDescriptionPrefix(activity.getWindow().getDecorView(),
+                        "Ouvrir le second verset en Lecture : ");
+                    assertNotNull("First compact Quran header missing",firstLink);
+                    assertNotNull("Second compact Quran header missing",secondLink);
                     assertTrue(firstLink.isClickable()&&secondLink.isClickable());
-                    assertEquals("Lire "+pair.first+" en Lecture",((android.widget.TextView)firstLink).getText().toString());
-                    assertEquals("Lire "+pair.second+" en Lecture",((android.widget.TextView)secondLink).getText().toString());
+                    assertTrue(((android.widget.TextView)firstLink).getText().toString().contains(pair.first.toString()));
+                    assertTrue(((android.widget.TextView)secondLink).getText().toString().contains(pair.second.toString()));
+                    assertFalse("No redundant giant Lecture line",
+                        ((android.widget.TextView)firstLink).getText().toString().contains("Lire "));
+                    assertTrue("Header must retain a genuine 48dp touch target",
+                        firstLink.getLayoutParams().height>=Ui.dp(activity,48));
                     assertNull("Standalone Atlas next-couple arrow must be absent",
                         findByDescription(activity.getWindow().getDecorView(),
                             "Passage suivant du corpus"));
@@ -940,7 +957,7 @@ public final class AtlasDiscriminantInstrumentedTest {
     }
 
 
-    /** Two distinct, visible Lecture links must open the exact target verse,
+    /** Two compact Quran headers preserve independent exact-verse navigation,
      * then return to the SAME comparison without touching Hifz. */
     @Test public void bothVisibleLectureLinksOpenExactVersesAndReturn() throws Exception {
         Context context=ApplicationProvider.getApplicationContext();
@@ -961,11 +978,11 @@ public final class AtlasDiscriminantInstrumentedTest {
                     }
                     final boolean first=side==0;
                     scenario.onActivity(activity->{
-                        View link=findByDescription(activity.getWindow().getDecorView(),
-                            first?"Ouvrir le premier verset en Lecture":
-                                "Ouvrir le second verset en Lecture");
+                        View link=findByDescriptionPrefix(activity.getWindow().getDecorView(),
+                            first?"Ouvrir le premier verset en Lecture : ":
+                                "Ouvrir le second verset en Lecture : ");
                         assertNotNull("Contextual Lecture destination missing",link);
-                        assertTrue("Text link must be directly tappable",link.performClick());
+                        assertTrue("Compact Quran header must open the correct verse",link.performClick());
                     });
                     Activity opened=instrumentation.waitForMonitorWithTimeout(monitor,15000);
                     assertNotNull("Tapping explicit Lecture destination must open reader",opened);
