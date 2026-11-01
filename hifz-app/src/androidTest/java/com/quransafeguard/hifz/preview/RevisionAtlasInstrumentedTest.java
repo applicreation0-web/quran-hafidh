@@ -164,6 +164,7 @@ public final class RevisionAtlasInstrumentedTest {
     }
 
     private static void saveAuditCapture(String name)throws Exception{
+        EmulatorLauncherAnr.requireApplicationForeground(InstrumentationRegistry.getInstrumentation());
         HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot(name);
         Context c=ApplicationProvider.getApplicationContext();
         // UTP uninstalls the target package after the suite. Preserve this real
