@@ -321,8 +321,8 @@ public final class AtlasDiscriminantActivity extends Activity {
             // two source pages out of the upper comparison viewport.
             int available=workspace.getHeight();
             if(available>0){
-                int desired=Math.max(Ui.dp(this,180),Math.round(available*0.40f));
-                int panelHeight=Math.min(desired,Math.round(available*0.50f));
+                int desired=Math.max(Ui.dp(this,210),Math.round(available*0.52f));
+                int panelHeight=Math.min(desired,Math.round(available*0.58f));
                 LinearLayout.LayoutParams params=(LinearLayout.LayoutParams)tafsirPanel.getLayoutParams();
                 params.height=panelHeight;tafsirPanel.setLayoutParams(params);
             }
@@ -383,8 +383,8 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(pagePair==null||comparisonScroll==null)return;
         if(selectedTafsir>=0&&!lateralTafsir&&workspace.getHeight()>0){
             int available=workspace.getHeight();
-            int panelHeight=Math.min(Math.max(Ui.dp(this,180),Math.round(available*0.40f)),
-                Math.round(available*0.50f));
+            int panelHeight=Math.min(Math.max(Ui.dp(this,210),Math.round(available*0.52f)),
+                Math.round(available*0.58f));
             LinearLayout.LayoutParams panelParams=(LinearLayout.LayoutParams)tafsirPanel.getLayoutParams();
             if(panelParams.height!=panelHeight){panelParams.height=panelHeight;tafsirPanel.setLayoutParams(panelParams);}
         }
@@ -708,6 +708,22 @@ public final class AtlasDiscriminantActivity extends Activity {
         text.getGlobalVisibleRect(visible);
         return !viewport.isEmpty()&&!visible.isEmpty()&&viewport.intersect(visible)
             &&viewport.height()>=Ui.dp(this,16);
+    }
+
+    /** First commentary paragraphs (not merely Jalalayn edition metadata)
+     * must be visible on opening the mobile pane, with no initial scroll. */
+    boolean tafsirCommentaryVisibleForTest(){
+        if(!tafsirTextVisibleForTest()||tafsirScroll==null)return false;
+        TextView text=selectedTafsir==0?leftTafsir:rightTafsir;
+        android.text.Layout layout=text.getLayout();
+        if(layout==null||layout.getLineCount()<5)return false;
+        android.graphics.Rect viewport=new android.graphics.Rect();
+        if(!tafsirScroll.getGlobalVisibleRect(viewport)||viewport.isEmpty())return false;
+        int[] position=new int[2];
+        text.getLocationOnScreen(position);
+        int commentaryLineY=position[1]+text.getTotalPaddingTop()+layout.getLineTop(4);
+        return commentaryLineY<viewport.bottom-Ui.dp(this,14)
+            &&commentaryLineY>=viewport.top-Ui.dp(this,18);
     }
 
     boolean tafsirPairLockedForTest(){
