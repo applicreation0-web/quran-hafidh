@@ -383,6 +383,16 @@ public final class AtlasDiscriminantInstrumentedTest {
                 Thread.sleep(100L);
             }
             assertTrue("Both original offline Jalalayn texts must load",loaded.get());
+            AtomicBoolean firstVisibleJalalayn=new AtomicBoolean();
+            for(int attempt=0;attempt<30;attempt++){
+                scenario.onActivity(a->firstVisibleJalalayn.set(a.tafsirTextVisibleForTest()));
+                if(firstVisibleJalalayn.get())break;
+                Thread.sleep(100L);
+            }
+            if(!firstVisibleJalalayn.get())
+                HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("haafidh-tafsir-hidden-text.png");
+            assertTrue("Actual al-Jalalayn commentary must be visible under the compact QCF pivot, without requiring initial scroll",
+                firstVisibleJalalayn.get());
             String profile=context.getResources().getConfiguration().smallestScreenWidthDp>=600?"boox":"phone";
             saveComparisonScreenshot(context,profile+"-portrait-contextual");
             scenario.recreate();waitForQcf(scenario);
@@ -820,6 +830,8 @@ public final class AtlasDiscriminantInstrumentedTest {
                 if(frame!=null)frame.recycle();
                 Thread.sleep(250L);
             }
+            if(shot==null)
+                HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("haafidh-qcf-pixel-gate-diagnostic.png");
             assertNotNull("Both authentic QCF word excerpts must be visibly painted in the SAME actual screenshot",shot);
             assertInkIsVisible(shot,pageBounds[0],"Left KFQC page");
             assertInkIsVisible(shot,pageBounds[1],"Right KFQC page");
