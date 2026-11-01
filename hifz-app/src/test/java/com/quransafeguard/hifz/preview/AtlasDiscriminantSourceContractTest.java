@@ -88,7 +88,7 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(activity.contains("right.showPages("));
         // Excerpts must load only after both full-size QCF thumbnails reported image.onload.
         assertTrue(activity.contains("if(leftPageStatus==1 && rightPageStatus==1 && strips!=null)"));
-        assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,entry.firstWordIndices,"));
+        assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,"));
         assertFalse(excerpts.contains("java.net."));
         assertFalse(excerpts.contains("http://"));
     }
@@ -129,7 +129,7 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(qcf.contains("matrix.inverse()"));
         assertTrue(qcf.contains("generation==fullGeneration"));
         assertTrue(qcf.contains("listener.onVerseChosen(page,surah,ayah)"));
-        assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,entry.firstWordIndices,"));
+        assertTrue(activity.contains("strips.show(entry.first,currentLeftPage,"));
         assertTrue(catalog.contains("new Entry(2,63,2,93"));
         assertFalse(activity.contains("new HifzPrefs("));
     }
@@ -147,6 +147,26 @@ public final class AtlasDiscriminantSourceContractTest {
             activity.contains("description.append(\"\\nSource : \").append(c.source)"));
         assertFalse("Do not synthesize a French Quran word gloss from unverified text",
             activity.contains("autoTranslatePivots("));
+    }
+
+    @Test public void reviewedOmissionsDoNotUnderlineSharedQuranWords() throws Exception {
+        String activity=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantActivity.java");
+        String actual=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantOmissions.java");
+        String crops=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
+        assertTrue(activity.contains("AtlasDiscriminantOmissions.actualDifference(c,true)"));
+        assertTrue(activity.contains("AtlasDiscriminantOmissions.actualDifference(c,false)"));
+        assertTrue(activity.contains("AtlasDiscriminantOmissions.cropAnchor(entry,true)"));
+        assertTrue(activity.contains("AtlasDiscriminantOmissions.cropAnchor(entry,false)"));
+        assertTrue(activity.contains("\" · absent\""));
+        assertTrue(actual.contains("case 142:"));
+        assertTrue(actual.contains("case 145:"));
+        assertTrue(actual.contains("case 149:"));
+        assertTrue(actual.contains("case 161:"));
+        assertTrue(actual.contains("case 185:"));
+        assertTrue(crops.contains("windowAnchors,originY,safeCuts"));
+        assertTrue(crops.contains("for(int index:underlineWords)"));
+        assertFalse("No textual fake substitution is allowed for a missing Quran word",
+            actual.contains("new int[]{1} : new int[]{1}"));
     }
 
     @Test public void noExternalCorpusOrGeneratedExplanations() throws Exception {
