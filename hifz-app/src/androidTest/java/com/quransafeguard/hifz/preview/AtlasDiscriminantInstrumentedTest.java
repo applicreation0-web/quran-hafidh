@@ -492,7 +492,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                     "(function(){var ids=[],prefixes=['atlas-word-window-"+
                     pair.first.getSurah()+"-"+pair.first.getAyah()+"','atlas-word-window-"+
                     pair.second.getSurah()+"-"+pair.second.getAyah()+"'];var expected=["+
-                    pair.firstWordIndices.length+","+pair.secondWordIndices.length+"];"
+                    AtlasDiscriminantOmissions.actualDifference(pair,true).length+","+AtlasDiscriminantOmissions.actualDifference(pair,false).length+"];"
                     +"for(var i=0;i<2;i++){var s=document.querySelector('#crop'+i+' svg');if(!s)return false;"
                     +"var clips=s.querySelectorAll('clipPath');if(!clips.length)return false;"
                     +"for(var j=0;j<clips.length;j++){var clip=clips[j];"
