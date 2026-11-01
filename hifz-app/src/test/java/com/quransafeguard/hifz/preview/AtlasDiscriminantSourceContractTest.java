@@ -191,7 +191,13 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(actual.contains("case 161:"));
         assertTrue(actual.contains("case 185:"));
         assertTrue(crops.contains("windowAnchors,originY,safeCuts"));
-        assertTrue(crops.contains("for(int index:underlineWords)"));
+        assertTrue(crops.contains("for(int index:visualFocus)")
+            && crops.contains("if(underlineWords.length>0)"));
+        assertTrue("Omission side must keep the same QCF fade without fake words",
+            crops.contains("int[] visualFocus=underlineWords.length==0?windowAnchors:underlineWords")
+                && crops.contains("data-qcf-omission"));
+        assertFalse("Never skip fading around a genuine common-word anchor",
+            crops.contains("if(underlineWords.length==0)return cropped.replace"));
         assertFalse("No textual fake substitution is allowed for a missing Quran word",
             actual.contains("new int[]{1} : new int[]{1}"));
     }
@@ -213,13 +219,20 @@ public final class AtlasDiscriminantSourceContractTest {
         String strips=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QcfAtlasVerseStrips.java");
         assertTrue("Both QCF viewBoxes must contribute to a shared pixel/source-unit scale",
             strips.contains("function fitPairedQcf()")
-                && strips.contains("scale=Math.min(scale,box.clientWidth/vb.width,box.clientHeight/vb.height)"));
-        assertTrue(strips.contains("el.style.width=(dims[j].w*scale).toFixed(3)+'px'"));
-        assertTrue(strips.contains("el.style.height=(dims[j].h*scale).toFixed(3)+'px'"));
+                && strips.contains("scale=Math.min(scale,box.clientWidth/contextWidth,box.clientHeight/contextHeight)"));
+        assertTrue(strips.contains("el.style.width=(d.w*scale).toFixed(3)+'px'"));
+        assertTrue(strips.contains("el.style.height=(d.h*scale).toFixed(3)+'px'"));
         assertFalse("Independent 100% source SVG zoom must not return",
             strips.contains("section svg{display:block;width:100%;height:100%"));
         assertTrue("A longer passage may remain smaller in *area*, but never in glyph scale",
             strips.contains("data-qcf-shared-scale"));
+        assertTrue("Source-only SVG focus metadata must be geometry based",
+            strips.contains("data-qcf-focus-x")&&strips.contains("data-qcf-focus-y")
+                &&strips.contains("data-qcf-focus-centered"));
+        assertTrue("Opening a Tafsir tab must never hide the other QCF excerpt",
+            strips.contains("main.style.gridTemplateColumns='1fr 1fr'")
+                &&strips.contains("document.getElementById('crop0').parentNode.style.display='flex'")
+                &&strips.contains("document.getElementById('crop1').parentNode.style.display='flex'"));
     }
 
     @Test public void booxPortraitTafsirDefaultsOpenButPersistsManualClosure() throws Exception {
@@ -264,7 +277,7 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(strips.contains("atlas-comparison-pivot-tone"));
         assertTrue(strips.contains("fill-opacity='0.22'"));
         assertTrue(strips.contains("fill-opacity='0.36'"));
-        assertTrue(strips.contains("if(underlineWords.length==0)return cropped.replace"));
+        assertTrue(strips.contains("int[] visualFocus=underlineWords.length==0?windowAnchors:underlineWords"));
         assertFalse("Never add the excerpt-only pivot tint to complete 15-line QCF pages",
             mushaf.contains("atlas-comparison-pivot-tone"));
     }
