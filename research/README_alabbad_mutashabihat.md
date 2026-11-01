@@ -112,3 +112,17 @@ Un mot après une omission est parfois le premier mot de la suite complète de l
 āya, au-delà de l’extrait abrégé du livre (par exemple 4:43/5:6). Il est donné comme
 **point de bifurcation dans le verset**, et non comme citation du commentaire.
 Aucune justification religieuse ou théologique n’est générée.
+
+## Avenant éditorial ciblé — 1er novembre 2026
+
+Une seule comparaison supplémentaire a été approuvée : **28:40 ↔ 51:40**,
+source al-ʿAbbād, chapitre s14, **page imprimée 124**. Les deux versets
+commencent par les mêmes cinq mots, puis bifurquent au **mot 6** :
+**فَٱنظُرۡ** (28:40, page QCF 390) / **وَهُوَ** (51:40, page QCF 522).
+Le cas prend l’identifiant **295**, après les 294 dossiers historiques, sans
+réhabiliter le faux rapprochement **277** (28:40 ↔ 36:29), qui demeure exclu.
+Le catalogue admis comporte désormais **280 comparaisons** ; les 9 décisions
+réservées et les 6 exclusions demeurent inchangées. Les noms historiques
+`alabbad_audit_294.*` sont conservés pour la compatibilité des scripts,
+mais le contenu des fichiers régénérés compte bien **295 dossiers**.
+Aucune modification du moteur Hifz, des sauvegardes ou des tracés QCF.

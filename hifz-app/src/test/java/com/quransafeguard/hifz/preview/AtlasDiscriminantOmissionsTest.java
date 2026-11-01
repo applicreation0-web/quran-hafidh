@@ -52,7 +52,7 @@ public final class AtlasDiscriminantOmissionsTest {
         assertArrayEquals(right,AtlasDiscriminantOmissions.cropAnchor(entry,false));
         assertFalse(AtlasDiscriminantOmissions.explicitlyAbsent(entry,true));
         assertFalse(AtlasDiscriminantOmissions.explicitlyAbsent(entry,false));
-        // This presentation adapter cannot mutate the approved 279-case catalogue.
+        // This presentation adapter cannot mutate historical decisions or new 280-case catalogue.
         if(id==124){
             assertArrayEquals(new int[]{6},entry.firstWordIndices);
             assertArrayEquals(new int[]{3},entry.secondWordIndices);
@@ -85,7 +85,7 @@ public final class AtlasDiscriminantOmissionsTest {
     }
 
     @Test public void otherApprovedPairsAndBaqaraPriorityStayByteForByteStable() {
-        assertEquals(279,AtlasDiscriminantCases.CATALOGUE.size());
+        assertEquals(280,AtlasDiscriminantCases.CATALOGUE.size());
         for(AtlasDiscriminantCases.Entry entry:AtlasDiscriminantCases.CATALOGUE) {
             if(entry.auditId==120||entry.auditId==199
                     ||entry.auditId==124||entry.auditId==147
@@ -99,6 +99,23 @@ public final class AtlasDiscriminantOmissionsTest {
         }
         assertNotNull(AtlasDiscriminantCases.forVerse(2,63));
         assertNotNull(AtlasDiscriminantCases.forVerse(13,18));
+    }
+
+    @Test public void addedVerse295RetainsOriginalQcfPivotAndNoExistingReclassification(){
+        AtlasDiscriminantCases.Entry added=byId(295);
+        assertEquals(new com.quransafeguard.hifz.core.VerseRef(28,40),added.first);
+        assertEquals(new com.quransafeguard.hifz.core.VerseRef(51,40),added.second);
+        assertEquals(390,added.firstPage);
+        assertEquals(522,added.secondPage);
+        assertArrayEquals(new int[]{6},added.firstWordIndices);
+        assertArrayEquals(new int[]{6},added.secondWordIndices);
+        assertArrayEquals(new int[]{6},AtlasDiscriminantOmissions.actualDifference(added,true));
+        assertArrayEquals(new int[]{6},AtlasDiscriminantOmissions.actualDifference(added,false));
+        assertEquals("Même amorce, bifurcation",AtlasDiscriminantOmissions.relation(added));
+        assertEquals("Même début, suite différente",AtlasDiscriminantActivity.displayRelation(added));
+        assertEquals(-1,AtlasDiscriminantCases.indexFor(4,92));
+        assertEquals(-1,AtlasDiscriminantCases.indexFor(58,3));
+        assertEquals(280,AtlasDiscriminantCases.CATALOGUE.size());
     }
 
     @Test public void returnedArraysCannotMutateApprovedCatalogue() {

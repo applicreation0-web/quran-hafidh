@@ -404,6 +404,38 @@ public final class AtlasDiscriminantInstrumentedTest {
         }
     }
 
+    /** Exact newly admitted al-Abbad s14 p124 pair: two canonical QCF pages,
+     * one authentic sixth-word pivot on each side, and offline pair-locked Tafsir.
+     * Screenshot captured from the actual emulator; never touch Hifz progress. */
+    @Test public void approved280thCaseRendersAuthenticQcfAndBothPairLockedTafsirs()throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        SharedPreferences prefs=context.getSharedPreferences("quran_hifz_preview_v1",0);
+        Map<String,?> before=new HashMap<>(prefs.getAll());
+        int index=exactPairIndex(28,40,51,40);
+        AtlasDiscriminantCases.Entry pair=AtlasDiscriminantCases.PILOT.get(index);
+        assertEquals(295,pair.auditId);
+        try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(pairIntent(context,index))){
+            waitForQcf(scenario);
+            assertOriginalPageShapeAndWordMarks(scenario,pair);
+            assertExactQcfWords(context,pair.first,pair.firstWordIndices);
+            assertExactQcfWords(context,pair.second,pair.secondWordIndices);
+            scenario.onActivity(a->{
+                assertEquals(390,a.getCurrentLeftPageForTest());
+                assertTrue(a.tafsirPairLockedForTest());
+                assertEquals("Même début, suite différente",
+                    AtlasDiscriminantActivity.displayRelation(pair));
+            });
+            tapQcfPage(scenario,0,false,pair.first);
+            waitForSelectedTafsir(scenario,0);
+            tapQcfPage(scenario,1,true,pair.second);
+            waitForSelectedTafsir(scenario,1);
+            awaitBothTafsirs(scenario);
+            assertContextPanesVisible(scenario);
+            saveComparisonScreenshot(context,"case-295-approved-280th");
+        }
+        assertEquals("Atlas comparison must remain read-only for Hifz",before,prefs.getAll());
+    }
+
     /** Run on phone and BOOX profiles: page touch, retained localizations and rotation. */
     @Test public void mushafTapOpensContextualTafsirAndSwitchPreservesBothQcfPages()throws Exception{
         Context context=ApplicationProvider.getApplicationContext();
@@ -1115,7 +1147,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                         "boox":"phone";
                     saveComparisonScreenshot(context,"case-"+pair.auditId+"-two-pivots-"+device);
                 }
-                if(pair.auditId==49||pair.auditId==292||pair.auditId==293){
+                if(pair.auditId==49||pair.auditId==292||pair.auditId==293||pair.auditId==295){
                     AtomicReference<String> surface=new AtomicReference<>();
                     scenario.onActivity(a->surface.set(a.getResources().getConfiguration().smallestScreenWidthDp>=600?"boox":"phone"));
                     saveComparisonScreenshot(context,"case-"+pair.auditId+"-"+surface.get());

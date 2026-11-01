@@ -99,7 +99,9 @@ def main():
             key=tuple(sorted((row['first'],row['second'])));assert key not in seen,key;seen.add(key)
             approved.append({k:row[k] for k in ('auditId','first','second','firstPage','secondPage','firstWordIndices','secondWordIndices','firstWords','secondWords','kind','source','sourceUrl','priority')})
         audit.append(row)
-    summary=dict(Counter(x['decision'] for x in audit));assert len(audit)==294
+    # The *_294 output names are retained for older validation references;
+    # the original 294 decisions remain unchanged and approved addendum 295 is appended.
+    summary=dict(Counter(x['decision'] for x in audit));assert len(audit)==295
     args.out.mkdir(parents=True,exist_ok=True)
     metadata={'schemaVersion':1,'sourceBook':'ʿAbd al-Muḥsin al-ʿAbbād, آيات متشابهات الألفاظ في القرآن الكريم وكيف التمييز بينها','sourceBookUrl':'https://quranpedia.app/books/b10901/index.html','wordIndexBase':1,'geometrySpace':'viewBox 0 0 345 550','counts':summary,'approvedCount':len(approved),'verification':{'textSource':str(TEXT.relative_to(ROOT)),'textSha256':sha(TEXT),'geometrySource':'quran-ws/quran-svg-elements v1.1.2','editorialDecisionsSha256':sha(DECISIONS),'supplementaryDecisionsSha256':sha(ROOT/'research/alabbad_supplementary_decisions.json'),'geometrySha256':hashes,'svgSha256':svg_hashes,'tokenization':'Remove U+200A and U+2060, omit nonletter stop signs, remove prepended four-word basmala except surahs1/9. All admitted verse token counts equal QCF sidecar counts. 15:7 mismatch is excluded from admission.','limitation':'SVG files contain paths, no machine-readable word text. Geometry and canonical textual alignment are verified; this is not a claim of independent visual inspection of every glyph.','sourceProvenanceChecked':bool(source_info)}}
     (args.out/'alabbad_audit_294.json').write_text(json.dumps(dict(metadata,entries=audit),ensure_ascii=False,indent=2)+'\n')

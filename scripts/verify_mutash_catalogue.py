@@ -13,9 +13,16 @@ def main():
     approved=json.loads((ROOT/'research/alabbad_catalogue_approved.json').read_text())
     audit=json.loads((ROOT/'research/alabbad_audit_294.json').read_text())
     assert approved['verification']['sourceProvenanceChecked'] is True
-    assert [e['auditId'] for e in audit['entries']]==list(range(1,295))
+    assert [e['auditId'] for e in audit['entries']]==list(range(1,296))
     admitted={e['auditId']:e for e in audit['entries'] if e['decision'] in ('retenu','corrigé')}
     assert len(admitted)==approved['approvedCount']==len(approved['entries'])
+    new=approved['entries'][-1]
+    assert (new['auditId'],new['first'],new['second'])==(295,'28:40','51:40')
+    assert (new['firstWordIndices'],new['secondWordIndices'])==([6],[6])
+    assert (new['firstWords'],new['secondWords'])==(['فَٱنظُرۡ'],['وَهُوَ'])
+    assert (new['firstPage'],new['secondPage'])==(390,522)
+    assert audit['entries'][-1]['decision']=='retenu'
+    assert len(approved['entries'])==280
     geometry,text,_=load_inputs()
     svg={};by_page={p:set() for p in range(1,605)};endpoints=set()
     pinned=approved['verification']['svgSha256']

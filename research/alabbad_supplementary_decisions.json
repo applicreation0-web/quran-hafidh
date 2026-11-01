@@ -52,6 +52,30 @@
       "reason": "Supplément demandé: même amorce et même formule; variation locale du deuxième mot, page imprimée 99. Points contrôlés : 30:37 mot(s) 2 « یَرَوۡا۟ » ; 39:52 mot(s) 2 « یَعۡلَمُوۤا۟ ».",
       "kind": "Variation de mot ou de particule",
       "supplementary": true
+    },
+    {
+      "auditId": 295,
+      "first": "28:40",
+      "second": "51:40",
+      "firstWordIndices": [
+        6
+      ],
+      "secondWordIndices": [
+        6
+      ],
+      "firstWords": [
+        "فَٱنظُرۡ"
+      ],
+      "secondWords": [
+        "وَهُوَ"
+      ],
+      "source": "al-Abbad",
+      "sourceUrl": "https://quranpedia.app/books/b10901/s14.html",
+      "priority": "P1",
+      "decision": "retenu",
+      "reason": "Avenant demandé le 1er novembre 2026 : les cinq premiers mots sont identiques, puis 28:40 poursuit par « فَٱنظُرۡ » et 51:40 par « وَهُوَ ». Source vérifiée : al-ʿAbbād, chapitre s14, page imprimée 124. Mots 6 / 6, pages QCF 390 / 522, sans réadmission du faux couple n°277.",
+      "kind": "Même amorce, bifurcation",
+      "supplementary": true
     }
   ]
 }

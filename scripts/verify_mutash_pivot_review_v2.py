@@ -51,16 +51,23 @@ def main():
     assert review["summary"]["canonicalMismatchIds"] == []
     rows = review["rows"]
     source = audit["entries"]
-    assert len(rows) == len(source) == 294
-    assert [r["auditId"] for r in rows] == [r["auditId"] for r in source] == list(range(1, 295))
+    # This is an immutable 31 October review of the original 294 decisions.
+    # One separately approved 1 November addendum (295) must NOT rewrite this review.
+    assert len(rows) == 294 and len(source) == 295
+    assert [r["auditId"] for r in rows] == [r["auditId"] for r in source[:294]] == list(range(1, 295))
+    assert (source[-1]["auditId"], source[-1]["first"], source[-1]["second"],
+            source[-1]["decision"]) == (295,"28:40","51:40","retenu")
+    assert source[-1]["firstWordIndices"] == source[-1]["secondWordIndices"] == [6]
+    assert source[-1]["firstWords"] == ["فَٱنظُرۡ"]
+    assert source[-1]["secondWords"] == ["وَهُوَ"]
     decisions = {r["auditId"]: r for r in source}
     admitted = [e for e in rows if e["decision"] in ("retenu", "corrigé")]
     pending = [e for e in rows if e["decision"] == "à arbitrer"]
     excluded = [e for e in rows if e["decision"] == "exclu"]
     assert (len(admitted), len(pending), len(excluded)) == (279, 9, 6)
-    assert approved["approvedCount"] == len(admitted)
+    assert approved["approvedCount"] == len(admitted)+1 == 280
     approved_ids = {r["auditId"] for r in approved["entries"]}
-    assert approved_ids == {r["auditId"] for r in admitted}
+    assert approved_ids == {r["auditId"] for r in admitted} | {295}
     geometry, verses, _hashes = load_inputs()
     additional = 0
     manual = 0
@@ -113,7 +120,7 @@ def main():
     assert (manual, additional) == (10, 12)
     assert review["summary"]["manuallyPrioritized"] == manual
     assert review["summary"]["additionalCuratedApprovedCases"] == additional
-    print(f"PASS — 294 source decisions; 279 approved preserved; 9 pending; 6 excluded; "
+    print(f"PASS — historical 294 reviewed decisions (279 admitted), plus one verified 295 (280 total); 9 pending; 6 excluded; "
           f"{manual} pending proposals; {additional} approved-case reviews; "
           "zero automatic admission, no runtime modification")
 
