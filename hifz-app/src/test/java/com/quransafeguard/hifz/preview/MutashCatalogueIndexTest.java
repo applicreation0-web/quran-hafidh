@@ -30,6 +30,11 @@ public final class MutashCatalogueIndexTest {
         assertTrue(AtlasDiscriminantCases.indicesForPage(605).isEmpty());
         assertTrue(AtlasDiscriminantCases.indicesForVerse(0,0).isEmpty());
     }
+    @Test public void absentVerseNeverPrefersUnrelatedFirstComparison() {
+        assertEquals(-1,AtlasDiscriminantCases.preferredIndex(1,1));
+        assertEquals(-1,AtlasDiscriminantCases.preferredIndex(0,0));
+        assertEquals(-1,AtlasDiscriminantCases.preferredIndex(115,1));
+    }
     @Test public void lookupResultsCannotBeMutated() {
         AtlasDiscriminantCases.Entry e=AtlasDiscriminantCases.PILOT.get(0);
         try { AtlasDiscriminantCases.indicesForPage(e.firstPage).clear(); fail("Mutable page index"); }
