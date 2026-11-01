@@ -144,7 +144,7 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue("Never generate religious commentary to fill missing editorial prose",
             activity.contains("if(!TextUtils.isEmpty(c.explanation))"));
         assertTrue("Retain the exact editorial source provenance",
-            activity.contains("description.append(\"\\nSource : \").append(c.source)"));
+            activity.contains(".append(\"\\nSource : \").append(c.source)"));
         assertFalse("Do not synthesize a French Quran word gloss from unverified text",
             activity.contains("autoTranslatePivots("));
     }
