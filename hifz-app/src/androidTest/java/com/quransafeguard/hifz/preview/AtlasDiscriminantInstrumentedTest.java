@@ -276,11 +276,15 @@ public final class AtlasDiscriminantInstrumentedTest {
             if(polygonPoint.get()==null){point[0]+=page.getWidth()/2;point[1]+=page.getHeight()/2;}
             else try{
                 org.json.JSONObject q=polygonPoint.get();
-                double cssToDisplay=page.getScale();
-                point[0]+=(int)Math.round(q.getDouble("x")*cssToDisplay);
-                point[1]+=(int)Math.round(q.getDouble("y")*cssToDisplay);
+                // WebView.getScale() reports internal page zoom, not the reliable
+                // CSS-viewport-to-Android-pixel ratio on different DPI devices.
+                double xScale=page.getWidth()/q.getDouble("w");
+                double yScale=page.getHeight()/q.getDouble("h");
+                point[0]+=(int)Math.round(q.getDouble("x")*xScale);
+                point[1]+=(int)Math.round(q.getDouble("y")*yScale);
                 android.util.Log.i("HaafidhEnduranceTouch","verse="+requested+" side="+side
-                    +" css="+q+" scale="+cssToDisplay+" display="+java.util.Arrays.toString(point));
+                    +" css="+q+" xScale="+xScale+" yScale="+yScale
+                    +" display="+java.util.Arrays.toString(point));
             }catch(org.json.JSONException invalid){throw new AssertionError(invalid);}
             Rect visibleWindow=new Rect();root.getWindowVisibleDisplayFrame(visibleWindow);
             assertTrue("Mushaf touch must lie inside the current application window",visibleWindow.contains(point[0],point[1]));
@@ -302,8 +306,9 @@ public final class AtlasDiscriminantInstrumentedTest {
                 scenario.onActivity(a->{
                     MapQcfThumbnails view=a.qcfViewsForTest()[side];
                     try{
-                        float x=(float)(polygonPoint.get().getDouble("x")*view.getScale());
-                        float y=(float)(polygonPoint.get().getDouble("y")*view.getScale());
+                        org.json.JSONObject q=polygonPoint.get();
+                        float x=(float)(q.getDouble("x")*view.getWidth()/q.getDouble("w"));
+                        float y=(float)(q.getDouble("y")*view.getHeight()/q.getDouble("h"));
                         down.setLocation(x,y);up.setLocation(x,y);
                         assertTrue("WebView accepts real local Android touch down",view.dispatchTouchEvent(down));
                         assertTrue("WebView accepts real local Android touch up",view.dispatchTouchEvent(up));
