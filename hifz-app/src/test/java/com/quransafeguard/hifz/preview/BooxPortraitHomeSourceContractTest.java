@@ -48,7 +48,10 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("Ui.bookText(this, \"AUJOURD’HUI\", 17f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"…\", 23f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)"));
-        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 54))"));
+        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 22))"));
+        assertTrue("Labels are available to accessibility without captions under the icons",
+            home.contains("tile.setContentDescription(display);"));
+        assertFalse(home.contains("tile.addView(title);"));
         assertTrue(home.contains("booxIconDp(2, 112)"));
         assertTrue(home.contains("primaryTile(practiceRow, \"Parcours Hifz\", \"Parcours\""));
         assertTrue(home.contains("primaryTile(practiceRow, \"Progression\", \"Progression\""));
