@@ -177,6 +177,33 @@ public final class AtlasDiscriminantInstrumentedTest {
         fail("Touching the actual QCF page must select tafsir side "+side);
     }
 
+    /** A WebView JavascriptInterface dispatches through a bridge thread and then
+     * posts onto the Android main thread. Merely observing an already-open
+     * Tafsir pane can return before the newly tapped exact verse is selected.
+     * Preserve the real tap: wait for the exact requested verse, fail closed if
+     * the callback never arrives (rather than allowing a 2:62/2:63 mismatch).
+     */
+    private static void awaitExactTappedTafsir(
+        ActivityScenario<AtlasDiscriminantActivity> scenario,int side,
+        com.quransafeguard.hifz.core.VerseRef requested)throws Exception{
+        AtomicReference<String> observed=new AtomicReference<>("none");
+        for(int attempt=0;attempt<100;attempt++){
+            AtomicBoolean exact=new AtomicBoolean();
+            scenario.onActivity(a->{
+                com.quransafeguard.hifz.core.VerseRef actual=a.selectedTafsirVerseForTest();
+                observed.set("side="+a.selectedTafsirForTest()+" verse="+actual
+                    +" heading="+a.tafsirHeadingTextForTest());
+                exact.set(a.tafsirPanelVisibleForTest()
+                    &&a.selectedTafsirForTest()==side&&requested.equals(actual)
+                    &&("Tafsīr al-Jalālayn · "+requested).equals(a.tafsirHeadingTextForTest()));
+            });
+            if(exact.get())return;
+            Thread.sleep(100L);
+        }
+        fail("The real QCF touch must open EXACT ayah "+requested
+            +" within 10 seconds; last observed "+observed.get());
+    }
+
     private static void switchTafsirAndAssertPagesRetained(
         ActivityScenario<AtlasDiscriminantActivity> scenario,int side,
         MapQcfThumbnails[] originalPages)throws Exception{
@@ -619,7 +646,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 com.quransafeguard.hifz.core.VerseRef canonical=
                     position==0?pair.first:pair.second;
                 tapQcfPage(scenario,position,wasSelected.get()>=0,canonical);
-                waitForSelectedTafsir(scenario,position);
+                awaitExactTappedTafsir(scenario,position,canonical);
                 scenario.onActivity(a->{
                     assertEquals("The Tafsir must display the exact corresponding ayah",
                         canonical,a.selectedTafsirVerseForTest());
