@@ -107,6 +107,12 @@ public final class AtlasDiscriminantSourceContractTest {
         assertTrue(markers.contains("100vw - 96px"));
         assertFalse("HTML SVG attributes must not contain literal backslashes",markers.contains("\\\\\\\""));
         assertTrue(markers.contains("root.appendChild(btn)"));
+        assertTrue("Late QCF resize must realign the outside marker",
+            markers.contains("ResizeObserver")&&markers.contains("requestAnimationFrame(realign)"));
+        assertTrue("Marker listeners must be removed when changing Quran page or mask",
+            markers.contains("__haafidhAtlasMarkerDispose")&&markers.contains("observer.disconnect()"));
+        assertTrue("No marker may be shown over Quran when the margin is unavailable",
+            markers.contains("if(!lane){btn.style.visibility='hidden';return;}"));
         assertFalse(markers.contains("M2.5 5.5h6"));
     }
     @Test public void fullJalalaynOnBothSidesAndTrueQcfWords() throws Exception {
