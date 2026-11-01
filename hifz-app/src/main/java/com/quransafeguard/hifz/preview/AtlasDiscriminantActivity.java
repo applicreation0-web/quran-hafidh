@@ -67,7 +67,11 @@ public final class AtlasDiscriminantActivity extends Activity {
             caseIndices=sourcePage>0?AtlasDiscriminantCases.indicesForPage(sourcePage):
                 AtlasDiscriminantCases.indicesForVerse(getIntent().getIntExtra(EXTRA_SURAH,0),
                     getIntent().getIntExtra(EXTRA_AYAH,0));
-            if(caseIndices.isEmpty())caseIndices=java.util.Collections.singletonList(0);
+            if(caseIndices.isEmpty()){
+                android.widget.Toast.makeText(this,"Aucune comparaison pour ce passage.",
+                    android.widget.Toast.LENGTH_SHORT).show();
+                finish();return;
+            }
             selectedIndex=state!=null?state.getInt("caseIndex",caseIndices.get(0)):
                 getIntent().getIntExtra(EXTRA_CASE_INDEX,caseIndices.get(0));
             if(!caseIndices.contains(selectedIndex))selectedIndex=caseIndices.get(0);
@@ -310,17 +314,29 @@ public final class AtlasDiscriminantActivity extends Activity {
 
     private void selectExactTafsir(int side,int page,VerseRef verse){
         if(verse==null||side<0||side>1)return;
-        AtlasDiscriminantCases.Entry pair=current();
-        VerseRef allowed=side==0?pair.first:pair.second;
-        // Pair-locked Tafsir: other ayah polygons on these physical QCF pages
-        // are NOT part of this correspondance and may never switch its source.
-        if(!allowed.equals(verse)||page!=(side==0?currentLeftPage:currentRightPage))
-            return;
-        selectTafsir(side);
+        // A complete QCF page exposes every original ayah polygon, not just
+        // the two compared verses. Reject stale/wrong-page callbacks only.
+        if(page!=(side==0?currentLeftPage:currentRightPage))return;
+        try {if(geometry.pageForVerse(verse)!=page)return;}
+        catch(RuntimeException invalid){return;}
+        if(side==0)selectedLeftVerse=verse;else selectedRightVerse=verse;
+        loadBothTafsirs(selectedLeftVerse,selectedRightVerse);
+        showSelectedTafsir(side);
+        updateContextualHeaders();
     }
 
+    /** Canonical pair tabs always restore the corresponding compared ayah. */
     private void selectTafsir(int side){
         if(side<0||side>1)return;
+        VerseRef canonical=side==0?current().first:current().second;
+        VerseRef previous=side==0?selectedLeftVerse:selectedRightVerse;
+        if(side==0)selectedLeftVerse=canonical;else selectedRightVerse=canonical;
+        if(!canonical.equals(previous))loadBothTafsirs(selectedLeftVerse,selectedRightVerse);
+        showSelectedTafsir(side);
+        updateContextualHeaders();
+    }
+
+    private void showSelectedTafsir(int side){
         selectedTafsir=side;
         movePivotIntoTafsir(side);
         tafsirPanel.setVisibility(View.VISIBLE);
@@ -390,6 +406,12 @@ public final class AtlasDiscriminantActivity extends Activity {
                 ((ViewGroup)secondaryHost.getParent()).removeView(secondaryHost);
             destination.addView(secondaryHost);
         }
+        VerseRef selected=side==0?selectedLeftVerse:selectedRightVerse;
+        boolean canonical=side<0||(side==0?current().first:current().second).equals(selected);
+        tafsirSnippetHost.setVisibility(canonical?View.VISIBLE:View.GONE);
+        strips.setVisibility(canonical?View.VISIBLE:View.GONE);
+        if(secondaryHost!=null)secondaryHost.setVisibility(
+            canonical&&AtlasDiscriminantOmissions.hasSecondary(current().auditId)?View.VISIBLE:View.GONE);
         strips.setTafsirFocusSide(side);
         if(secondaryStrips!=null)secondaryStrips.setTafsirFocusSide(side);
         if(readingTafsir){
@@ -534,10 +556,18 @@ public final class AtlasDiscriminantActivity extends Activity {
         if(currentLeftPage<1||currentLeftPage>604||currentRightPage<1||currentRightPage>604)
             throw new IllegalStateException("Invalid QCF page");
 
-        // The pair is canonical and immutable even after restore/rotation/case switching:
-        // never carry arbitrary adjacent-ayah Tafsir references across comparisons.
-        selectedLeftVerse=c.first;
-        selectedRightVerse=c.second;
+        // Comparison references stay canonical; Tafsir may follow another ayah
+        // on the same complete physical QCF page.
+        // Preserve a valid full-page selection through rotation/process recreation.
+        // moveCase explicitly clears both selections before changing comparisons.
+        try {
+            if(selectedLeftVerse==null||geometry.pageForVerse(selectedLeftVerse)!=currentLeftPage)
+                selectedLeftVerse=c.first;
+        }catch(RuntimeException invalid){selectedLeftVerse=c.first;}
+        try {
+            if(selectedRightVerse==null||geometry.pageForVerse(selectedRightVerse)!=currentRightPage)
+                selectedRightVerse=c.second;
+        }catch(RuntimeException invalid){selectedRightVerse=c.second;}
         updateContextualHeaders();
         // BOOX: never decode two 600 KB original SVG pages and two crops simultaneously.
         // Load the second page only after the first confirms a real image.onload;
@@ -559,10 +589,10 @@ public final class AtlasDiscriminantActivity extends Activity {
         previousCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
         nextCase.setVisibility(caseIndices.size()>1?View.VISIBLE:View.GONE);
         previousCase.setEnabled(position>0);nextCase.setEnabled(position+1<caseIndices.size());
-        firstTafsirTab.setText(selectedLeftVerse.toString());
-        secondTafsirTab.setText(selectedRightVerse.toString());
+        firstTafsirTab.setText(c.first.toString());
+        secondTafsirTab.setText(c.second.toString());
         loadBothTafsirs(selectedLeftVerse,selectedRightVerse);
-        if(selectedTafsir>=0)selectTafsir(selectedTafsir);
+        if(selectedTafsir>=0)showSelectedTafsir(selectedTafsir);
         updateContextualHeaders();
         String origin=getIntent().getStringExtra(EXTRA_ORIGIN);
         String label="Révision active".equals(origin)?"Révision active":
@@ -759,7 +789,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     boolean tafsirPanelVisibleForTest(){return tafsirPanel!=null&&tafsirPanel.getVisibility()==View.VISIBLE;}
     String tafsirHeadingTextForTest(){return tafsirHeading==null?"":tafsirHeading.getText().toString();}
     boolean tafsirPivotEmbeddedForTest(){
-        return selectedTafsir>=0 && strips!=null && strips.getParent()==tafsirSnippetHost
+        return selectedTafsir>=0 && strips!=null && strips.getVisibility()==View.VISIBLE && strips.getParent()==tafsirSnippetHost
             && strips.tafsirFocusSideForTest()==selectedTafsir
             && !TextUtils.isEmpty(strips.getContentDescription());
     }
