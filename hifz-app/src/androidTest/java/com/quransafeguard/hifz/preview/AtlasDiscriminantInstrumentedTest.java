@@ -803,6 +803,9 @@ public final class AtlasDiscriminantInstrumentedTest {
             Rect[] crop=croppedBounds.get();
             assertNotNull("Both genuine source QCF excerpts need a measured viewport",crop);
             assertEquals(2,crop.length);
+            android.util.Log.i("HaafidhAtlasPixelBounds","fullPages="+java.util.Arrays.toString(pageBounds)
+                +" excerptHalves="+java.util.Arrays.toString(crop)
+);
             // Chromium may report valid SVG geometry one compositing frame
             // before the underlying WebView's pixels appear. Sample *real*
             // screenshots until BOTH exact Quran excerpts are visible together;
