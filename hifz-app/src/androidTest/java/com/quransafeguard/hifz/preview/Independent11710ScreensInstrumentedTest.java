@@ -106,7 +106,10 @@ public final class Independent11710ScreensInstrumentedTest {
         }
         try(ActivityScenario<ProgressMapActivity> s=ActivityScenario.launch(ProgressMapActivity.class)) {capture("progress-map");}
         try(ActivityScenario<AtlasMapActivity> s=ActivityScenario.launch(AtlasMapActivity.class)) {capture("atlas-private-corpus-state");}
-        try(ActivityScenario<AtlasSourcePdfActivity> s=ActivityScenario.launch(AtlasSourcePdfActivity.class)) {capture("atlas-private-pdf-state");}
+        try(ActivityScenario<AtlasSourcePdfActivity> s=ActivityScenario.launch(new Intent(ApplicationProvider.getApplicationContext(),AtlasSourcePdfActivity.class)
+                .putExtra(AtlasSourcePdfActivity.EXTRA_SURAH,1).putExtra(AtlasSourcePdfActivity.EXTRA_AYAH,1))) {
+            android.os.SystemClock.sleep(1500L);capture("atlas-private-pdf-state");
+        }
     }
     @Test public void allStructuredModeEntryStates() {
         Context c=ApplicationProvider.getApplicationContext();
@@ -119,6 +122,9 @@ public final class Independent11710ScreensInstrumentedTest {
             Intent intent=new Intent(c,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,mode);
             try(ActivityScenario<HifzSessionActivity> s=ActivityScenario.launch(intent)) {
                 s.onActivity(a->{assertFalse(a.isFinishing());assertNotNull(a.findViewById(android.R.id.content));});
+                java.util.concurrent.atomic.AtomicBoolean requested=new java.util.concurrent.atomic.AtomicBoolean();
+                s.onActivity(a->requested.set((Boolean)field(a,"hasShown")));
+                if(requested.get())HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","independent "+mode);
                 capture("mode-"+mode.toLowerCase(java.util.Locale.ROOT));
             }
         }
