@@ -2,7 +2,7 @@
 # Synthetic disposable emulator only. Re-exercises the preserved 1.17.8 gates
 # against the reviewed 1.17.9 adapters; never touches user progression.
 set -euo pipefail
-python3 scripts/verify_1179_invariants.py
+python3 scripts/verify_11710_invariants.py
 adb shell wm size 1404x1872
 adb shell wm density 226
 gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
