@@ -281,7 +281,16 @@ public final class AtlasDiscriminantInstrumentedTest {
                 +"if(p.isPointInFill(local)){var q=local.matrixTransform(m),safe=true;"
                 +"for(var dx of [-1,0,1])for(var dy of [-1,0,1]){var test=svg.createSVGPoint();"
                 +"test.x=q.x+dx;test.y=q.y+dy;if(winner(test)!==p)safe=false;}"
-                +"if(safe){window.__auditQcfClick=null;document.addEventListener('touchend',function(e){e=e.changedTouches[0];"
+                +"if(safe){window.__auditQcfClick=null;window.__auditQcfClickEvent=null;window.__auditReadPage=null;"
+                +"var originalReadPage=readPage;readPage=function(page,e){"
+                +"window.__auditReadPage={page:page,clientX:e.clientX,clientY:e.clientY};"
+                +"return originalReadPage(page,e);};"
+                +"document.addEventListener('click',function(e){var q=svg.createSVGPoint();"
+                +"q.x=e.clientX;q.y=e.clientY;var h=winner(q);"
+                +"window.__auditQcfClickEvent={clientX:e.clientX,clientY:e.clientY,"
+                +"tag:e.target.tagName,winner:h?h.getAttribute('surah')+':'+h.getAttribute('ayah'):'none'};"
+                +"},{capture:true,once:true});"
+                +"document.addEventListener('touchend',function(e){e=e.changedTouches[0];"
                 +"var actual=svg.createSVGPoint();actual.x=e.clientX;actual.y=e.clientY;var hit=winner(actual),v=window.visualViewport;"
                 +"window.__auditQcfClick={clientX:e.clientX,clientY:e.clientY,dpr:devicePixelRatio,w:innerWidth,h:innerHeight,"
                 +"winner:hit?hit.getAttribute('surah')+':'+hit.getAttribute('ayah'):'none',"
@@ -363,7 +372,7 @@ public final class AtlasDiscriminantInstrumentedTest {
             for(int poll=0;poll<30;poll++){
                 java.util.concurrent.CountDownLatch read=new java.util.concurrent.CountDownLatch(1);
                 scenario.onActivity(a->a.qcfViewsForTest()[side].evaluateJavascript(
-                    "JSON.stringify(window.__auditQcfClick)",value->{received.set(value);read.countDown();}));
+                    "JSON.stringify({touch:window.__auditQcfClick,click:window.__auditQcfClickEvent,read:window.__auditReadPage})",value->{received.set(value);read.countDown();}));
                 assertTrue(read.await(5,java.util.concurrent.TimeUnit.SECONDS));
                 if(received.get()!=null&&received.get().contains("clientX"))break;
                 Thread.sleep(50L);
