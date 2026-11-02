@@ -11,6 +11,16 @@ Private use only. Public GitHub repository: **never attach a signed APK, full pr
 - Preserved Android schema/final/recovery tests: **52/52 PASS**. Tafsir endurance per profile: 200 cycles, 100 rotations, 400 QCF selections, no app crash or ANR observed.
 - This staging branch is not a substitute for the primary reviewed PR. Its only additions are private-delivery guards, synthetic tests, and CI workflow; release application binaries must remain identical to the reviewed code.
 
+## Final source-only assembly result — 2026-11-02
+
+- [Run 41485836114](https://github.com/applicreation0-web/quran-hafidh/actions/runs/41485836114): **2/2 jobs PASS** (`release-guard`, `code-only-unsigned`).
+- Gradle `assembleRelease` passed for the code-only unsigned staging; verified via `aapt`: `com.quransafeguard.hifz`, `versionCode=48`, `versionName=1.17.10`.
+- Verified 604 source QCF pages in the staged artifact; 7 private resources are intentionally absent.
+- Non-installable unsigned APK staged as GitHub Actions artifact `haafidh-11710-CODE-ONLY-UNSIGNED-NOT-INSTALLABLE`, artifact ID `13160739734` (NOT a private signed release).
+- Current outcome: **GO for assembly source validation, NO-GO for signed private APK release**. No signed APK exists from this process, and no physical device upgrade has occurred.
+- Search of accessible file sources did not surface the exact seven original private files or the historical Haafidh keystore. A keystore belonging to another application must not be used. These inputs must be provided to the authorized offline signer.
+- Do not publish a GitHub Release asset or a draft disguised as installable until private resource hashes and historical signer are verified.
+
 ## Exact installed identity
 
 - Android application ID: `com.quransafeguard.hifz`
