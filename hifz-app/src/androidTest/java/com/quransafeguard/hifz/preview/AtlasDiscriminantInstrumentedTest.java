@@ -395,6 +395,7 @@ public final class AtlasDiscriminantInstrumentedTest {
      * is a user choice and must survive Android activity recreation. */
     @Test public void booxPortraitDefaultTafsirOpensAndManualCloseSurvivesRecreation()throws Exception{
         Context context=ApplicationProvider.getApplicationContext();
+        AtlasDiscriminantCases.Entry pair=samplePair();
         try(ActivityScenario<AtlasDiscriminantActivity> scenario=ActivityScenario.launch(
                 pairIntent(context,exactPairIndex(2,63,2,93)))){
             waitForQcf(scenario);
@@ -416,7 +417,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 }
             });
             if(boox.get()){
-                awaitBothTafsirs(scenario);
+                awaitBothTafsirs(scenario,pair);
                 assertContextPanesVisible(scenario);
                 saveComparisonScreenshot(context,"boox-portrait-default-tafsir");
                 scenario.onActivity(a->{
@@ -462,7 +463,7 @@ public final class AtlasDiscriminantInstrumentedTest {
             waitForSelectedTafsir(scenario,0);
             tapQcfPage(scenario,1,true,pair.second);
             waitForSelectedTafsir(scenario,1);
-            awaitBothTafsirs(scenario);
+            awaitBothTafsirs(scenario,pair);
             assertContextPanesVisible(scenario);
             saveComparisonScreenshot(context,"case-295-approved-280th");
         }
@@ -725,17 +726,37 @@ public final class AtlasDiscriminantInstrumentedTest {
         assertEquals("Real injected touch must select its requested original QCF polygon",expected,actual.get());
     }
 
-    private static void awaitBothTafsirs(ActivityScenario<AtlasDiscriminantActivity> scenario)throws Exception{
+    private static String expectedOriginalTafsir(com.quransafeguard.hifz.core.VerseRef verse)throws Exception{
+        TafsirRepository.Entry entry=new TafsirRepository(ApplicationProvider.getApplicationContext()).load(verse);
+        assertNotNull("Missing original offline Tafsir: "+verse,entry);
+        StringBuilder expected=new StringBuilder();
+        for(TafsirRepository.Run run:entry.commentaryRuns)expected.append(run.text);
+        for(TafsirRepository.Note note:entry.notes){
+            expected.append("\n\nNote ").append(note.number).append("\n");
+            for(TafsirRepository.Run run:note.runs)expected.append(run.text);
+        }
+        assertFalse("Original commentary must not be empty",expected.toString().trim().isEmpty());
+        return expected.toString();
+    }
+
+    private static void awaitBothTafsirs(ActivityScenario<AtlasDiscriminantActivity> scenario,
+            AtlasDiscriminantCases.Entry pair)throws Exception{
+        // A legitimate original commentary (e.g. 11:22) may be shorter than 100 chars.
+        // Compare the complete expected source text instead of guessing a minimum length.
+        String first=expectedOriginalTafsir(pair.first),second=expectedOriginalTafsir(pair.second);
         AtomicBoolean loaded=new AtomicBoolean();
+        AtomicReference<String> actual=new AtomicReference<>();
         for(int poll=0;poll<100;poll++){
             scenario.onActivity(a->{
                 CharSequence[] texts=a.tafsirTextsForTest();
-                loaded.set(a.selectedTafsirVerseForTest()!=null&&texts[0].length()>100&&texts[1].length()>100);
+                actual.set("leftChars="+texts[0].length()+" rightChars="+texts[1].length());
+                loaded.set(a.selectedTafsirVerseForTest()!=null
+                    &&first.contentEquals(texts[0])&&second.contentEquals(texts[1]));
             });
             if(loaded.get())return;
             Thread.sleep(100L);
         }
-        fail("Both real offline Tafsir bodies must load during endurance");
+        fail("Both exact original Tafsir bodies must load for "+pair.first+" / "+pair.second+"; "+actual.get());
     }
 
     /** Opt-in endurance. Reuses the strict real-window, DOM and original-glyph gates.
@@ -771,7 +792,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 assertSelectedVerse(scenario,pair.first);
                 tapQcfPage(scenario,1,true,pair.second);waitForSelectedTafsir(scenario,1);
                 assertSelectedVerse(scenario,pair.second);
-                assertContextPanesVisible(scenario);awaitBothTafsirs(scenario);
+                assertContextPanesVisible(scenario);awaitBothTafsirs(scenario,pair);
                 if(cycle<requestedRotations){
                     AtomicReference<MapQcfThumbnails[]> old=new AtomicReference<>();
                     int[] desired=new int[1];
@@ -793,7 +814,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                         Thread.sleep(100L);
                     }
                     assertTrue("Rotation must replace actual QCF views",rotated.get());
-                    waitForQcf(scenario);assertContextPanesVisible(scenario);awaitBothTafsirs(scenario);
+                    waitForQcf(scenario);assertContextPanesVisible(scenario);awaitBothTafsirs(scenario,pair);
                     assertDisplayedQcfClips(scenario,pair);
                     assertOriginalPageShapeAndWordMarks(scenario,pair);
                     scenario.onActivity(a->{

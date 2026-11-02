@@ -229,7 +229,11 @@ public final class SettingsActivity extends android.app.Activity {
         Ui.weight(heading,1);heading.setGravity(Gravity.CENTER);top.addView(heading);
         top.addView(new View(this),new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         page.addView(top);page.addView(Ui.divider(this));
-        int inset=Ui.dp(this,12);Ui.respectSystemBars(this,page,inset,0,inset,inset);
+        int inset=Ui.dp(this,12);
+        page.setPadding(inset,0,inset,inset);
+        // Keep system bars outside the stationary viewport while its child scrolls.
+        scroll.setClipToPadding(true);
+        Ui.respectSystemBars(this,scroll,0,0,0,0);
         screens.put(page,scroll);
         if(rootScreen==null)rootScreen=page;
         if(parent!=null){
@@ -340,9 +344,9 @@ public final class SettingsActivity extends android.app.Activity {
         String stabilizationDays=daysFor(CadenceAction.STABILIZATION),learningDays=daysFor(CadenceAction.LEARNING);
         consolidationSchemaNote.setText("Consolidation · soir "+stabilizationDays);
         renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") :"
-            +"\\n1. Renforcement Sabqi : protocole conservé. Consolidation Itqān : ×7 sur le nouveau bloc, puis passage continu des blocs précédents (sans refaire chacun ×7)."
-            +"\\n2. Dimanche matin : finale Sabqi. Dimanche soir : finale Itqān seulement pendant le premier régime. Après An-Nās, aucune finale Itqān."
-            +"\\n3. Matin : Révision active "+maintenanceMinutes()+" min + Révision passive "+maintenanceMinutes()+" min. Soir : Apprentissage ou Stabilisation, puis Renforcement ou Consolidation. Aucune Révision le dimanche.");
+            +"\n1. Renforcement Sabqi : protocole conservé. Consolidation Itqān : ×7 sur le nouveau bloc, puis passage continu des blocs précédents (sans refaire chacun ×7)."
+            +"\n2. Dimanche matin : finale Sabqi. Dimanche soir : finale Itqān seulement pendant le premier régime. Après An-Nās, aucune finale Itqān."
+            +"\n3. Matin : Révision active "+maintenanceMinutes()+" min + Révision passive "+maintenanceMinutes()+" min. Soir : Apprentissage ou Stabilisation, puis Renforcement ou Consolidation. Aucune Révision le dimanche.");
     }
 
     private String suggestedTimeLabel(boolean morning) {
