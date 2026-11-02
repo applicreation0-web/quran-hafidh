@@ -9,7 +9,7 @@ collect() {
 }
 trap collect EXIT
 gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
- -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.Independent11710ScreensInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710RecoveryInstrumentedTest
+ -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.Independent11710ScreensInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710VisualBoundsInstrumentedTest
 # Cross a genuine Android reboot with the established five-store synthetic fixture.
 package=com.quransafeguard.hifz.ibnkathirtest
 runner="$package.test/androidx.test.runner.AndroidJUnitRunner"
