@@ -2,7 +2,13 @@ name: Haafidh 1.17.10 independent audit (NO APK)
 on:
   push:
     branches: [audit/haafidh-11710-independent-20261102]
-    paths-ignore: ["docs/**"]
+    # Full production campaign; test-only fixture corrections have a focused workflow.
+    paths:
+      - 'hifz-app/src/main/**'
+      - 'hifz-app/src/private114/**'
+      - 'hifz-core/src/**'
+      - 'hifz-app/build.gradle.kts'
+      - 'app/src/main/assets/**'
   workflow_dispatch:
 permissions:
   contents: read

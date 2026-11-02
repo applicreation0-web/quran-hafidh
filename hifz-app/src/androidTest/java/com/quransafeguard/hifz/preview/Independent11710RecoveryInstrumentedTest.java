@@ -22,15 +22,18 @@ public final class Independent11710RecoveryInstrumentedTest {
    assertTrue(p.setV6AcquiredRanges(Collections.emptyList(),GeometryRepository.get(c)));
    raw.edit().remove("activeMurajaahCursor").commit();
    assertFalse(p.isActiveMurajaahCursorValid());
-   java.util.Map<String,?> before=new java.util.HashMap<>(raw.getAll());
+   java.util.concurrent.atomic.AtomicReference<java.util.Map<String,?>> before=new java.util.concurrent.atomic.AtomicReference<>();
    try(ActivityScenario<SettingsActivity> s=ActivityScenario.launch(SettingsActivity.class)) {
     s.onActivity(a->{try {
+     // Existing Activity initialization may initialize its rotation display.
+     // Measure the Diagnostic action itself without ignoring any preference key.
+     before.set(new java.util.HashMap<>(raw.getAll()));
      java.lang.reflect.Method m=SettingsActivity.class.getDeclaredMethod("showDiagnostic");
      m.setAccessible(true);m.invoke(a);
     }catch(Exception e){throw new AssertionError("Diagnostic must handle an empty acquired corpus",e);}});
     Independent11710ScreensInstrumentedTest.capture("diagnostic-empty-corpus");
    }
-   assertEquals("Diagnostic must be read-only",before,raw.getAll());
+   assertEquals("Diagnostic must be read-only",before.get(),raw.getAll());
   }finally{assertTrue(raw.edit().clear().commit());}
  }
  @Test public void damagedCheckpointExitPreservesUnvalidatedActiveTime() throws Exception {
