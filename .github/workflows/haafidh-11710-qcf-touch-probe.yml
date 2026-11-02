@@ -37,15 +37,13 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: |
-            adb shell wm size 1404x1872
-            adb shell wm density 226
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtlasDiscriminantInstrumentedTest#enduranceTafsirRotationsAndQcfDisposal -Pandroid.testInstrumentationRunnerArguments.atlasEndurance=true -Pandroid.testInstrumentationRunnerArguments.atlasTafsirCycles=1 -Pandroid.testInstrumentationRunnerArguments.atlasTafsirStartIndex=41
+          script: bash scripts/run_11710_qcf_touch_probe.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: haafidh-11710-exact-touch-probe-NO-APK
           path: |
+            hifz-app/build/qcf-touch-probe/
             hifz-app/build/independent-surfaces/
             hifz-app/build/independent-quick-results/
             hifz-app/build/atlas-comparison-audit/
