@@ -102,6 +102,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private ActiveReviewCorrectionStore correctionStore;
     private ActiveReviewCorrectionStore.State correctionState;
     private boolean activeCorrectionRecoveryRequired;
+    private boolean sessionRenderFailed; // Recovery failure is not a validated session.
     private boolean correctionMaskedPageReady;
     private Button correctionPageDoneButton;
     private LocalDate sessionDate;
@@ -318,6 +319,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void renderMode() {
+        sessionRenderFailed = false;
         closeAudio();
         // Amorces/page-word holes are never carried into another mode or a validation flow by
         // accident: Révision active and post-An-Nās Itqān recall opt back in explicitly.
@@ -341,6 +343,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             else if (MURAJAAH_ACTIVE.equals(mode)) renderMurajaahActive();
             else renderMurajaah();
         } catch (RuntimeException error) {
+            sessionRenderFailed = true;
             sessionCompleted = true;
             clock.pause();
             android.util.Log.e("QuranHifz", "Unable to render " + mode, error);
@@ -2574,7 +2577,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override protected void onPause(){
         if(clock==null){super.onPause();return;}
         long elapsed=clock.pause();
-        if(sessionCompleted&&!awaitingValidation)prefs.setElapsedFor(mode,0L);
+        if(sessionCompleted&&!awaitingValidation&&!sessionRenderFailed)prefs.setElapsedFor(mode,0L);
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }

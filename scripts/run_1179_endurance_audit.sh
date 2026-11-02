@@ -44,7 +44,7 @@ if [ "$phase" = navigation ]; then
 elif [ "$phase" = tafsir ]; then
   # Target the reproduced surah-title gap first; its smoke operation has its own
   # metric phase and is never counted among the 200 endurance operations.
-  for exact_case in 26 21 9; do
+  for exact_case in 26 21 9 27; do
     gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
       -Pandroid.testInstrumentationRunnerArguments.class="$class.AtlasDiscriminantInstrumentedTest#enduranceTafsirRotationsAndQcfDisposal" \
       -Pandroid.testInstrumentationRunnerArguments.atlasEndurance=true \

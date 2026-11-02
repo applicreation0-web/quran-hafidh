@@ -238,7 +238,14 @@ final class MapQcfThumbnails extends WebView {
    .append("function pills(){var nav=document.querySelector('nav');if(!nav)return;var count=Math.max(1,Math.min(7,Math.floor((nav.clientWidth-12)/50)));if(count>1&&count%2===0)count--;var first=Math.max(")
    .append(start).append(",Math.min(").append(end).append("-count+1,").append(selected).append("-Math.floor(count/2)));nav.querySelectorAll('button').forEach(b=>b.hidden=Number(b.textContent)<first||Number(b.textContent)>=first+count);}")
    .append("var touch=null,ignoreClick=0;document.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});")
-   .append("document.addEventListener('touchend',e=>{if(!touch)return;var dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){e.preventDefault();ignoreClick=Date.now()+400;MapPages.step(dx>0?1:-1);}});")
+   // Android WebView may round a synthetic click by one CSS pixel, crossing exact adjacent QCF polygons.
+   // Select from the precise touchend point; suppress only the duplicate synthesized click.
+   .append("document.addEventListener('touchend',e=>{if(!touch||e.changedTouches.length!==1){touch=null;return;}")
+   .append("var end=e.changedTouches[0],dx=end.clientX-touch.x,dy=end.clientY-touch.y;touch=null;")
+   .append("if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){e.preventDefault();ignoreClick=Date.now()+400;MapPages.step(dx>0?1:-1);return;}")
+   .append("if(inlineQcf&&Math.abs(dx)<12&&Math.abs(dy)<12&&e.target.closest&&e.target.closest('.paper')){")
+   .append("e.preventDefault();readPage(currentSvgPage,end);ignoreClick=Date.now()+400;}},{passive:false});")
+   .append("document.addEventListener('touchcancel',()=>{touch=null;});")
    .append("function readPage(p,e){if(Date.now()<=ignoreClick)return;if(!inlineQcf){MapPages.open(p);return;}")
    .append("var svg=document.querySelector('.paper svg');if(!svg)return;")
    .append("var point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;")
