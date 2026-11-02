@@ -40,8 +40,22 @@ public final class Independent11710ScreensInstrumentedTest {
         while(v!=null && !v.isClickable())v=v.getParent() instanceof View?(View)v.getParent():null;
         assertNotNull("No clickable navigation: "+label,v);assertTrue(v.performClick());
     }
-    private static void capture(String name) {
-        HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("independent-"+name+".png");
+    static void capture(String name) {
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        android.os.SystemClock.sleep(900L);
+        android.graphics.Bitmap image=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+        assertNotNull(image);
+        Context c=ApplicationProvider.getApplicationContext();
+        android.content.ContentValues values=new android.content.ContentValues();
+        values.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME,"independent-"+name+".png");
+        values.put(android.provider.MediaStore.Images.Media.MIME_TYPE,"image/png");
+        values.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH,"Pictures/HaafidhAudit");
+        android.net.Uri uri=c.getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values);
+        assertNotNull(uri);
+        try(java.io.OutputStream stream=c.getContentResolver().openOutputStream(uri)) {
+            assertTrue(image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream));
+        }catch(Exception e){throw new AssertionError("Cannot save actual Android screenshot",e);}
+        finally{image.recycle();}
     }
     @Test public void homeCalendarAndAllSettingsPages() {
         try(ActivityScenario<MainActivity> s=ActivityScenario.launch(MainActivity.class)) {
@@ -70,6 +84,14 @@ public final class Independent11710ScreensInstrumentedTest {
                     s.onActivity(a->call(a,"showDiagnostic"));capture("diagnostic-dialog");
                 }
             }
+        }
+        try(ActivityScenario<SettingsActivity> s=ActivityScenario.launch(SettingsActivity.class)) {
+            s.onActivity(a->open(a,"Avancé"));
+            s.onActivity(a->open(a,"À propos du parcours"));
+            capture("settings-about-top");
+            s.onActivity(a->{View first=((ViewGroup)a.findViewById(android.R.id.content)).getChildAt(0);
+                if(first instanceof ScrollView)((ScrollView)first).fullScroll(View.FOCUS_DOWN);});
+            capture("settings-about-bottom");
         }
     }
     @Test public void realReadingProgressAndUnavailablePrivateStates() {

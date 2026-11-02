@@ -3,7 +3,7 @@
 gradle.projectsEvaluated {
     def app = gradle.rootProject.project(':hifz-app')
     app.tasks.register('exportJvmAuditRuntime') {
-        dependsOn app.tasks.named('compileDebugUnitTestJavaWithJavac')
+        dependsOn app.tasks.named('compileDebugUnitTestJavaWithJavac'), app.tasks.named('bundleDebugClassesToRuntimeJar')
         doLast {
             def test = app.tasks.named('testDebugUnitTest').get()
             def target = new File(app.layout.buildDirectory.get().asFile, 'jvm-audit-runtime')

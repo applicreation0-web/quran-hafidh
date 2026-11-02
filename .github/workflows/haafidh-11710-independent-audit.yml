@@ -2,6 +2,7 @@ name: Haafidh 1.17.10 independent audit (NO APK)
 on:
   push:
     branches: [audit/haafidh-11710-independent-20261102]
+    paths-ignore: ["docs/**"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -50,11 +51,14 @@ jobs:
         run: |
           sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
           gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Export public classes for local private-backup replay
+        run: gradle --no-daemon -I scripts/export_jvm_audit_runtime.init.gradle :hifz-app:exportJvmAuditRuntime
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: haafidh-11710-finalisation-JVM-NO-APK
           path: |
+            hifz-app/build/jvm-audit-runtime/
             hifz-core/build/test-results/
             hifz-app/build/test-results/
             hifz-app/build/reports/tests/
@@ -94,7 +98,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Full catalogue rendering, actual masks, restoration, force-stop and captures
+      - name: Actual masks, recovery, general screens and Android reboot
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -104,14 +108,15 @@ jobs:
           disable-animations: true
           script: |
             bash scripts/run_1179_finalisation_android_audit.sh ${{ matrix.surface }} ${{ matrix.size }} ${{ matrix.density }} quick
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.Independent11710ScreensInstrumentedTest
-            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files hifz-app/build/independent-screens
+            cp -a hifz-app/build/outputs/androidTest-results hifz-app/build/independent-quick-results
+            bash scripts/run_11710_independent_surfaces.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: haafidh-11710-finalisation-${{ matrix.surface }}-NO-APK
           path: |
-            hifz-app/build/independent-screens/
+            hifz-app/build/independent-surfaces/
+            hifz-app/build/independent-quick-results/
             hifz-app/build/atlas-comparison-audit/
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
@@ -200,7 +205,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Full catalogue rendering, actual masks, restoration, force-stop and captures
+      - name: Actual masks, recovery, general screens and Android reboot
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35

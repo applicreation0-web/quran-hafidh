@@ -809,7 +809,8 @@ public final class SettingsActivity extends android.app.Activity {
             +"\nPlages promues (Sabqi) : "+prefs.promotedRanges().size()+"\nLignes à stabiliser (Itqan) : "+progression.stabilized.size()
             +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanRotationLiveCursor(geometry)
             +"\nPosition Révision passive : "+prefs.murajaahCursor()
-            +"\nPosition Révision active : "+prefs.activeMurajaahCursor()
+            +"\nPosition Révision active : "+(prefs.isActiveMurajaahCursorValid()
+                ? prefs.activeMurajaahCursor().toString() : "indisponible · corpus ou curseur à vérifier")
             +"\nFile de Consolidation : "+prefs.recentSabqi().size()
             +"\nQuarantaine : "+quarantine.size()+" ligne(s)"
             +"\nEstimation fin Stabilisation : "+stabilizationEtaSummary()
