@@ -76,7 +76,7 @@ final class ActiveReviewCorrectionStore {
                 GeometryRepository.parseVerse(doc.getString("end")),
                 strictLong(doc.get("activeElapsedMs")),pages,
                 strictInt(doc.get("originPage")),strictInt(doc.get("pageIndex")),doc.getString("stage"),
-                doc.optBoolean("assisted",false));
+                strictBoolean(doc.get("assisted")));
         }catch(Exception invalid){
             // Never silently delete a damaged checkpoint or advance the Hifz cursor.
             throw new IllegalStateException("État de reprise des pages à vérifier ; données conservées.",invalid);
@@ -86,6 +86,14 @@ final class ActiveReviewCorrectionStore {
     /** JSONObject.getInt/getLong coerce fractional numbers and numeric strings.
      * Disk checkpoints contain integral JSON numbers only: fail closed on damage,
      * retaining the original bytes instead of silently changing page/time/index. */
+    // Assistance is always written as a boolean in V2. Missing/coerced values
+    // must not erase a recorded reveal after a damaged backup is restored.
+    private static boolean strictBoolean(Object value){
+        if(!(value instanceof Boolean))
+            throw new IllegalArgumentException("Non-boolean checkpoint assistance");
+        return (Boolean)value;
+    }
+
     private static long strictLong(Object value){
         if(!(value instanceof Integer)&&!(value instanceof Long))
             throw new IllegalArgumentException("Non-integral checkpoint number");
