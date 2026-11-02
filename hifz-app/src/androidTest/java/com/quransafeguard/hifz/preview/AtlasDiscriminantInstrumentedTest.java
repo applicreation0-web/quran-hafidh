@@ -281,7 +281,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 +"if(p.isPointInFill(local)){var q=local.matrixTransform(m),safe=true;"
                 +"for(var dx of [-1,0,1])for(var dy of [-1,0,1]){var test=svg.createSVGPoint();"
                 +"test.x=q.x+dx;test.y=q.y+dy;if(winner(test)!==p)safe=false;}"
-                +"if(safe){window.__auditQcfClick=null;document.addEventListener('click',function(e){"
+                +"if(safe){window.__auditQcfClick=null;document.addEventListener('touchend',function(e){e=e.changedTouches[0];"
                 +"var actual=svg.createSVGPoint();actual.x=e.clientX;actual.y=e.clientY;var hit=winner(actual),v=window.visualViewport;"
                 +"window.__auditQcfClick={clientX:e.clientX,clientY:e.clientY,dpr:devicePixelRatio,w:innerWidth,h:innerHeight,"
                 +"winner:hit?hit.getAttribute('surah')+':'+hit.getAttribute('ayah'):'none',"
@@ -365,7 +365,7 @@ public final class AtlasDiscriminantInstrumentedTest {
                 scenario.onActivity(a->a.qcfViewsForTest()[side].evaluateJavascript(
                     "JSON.stringify(window.__auditQcfClick)",value->{received.set(value);read.countDown();}));
                 assertTrue(read.await(5,java.util.concurrent.TimeUnit.SECONDS));
-                if(!"null".equals(received.get())&&!"undefined".equals(received.get()))break;
+                if(received.get()!=null&&received.get().contains("clientX"))break;
                 Thread.sleep(50L);
             }
             android.util.Log.i("HaafidhTouchProbe","requested="+requested+" actual="+received.get());
