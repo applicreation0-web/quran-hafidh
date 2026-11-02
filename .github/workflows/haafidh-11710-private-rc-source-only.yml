@@ -1,0 +1,117 @@
+name: Haafidh 1.17.10 PRIVATE RC source-only preflight (NO SIGNED APK)
+on:
+  push:
+    branches: [release-candidate/haafidh-11710-private-offline-20261102]
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-11710-private-rc-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  release-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prove identical application sources and offline-only release contract
+        run: |
+          set -euo pipefail
+          git diff --exit-code a50cacff8943a63aa42461f9a3553a5f831caffe HEAD -- hifz-core/src hifz-app/src/main hifz-app/src/private114 hifz-app/build.gradle.kts
+          python3 scripts/verify_11710_invariants.py
+          python3 scripts/test_build_11710_private_offline.py
+          python3 scripts/test_build_1179_private_offline.py
+          python3 -m py_compile scripts/build_11710_private_offline.py
+          test -z "${HIFZ_PRIVATE_RELEASE_UPGRADE:-}${HIFZ_KEYSTORE_PATH:-}${HIFZ_KEYSTORE_BASE64:-}"
+      - name: Record exact pinned source manifest only (no private data)
+        run: |
+          set -euo pipefail
+          mkdir -p release-guard-output
+          {
+            echo "REVIEWED_APPLICATION_SHA=a50cacff8943a63aa42461f9a3553a5f831caffe"
+            echo "STAGING_BRANCH_SHA=$GITHUB_SHA"
+            echo "ANDROID_VERSION=1.17.10"
+            echo "ANDROID_VERSION_CODE=48"
+            echo "PACKAGE=com.quransafeguard.hifz"
+            echo "HISTORIC_CERT_SHA256=66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14"
+            echo "SOURCE_ONLY=TRUE"
+            echo "PRIVATE_ASSETS=NOT_PRESENT"
+            echo "SIGNED_APK=NOT_BUILT"
+            echo "PHYSICAL_BOOX_TEST=NOT_DONE"
+            echo "STATUS=NO-GO_DELIVERY"
+          } > release-guard-output/PINNED-CANDIDATE-NOT-RELEASED.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-11710-SOURCE-GUARD-NO-APK
+          path: release-guard-output/
+          retention-days: 14
+  code-only-unsigned:
+    needs: release-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Recheck 1.17.10 identity and fetch verified original public QCF pages
+        run: |
+          set -euo pipefail
+          test -z "${HIFZ_KEYSTORE_PATH:-}${HIFZ_KEYSTORE_PASSWORD:-}${HIFZ_KEY_PASSWORD:-}"
+          python3 scripts/verify_11710_invariants.py
+          python3 -m pip install brotli
+          bash scripts/fetch_mushaf_pages.sh
+          python3 scripts/verify_mutash_catalogue.py
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Build SOURCE-ONLY unsigned APK, NOT INSTALLABLE
+        env:
+          AYAH_THEMES_PRIVATE_114: '1'
+          HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --max-workers=2 :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs
+          APK=hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep "^package: name='com.quransafeguard.hifz' versionCode='48' versionName='1.17.10' "
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,re,hashlib
+          p=Path('hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk')
+          with zipfile.ZipFile(p) as a:
+              names=set(a.namelist())
+              assert a.testzip() is None
+              assert len([n for n in names if re.fullmatch(r'assets/mushaf/hafs/kfqc/svg-br/\d{3}\.svg\.br',n)])==604
+              assert not any(n.startswith(('assets/atlas_private/','assets/ayah_themes_private/')) for n in names)
+              assert 'assets/atlas/atlas_display_catalog_v1.json' not in names
+          digest=hashlib.sha256(p.read_bytes()).hexdigest()
+          manifest=p.parent/'CODE_ONLY_UNSAFE_TO_INSTALL.txt'
+          manifest.write_text('SOURCE_SHA='+str(__import__('os').environ['GITHUB_SHA'])+'\n'
+              +'PACKAGE=com.quransafeguard.hifz\nVERSION=1.17.10\nCODE=48\n'
+              +'SHA256='+digest+'\nNOT_SIGNED=TRUE\nSEVEN_PRIVATE_RESOURCES=ABSENT\n'
+              +'NEVER_INSTALL_OR_PUBLISH_THIS_APK\n',encoding='utf8')
+          print('PASS: code-only unsigned 1.17.10 staging; 604 original pages; NO installable artifact')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-11710-CODE-ONLY-UNSIGNED-NOT-INSTALLABLE
+          path: |
+            hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk
+            hifz-app/build-private114/outputs/apk/release/CODE_ONLY_UNSAFE_TO_INSTALL.txt
+          if-no-files-found: error
+          retention-days: 14
