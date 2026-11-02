@@ -788,9 +788,9 @@ public final class AtlasDiscriminantInstrumentedTest {
                 assertDisplayedQcfClips(scenario,pair);
                 assertExactQcfWords(context,pair.first,pair.firstWordIndices);
                 assertExactQcfWords(context,pair.second,pair.secondWordIndices);
-                tapQcfPage(scenario,0,false,pair.first);waitForSelectedTafsir(scenario,0);
+                tapQcfPage(scenario,0,false,pair.first);awaitExactTappedTafsir(scenario,0,pair.first);
                 assertSelectedVerse(scenario,pair.first);
-                tapQcfPage(scenario,1,true,pair.second);waitForSelectedTafsir(scenario,1);
+                tapQcfPage(scenario,1,true,pair.second);awaitExactTappedTafsir(scenario,1,pair.second);
                 assertSelectedVerse(scenario,pair.second);
                 assertContextPanesVisible(scenario);awaitBothTafsirs(scenario,pair);
                 if(cycle<requestedRotations){
