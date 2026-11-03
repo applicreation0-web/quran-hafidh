@@ -94,7 +94,14 @@ public final class AtTur11711RecoveryInstrumentedTest {
             e.putInt("schema",6);
             e.putString("v6LearnedLineIds","[]");
             e.putString("v6StabilizedLineIds",array(new ArrayList<String>(){{addAll(MISSING);addAll(NEW_STABILIZED);}}).toString());
-            e.putString("v6AcquiredCreditLineIds",array(ALREADY_ACQUIRED).toString());
+            // The earlier 9-line historical receipt was ALREADY Acquis in the
+            // real export, including 524:8..14. Never pretend it is uncredited:
+            // Sunday must skip this old unit, not try to promote it again.
+            LinkedHashSet<String> previouslyAcquired=new LinkedHashSet<>(ALREADY_ACQUIRED);
+            previouslyAcquired.addAll(OCT_EARNED_1);
+            previouslyAcquired.addAll(OCT_EARNED_2);
+            e.putString("v6AcquiredCreditLineIds",
+                array(new ArrayList<>(previouslyAcquired)).toString());
             e.putString("v6QuarantineLineIds","[]");
             e.putString("v6LegacyPartialAcquiredLineIds","[]");
             e.putString("itqanRanges",ranges("2:1","2:76"));
