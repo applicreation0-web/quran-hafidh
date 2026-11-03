@@ -3673,7 +3673,40 @@ public final class HifzPrefs {
             String prior=frozenConsolidationSnapshot(cycle.family(),cycle.cycleId());
             String snapshot=prior;
             if(snapshot.isEmpty()) {
-                snapshot=recoverLegacyFrozenSnowballSnapshot(cycle);
+                // NEW first-pass Consolidation sessions can have several ×7
+                // subblocks (or an overdue week + this week's ×1 pass).
+                // The legacy-prefix decoder only knows a single newest ×7:
+                // treating a genuinely new composite as LEGACY_OPEN makes its
+                // validated snapshot differ from the real due source forever.
+                //
+                // Only freeze the current full source when NO persisted OPEN
+                // session exists, and when every planned physical unit matches
+                // the cycle exactly. An old session missing sourceSnapshot
+                // must still recover only its historical prefix, never absorb
+                // newly added lines after interruption or upgrade.
+                if (!isFinalCycleId(cycle.cycleId())
+                        && cycle.family()==ConsolidationCycleEngine.Family.STABILIZATION
+                        && !itqanPostNasMaintenance()) {
+                    String existingSlot=p.getString(
+                        consolidationStateKeyForCycle(cycle.family(),cycle.cycleId()),"");
+                    if(existingSlot==null||existingSlot.isEmpty()) {
+                        try {
+                            LocalDate day=LocalDate.parse(
+                                cycle.cycleId().substring("stabilization-".length()));
+                            List<ConsolidationCycleEngine.Unit> planned=
+                                stabilizedConsolidationUnits(day);
+                            boolean exact=planned.size()==cycle.units().size();
+                            for(int i=0;exact&&i<planned.size();i++) {
+                                exact=planned.get(i).id().equals(cycle.units().get(i).id())
+                                    && planned.get(i).protocol()==cycle.units().get(i).protocol();
+                            }
+                            if(exact) snapshot=snowballSnapshot(cycle.family(),day);
+                        } catch(RuntimeException invalid) {
+                            // Fall back to legacy prefix below. Never infer credits.
+                        }
+                    }
+                }
+                if(snapshot.isEmpty())snapshot=recoverLegacyFrozenSnowballSnapshot(cycle);
             }
             root.put("sourceSnapshot",snapshot);
 
