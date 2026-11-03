@@ -3452,13 +3452,18 @@ public final class HifzPrefs {
         }
     }
 
-    /** Idempotent, single atomic close: validation date + consumed cumulative units + session. */
+    /** Legacy date-only closure: no verified x7/x10 receipt, never re-close on the
+     * same calendar date even if new physical units arrived after the old closure.
+     * Only the Session-verified overload may record a second same-day set. */
     boolean completeSnowballEvening(ConsolidationCycleEngine.Family family, String date) {
         if(family==null||date==null)return false;
         LocalDate day;
         try {day=LocalDate.parse(date);}catch(RuntimeException badDate){return false;}
         synchronized(V6_STATE_LOCK) {
-            if(!snowballEveningPending(family,day))return false; // cannot credit same set twice
+            String marker=family==ConsolidationCycleEngine.Family.LEARNING
+                ?lastLearningSnowballEveningDate():lastStabilizationSnowballEveningDate();
+            if (date.equals(marker))return false; // legacy caller cannot manufacture a new same-day receipt
+            if(!snowballEveningPending(family,day))return false;
             String key=family==ConsolidationCycleEngine.Family.LEARNING
                 ?"lastLearningSnowballEveningDate":"lastStabilizationSnowballEveningDate";
             String snapshot=exactSnowballSnapshotToValidate(family,day);
