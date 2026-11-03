@@ -72,6 +72,8 @@ public final class AtTur11711RecoveryInstrumentedTest {
         SharedPreferences disk=c.getSharedPreferences("quran_hifz_preview_v1",0);
         assertTrue(disk.edit().clear().commit());
         try {
+            assertEquals("1.17.11",BuildConfig.VERSION_NAME);
+            assertEquals(49,BuildConfig.VERSION_CODE);
             GeometryRepository geometry=GeometryRepository.get(c);
             assertEquals(7,geometry.linesForExactIds(MISSING).size());
             assertEquals(8,geometry.linesForExactIds(ALREADY_ACQUIRED).size());
