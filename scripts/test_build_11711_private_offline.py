@@ -11,7 +11,7 @@ from unittest.mock import patch
 import zipfile
 
 SCRIPT = Path(__file__).with_name("build_11711_private_offline.py")
-spec = importlib.util.spec_from_file_location("haafidh11710_offline", SCRIPT)
+spec = importlib.util.spec_from_file_location("haafidh11711_offline", SCRIPT)
 builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
 
@@ -31,7 +31,7 @@ class PrivateCandidateDeliveryGuardTest(unittest.TestCase):
         zip_fixture(self.original)
 
     def test_accepts_only_authentic_old_version_and_matching_signer(self):
-        for version in ((42, "1.17.4"), (46, "1.17.8"), (47, "1.17.9")):
+        for version in ((42, "1.17.4"), (46, "1.17.8"), (47, "1.17.9"), (48, "1.17.10")):
             with self.subTest(version=version):
                 with patch.object(builder, "package_identity",
                                   return_value=(builder.PACKAGE, *version)), \
@@ -94,7 +94,7 @@ class PrivateCandidateDeliveryGuardTest(unittest.TestCase):
 
     def test_exact_upgraded_identity(self):
         self.assertEqual((builder.PACKAGE,builder.VERSION_CODE,builder.VERSION),
-                         ("com.quransafeguard.hifz",48,"1.17.11"))
+                         ("com.quransafeguard.hifz",49,"1.17.11"))
         self.assertEqual(len(builder.RESOURCES),7)
         self.assertEqual(len(builder.HISTORICAL_CERT),64)
 
