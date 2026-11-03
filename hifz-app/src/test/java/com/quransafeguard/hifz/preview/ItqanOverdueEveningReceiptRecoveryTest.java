@@ -146,6 +146,27 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(1).protocol());
         assertEquals(laterId,due.get(1).id());
         assertEquals("No automatic extra Acquis","[]",disk.getString("v6AcquiredCreditLineIds",""));
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle=engine.startCycle(
+            "stabilization-"+CURRENT,ConsolidationCycleEngine.Family.STABILIZATION,due.get(0));
+        cycle=engine.addUnit(cycle,due.get(1));
+        ConsolidationCycleEngine.Session verified=engine.openSession(cycle,"second-same-day");
+        assertTrue(prefs.persistConsolidationSession(verified));
+        while(!verified.readyToClose()){
+            verified=engine.recordRepetition(verified);
+            assertTrue(prefs.persistConsolidationSession(verified));
+        }
+        assertTrue("Only completed repetitions may earn the second same-date receipt",
+            prefs.completeSnowballEvening(
+                ConsolidationCycleEngine.Family.STABILIZATION,CURRENT.toString(),verified));
+        assertFalse("Same-day verified cycle must not be repeated",
+            prefs.completeSnowballEvening(
+                ConsolidationCycleEngine.Family.STABILIZATION,CURRENT.toString(),verified));
+        assertFalse(prefs.snowballEveningPending(
+            ConsolidationCycleEngine.Family.STABILIZATION,CURRENT));
+        assertTrue(new JSONArray(disk.getString("v6StabilizationEarnedEveningUnitsV1","[]"))
+            .toString().contains(laterId));
+        assertEquals("No premature Acquis","[]",disk.getString("v6AcquiredCreditLineIds",""));
     }
 
     @Test public void historicalUnitMustRemainStabilizedToBeRecoverable() throws Exception {
