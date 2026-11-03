@@ -3046,13 +3046,82 @@ public final class HifzPrefs {
     }
 
     /**
+     * First-pass Itqan recovery: a physical block may have been Stabilised last week
+     * but missed its verified ×7 evening receipt (for example 525:8..525:14).
+     * The old week is not an excuse to drop it forever. Re-offer the exact
+     * unreceipted physical block at the NEXT eligible evening session.
+     *
+     * Historical snowball entries are evidence that lines were Stabilised, NOT
+     * evidence that evening repetitions were completed. This read-only planner
+     * never manufactures receipts or Acquis credit. A genuine frozen ×7 cycle
+     * must still complete and commit through completeSnowballEvening().
+     *
+     * Keep current-week units in their original order, even if already earned:
+     * they receive only the ×1 continuous pass while overdue units earn ×7.
+     * Cap the oldest outstanding units before the composite 31-unit limit;
+     * the remainder stays in history and will be offered on later days.
+     */
+    private JSONArray stabilizationEveningSource(LocalDate today) {
+        JSONArray current = rolledSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today);
+        if (itqanPostNasMaintenance()) return current;
+        JSONArray history;
+        try {
+            history = new JSONArray(p.getString(
+                snowballHistoryKey(ConsolidationCycleEngine.Family.STABILIZATION), "[]"));
+        } catch (Exception invalid) {
+            throw new IllegalStateException("Invalid Stabilisation history; cannot plan recovery", invalid);
+        }
+        Set<String> earned = earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
+        Set<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        Set<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+        LinkedHashSet<String> seen = new LinkedHashSet<>();
+        for (int i = 0; i < current.length(); i++) {
+            String id = current.optString(i, "");
+            if (id.isEmpty() || !seen.add(id))
+                throw new IllegalStateException("Invalid current-week Stabilisation unit");
+        }
+
+        JSONArray due = new JSONArray();
+        int room = Math.max(0, ConsolidationCycleEngine.maxUnitsFor(
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN) - 1 - current.length());
+        LocalDate thisWeek = mondayOf(today);
+        for (int w = 0; w < history.length() && due.length() < room; w++) {
+            JSONObject week = history.optJSONObject(w);
+            if (week == null) continue;
+            LocalDate anchor = safeDate(week.optString("week", ""), null);
+            if (anchor == null || !anchor.isBefore(thisWeek)) continue;
+            JSONArray units = week.optJSONArray("units");
+            if (units == null) continue;
+            for (int u = 0; u < units.length() && due.length() < room; u++) {
+                String id = units.optString(u, "");
+                if (id.isEmpty()) throw new IllegalStateException("Empty historical Stabilisation unit");
+                if (earned.contains(id) || !seen.add(id)) continue;
+                List<String> lines = ConsolidationPhysicalUnitPolicy.decodeLineUnit(id);
+                if (lines.isEmpty()) throw new IllegalStateException("Empty historical physical block");
+                boolean remaining = false, valid = true;
+                for (String line : lines) {
+                    if (stabilized.contains(line)) remaining = true;
+                    else if (!acquired.contains(line)) { valid = false; break; }
+                }
+                // Never offer work that has not actually been Stabilised.
+                // A fully Acquis block likewise needs no retroactive receipt.
+                if (valid && remaining) due.put(id);
+            }
+        }
+        JSONArray source = new JSONArray();
+        for (int i = 0; i < due.length(); i++) source.put(due.optString(i));
+        for (int i = 0; i < current.length(); i++) source.put(current.optString(i));
+        return source;
+    }
+
+    /**
      * J4 Consolidation: today’s new physical Stabilisé block ×7, older blocks read
      * once as one continuous pass. Renforcement retains its original SNOWBALL ×10.
      * Already persisted OPEN sessions keep their frozen protocol vectors in restore.
      */
     List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
         if(itqanPostNasMaintenance())return postNasConsolidationUnits(today);
-        JSONArray source=rolledSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION,today);
+        JSONArray source=stabilizationEveningSource(today);
         if(source.length()==0)return Collections.emptyList();
         Set<String> earned=earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
         ArrayList<String> alreadyRepeated=new ArrayList<>(),newBlocks=new ArrayList<>();
@@ -3299,7 +3368,9 @@ public final class HifzPrefs {
     }
 
     private String snowballSnapshot(ConsolidationCycleEngine.Family family, LocalDate date) {
-        JSONArray current = rolledSnowballUnits(family,date);
+        JSONArray current = family == ConsolidationCycleEngine.Family.STABILIZATION
+            && !itqanPostNasMaintenance() ? stabilizationEveningSource(date)
+            : rolledSnowballUnits(family,date);
         if(current.length()==0)return "";
         return mondayOf(date).toString()+"|"+current.toString();
     }
