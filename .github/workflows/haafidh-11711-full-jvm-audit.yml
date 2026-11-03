@@ -46,16 +46,23 @@ jobs:
           changed = check_output(["git", "diff", "--name-only", baseline, "HEAD", "--",
               "hifz-core/src", "hifz-app/src/main", "hifz-app/src/private114"],
               text=True).splitlines()
-          assert changed == [path], f"Unauthorized production changes: {changed}"
-          for filename in ["hifz-app/build.gradle.kts", "hifz-app/src/main/AndroidManifest.xml"]:
-              old = check_output(["git", "show", baseline + ":" + filename])
-              current = open(filename, "rb").read()
-              assert old == current, f"Unexpected build identity/resource change: {filename}"
-          print("PASS: 1.17.11 only changes the approved Itqan state/receipt planner")
+          assert set(changed) == {path}, f"Unauthorized production changes: {changed}"
+          filename = "hifz-app/build.gradle.kts"
+          old = check_output(["git", "show", baseline + ":" + filename])
+          current = open(filename, "rb").read()
+          expected = old.replace(b"versionCode = 48", b"versionCode = 49").replace(b'versionName = "1.17.10"', b'versionName = "1.17.11"')
+          assert current == expected, "Build modified beyond exact versionName/code 1.17.11/49"
+          manifest = "hifz-app/src/main/AndroidManifest.xml"
+          assert check_output(["git", "show", baseline + ":" + manifest]) == open(manifest, "rb").read(), "Manifest identity changed"
+          print("PASS: 1.17.11 only changes approved Itqan engine and exact code49/versionName metadata")
           PY
           python scripts/materialize_mutash_catalogue.py --check
           python scripts/verify_mutash_catalogue.py
           python scripts/verify_mutash_pivot_review_v2.py
+      - name: Fail-closed private 1.17.11 offline builder tests (synthetic; NO APK)
+        run: |
+          python3 scripts/test_build_11711_private_offline.py
+          python3 scripts/build_11711_private_offline.py --help >/dev/null
       - name: Full JVM and source-contract nonregression
         run: gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
       - uses: actions/upload-artifact@v4
