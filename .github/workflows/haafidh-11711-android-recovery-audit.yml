@@ -59,8 +59,7 @@ jobs:
           script: |
             adb shell wm size ${{ matrix.size }}
             adb shell wm density ${{ matrix.density }}
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710RecoveryInstrumentedTest
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710RecoveryInstrumentedTest
       - uses: actions/upload-artifact@v4
         if: always()
         with:
