@@ -3392,10 +3392,14 @@ public final class HifzPrefs {
         }
         String marker=family==ConsolidationCycleEngine.Family.LEARNING
             ?lastLearningSnowballEveningDate():lastStabilizationSnowballEveningDate();
-        if(date.toString().equals(marker))return false;
+        String completedSnapshot=p.getString(snowballCompletedSnapshotKey(family),"");
+        // An older date-only completed cycle remains closed when it has no
+        // fingerprint. Newer verified cycles store the exact source snapshot:
+        // a NEW physical block completed later on the SAME day must still
+        // receive its own real evening repetitions and receipt.
+        if(date.toString().equals(marker) && completedSnapshot.isEmpty())return false;
         String snapshot=exactSnowballSnapshotToValidate(family,date);
-        return !snapshot.isEmpty()
-            && !snapshot.equals(p.getString(snowballCompletedSnapshotKey(family),""));
+        return !snapshot.isEmpty() && !snapshot.equals(completedSnapshot);
     }
 
     /** Verified production closure: the completed session, its date and all
