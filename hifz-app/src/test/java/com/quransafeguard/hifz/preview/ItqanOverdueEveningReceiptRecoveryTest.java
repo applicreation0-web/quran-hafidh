@@ -132,7 +132,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         List<String> later=Arrays.asList("526:8","526:9","526:10");
         String laterId=ConsolidationPhysicalUnitPolicy.encodeLineUnit(later);
         ArrayList<String> stabilized=new ArrayList<>(OVERDUE);
-        stabilized.addAll(NEW);
+        stabilized.addAll(NEW_WEEK);
         stabilized.addAll(later);
         disk.disk.put("v6StabilizedLineIds",new JSONArray(stabilized).toString());
         disk.disk.put("stabilizationSnowballUnitIds",
