@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -34,7 +36,23 @@ jobs:
           bash scripts/fetch_mushaf_pages.sh
       - name: Validate source invariants and public catalogue
         run: |
-          python scripts/verify_11710_invariants.py
+          # The 1.17.10 invariant is intentionally a no-core-change release guard.
+          # This 1.17.11 fix changes exactly HifzPrefs.java, so compare instead
+          # against the pinned, fully reviewed 1.17.10 source candidate.
+          python - <<'PY'
+          from subprocess import check_output
+          baseline = "3edf0a46abc87798ee2fc1c693b16003b63e5a65"
+          path = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"
+          changed = check_output(["git", "diff", "--name-only", baseline, "HEAD", "--",
+              "hifz-core/src", "hifz-app/src/main", "hifz-app/src/private114"],
+              text=True).splitlines()
+          assert changed == [path], f"Unauthorized production changes: {changed}"
+          for filename in ["hifz-app/build.gradle.kts", "hifz-app/src/main/AndroidManifest.xml"]:
+              old = check_output(["git", "show", baseline + ":" + filename])
+              current = open(filename, "rb").read()
+              assert old == current, f"Unexpected build identity/resource change: {filename}"
+          print("PASS: 1.17.11 only changes the approved Itqan state/receipt planner")
+          PY
           python scripts/materialize_mutash_catalogue.py --check
           python scripts/verify_mutash_catalogue.py
           python scripts/verify_mutash_pivot_review_v2.py
