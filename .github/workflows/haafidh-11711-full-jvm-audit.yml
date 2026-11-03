@@ -1,0 +1,51 @@
+name: Haafidh 1.17.11 independent full JVM regression (NO APK)
+on:
+  push:
+    branches: [fix/haafidh-11711-itqan-overdue-receipts-20261103]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-11711-full-jvm-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  hifz-and-ui-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install pinned Android SDK and verified original public QCF
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          python -m pip install brotli
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Validate source invariants and public catalogue
+        run: |
+          python scripts/verify_11710_invariants.py
+          python scripts/materialize_mutash_catalogue.py --check
+          python scripts/verify_mutash_catalogue.py
+          python scripts/verify_mutash_pivot_review_v2.py
+      - name: Full JVM and source-contract nonregression
+        run: gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11711-full-jvm-NO-APK
+          path: |
+            hifz-core/build/test-results/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+          retention-days: 14
