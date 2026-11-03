@@ -26,7 +26,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
     private static final String OLD = ConsolidationPhysicalUnitPolicy.encodeLineUnit(OVERDUE);
     private static final String NEW = ConsolidationPhysicalUnitPolicy.encodeLineUnit(NEW_WEEK);
 
-    private static InMemoryPrefs fixture(boolean currentWeek, boolean alreadyReceipted) {
+    private static InMemoryPrefs fixture(boolean currentWeek, boolean alreadyReceipted) throws Exception {
         InMemoryPrefs disk = new InMemoryPrefs();
         disk.disk.put("schema", 6);
         ArrayList<String> stabilized = new ArrayList<>(OVERDUE);
@@ -62,7 +62,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         return disk;
     }
 
-    @Test public void overdueAtTurBlockIsOfferedAfterWeekChangeWithoutMutatingProgress() {
+    @Test public void overdueAtTurBlockIsOfferedAfterWeekChangeWithoutMutatingProgress() throws Exception {
         InMemoryPrefs disk = fixture(true, false);
         Map<String,Object> before = new HashMap<>(disk.disk);
         HifzPrefs prefs = new HifzPrefs(disk);
@@ -77,7 +77,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals("53:1", disk.getString("itqanCursor", ""));
     }
 
-    @Test public void aLateSevenRepCycleEarnsOnlyItsReceiptAndEnablesFutureSunday() {
+    @Test public void aLateSevenRepCycleEarnsOnlyItsReceiptAndEnablesFutureSunday() throws Exception {
         InMemoryPrefs disk = fixture(false, false);
         HifzPrefs prefs = new HifzPrefs(disk);
         List<ConsolidationCycleEngine.Unit> due = prefs.stabilizedConsolidationUnits(CURRENT);
@@ -111,7 +111,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
             prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION, CURRENT.plusDays(1)));
     }
 
-    @Test public void aPriorWeekWithNoCurrentEnrollmentStillShowsTheOverdueCycle() {
+    @Test public void aPriorWeekWithNoCurrentEnrollmentStillShowsTheOverdueCycle() throws Exception {
         InMemoryPrefs disk = fixture(false, false);
         HifzPrefs prefs = new HifzPrefs(disk);
         assertTrue(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION, CURRENT));
@@ -119,7 +119,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals(1, prefs.stabilizedConsolidationUnits(CURRENT).size());
     }
 
-    @Test public void historicalUnitMustRemainStabilizedToBeRecoverable() {
+    @Test public void historicalUnitMustRemainStabilizedToBeRecoverable() throws Exception {
         InMemoryPrefs disk = fixture(false, false);
         disk.disk.put("v6StabilizedLineIds", "[]");
         HifzPrefs prefs = new HifzPrefs(disk);
@@ -128,7 +128,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertTrue(prefs.stabilizedConsolidationUnits(CURRENT).isEmpty());
     }
 
-    @Test public void anAlreadyEarnedLateReceiptCannotBeReissued() {
+    @Test public void anAlreadyEarnedLateReceiptCannotBeReissued() throws Exception {
         InMemoryPrefs disk = fixture(false, true);
         HifzPrefs prefs = new HifzPrefs(disk);
         assertFalse(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION, CURRENT));
