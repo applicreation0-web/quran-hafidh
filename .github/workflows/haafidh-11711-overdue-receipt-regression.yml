@@ -1,0 +1,45 @@
+name: Haafidh 1.17.11 overdue Itqan receipts — JVM only, NO APK
+on:
+  push:
+    branches:
+      - fix/haafidh-11711-itqan-overdue-receipts-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-11711-overdue-receipts-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  overdue-and-final-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install pinned Android SDK
+        run: sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Run overdue receipt and prior Sunday/backup regression suites
+        run: |
+          gradle --no-daemon :hifz-app:testDebugUnitTest \
+            --tests 'com.quransafeguard.hifz.preview.ItqanOverdueEveningReceiptRecoveryTest' \
+            --tests 'com.quransafeguard.hifz.preview.SundayPromotionActiveCorpusIntegrationTest' \
+            --tests 'com.quransafeguard.hifz.preview.ConsolidationSevenAndSundayFinalTest' \
+            --tests 'com.quransafeguard.hifz.preview.ConsolidationOpenSlotSafetyTest' \
+            --tests 'com.quransafeguard.hifz.preview.HifzBackupSchemaValidationTest'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11711-itqan-receipt-jvm-NO-APK
+          path: |
+            hifz-app/build/test-results/testDebugUnitTest/
+            hifz-app/build/reports/tests/testDebugUnitTest/
+          retention-days: 14
