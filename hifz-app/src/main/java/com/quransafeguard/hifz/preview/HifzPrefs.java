@@ -3072,8 +3072,6 @@ public final class HifzPrefs {
             throw new IllegalStateException("Invalid Stabilisation history; cannot plan recovery", invalid);
         }
         Set<String> earned = earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
-        Set<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-        Set<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
         LinkedHashSet<String> seen = new LinkedHashSet<>();
         for (int i = 0; i < current.length(); i++) {
             String id = current.optString(i, "");
@@ -3084,7 +3082,12 @@ public final class HifzPrefs {
         JSONArray due = new JSONArray();
         int room = Math.max(0, ConsolidationCycleEngine.maxUnitsFor(
             ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN) - 1 - current.length());
+        // Legacy OPEN sessions and historical unit-only tests may have no V6 line
+        // ledger at all. The old ordinary snowball must remain read-only and
+        // operational when there is no prior-week work to recover.
+        if (history.length() == 0 || room == 0) return current;
         LocalDate thisWeek = mondayOf(today);
+        Set<String> acquired = null, stabilized = null; // load only for a prior-week unreceipted unit
         for (int w = 0; w < history.length() && due.length() < room; w++) {
             JSONObject week = history.optJSONObject(w);
             if (week == null) continue;
@@ -3096,6 +3099,10 @@ public final class HifzPrefs {
                 String id = units.optString(u, "");
                 if (id.isEmpty()) throw new IllegalStateException("Empty historical Stabilisation unit");
                 if (earned.contains(id) || !seen.add(id)) continue;
+                if (acquired == null) {
+                    acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+                    stabilized = v6LineIdSet("v6StabilizedLineIds");
+                }
                 List<String> lines = ConsolidationPhysicalUnitPolicy.decodeLineUnit(id);
                 if (lines.isEmpty()) throw new IllegalStateException("Empty historical physical block");
                 boolean remaining = false, valid = true;
@@ -3368,9 +3375,9 @@ public final class HifzPrefs {
     }
 
     private String snowballSnapshot(ConsolidationCycleEngine.Family family, LocalDate date) {
-        JSONArray current = family == ConsolidationCycleEngine.Family.STABILIZATION
-            && !itqanPostNasMaintenance() ? stabilizationEveningSource(date)
-            : rolledSnowballUnits(family,date);
+        JSONArray current = rolledSnowballUnits(family,date);
+        if (family == ConsolidationCycleEngine.Family.STABILIZATION
+                && !itqanPostNasMaintenance()) current = stabilizationEveningSource(date);
         if(current.length()==0)return "";
         return mondayOf(date).toString()+"|"+current.toString();
     }
