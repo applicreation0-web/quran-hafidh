@@ -119,6 +119,35 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals(1, prefs.stabilizedConsolidationUnits(CURRENT).size());
     }
 
+
+    @Test public void secondItqanBlockOnSameDateMustReceiveItsOwnSevenRepReceipt() throws Exception {
+        InMemoryPrefs disk=fixture(true,true);
+        // The earlier evening cycle was properly closed and snapshotted today.
+        disk.disk.put("lastStabilizationSnowballEveningDate",CURRENT.toString());
+        disk.disk.put("v6LastStabilizationSnowballCompletedSnapshotV1",
+            "2026-11-02|"+new JSONArray().put(NEW).toString());
+        HifzPrefs prefs=new HifzPrefs(disk);
+        assertFalse("Completed unchanged evening must remain idempotent",
+            prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,CURRENT));
+        List<String> later=Arrays.asList("526:8","526:9","526:10");
+        String laterId=ConsolidationPhysicalUnitPolicy.encodeLineUnit(later);
+        ArrayList<String> stabilized=new ArrayList<>(OVERDUE);
+        stabilized.addAll(NEW);
+        stabilized.addAll(later);
+        disk.disk.put("v6StabilizedLineIds",new JSONArray(stabilized).toString());
+        disk.disk.put("stabilizationSnowballUnitIds",
+            new JSONArray().put(NEW).put(laterId).toString());
+        assertTrue("Same-day newly stabilized block must remain due, despite today's first receipt",
+            prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,CURRENT));
+        List<ConsolidationCycleEngine.Unit> due=prefs.stabilizedConsolidationUnits(CURRENT);
+        assertEquals(2,due.size());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,due.get(0).protocol());
+        assertEquals(NEW,due.get(0).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(1).protocol());
+        assertEquals(laterId,due.get(1).id());
+        assertEquals("No automatic extra Acquis","[]",disk.getString("v6AcquiredCreditLineIds",""));
+    }
+
     @Test public void historicalUnitMustRemainStabilizedToBeRecoverable() throws Exception {
         InMemoryPrefs disk = fixture(false, false);
         disk.disk.put("v6StabilizedLineIds", "[]");
