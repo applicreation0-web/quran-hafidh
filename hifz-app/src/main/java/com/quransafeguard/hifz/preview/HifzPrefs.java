@@ -3183,7 +3183,11 @@ public final class HifzPrefs {
             ConsolidationCycleEngine.Family family, LocalDate today) {
         JSONArray history;
         try { history = new JSONArray(p.getString(snowballHistoryKey(family), "[]")); }
-        catch (Exception malformed) { history = new JSONArray(); }
+        catch (Exception malformed) {
+            // A corrupt Sunday corpus is not a successfully emptied final.
+            // Fail closed and preserve the original historical evidence.
+            throw new IllegalStateException("Corrupt Hifz snowball history: preserve original",malformed);
+        }
         LocalDate cutoff = mondayOf(today).minusWeeks(SNOWBALL_EXTENDED_WEEKS - 1L);
         LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
         LinkedHashSet<String> earned=earnedEveningUnits(family);
