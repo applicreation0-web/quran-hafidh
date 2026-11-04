@@ -329,30 +329,58 @@ public final class CorrespondenceContextInstrumentedTest {
                         assertTrue("Only actual user confirmation may validate",positive.performClick());
                     }
                 });
-                long deadline=android.os.SystemClock.uptimeMillis()+5000L;
+                // The authentic QCF may be revealed by the fail-open landmark
+                // policy when exact word geometry is unavailable. This is a real
+                // revealed page, not a missed Hifz receipt. The production flow
+                // MUST require visible rereading and then fully masked recall.
+                ActiveReviewCorrectionStore correction=new ActiveReviewCorrectionStore(c);
+                ActiveReviewCorrectionStore.State pending=correction.pending();
+                if(pending!=null){
+                    assertEquals("Missing QCF anchors must never bypass the reread", "READ",pending.stage);
+                    assertEquals(date,pending.date);
+                    assertEquals("",prefs.lastActiveMurajaahDate());
+                    HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
+                        scenario,"mushaf","Correspondances · vraie relecture corrective");
+                    scenario.onActivity(a->{
+                        assertEquals(0,((Integer)readField(a,"currentMask")).intValue());
+                        android.widget.Button read=findAction(a,"Page relue");
+                        assertTrue(read.isEnabled());
+                        assertTrue("Real visible reread is mandatory",read.performClick());
+                    });
+                    assertEquals("RECALL",correction.pending().stage);
+                    HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
+                        scenario,"mushaf","Correspondances · vrai rappel masqué");
+                    // Never fake onPageShown or set the readiness flag manually.
+                    // Wait for the real QCF mask to paint before its button enables.
+                    boolean painted=false;
+                    for(int wait=0;wait<80&&!painted;wait++){
+                        java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
+                        scenario.onActivity(a->{
+                            android.widget.Button done=(android.widget.Button)
+                                readField(a,"correctionPageDoneButton");
+                            ready.set(done!=null&&done.isEnabled()
+                                &&((Integer)readField(a,"currentMask")).intValue()==100
+                                &&(Boolean)readField(a,"correctionMaskedPageReady")
+                                &&((View)readField(a,"validatedCorrespondenceButton")).getVisibility()==View.GONE);
+                        });
+                        painted=ready.get();
+                        if(!painted)Thread.sleep(125L);
+                    }
+                    assertTrue("Original QCF mask must be painted before unaided validation",painted);
+                    scenario.onActivity(a->{
+                        assertEquals("RECALL",correction.pending().stage);
+                        assertFalse("No assistance may be counted as unaided recall",correction.pending().assisted);
+                        assertTrue("Only a real validated recall may earn a receipt",
+                            findAction(a,"Page récitée sans aide").performClick());
+                    });
+                }
+                long deadline=android.os.SystemClock.uptimeMillis()+8000L;
                 while(!date.equals(prefs.lastActiveMurajaahDate())
                       &&android.os.SystemClock.uptimeMillis()<deadline)Thread.sleep(100L);
-                java.util.concurrent.atomic.AtomicReference<String> diagnostic=
-                    new java.util.concurrent.atomic.AtomicReference<>("");
-                scenario.onActivity(a->{
-                    Object pending=new ActiveReviewCorrectionStore(c).pending();
-                    android.app.AlertDialog dlg=(android.app.AlertDialog)
-                        readField(a,"murajaahPartialValidationDialog");
-                    diagnostic.set("receipt="+prefs.lastActiveMurajaahDate()
-                        +" actualEnd="+prefs.activeMurajaahActualEnd()
-                        +" page="+readField(a,"currentPage")
-                        +" sessionDate="+readField(a,"sessionDate")
-                        +" sessionCompleted="+readField(a,"sessionCompleted")
-                        +" sessionRenderFailed="+readField(a,"sessionRenderFailed")
-                        +" correction="+(pending==null?"none":"PENDING")
-                        +" revealed="+new ActiveReviewCorrectionStore(c).revealed(date,source)
-                        +" dialog="+(dlg==null?"null":("visible="+dlg.isShowing()))
-                        +" program="+((android.widget.TextView)readField(a,"program")).getText()
-                        +" progress="+((android.widget.TextView)readField(a,"progress")).getText()
-                        +" clockRunning="+clock(a).isRunning());
-                });
-                assertEquals("Real active receipt missing. Full checkpoint: "+diagnostic.get(),
+                assertEquals("Active receipt only after actual corrective replay",
                     date,prefs.lastActiveMurajaahDate());
+                assertNull("Reread/recall checkpoint must be cleared after real validation",
+                    correction.pending());
                 scenario.onActivity(a->assertEquals(View.VISIBLE,
                     ((View)readField(a,"validatedCorrespondenceButton")).getVisibility()));
                 scenario.recreate();
@@ -376,6 +404,22 @@ public final class CorrespondenceContextInstrumentedTest {
             ins.removeMonitor(comparison);
             HifzBackup.restore(c,original);
         }
+    }
+
+    private static android.widget.Button findAction(HifzSessionActivity activity,String name){
+        android.widget.LinearLayout actions=(android.widget.LinearLayout)readField(activity,"actions");
+        for(int i=0;i<actions.getChildCount();i++){
+            View row=actions.getChildAt(i);
+            if(!(row instanceof android.view.ViewGroup))continue;
+            android.view.ViewGroup group=(android.view.ViewGroup)row;
+            for(int j=0;j<group.getChildCount();j++){
+                View candidate=group.getChildAt(j);
+                if(candidate instanceof android.widget.Button
+                    &&name.contentEquals(candidate.getContentDescription()))
+                    return (android.widget.Button)candidate;
+            }
+        }
+        throw new AssertionError("Required genuine Hifz action not found: "+name);
     }
 
     private static Object readField(Object activity,String name){
