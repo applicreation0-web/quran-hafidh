@@ -346,7 +346,7 @@ public final class CorrespondenceContextInstrumentedTest {
         android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
         android.app.Instrumentation.ActivityMonitor comparison=
             ins.addMonitor(CorrespondenceComparisonActivity.class.getName(),null,false);
-        VerseRef source=new VerseRef(2,47);
+        VerseRef source=new VerseRef(2,47),end=new VerseRef(2,48);
         GeometryRepository geometry=GeometryRepository.get(c);
         String date="2026-10-29";
         try{
@@ -355,6 +355,10 @@ public final class CorrespondenceContextInstrumentedTest {
             HifzPrefs prefs=new HifzPrefs(c);
             assertTrue(prefs.setV6AcquiredRanges(java.util.Collections.singletonList(
                 new com.quransafeguard.hifz.core.VerseRange(source,new VerseRef(2,51))),geometry));
+            android.content.SharedPreferences raw=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE);
+            String originalCredit=raw.getString("v6AcquiredCreditLineIds",null);
+            assertNotNull(originalCredit);
+            VerseRef expectedCursor=new VerseRef(2,49);
             prefs.setActiveMurajaahCursor(source);
             prefs.setActiveMurajaahPage(geometry.pageForVerse(source));
             try(ActivityScenario<HifzSessionActivity> scenario=ActivityScenario.launch(
@@ -363,7 +367,7 @@ public final class CorrespondenceContextInstrumentedTest {
                         .putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,date))){
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Active Correspondances");
                 scenario.onActivity(a->{
-                    a.onVerseTap(source);
+                    a.onVerseTap(end);
                     a.onCorrespondenceTap(source);
                     assertEquals(View.GONE,((View)readField(a,"validatedCorrespondenceButton")).getVisibility());
                     assertEquals("",prefs.lastActiveMurajaahDate());
@@ -371,6 +375,21 @@ public final class CorrespondenceContextInstrumentedTest {
                 assertNull("A bridge tap cannot reveal an unvalidated dossier",
                     comparison.waitForActivityWithTimeout(500L));
                 scenario.onActivity(a->{
+                    ActiveReviewCorrectionStore store=new ActiveReviewCorrectionStore(c);
+                    int current=(Integer)readField(a,"currentPage");
+                    if(!store.revealed(date,source).contains(current)){
+                        android.widget.Button reveal=findAction(a,"Révéler");
+                        assertTrue(reveal.isEnabled());
+                        long now=android.os.SystemClock.uptimeMillis();
+                        for(int action:new int[]{android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP}){
+                            android.view.MotionEvent event=android.view.MotionEvent.obtain(now,
+                                android.os.SystemClock.uptimeMillis(),action,1,1,0);
+                            try{assertTrue(reveal.dispatchTouchEvent(event));}
+                            finally{event.recycle();}
+                        }
+                    }
+                    assertTrue("A real reveal must be persisted before validation",
+                        store.revealed(date,source).contains(current));
                     View validate=(View)readField(a,"murajaahFinishButton");
                     assertNotNull("The active session must expose its validation action",validate);
                     assertTrue(validate.isEnabled());
@@ -396,8 +415,7 @@ public final class CorrespondenceContextInstrumentedTest {
                 // Android dialog dismissal and the QCF correction transition can be
                 // posted after the original button callback. A single immediate
                 // preferences read races that transition on e-ink-size emulators.
-                // Observe a real durable state (pending reread OR receipt), never
-                // synthesize a checkpoint, force a credit, or bypass the masked recall.
+                // An immediate receipt fails because the reveal was recorded above.
                 ActiveReviewCorrectionStore.State pending=null;
                 for(int wait=0;wait<120;wait++){
                     ins.waitForIdleSync();
@@ -405,47 +423,45 @@ public final class CorrespondenceContextInstrumentedTest {
                     if(pending!=null||date.equals(prefs.lastActiveMurajaahDate()))break;
                     Thread.sleep(125L);
                 }
-                assertTrue("Active validation must reach a real persisted replay or receipt",
-                    pending!=null||date.equals(prefs.lastActiveMurajaahDate()));
-                if(pending!=null){
-                    assertEquals("Missing QCF anchors must never bypass the reread", "READ",pending.stage);
-                    assertEquals(date,pending.date);
-                    assertEquals("",prefs.lastActiveMurajaahDate());
-                    HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
-                        scenario,"mushaf","Correspondances · vraie relecture corrective");
+                assertNotNull("A revealed page must reach persisted corrective replay before any receipt",pending);
+                assertEquals("Missing QCF anchors must never bypass the reread", "READ",pending.stage);
+                assertEquals(date,pending.date);
+                assertEquals("",prefs.lastActiveMurajaahDate());
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
+                    scenario,"mushaf","Correspondances · vraie relecture corrective");
+                scenario.onActivity(a->{
+                    assertEquals(0,((Integer)readField(a,"currentMask")).intValue());
+                    android.widget.Button read=findAction(a,"Page relue");
+                    assertTrue(read.isEnabled());
+                    assertTrue("Real visible reread is mandatory",read.performClick());
+                });
+                assertEquals("RECALL",correction.pending().stage);
+                assertEquals("Reread alone never earns a receipt","",prefs.lastActiveMurajaahDate());
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
+                    scenario,"mushaf","Correspondances · vrai rappel masqué");
+                // Never fake onPageShown or set the readiness flag manually.
+                // Wait for the real QCF mask to paint before its button enables.
+                boolean painted=false;
+                for(int wait=0;wait<80&&!painted;wait++){
+                    java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
                     scenario.onActivity(a->{
-                        assertEquals(0,((Integer)readField(a,"currentMask")).intValue());
-                        android.widget.Button read=findAction(a,"Page relue");
-                        assertTrue(read.isEnabled());
-                        assertTrue("Real visible reread is mandatory",read.performClick());
+                        android.widget.Button done=(android.widget.Button)
+                            readField(a,"correctionPageDoneButton");
+                        ready.set(done!=null&&done.isEnabled()
+                            &&((Integer)readField(a,"currentMask")).intValue()==100
+                            &&(Boolean)readField(a,"correctionMaskedPageReady")
+                            &&((View)readField(a,"validatedCorrespondenceButton")).getVisibility()==View.GONE);
                     });
-                    assertEquals("RECALL",correction.pending().stage);
-                    HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
-                        scenario,"mushaf","Correspondances · vrai rappel masqué");
-                    // Never fake onPageShown or set the readiness flag manually.
-                    // Wait for the real QCF mask to paint before its button enables.
-                    boolean painted=false;
-                    for(int wait=0;wait<80&&!painted;wait++){
-                        java.util.concurrent.atomic.AtomicBoolean ready=new java.util.concurrent.atomic.AtomicBoolean();
-                        scenario.onActivity(a->{
-                            android.widget.Button done=(android.widget.Button)
-                                readField(a,"correctionPageDoneButton");
-                            ready.set(done!=null&&done.isEnabled()
-                                &&((Integer)readField(a,"currentMask")).intValue()==100
-                                &&(Boolean)readField(a,"correctionMaskedPageReady")
-                                &&((View)readField(a,"validatedCorrespondenceButton")).getVisibility()==View.GONE);
-                        });
-                        painted=ready.get();
-                        if(!painted)Thread.sleep(125L);
-                    }
-                    assertTrue("Original QCF mask must be painted before unaided validation",painted);
-                    scenario.onActivity(a->{
-                        assertEquals("RECALL",correction.pending().stage);
-                        assertFalse("No assistance may be counted as unaided recall",correction.pending().assisted);
-                        assertTrue("Only a real validated recall may earn a receipt",
-                            findAction(a,"Page récitée sans aide").performClick());
-                    });
+                    painted=ready.get();
+                    if(!painted)Thread.sleep(125L);
                 }
+                assertTrue("Original QCF mask must be painted before unaided validation",painted);
+                scenario.onActivity(a->{
+                    assertEquals("RECALL",correction.pending().stage);
+                    assertFalse("No assistance may be counted as unaided recall",correction.pending().assisted);
+                    assertTrue("Only a real validated recall may earn a receipt",
+                        findAction(a,"Page récitée sans aide").performClick());
+                });
                 long deadline=android.os.SystemClock.uptimeMillis()+8000L;
                 while(!date.equals(prefs.lastActiveMurajaahDate())
                       &&android.os.SystemClock.uptimeMillis()<deadline)Thread.sleep(100L);
@@ -468,6 +484,8 @@ public final class CorrespondenceContextInstrumentedTest {
                 });
                 assertEquals("Active receipt only after actual corrective replay; "+afterReplay.get(),
                     date,prefs.lastActiveMurajaahDate());
+                assertEquals(expectedCursor,prefs.activeMurajaahCursor());
+                assertEquals(originalCredit,raw.getString("v6AcquiredCreditLineIds",null));
                 assertNull("Reread/recall checkpoint must be cleared after real validation",
                     correction.pending());
                 scenario.onActivity(a->assertEquals(View.VISIBLE,
@@ -487,6 +505,8 @@ public final class CorrespondenceContextInstrumentedTest {
                     assertEquals(1,((Integer)readField(a,"currentPage")).intValue());
                     assertFalse(clock(a).isRunning());
                     assertEquals(date,prefs.lastActiveMurajaahDate());
+                    assertEquals(expectedCursor,prefs.activeMurajaahCursor());
+                    assertEquals(originalCredit,raw.getString("v6AcquiredCreditLineIds",null));
                 });
             }
         }finally{

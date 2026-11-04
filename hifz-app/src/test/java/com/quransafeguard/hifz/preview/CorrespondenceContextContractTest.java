@@ -79,6 +79,22 @@ public final class CorrespondenceContextContractTest {
         assertTrue(hifz.contains("openValidatedCorrespondence"));
         assertTrue(hifz.contains("state.putString(\"correspondenceValidated\""));
     }
+    @Test public void activeAnchorMustBeInsideTheValidatedTraversalPrefix(){
+        com.quransafeguard.hifz.core.VerseRef start=new com.quransafeguard.hifz.core.VerseRef(2,46);
+        com.quransafeguard.hifz.core.VerseRef anchor=new com.quransafeguard.hifz.core.VerseRef(2,47);
+        com.quransafeguard.hifz.core.VerseRef end=new com.quransafeguard.hifz.core.VerseRef(2,48);
+        java.util.List<com.quransafeguard.hifz.core.VerseRef> traversal=
+            java.util.Arrays.asList(start,anchor,end);
+        if(!CorrespondenceCases.enabled()){
+            assertNull(CorrespondenceCases.lastValidatedAnchor(traversal,end));
+            return;
+        }
+        assertNull(CorrespondenceCases.lastValidatedAnchor(traversal,start));
+        assertEquals(anchor,CorrespondenceCases.lastValidatedAnchor(traversal,anchor));
+        assertEquals(anchor,CorrespondenceCases.lastValidatedAnchor(traversal,end));
+        assertNull(CorrespondenceCases.lastValidatedAnchor(traversal,
+            new com.quransafeguard.hifz.core.VerseRef(2,49)));
+    }
     @Test public void readerAndReviewGateNoRecitationLeaks()throws Exception{
         String reader=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String hifz=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");

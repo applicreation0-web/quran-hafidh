@@ -65,6 +65,16 @@ final class CorrespondenceCases {
         for(Entry candidate:PILOT)if(candidate.contains(verse))result.add(candidate);
         return Collections.unmodifiableList(result);
     }
+    /** Last indexed anchor in traversal order, bounded by the confirmed endpoint. */
+    static VerseRef lastValidatedAnchor(List<VerseRef> traversal,VerseRef end){
+        if(!enabled()||end==null)return null;
+        VerseRef anchor=null;
+        for(VerseRef verse:traversal){
+            if(!forVerse(verse).isEmpty())anchor=verse;
+            if(end.equals(verse))return anchor;
+        }
+        return null;
+    }
     static Entry forIdAndVerse(String id,VerseRef verse){
         if(!enabled()||id==null||verse==null)return null;
         for(Entry entry:PILOT)if(entry.id.equals(id)&&entry.contains(verse))return entry;

@@ -2111,8 +2111,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if(!correctionStore.clear())
                 onError("Révision validée ; nettoyage de la relecture à vérifier.");
             correctionState=null;
-            validatedCorrespondenceVerse=CorrespondenceCases.forVerse(murajaahActualEnd).isEmpty()
-                ? null : murajaahActualEnd;
+            validatedCorrespondenceVerse=CorrespondenceCases.lastValidatedAnchor(
+                murajaahPlan.traversalVerses,murajaahActualEnd);
             validatedDiscriminantVerse=null;
             if(AtlasDiscriminantCases.indexFor(murajaahActualEnd.getSurah(),murajaahActualEnd.getAyah())>=0)
                 validatedDiscriminantVerse=murajaahActualEnd;

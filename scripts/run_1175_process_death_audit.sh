@@ -6,8 +6,10 @@ runner="$package.test/androidx.test.runner.AndroidJUnitRunner"
 out=hifz-app/build/boox-audit
 mkdir -p "$out"
 run_test() {
-  adb shell am instrument -w -e class "$1" "$runner" | tee "$out/$2.log"
-  grep -q 'OK (1 test)' "$out/$2.log"
+  local method="$1" log="$2"
+  shift 2
+  adb shell am instrument -w "$@" -e class "$method" "$runner" | tee "$out/$log.log"
+  grep -q 'OK (1 test)' "$out/$log.log"
 }
 kill_and_reopen() {
   adb shell am start -n "$package/com.quransafeguard.hifz.preview.MainActivity"
@@ -36,3 +38,10 @@ sunday=com.quransafeguard.hifz.preview.SundayFinalProcessDeathInstrumentedTest
 run_test "$sunday#prepare" sunday-death-prepare
 kill_and_reopen
 run_test "$sunday#verify" sunday-death-verify
+
+if [[ "${1:-}" == --active-replay ]]; then
+  active=com.quransafeguard.hifz.preview.ActiveReviewCorrectionInstrumentedTest
+  run_test "$active#forceStopPrepare" active-death-prepare -e activeReplayForceStop true
+  kill_and_reopen
+  run_test "$active#forceStopVerify" active-death-verify -e activeReplayForceStop true
+fi
