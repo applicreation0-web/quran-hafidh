@@ -22,3 +22,9 @@ Le fichier `registre-documentaire-110.json` rapproche les 110 décisions stricte
 - Le diff de cette reprise ne touche pas aux classes de persistance ni aux moteurs Hifz. Une non-régression par exécution, incluant sauvegardes V6, process death, chronomètres et accès en restitution active, reste nécessaire.
 - Restent à vérifier sur Android la densité réelle, le parcours à dossiers multiples, les rotations, la lisibilité et les bornes QCF, ainsi que les captures. Validation BOOX physique et comportement E-Ink en attente.
 - Restent ouverts l’optimisation complète du comparatif, les huit modes structurels et la certification individuelle des présélections avec références exactes, contrôle des doublons et géométrie. Aucune activation supplémentaire.
+
+## Contre-expertise indépendante
+
+- Le dialogue de regroupement laissait le balayage horizontal atteindre la liseuse et son bouton de fermeture pouvait basculer les commandes. Le dialogue intercepte désormais la fermeture et la WebView suspend le changement de folio par balayage tant qu’il est ouvert. Le test Node couvre les transitions du signal au pont natif. Une vérification tactile Android reste nécessaire.
+- Le chronomètre passif est suspendu au départ vers la comparaison. Le sélecteur de dossier, qui sera utilisé lorsqu’un verset aura plusieurs dossiers, laisse le chronomètre tourner. Ce cas reste à éprouver avant l’activation d’un premier verset à dossiers multiples.
+- Le test d’agrandissement vérifie la disparition du folio voisin. La qualité du cadre agrandi reste à constater dans les captures.

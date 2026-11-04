@@ -38,16 +38,18 @@ final class CorrespondenceGutterMarkers {
           "else HifzNative.correspondenceTap(Number(p[0]),Number(p[1]));}"+
           "function label(item){return (item.kind==='similarity'?'Similitudes ':'Correspondances ')+item.ref;}"+
           "var groups={},dialog=null;"+
+          "function closeGroup(){dialog.close();HifzNative.setMarkerDialogOpen(false);}"+
           "function showGroup(side){if(dialog)dialog.remove();"+
           "dialog=document.createElement('dialog');dialog.setAttribute('aria-label','Repères du folio');"+
           "dialog.style.cssText='pointer-events:auto;max-height:75vh;overflow:auto;background:#faf8f2;color:#121211';"+
+          "dialog.addEventListener('cancel',function(e){e.preventDefault();closeGroup();});"+
           "var close=document.createElement('button');close.type='button';close.textContent='Fermer';"+
-          "close.style.minHeight='44px';close.addEventListener('click',function(){dialog.close();});dialog.appendChild(close);"+
+          "close.style.minHeight='44px';close.addEventListener('click',function(e){e.stopPropagation();closeGroup();});dialog.appendChild(close);"+
           "groups[side].rows.forEach(function(item){var entry=document.createElement('button');entry.type='button';"+
           "entry.textContent=label(item);entry.setAttribute('data-verse',item.ref);"+
           "entry.style.cssText='display:block;width:100%;min-height:44px';"+
-          "entry.addEventListener('click',function(e){e.stopPropagation();dialog.close();open(item);});"+
-          "dialog.appendChild(entry);});root.appendChild(dialog);dialog.showModal();}"+
+          "entry.addEventListener('click',function(e){e.stopPropagation();closeGroup();open(item);});"+
+          "dialog.appendChild(entry);});root.appendChild(dialog);dialog.showModal();HifzNative.setMarkerDialogOpen(true);}"+
           "['left','right'].forEach(function(side){var button=document.createElement('button');button.type='button';"+
           "button.style.cssText='position:absolute;width:44px;height:44px;visibility:hidden;pointer-events:auto;"+
           "border:1px solid #777;border-radius:6px;background:#faf8f2;color:#121211';"+
@@ -103,7 +105,7 @@ final class CorrespondenceGutterMarkers {
           "if(observer){observer.observe(host);observer.observe(m);}"+
           "window.addEventListener('resize',schedule,{passive:true});"+
           "window.__haafidhAtlasMarkerDispose=function(){if(observer)observer.disconnect();"+
-          "window.removeEventListener('resize',schedule);if(dialog)dialog.remove();};"+
+          "window.removeEventListener('resize',schedule);if(dialog){dialog.remove();HifzNative.setMarkerDialogOpen(false);}};"+
           "schedule();requestAnimationFrame(schedule);"+
           "})();";
         view.evaluateJavascript(js,null);

@@ -24,7 +24,8 @@ m.querySelectorAll=()=>refs.map((ref,i)=>({getAttribute:k=>k==='data-verse'?ref:
 const document={getElementById:k=>k==='box'?host:k==='mushaf'?m:null,createElement:t=>new Element(t)};
 const window={dispatchEvent(){},addEventListener(){},removeEventListener(){}};
 const selected=[];
-const HifzNative={comparisonTap:(s,a)=>selected.push(['similarity',s,a]),correspondenceTap:(s,a)=>selected.push(['correspondence',s,a])};
+let dialogOpen=false;
+const HifzNative={setMarkerDialogOpen:value=>{dialogOpen=value;},comparisonTap:(s,a)=>selected.push(['similarity',s,a]),correspondenceTap:(s,a)=>selected.push(['correspondence',s,a])};
 const requestAnimationFrame=f=>pending.push(f);
 eval(eval(script));
 while(pending.length)pending.shift()();
@@ -36,8 +37,10 @@ for(const button of group){
   button.events.click(event);
   const dialog=root.children.find(x=>x.tag==='dialog'&&x.open);
   assert.ok(dialog);
+  assert.equal(dialogOpen,true,'native swipe interception must be suspended');
   for(const x of dialog.children)if(x.attrs['data-verse'])x.events.click(event);
 }
+assert.equal(dialogOpen,false,'native swipe interception must resume');
 for(const btn of root.children.filter(x=>x.tag==='button'&&x.style.visibility==='visible'&&!x.attrs['aria-haspopup']))btn.events.click(event);
 assert.equal(new Set(selected.map(JSON.stringify)).size,62);
 assert.equal(selected.length,62);
