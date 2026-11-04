@@ -1,0 +1,72 @@
+name: Haafidh 1.17.11 adversarial Hifz + parcours Android audit (NO RELEASE)
+on:
+  push:
+    branches: [fix/haafidh-11711-itqan-overdue-receipts-20261103]
+    paths:
+      - 'hifz-app/src/main/**'
+      - 'hifz-app/src/androidTest/**'
+      - '.github/workflows/haafidh-11711-hifz-parcours-exhaustive.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-11711-parcours-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  adversarial-android-hifz:
+    name: "Hifz/Parcours — ${{ matrix.surface }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - surface: phone
+            size: 1080x1920
+            density: 420
+            classes: 'com.quransafeguard.hifz.preview.ActiveReviewCorrectionInstrumentedTest,com.quransafeguard.hifz.preview.AnchoringProtocolContinuityInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.C23SurahAwareAnchoringInstrumentedTest,com.quransafeguard.hifz.preview.ClaudeNoGoRegressionInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.HifzFractionatedAnchoringInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzSessionDateInstrumentedTest,com.quransafeguard.hifz.preview.HifzUiLayoutInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6LegacyJ10MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710ScreensInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710VisualBoundsInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.J10ReviewStoreInstrumentedTest,com.quransafeguard.hifz.preview.MushafPendingCommandsInstrumentedTest,com.quransafeguard.hifz.preview.PhoneProgrammeMigrationInstrumentedTest,com.quransafeguard.hifz.preview.PhysicalConsolidationRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.PostFinalRecallInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.ReaderSevenDayRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.RevisionAtlasInstrumentedTest,com.quransafeguard.hifz.preview.StabilizationHalfPageInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalMaskReadinessInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalProcessDeathInstrumentedTest,com.quransafeguard.hifz.preview.SundayMondayResumeInstrumentedTest'
+          - surface: boox-portrait-emulation
+            size: 1404x1872
+            density: 226
+            classes: 'com.quransafeguard.hifz.preview.ActiveReviewCorrectionInstrumentedTest,com.quransafeguard.hifz.preview.AnchoringProtocolContinuityInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.HifzUiLayoutInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710ScreensInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710VisualBoundsInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.PhysicalConsolidationRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.PostFinalRecallInstrumentedTest,com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.RevisionAtlasInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalMaskReadinessInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayMondayResumeInstrumentedTest'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Fetch authentic public QCF assets + SDK
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Grant KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Exercise Hifz paths, persistence, process death, finals, review, and UI
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb shell wm size ${{ matrix.size }}
+            adb shell wm density ${{ matrix.density }}
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=${{ matrix.classes }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11711-hifz-parcours-${{ matrix.surface }}-TEST-ONLY
+          path: |
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+          retention-days: 14
