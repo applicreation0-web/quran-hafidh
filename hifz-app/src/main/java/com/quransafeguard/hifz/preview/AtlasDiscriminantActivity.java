@@ -773,7 +773,7 @@ public final class AtlasDiscriminantActivity extends Activity {
             .append("\nSource : ").append(c.source);
         if(!TextUtils.isEmpty(c.sourceUrl))description.append("\n").append(c.sourceUrl);
         new AlertDialog.Builder(this)
-            .setTitle("Versets ressemblants · "+c.first+" / "+c.second)
+            .setTitle("Similitudes · "+c.first+" / "+c.second)
             .setMessage(description.toString())
             .setPositiveButton("Fermer",null)
             .show();

@@ -346,9 +346,12 @@ final class Ui {
         if (s.contains("retour")) return R.drawable.ic_ui_back;
         if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
         if (s.equals("atlas")) return R.drawable.ic_palace_compass;
-        if (s.equals("versets ressemblants")) return R.drawable.ic_ui_atlas_similar;
+        if (s.equals("versets ressemblants") || s.equals("similitudes")) return R.drawable.ic_ui_atlas_similar;
+        if (s.equals("correspondances")) return R.drawable.ic_ui_correspondances;
+        if (s.equals("sources") || s.contains("justification")) return R.drawable.ic_ui_info;
+        if (s.contains("agrandir le mushaf")) return R.drawable.ic_ui_focus;
         if (s.equals("carte atlas") || s.equals("carte") || s.equals("carte ibn kathīr")) return R.drawable.ic_ui_semantic_map;
-        if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
+        if (s.contains("tafsir") || s.contains("tafsīr")) return R.drawable.ic_ui_tafsir;
         if (s.contains("passage vers le haut") || s.contains("passage vers le bas")) return R.drawable.ic_ui_previous;
         if (s.contains("passage précédent du corpus")) return R.drawable.ic_ui_jump_prev;
         if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_jump_next;

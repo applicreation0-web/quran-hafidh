@@ -57,6 +57,8 @@ final class CorrespondenceCases {
     private CorrespondenceCases(){}
 
     static boolean enabled(){return BuildConfig.CORRESPONDENCES_EDITORIAL_PREVIEW;}
+    /** Stable JUnit fixture; never a production admission switch. */
+    static List<Entry> editorialPilotForTest(){return PILOT;}
     static List<Entry> forVerse(VerseRef verse){
         if(!enabled() || verse==null)return Collections.emptyList();
         List<Entry> result=new ArrayList<>();

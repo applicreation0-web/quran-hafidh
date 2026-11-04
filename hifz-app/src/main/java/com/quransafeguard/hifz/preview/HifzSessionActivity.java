@@ -286,7 +286,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
-        discriminantButton=Ui.iconButton(this,"","Versets ressemblants",v->openRevisionDiscriminant());
+        discriminantButton=Ui.iconButton(this,"","Similitudes",v->openRevisionDiscriminant());
         discriminantButton.setVisibility(View.GONE);
         controlBar.addView(discriminantButton);
         if (!MURAJAAH_ACTIVE.equals(mode)) {
@@ -376,6 +376,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean canCompareCorrespondenceVerse(VerseRef verse){
         if(!isMurajaahMode()||verse==null||geometry==null)return false;
         boolean active=MURAJAAH_ACTIVE.equals(mode);
+        if(!CorrespondenceCases.versesOnPage(currentPage,geometry).contains(verse))return false;
         boolean covered=active ? sessionCompleted && verse.equals(murajaahActualEnd)
             : murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse);
         return RevisionAtlasAccess.allowed(active,sessionCompleted,
@@ -409,7 +410,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         boolean allowed=canCompareRevisionVerse(discriminantVerse);
         discriminantButton.setVisibility(allowed?View.VISIBLE:View.GONE);
-        if(allowed)Ui.setIconDescription(discriminantButton,"Versets ressemblants · "+discriminantVerse);
+        if(allowed)Ui.setIconDescription(discriminantButton,"Similitudes · "+discriminantVerse);
     }
 
     private void openRevisionDiscriminant(){
