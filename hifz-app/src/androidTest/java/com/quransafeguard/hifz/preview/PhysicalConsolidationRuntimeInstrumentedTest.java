@@ -162,6 +162,16 @@ public final class PhysicalConsolidationRuntimeInstrumentedTest {
                 assertEquals(exact.get(i), ConsolidationPhysicalUnitPolicy.decodeLineUnit(restored.unitIds().get(i)));
             }
             assertArrayEquals(countersBefore, counters(reopened));
+            // Each size=1/2/3 case is an INDEPENDENT disposable fixture.
+            // The runtime must fail closed if a second session is started
+            // while this one is OPEN, so explicitly discard only the
+            // artificial session after proving persistence/restart safety.
+            assertTrue("Dispose isolated unfinished test cycle only",
+                reopened.discardConsolidationSession(
+                    ConsolidationCycleEngine.Family.STABILIZATION,"cycle-"+size));
+            assertEquals("No synthetic completion credits",
+                "",reopened.lastStabilizationSnowballEveningDate());
+            assertArrayEquals(countersBefore,counters(reopened));
             prefs = reopened;
         }
     }

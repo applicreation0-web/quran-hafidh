@@ -1,0 +1,58 @@
+name: Haafidh 1.17.11 isolated adversarial failures (NO APK)
+on:
+  push:
+    branches: [fix/haafidh-11711-itqan-overdue-receipts-20261103]
+    paths: ['.github/workflows/haafidh-11711-isolated-failures.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fresh-emulator-per-class:
+    name: "Fresh Android data — ${{ matrix.test_class }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        test_class: [HifzAndMapRuntimeSmokeInstrumentedTest, HifzCarryoverDateInstrumentedTest, J10ReviewStoreInstrumentedTest, PhysicalConsolidationRuntimeInstrumentedTest, PostFinalRecallInstrumentedTest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Original public QCF + SDK
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Grant KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Reproduce each suspicious failure WITHOUT other test classes
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb shell wm size 1080x1920
+            adb shell wm density 420
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.${{ matrix.test_class }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11711-isolated-${{ matrix.test_class }}
+          path: |
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+          retention-days: 14

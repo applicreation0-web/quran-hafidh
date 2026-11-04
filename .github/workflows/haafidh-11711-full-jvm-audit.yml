@@ -1,0 +1,98 @@
+name: Haafidh 1.17.11 independent full JVM regression (NO APK)
+on:
+  push:
+    branches: [fix/haafidh-11711-itqan-overdue-receipts-20261103]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-11711-full-jvm-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  hifz-and-ui-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install pinned Android SDK and verified original public QCF
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          python -m pip install brotli
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Validate source invariants and public catalogue
+        run: |
+          # The 1.17.10 invariant is intentionally a no-core-change release guard.
+          # This 1.17.11 audit approves only HifzPrefs.java and a guarded MainActivity navigation fix.
+          # Check them against the pinned, reviewed 1.17.10 source candidate.
+          python - <<'PY'
+          from subprocess import check_output
+          baseline = "3edf0a46abc87798ee2fc1c693b16003b63e5a65"
+          path = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"
+          changed = check_output(["git", "diff", "--name-only", baseline, "HEAD", "--",
+              "hifz-core/src", "hifz-app/src/main", "hifz-app/src/private114"],
+              text=True).splitlines()
+          ui_path = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java"
+          assert set(changed) == {path, ui_path}, f"Unauthorized production changes: {changed}"
+          # The parcours fix is deliberately restricted to exposing an existing
+          # frozen Itqan evening. No Hifz credits, schedule or layout changes.
+          ui_original = check_output(["git", "show", baseline + ":" + ui_path]).decode()
+          ui_candidate = open(ui_path, encoding="utf-8").read()
+          block_start = '        // A frozen Itqan evening has its own slot and original calendar date,'
+          block_end = '        String sabqiFinal=prefs.unfinishedConsolidationSessionDate('
+          assert ui_candidate.count(block_start) == 1 and ui_candidate.count(block_end) == 1
+          first = ui_candidate.index(block_start)
+          last = ui_candidate.index(block_end, first)
+          ui_candidate = ui_candidate[:first] + ui_candidate[last:]
+          shortcut_start = '        // A previously OPEN ×7 evening outranks starting a NEW Sunday finale.'
+          shortcut_end = '        // The maintenance tile must lead to the hizb ×3, not a non-existent'
+          assert ui_candidate.count(shortcut_start) == 1 and ui_candidate.count(shortcut_end) == 1
+          begin = ui_candidate.index(shortcut_start)
+          end = ui_candidate.index(shortcut_end, begin)
+          ui_candidate = ui_candidate[:begin] + ui_candidate[end:]
+          new_label = ('                    else if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(item.mode))'
+                       'names.add("Consolidation Itqān");' + "\n")
+          assert ui_candidate.count(new_label) == 1
+          ui_candidate = ui_candidate.replace(new_label, "", 1)
+          assert ui_candidate == ui_original, "Parcours changed outside the approved frozen-Itqan navigation patch"
+          filename = "hifz-app/build.gradle.kts"
+          old = check_output(["git", "show", baseline + ":" + filename])
+          current = open(filename, "rb").read()
+          expected = old.replace(b"versionCode = 48", b"versionCode = 49").replace(b'versionName = "1.17.10"', b'versionName = "1.17.11"')
+          assert current == expected, "Build modified beyond exact versionName/code 1.17.11/49"
+          manifest = "hifz-app/src/main/AndroidManifest.xml"
+          assert check_output(["git", "show", baseline + ":" + manifest]) == open(manifest, "rb").read(), "Manifest identity changed"
+          print("PASS: only approved Itqan engine, prior-day OPEN-session navigation and code49 metadata")
+          PY
+          python scripts/materialize_mutash_catalogue.py --check
+          python scripts/verify_mutash_catalogue.py
+          python scripts/verify_mutash_pivot_review_v2.py
+      - name: Fail-closed private 1.17.11 offline builder tests (synthetic; NO APK)
+        run: |
+          python3 scripts/test_build_11711_private_offline.py
+          python3 scripts/build_11711_private_offline.py --help >/dev/null
+      - name: Full JVM and source-contract nonregression
+        run: gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11711-full-jvm-NO-APK
+          path: |
+            hifz-core/build/test-results/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+          retention-days: 14

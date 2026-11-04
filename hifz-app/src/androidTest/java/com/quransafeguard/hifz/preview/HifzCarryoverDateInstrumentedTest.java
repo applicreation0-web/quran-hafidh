@@ -44,6 +44,8 @@ public final class HifzCarryoverDateInstrumentedTest {
 
     @After public void tearDown() {
         context.getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
+        context.getSharedPreferences("quran_hifz_dashboard_ledger_v1", Context.MODE_PRIVATE)
+            .edit().clear().commit();
     }
 
     @Test public void carriedLearningSessionCommitsOriginalScheduledDateInsteadOfToday() {
@@ -51,6 +53,21 @@ public final class HifzCarryoverDateInstrumentedTest {
         assertEquals(LocalDate.of(2026, 9, 15), HifzClock.today());
 
         HifzPrefs prefs = new HifzPrefs(context);
+        // Genuine carried lesson: its program and durable attendance coverage
+        // MUST actually begin on the original Monday. A fresh install created
+        // on Tuesday cannot claim a fictional previous-day Sabqi debt.
+        assertTrue(context.getSharedPreferences(HIFZ_PREFS,Context.MODE_PRIVATE)
+            .edit().putString("programStartDate",scheduledDay.toString()).commit());
+        assertTrue(context.getSharedPreferences("quran_hifz_dashboard_ledger_v1",Context.MODE_PRIVATE)
+            .edit().putString("coverage_start_date_v1",scheduledDay.toString())
+            .putString("started",scheduledDay.toString()).commit());
+        DashboardLedger ledger=new DashboardLedger(context);
+        ledger.capture(prefs);
+        HifzBacklog.Due oldest=HifzBacklog.first(HifzBacklog.pending(
+            prefs,ledger,HifzClock.today(),prefs.learningDaysPerWeek()));
+        assertNotNull("Fixture must represent a real prior-day scheduled lesson",oldest);
+        assertEquals(scheduledDay,oldest.date);
+        assertEquals(HifzSessionActivity.SABQI,oldest.mode);
         assertTrue(prefs.setSabqiProgress(PreviewConfig.SABQI_TOTAL_REPS, 0));
 
         Intent intent = new Intent(context, HifzSessionActivity.class)

@@ -698,6 +698,12 @@ public final class MainActivity extends android.app.Activity {
         if(prefs.unfinishedConsolidationSessionDate(
                 ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null)
             return HifzSessionActivity.CONSOLIDATION_FINAL;
+        // A previously OPEN ×7 evening outranks starting a NEW Sunday finale.
+        // Direct access cannot silently bypass the evening's earned receipt.
+        // HifzSessionActivity restores that evening's original frozen date.
+        if(prefs.unfinishedConsolidationSessionDate(
+                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-")!=null)
+            return HifzSessionActivity.RECENT_SABQI_REVIEW;
         // The maintenance tile must lead to the hizb ×3, not a non-existent
         // post-An-Nās Consolidation finale. Existing pre-An-Nās OPEN finals
         // were checked above and always retain their original date/protocol.
@@ -898,6 +904,19 @@ public final class MainActivity extends android.app.Activity {
             if(!dated.isAfter(today))
                 addToday(out,"Reprendre Renforcement Sabqi du "+dated+" · soir",
                     HifzSessionActivity.LEARNING_CONSOLIDATION,dated,false,null);
+        }
+        // A frozen Itqan evening has its own slot and original calendar date,
+        // just like Renforcement Sabqi. Without this entry, "Aujourd'hui"
+        // silently hides it after midnight even though tapping the separate
+        // Consolidation tile can still reopen it. Keep the original date and
+        // do NOT replan, auto-close or award repetitions.
+        String itqanEvening=prefs.unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-");
+        if(itqanEvening!=null) {
+            LocalDate dated=LocalDate.parse(itqanEvening);
+            if(!dated.isAfter(today))
+                addToday(out,"Reprendre Consolidation Itqān du "+dated+" · soir",
+                    HifzSessionActivity.RECENT_SABQI_REVIEW,dated,false,null);
         }
         String sabqiFinal=prefs.unfinishedConsolidationSessionDate(
             ConsolidationCycleEngine.Family.LEARNING,"learning-final-");
@@ -1111,6 +1130,7 @@ public final class MainActivity extends android.app.Activity {
                 for(TodaySession item:prior) {
                     if(HifzSessionActivity.LEARNING_FINAL.equals(item.mode))names.add("Finale Sabqi");
                     else if(HifzSessionActivity.CONSOLIDATION_FINAL.equals(item.mode))names.add("Finale Itqān");
+                    else if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(item.mode))names.add("Consolidation Itqān");
                     else if(HifzSessionActivity.POST_FINAL_RECALL.equals(item.mode))
                         names.add("Lecture cumulative "+(PostFinalRecallStore.ITQAN.equals(item.postFinalFamily)
                             ?"Itqān":"Sabqi")+" masquée");
