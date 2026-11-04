@@ -698,6 +698,12 @@ public final class MainActivity extends android.app.Activity {
         if(prefs.unfinishedConsolidationSessionDate(
                 ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-")!=null)
             return HifzSessionActivity.CONSOLIDATION_FINAL;
+        // A previously OPEN ×7 evening outranks starting a NEW Sunday finale.
+        // Direct access cannot silently bypass the evening's earned receipt.
+        // HifzSessionActivity restores that evening's original frozen date.
+        if(prefs.unfinishedConsolidationSessionDate(
+                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-")!=null)
+            return HifzSessionActivity.RECENT_SABQI_REVIEW;
         // The maintenance tile must lead to the hizb ×3, not a non-existent
         // post-An-Nās Consolidation finale. Existing pre-An-Nās OPEN finals
         // were checked above and always retain their original date/protocol.
