@@ -60,6 +60,17 @@ public final class CorrespondenceContextInstrumentedTest {
                     capture(capture);
                     if("R030".equals(dossier)){
                         AtomicInteger initialWidth=new AtomicInteger();
+                        AtomicInteger initialInkWidth=new AtomicInteger();
+                        CountDownLatch firstSvgMeasured=new CountDownLatch(1);
+                        scenario.onActivity(a->a.qcfPagesForTest()[0].evaluateJavascript(
+                            "(function(){var s=document.querySelector('.paper svg');return s?Math.round(s.getBoundingClientRect().width):0;})()",
+                            value->{
+                                try{initialInkWidth.set(Integer.parseInt(value));}
+                                catch(NumberFormatException ignored){}
+                                firstSvgMeasured.countDown();
+                            }));
+                        assertTrue(firstSvgMeasured.await(10,TimeUnit.SECONDS));
+                        assertTrue("Initial real QCF ink must already be visible",initialInkWidth.get()>40);
                         scenario.onActivity(a->{
                             initialWidth.set(a.qcfPagesForTest()[0].getWidth());
                             ArrayList<View> buttons=new ArrayList<>();
@@ -90,8 +101,9 @@ public final class CorrespondenceContextInstrumentedTest {
                                 svgMeasured.countDown();
                             }));
                         assertTrue(svgMeasured.await(10,TimeUnit.SECONDS));
-                        assertTrue("BOOX focus must enlarge the ORIGINAL Arabic SVG, not just its container: "+renderedInk.get(),
-                            renderedInk.get()>0);
+                        assertTrue("Focus must visibly enlarge the authentic QCF SVG (before="+initialInkWidth.get()+
+                            ", after="+renderedInk.get()+")",
+                            renderedInk.get()>=Math.round(initialInkWidth.get()*1.15f));
                         capture("agrandissement");
                     }
                     return;
