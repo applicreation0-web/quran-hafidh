@@ -332,7 +332,26 @@ public final class CorrespondenceContextInstrumentedTest {
                 long deadline=android.os.SystemClock.uptimeMillis()+5000L;
                 while(!date.equals(prefs.lastActiveMurajaahDate())
                       &&android.os.SystemClock.uptimeMillis()<deadline)Thread.sleep(100L);
-                assertEquals("A real validated receipt must be persisted before allowing Correspondances",
+                java.util.concurrent.atomic.AtomicReference<String> diagnostic=
+                    new java.util.concurrent.atomic.AtomicReference<>("");
+                scenario.onActivity(a->{
+                    Object pending=new ActiveReviewCorrectionStore(c).pending();
+                    android.app.AlertDialog dlg=(android.app.AlertDialog)
+                        readField(a,"murajaahPartialValidationDialog");
+                    diagnostic.set("receipt="+prefs.lastActiveMurajaahDate()
+                        +" actualEnd="+prefs.activeMurajaahActualEnd()
+                        +" page="+readField(a,"currentPage")
+                        +" sessionDate="+readField(a,"sessionDate")
+                        +" sessionCompleted="+readField(a,"sessionCompleted")
+                        +" sessionRenderFailed="+readField(a,"sessionRenderFailed")
+                        +" correction="+(pending==null?"none":"PENDING")
+                        +" revealed="+new ActiveReviewCorrectionStore(c).revealed(date,source)
+                        +" dialog="+(dlg==null?"null":("visible="+dlg.isShowing()))
+                        +" program="+((android.widget.TextView)readField(a,"program")).getText()
+                        +" progress="+((android.widget.TextView)readField(a,"progress")).getText()
+                        +" clockRunning="+clock(a).isRunning());
+                });
+                assertEquals("Real active receipt missing. Full checkpoint: "+diagnostic.get(),
                     date,prefs.lastActiveMurajaahDate());
                 scenario.onActivity(a->assertEquals(View.VISIBLE,
                     ((View)readField(a,"validatedCorrespondenceButton")).getVisibility()));
