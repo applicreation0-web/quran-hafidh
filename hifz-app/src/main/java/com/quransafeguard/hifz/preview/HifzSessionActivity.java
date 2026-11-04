@@ -101,6 +101,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private VerseRef validatedCorrespondenceVerse;
     private Button validatedCorrespondenceButton;
     private AlertDialog correspondenceSelector;
+    /** One real partial-validation dialog at a time; safe across slow BOOX taps. */
+    private AlertDialog murajaahPartialValidationDialog;
     private VerseRef correspondenceSelectorVerse;
     private boolean correspondenceSelectorClockWasRunning;
     private boolean sessionResumed;
@@ -2042,11 +2044,18 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         VerseRef unread = murajaahNextSegmentAfter(murajaahActualEnd);
         if (unread != null) {
-            new AlertDialog.Builder(this).setTitle("Passage restant")
+            // Single prompt instance: repeated E-Ink taps cannot stack confirmation windows.
+            if(murajaahPartialValidationDialog!=null&&murajaahPartialValidationDialog.isShowing())return;
+            AlertDialog prompt=new AlertDialog.Builder(this).setTitle("Passage restant")
                 .setMessage("L’objectif du jour continue plus loin (" + murajaahVerseLabel(unread) + "…). Valider maintenant clôturera la séance du jour sans le lire.")
                 .setNegativeButton("Continuer la lecture", null)
                 .setPositiveButton("Valider quand même", (d, w) -> completeMurajaahValidation())
-                .show();
+                .create();
+            murajaahPartialValidationDialog=prompt;
+            prompt.setOnDismissListener(ignored->{
+                if(murajaahPartialValidationDialog==prompt)murajaahPartialValidationDialog=null;
+            });
+            prompt.show();
             return;
         }
         completeMurajaahValidation();
@@ -2660,7 +2669,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override protected void onResume(){
         super.onResume();
         sessionResumed=true;
+        boolean returningFromComparison=correspondenceLaunching;
         correspondenceLaunching=false;
+        // BOOX may return before the choice dialog has finished dismissing. A
+        // completed selection must NEVER leave its stale dialog blocking the clock.
+        if(returningFromComparison&&correspondenceSelector!=null){
+            AlertDialog stale=correspondenceSelector;
+            correspondenceSelector=null;
+            correspondenceSelectorVerse=null;
+            correspondenceSelectorClockWasRunning=false;
+            if(stale.isShowing())stale.dismiss();
+        }
         if(clock==null)return;
         clock.syncPersistedElapsed(prefs.elapsedFor(mode));
         if(correspondenceSelector==null&&correspondenceSelectorVerse!=null){
@@ -2687,6 +2706,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(correctionState!=null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

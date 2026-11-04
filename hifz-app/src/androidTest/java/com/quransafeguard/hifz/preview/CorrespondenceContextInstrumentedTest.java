@@ -227,8 +227,17 @@ public final class CorrespondenceContextInstrumentedTest {
                 assertEquals(page,prefs.murajaahPage());
                 ins.runOnMainSync(opened::finish);
                 ins.waitForIdleSync();
+                // ActivityScenario callbacks can run before the last BOOX lifecycle
+                // transition. Wait for a real monotonic running clock, not a single
+                // scheduler tick, then verify the exact restored reading context.
+                AtomicBoolean resumed=new AtomicBoolean();
+                for(int retry=0;retry<40;retry++){
+                    scenario.onActivity(a->resumed.set(clock(a).isRunning()));
+                    if(resumed.get())break;
+                    Thread.sleep(100L);
+                }
+                assertTrue("Passive review clock must restart on return from a real comparison",resumed.get());
                 scenario.onActivity(a->{
-                    assertTrue(clock(a).isRunning());
                     assertEquals(page,((Integer)readField(a,"currentPage")).intValue());
                     assertEquals(0,((Integer)readField(a,"currentMask")).intValue());
                 });
@@ -275,24 +284,24 @@ public final class CorrespondenceContextInstrumentedTest {
                     assertNotNull("The active session must expose its validation action",validate);
                     assertTrue(validate.isEnabled());
                     assertTrue(validate.performClick());
-                });
-                long deadline=android.os.SystemClock.uptimeMillis()+15000L;
-                while(!date.equals(prefs.lastActiveMurajaahDate())
-                      &&android.os.SystemClock.uptimeMillis()<deadline){
-                    EmulatorLauncherAnr.requireApplicationForeground(ins);
-                    android.view.accessibility.AccessibilityNodeInfo root=
-                        ins.getUiAutomation().getRootInActiveWindow();
-                    if(root!=null){
-                        for(android.view.accessibility.AccessibilityNodeInfo node:
-                                root.findAccessibilityNodeInfosByText("Valider quand même")){
-                            if(node.isVisibleToUser()&&node.isEnabled()
-                               &&"Valider quand même".equalsIgnoreCase(String.valueOf(node.getText())))
-                                node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK);
-                        }
+                    // Click the genuine confirmation button in Android's own
+                    // AlertDialog. Do not bypass the actual production receipt path
+                    // or insert a synthetic credit into SharedPreferences.
+                    android.app.AlertDialog prompt=(android.app.AlertDialog)
+                        readField(a,"murajaahPartialValidationDialog");
+                    if(prompt!=null&&prompt.isShowing()){
+                        android.widget.Button positive=prompt.getButton(
+                            android.content.DialogInterface.BUTTON_POSITIVE);
+                        assertNotNull("Real partial-validation button must exist",positive);
+                        assertTrue("Real confirmation must be enabled",positive.isEnabled());
+                        assertTrue("Only actual user confirmation may validate",positive.performClick());
                     }
-                    Thread.sleep(100L);
-                }
-                assertEquals(date,prefs.lastActiveMurajaahDate());
+                });
+                long deadline=android.os.SystemClock.uptimeMillis()+5000L;
+                while(!date.equals(prefs.lastActiveMurajaahDate())
+                      &&android.os.SystemClock.uptimeMillis()<deadline)Thread.sleep(100L);
+                assertEquals("A real validated receipt must be persisted before allowing Correspondances",
+                    date,prefs.lastActiveMurajaahDate());
                 scenario.onActivity(a->assertEquals(View.VISIBLE,
                     ((View)readField(a,"validatedCorrespondenceButton")).getVisibility()));
                 scenario.recreate();
