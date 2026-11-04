@@ -164,40 +164,59 @@ public final class CorrespondenceContextInstrumentedTest {
         try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(
                 new Intent(c,StudyReaderActivity.class).putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page))){
             HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Lecture · repère R030");
+            capture("lecture-reperes");
             java.util.concurrent.atomic.AtomicReference<float[]> point=new java.util.concurrent.atomic.AtomicReference<>();
+            java.util.concurrent.atomic.AtomicReference<String> diagnostic=new java.util.concurrent.atomic.AtomicReference<>();
             CountDownLatch located=new CountDownLatch(1);
             scenario.onActivity(a->{
                 MushafView mushaf=(MushafView)readField(a,"mushaf");
-                mushaf.evaluateJavascript(
-                    "(function(){var b=document.querySelector('button[aria-label=\"Correspondances 2:47\"]');"
-                    +"if(!b||getComputedStyle(b).visibility!=='visible')return null;"
-                    +"var r=b.getBoundingClientRect(),q=document.querySelector('#mushaf').getBoundingClientRect();"
-                    +"return [ (r.left+r.width/2)/innerWidth, r.top+r.height/2, innerWidth,r.left>=q.right ];})()",
-                    value->{
-                        try{
-                            org.json.JSONArray bounds=new org.json.JSONArray(value);
-                            int[] offset=new int[2];
-                            mushaf.getLocationOnScreen(offset);
-                            float scale=(float)(mushaf.getWidth()/bounds.getDouble(2));
-                            if(bounds.getBoolean(3))point.set(new float[]{
-                                offset[0]+(float)bounds.getDouble(0)*mushaf.getWidth(),
-                                offset[1]+(float)bounds.getDouble(1)*scale});
-                        }catch(org.json.JSONException invalid){ /* Readiness is asserted below. */ }
-                        located.countDown();
-                    });
+                mushaf.postVisualStateCallback(0,new WebView.VisualStateCallback(){
+                    @Override public void onComplete(long requestId){
+                        mushaf.evaluateJavascript(
+                            "(function(){var b=document.querySelector('button[aria-label=\"Correspondances 2:47\"]');"
+                            +"if(!b||getComputedStyle(b).visibility!=='visible')return null;"
+                            +"var r=b.getBoundingClientRect(),q=document.querySelector('#mushaf').getBoundingClientRect();"
+                            +"var x=r.left+r.width/2,y=r.top+r.height/2;"
+                            +"return [x,y,innerWidth,innerHeight,r.left>=q.right,b.contains(document.elementFromPoint(x,y))];})()",
+                            value->{
+                                try{
+                                    org.json.JSONArray bounds=new org.json.JSONArray(value);
+                                    int[] offset=new int[2];
+                                    mushaf.getLocationOnScreen(offset);
+                                    float x=offset[0]+(float)(bounds.getDouble(0)*mushaf.getWidth()/bounds.getDouble(2));
+                                    float y=offset[1]+(float)(bounds.getDouble(1)*mushaf.getHeight()/bounds.getDouble(3));
+                                    android.graphics.Rect frame=new android.graphics.Rect();
+                                    mushaf.getWindowVisibleDisplayFrame(frame);
+                                    diagnostic.set("DOM="+bounds+" screen="+x+","+y+" window="+frame
+                                        +" focus="+a.hasWindowFocus()+" layoutRequested="+mushaf.isLayoutRequested());
+                                    if(bounds.getBoolean(4)&&bounds.getBoolean(5)&&a.hasWindowFocus()
+                                        &&!mushaf.isLayoutRequested()&&frame.contains((int)x,(int)y)){
+                                        point.set(new float[]{x,y});
+                                    }
+                                }catch(org.json.JSONException invalid){diagnostic.set(value);}
+                                located.countDown();
+                            });
+                    }
+                });
             });
             assertTrue(located.await(10,TimeUnit.SECONDS));
-            assertNotNull("Visible R030 touch target must be outside Arabic",point.get());
-            capture("lecture-reperes");
+            android.util.Log.i("HaafidhGutterTouch",String.valueOf(diagnostic.get()));
+            assertNotNull("Visible R030 touch target must be outside Arabic and own the hit point: "
+                +diagnostic.get(),point.get());
             long now=android.os.SystemClock.uptimeMillis();
             android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,
                 android.view.MotionEvent.ACTION_DOWN,point.get()[0],point.get()[1],0);
-            android.view.MotionEvent up=android.view.MotionEvent.obtain(now,now,
+            down.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+            try{ins.sendPointerSync(down);}
+            finally{down.recycle();}
+            android.os.SystemClock.sleep(80L);
+            android.view.MotionEvent up=android.view.MotionEvent.obtain(now,android.os.SystemClock.uptimeMillis(),
                 android.view.MotionEvent.ACTION_UP,point.get()[0],point.get()[1],0);
-            try{ins.sendPointerSync(down);ins.sendPointerSync(up);}
-            finally{down.recycle();up.recycle();}
+            up.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+            try{ins.sendPointerSync(up);}
+            finally{up.recycle();}
             android.app.Activity opened=ins.waitForMonitorWithTimeout(monitor,20000);
-            assertNotNull("Gutter touch must open the comparison",opened);
+            assertNotNull("Gutter touch must open the comparison: "+diagnostic.get(),opened);
             ins.runOnMainSync(opened::finish);
             ins.waitForIdleSync();
             scenario.onActivity(a->assertEquals(page,((Integer)readField(a,"page")).intValue()));

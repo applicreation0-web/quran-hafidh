@@ -63,6 +63,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private LinearLayout root,folioRow,tafsirPanel,tafsirHead,pairHeader;
     private final LinearLayout[] folioColumns=new LinearLayout[2];
     private TextView relationLine,tafsirHeading;
+    private ImageView relationIcon;
     private boolean booxPortrait,tafsirOpen,expanded;
     private int enlarged=-1,partnerOffset;
     private boolean disposed;
@@ -136,6 +137,11 @@ public final class CorrespondenceComparisonActivity extends Activity {
         root.addView(top,new LinearLayout.LayoutParams(-1,dp(48)));
         root.addView(Ui.divider(this));
         pairHeader=Ui.row(this);pairHeader.setGravity(Gravity.CENTER_VERTICAL);
+        relationIcon=new ImageView(this);
+        relationIcon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams relationIconLayout=new LinearLayout.LayoutParams(dp(32),dp(32));
+        relationIconLayout.setMarginStart(dp(8));
+        pairHeader.addView(relationIcon,relationIconLayout);
         relationLine=caption("",13,true);relationLine.setGravity(Gravity.CENTER_VERTICAL);
         relationLine.setSingleLine(true);relationLine.setPadding(dp(8),0,0,0);
         pairHeader.addView(relationLine,new LinearLayout.LayoutParams(0,dp(40),1));
@@ -295,7 +301,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
             case "Répétition":return "A = A′";
             case "Progression":return "A → A′";
             case "Opposition":return "A ≠ B";
-            case "Parallélisme":return "A ∥ A′";
+            case "Ressemblance":return "A ∥ A′";
             case "Alternance":return "A B A′ B′";
             case "Inversion":return "A B / B′ A′";
             case "Centre":return "A B X B′ A′";
@@ -303,7 +309,22 @@ public final class CorrespondenceComparisonActivity extends Activity {
             default:return "";
         }
     }
+    static int relationIconFor(String type) {
+        switch(type){
+            case "Répétition": return R.drawable.ic_corr_relation_repetition;
+            case "Ressemblance": return R.drawable.ic_corr_relation_ressemblance;
+            case "Opposition": return R.drawable.ic_corr_relation_opposition;
+            case "Progression": return R.drawable.ic_corr_relation_progression;
+            case "Alternance": return R.drawable.ic_corr_relation_alternance;
+            case "Inversion": return R.drawable.ic_corr_relation_inversion;
+            case "Centre": return R.drawable.ic_corr_relation_centre;
+            case "Début–Fin": return R.drawable.ic_corr_relation_debut_fin_inclusio;
+            default: return 0;
+        }
+    }
+
     private void updateRelationLabel(){
+        relationIcon.setImageResource(relationIconFor(relation.type));
         relationLine.setText(relation.type+" · "+pattern()+" · "+relation.id+" · "+
             (partnerOffset+1)+"/"+(relation.verses.size()-1));
     }
