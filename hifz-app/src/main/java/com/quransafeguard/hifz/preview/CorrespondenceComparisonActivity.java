@@ -34,6 +34,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private final int[] shownPages=new int[2];
     private final VerseRef[] selectedVerses=new VerseRef[2];
     private final int[] tafsirTokens=new int[2];
+    private final boolean[] authenticQcfRendered=new boolean[2];
     private CorrespondenceCases.Entry relation;
     private GeometryRepository geometry;
     private TafsirRepository tafsir;
@@ -138,6 +139,9 @@ public final class CorrespondenceComparisonActivity extends Activity {
             column.addView(bar,new LinearLayout.LayoutParams(-1,dp(40)));
             MapQcfThumbnails surface=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
                 @Override public void onPageChosen(int page){selectPage(pane,page);}
+                @Override public void onRendered(int page,boolean success){
+                    if(page==shownPages[pane])authenticQcfRendered[pane]=success;
+                }
                 @Override public void onOpenReading(int page){openReading(pane);}
                 @Override public void onVerseChosen(int page,int surah,int ayah){
                     selectVerse(pane,page,surah,ayah);
@@ -228,6 +232,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         }catch(RuntimeException invalid){/* Ignore stale polygon taps. */}
     }
     private void showFolio(int side){
+        authenticQcfRendered[side]=false;
         VerseRef target=side==0?origin:relation.partner(origin,partnerOffset);
         pageLabels[side].setText((side==0?"A":"B")+" · "+target+" · p."+shownPages[side]);
         pages[side].showPages(shownPages[side],shownPages[side],shownPages[side],
@@ -277,6 +282,9 @@ public final class CorrespondenceComparisonActivity extends Activity {
             .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,shownPages[side])
             .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,target.toString()));
     }
+    boolean bothAuthenticQcfPanesReadyForTest(){return authenticQcfRendered[0]&&authenticQcfRendered[1];}
+    boolean booxTafsirOpenForTest(){return booxPortrait&&tafsirOpen&&tafsirPanel.getVisibility()==View.VISIBLE;}
+    MapQcfThumbnails[] qcfPagesForTest(){return pages.clone();}
     @Override protected void onSaveInstanceState(Bundle out){
         out.putInt("partnerOffset",partnerOffset);out.putInt("page0",shownPages[0]);
         out.putInt("page1",shownPages[1]);out.putBoolean("tafsirOpen",tafsirOpen);
