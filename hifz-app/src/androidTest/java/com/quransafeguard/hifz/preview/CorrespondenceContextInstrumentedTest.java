@@ -377,7 +377,24 @@ public final class CorrespondenceContextInstrumentedTest {
                 long deadline=android.os.SystemClock.uptimeMillis()+8000L;
                 while(!date.equals(prefs.lastActiveMurajaahDate())
                       &&android.os.SystemClock.uptimeMillis()<deadline)Thread.sleep(100L);
-                assertEquals("Active receipt only after actual corrective replay",
+                java.util.concurrent.atomic.AtomicReference<String> afterReplay=
+                    new java.util.concurrent.atomic.AtomicReference<>("unavailable");
+                scenario.onActivity(a->{
+                    ActiveReviewCorrectionStore.State state=correction.pending();
+                    afterReplay.set("correctionStage="+(state==null?"CLEARED":state.stage)
+                        +" assisted="+(state==null?"n/a":state.assisted)
+                        +" actDate="+prefs.lastActiveMurajaahDate()
+                        +" actCursor="+prefs.activeMurajaahCursor()
+                        +" actualEnd="+prefs.activeMurajaahActualEnd()
+                        +" sessionDate="+readField(a,"sessionDate")
+                        +" complete="+readField(a,"sessionCompleted")
+                        +" renderFailed="+readField(a,"sessionRenderFailed")
+                        +" selected="+readField(a,"validatedCorrespondenceVerse")
+                        +" page="+readField(a,"currentPage")
+                        +" program="+((android.widget.TextView)readField(a,"program")).getText()
+                        +" progress="+((android.widget.TextView)readField(a,"progress")).getText());
+                });
+                assertEquals("Active receipt only after actual corrective replay; "+afterReplay.get(),
                     date,prefs.lastActiveMurajaahDate());
                 assertNull("Reread/recall checkpoint must be cleared after real validation",
                     correction.pending());
