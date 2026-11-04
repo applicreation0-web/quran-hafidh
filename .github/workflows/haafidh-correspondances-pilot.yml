@@ -49,7 +49,7 @@ jobs:
           retention-days: 14
   actual-qcf-on-android:
     runs-on: ubuntu-latest
-    timeout-minutes: 85
+    timeout-minutes: 110
     strategy:
       fail-fast: false
       matrix:
@@ -99,6 +99,9 @@ jobs:
             adb pull /data/local/tmp/haafidh-progression.png hifz-app/build/android-proof/
             adb pull /data/local/tmp/haafidh-repetition.png hifz-app/build/android-proof/
             adb pull /data/local/tmp/haafidh-agrandissement.png hifz-app/build/android-proof/
+            adb pull /data/local/tmp/haafidh-lecture-reperes.png hifz-app/build/android-proof/
+            adb pull /data/local/tmp/haafidh-retour-lecture.png hifz-app/build/android-proof/
+            bash scripts/run_11711_hifz_parcours_isolated.sh "$(awk -v surface='${{ matrix.surface }}' '$1 == "-" && $2 == "surface:" { match_surface = ($3 == surface) } match_surface && $1 == "classes:" { print $2; exit }' .github/workflows/haafidh-11711-hifz-parcours-exhaustive.yml | tr -d "'")" "${{ matrix.surface }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -107,4 +110,5 @@ jobs:
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
             hifz-app/build/android-proof/
+            hifz-app/build/parcours-android-logs/
           retention-days: 14

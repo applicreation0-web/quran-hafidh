@@ -48,7 +48,7 @@ final class CorrespondenceCases {
             "J3, comparaison du texte arabe sur deux témoins",v(2,47),v(2,122)),
         new Entry("R037","Progression","La vision de Yūsuf et son accomplissement",
             "12:100 renvoie explicitement à la vision relatée en 12:4.",
-            "Jalālayn 12:4 et 12:100; certification éditoriale historique",v(12,4),v(12,100)),
+            "Jalālayn 12:4 et 12:100; présélection documentaire",v(12,4),v(12,100)),
         new Entry("R047","Répétition","Le refrain d'Al-Qamar",
             "Même verset répété en 54:17, 54:22, 54:32 et 54:40.",
             "J3, comparaison du texte arabe sur deux témoins",v(54,17),v(54,22),v(54,32),v(54,40)),

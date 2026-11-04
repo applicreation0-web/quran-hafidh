@@ -101,7 +101,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private VerseRef validatedCorrespondenceVerse;
     private Button validatedCorrespondenceButton;
     private AlertDialog correspondenceSelector;
+    private VerseRef correspondenceSelectorVerse;
+    private boolean correspondenceSelectorClockWasRunning;
     private boolean sessionResumed;
+    private boolean correspondenceLaunching;
     /** Automatic page correction: visible reread, then 100% masked recall, no flags. */
     private ActiveReviewCorrectionStore correctionStore;
     private ActiveReviewCorrectionStore.State correctionState;
@@ -230,6 +233,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
         if(state!=null){
             discriminantVerse=readAtlasVerse(state,"atlasSelected");
+            correspondenceSelectorVerse=readAtlasVerse(state,"correspondenceSelectorVerse");
+            correspondenceSelectorClockWasRunning=state.getBoolean("correspondenceSelectorClockWasRunning");
             if(MURAJAAH_ACTIVE.equals(mode)&&sessionDate.toString().equals(prefs.lastActiveMurajaahDate())){
                 validatedDiscriminantVerse=readAtlasVerse(state,"atlasValidated");
                 validatedCorrespondenceVerse=readAtlasVerse(state,"correspondenceValidated");
@@ -408,11 +413,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void selectRevisionCorrespondence(VerseRef verse,List<CorrespondenceCases.Entry> entries){
-        if(!sessionResumed||correspondenceSelector!=null||!canCompareCorrespondenceVerse(verse))return;
-        boolean wasRunning=clock.isRunning();
+        if(!sessionResumed||correspondenceLaunching||correspondenceSelector!=null||!canCompareCorrespondenceVerse(verse))return;
+        boolean wasRunning=clock.isRunning()||correspondenceSelectorClockWasRunning;
+        correspondenceSelectorVerse=verse;
+        correspondenceSelectorClockWasRunning=wasRunning;
         clock.pause();
         correspondenceSelector=CorrespondenceComparisonActivity.chooseCase(this,entries,entry->{
             if(!sessionResumed||!canCompareCorrespondenceVerse(verse))return false;
+            correspondenceSelectorVerse=null;
+            correspondenceLaunching=true;
             startActivity(new Intent(this,CorrespondenceComparisonActivity.class)
                 .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,verse.getSurah())
                 .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,verse.getAyah())
@@ -422,6 +431,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return true;
         },opened->{
             correspondenceSelector=null;
+            correspondenceSelectorVerse=null;
+            correspondenceSelectorClockWasRunning=false;
             if(!opened&&wasRunning)resumeSessionClock();
         });
     }
@@ -473,6 +484,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(validatedDiscriminantVerse!=null)state.putString("atlasValidated",validatedDiscriminantVerse.toString());
         if(validatedCorrespondenceVerse!=null)
             state.putString("correspondenceValidated",validatedCorrespondenceVerse.toString());
+        if(correspondenceSelectorVerse!=null){
+            state.putString("correspondenceSelectorVerse",correspondenceSelectorVerse.toString());
+            state.putBoolean("correspondenceSelectorClockWasRunning",correspondenceSelectorClockWasRunning);
+        }
         super.onSaveInstanceState(state);
     }
 
@@ -2641,8 +2656,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override protected void onResume(){
         super.onResume();
         sessionResumed=true;
+        correspondenceLaunching=false;
         if(clock==null)return;
         clock.syncPersistedElapsed(prefs.elapsedFor(mode));
+        if(correspondenceSelector==null&&correspondenceSelectorVerse!=null){
+            VerseRef verse=correspondenceSelectorVerse;
+            List<CorrespondenceCases.Entry> entries=CorrespondenceCases.forVerse(verse);
+            if(entries.size()>1&&canCompareCorrespondenceVerse(verse)){
+                selectRevisionCorrespondence(verse,entries);
+                return;
+            }
+            correspondenceSelectorVerse=null;
+            correspondenceSelectorClockWasRunning=false;
+        }
         resumeSessionClock();
     }
     private void resumeSessionClock(){

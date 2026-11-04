@@ -67,6 +67,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     /** Lecture-only, opt-in Révision active gomme: no timer, validation or Hifz writes. */
     private Button freeActiveMaskButton;
     private boolean freeActiveMask;
+    private android.app.AlertDialog correspondenceSelector;
+    private boolean correspondenceLaunching;
     private boolean freeActiveMaskPageReady;
     private AyahThemesCueIndex ayahThemesCues;
     private boolean semanticCuesEnabled;
@@ -498,17 +500,22 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     /** Correspondences use the same contextual entry policy as Similitudes. */
     @Override public void onCorrespondenceTap(VerseRef verse) {
         if(verse==null||freeActiveMask)return;
+        if(correspondenceLaunching||correspondenceSelector!=null)return;
         try {
             GeometryRepository original=GeometryRepository.get(this);
             if(!CorrespondenceCases.versesOnPage(page,original).contains(verse))return;
-            CorrespondenceComparisonActivity.chooseCase(this,verse,entry->{
-                if(freeActiveMask||!CorrespondenceCases.versesOnPage(page,original).contains(verse))return;
+            correspondenceSelector=CorrespondenceComparisonActivity.chooseCase(
+                this,CorrespondenceCases.forVerse(verse),entry->{
+                if(correspondenceLaunching||freeActiveMask
+                    ||!CorrespondenceCases.versesOnPage(page,original).contains(verse))return false;
+                correspondenceLaunching=true;
                 startActivity(new Intent(this,CorrespondenceComparisonActivity.class)
                     .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,verse.getSurah())
                     .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,verse.getAyah())
                     .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,entry.id)
                     .putExtra(CorrespondenceComparisonActivity.EXTRA_ORIGIN,"Lecture"));
-            });
+                return true;
+            },opened->correspondenceSelector=null);
         } catch(RuntimeException unavailable) { /* No QCF means no inferred correspondence. */ }
     }
 
@@ -1395,17 +1402,20 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return super.onKeyDown(keyCode, event);
     }
     @Override protected void onPause() {
+        correspondenceLaunching=true;
         if(mushaf!=null)mushaf.removeCallbacks(autoHide);
         super.onPause();
     }
 
     @Override protected void onResume() {
         super.onResume();
+        correspondenceLaunching=false;
         updateDiscriminantButton();
         if(controlsVisible)scheduleAutoHide();
     }
 
     @Override protected void onDestroy() {
+        if(correspondenceSelector!=null)correspondenceSelector.dismiss();
         if(mapPreviewJalalayn!=null){mapPreviewJalalayn.close();mapPreviewJalalayn=null;}
         io.shutdownNow();
         if (semanticTitleDialog != null && semanticTitleDialog.isShowing()) semanticTitleDialog.dismiss();

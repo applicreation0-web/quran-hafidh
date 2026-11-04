@@ -27,14 +27,6 @@ public final class CorrespondenceComparisonActivity extends Activity {
     static final String EXTRA_ID="correspondenceId";
     static final String EXTRA_ORIGIN="correspondenceOrigin";
 
-    static void chooseCase(Activity activity, VerseRef verse,
-                           java.util.function.Consumer<CorrespondenceCases.Entry> open) {
-        chooseCase(activity,CorrespondenceCases.forVerse(verse),entry->{
-            open.accept(entry);
-            return true;
-        },opened->{});
-    }
-
     static AlertDialog chooseCase(Activity activity, java.util.List<CorrespondenceCases.Entry> entries,
                                   java.util.function.Predicate<CorrespondenceCases.Entry> open,
                                   java.util.function.Consumer<Boolean> finished) {
@@ -102,10 +94,19 @@ public final class CorrespondenceComparisonActivity extends Activity {
             for(int i=0;i<2;i++){
                 int p=state.getInt("page"+i,shownPages[i]);
                 if(p>=1&&p<=604)shownPages[i]=p;
+                int surah=state.getInt("selectedSurah"+i,0);
+                int ayah=state.getInt("selectedAyah"+i,0);
+                if(state.containsKey("selectedSurah"+i))
+                    selectedVerses[i]=surah>0&&ayah>0?new VerseRef(surah,ayah):null;
+                if(!isOnPage(selectedVerses[i],shownPages[i]))selectedVerses[i]=null;
             }
         }
         build();
-        updateComparison();
+        updateRelationLabel();
+        for(int i=0;i<2;i++){
+            showFolio(i);
+            if(tafsirOpen)loadTafsir(i,selectedVerses[i]);
+        }
     }
 
     private TextView caption(String value,float size,boolean bold){
@@ -154,12 +155,12 @@ public final class CorrespondenceComparisonActivity extends Activity {
         folioRow=Ui.row(this);folioRow.setGravity(Gravity.TOP);
         int halfWidth=Math.max(130,(width-18)/2);
         int natural=Math.round(halfWidth*550f/345f);
-        int cap=Math.max(195,height-(booxPortrait?405:landscape?160:250));
+        int cap=Math.max(195,height-(booxPortrait?340:landscape?125:185));
         int paperHeight=Math.min(natural,cap);
         normalFolioHeightDp=paperHeight;
         expandedFolioHeightDp=Math.max(paperHeight,Math.min(
             Math.round((width-16)*550f/345f),
-            Math.max(195,height-(booxPortrait?380:landscape?160:200))));
+            Math.max(195,height-(booxPortrait?340:landscape?125:165))));
         for(int side=0;side<2;side++){
             final int pane=side;
             LinearLayout column=Ui.column(this);
@@ -167,10 +168,14 @@ public final class CorrespondenceComparisonActivity extends Activity {
             LinearLayout bar=Ui.row(this);bar.setGravity(Gravity.CENTER_VERTICAL);
             TextView loc=caption("",12,true);loc.setGravity(Gravity.CENTER_VERTICAL);
             pageLabels[side]=loc;
-            bar.addView(loc,new LinearLayout.LayoutParams(0,dp(38),1));
+            bar.addView(action("‹","Page précédente "+(side==0?"A":"B"),()->selectPage(pane,shownPages[pane]-1)),
+                new LinearLayout.LayoutParams(dp(44),dp(44)));
+            bar.addView(loc,new LinearLayout.LayoutParams(0,dp(44),1));
+            bar.addView(action("›","Page suivante "+(side==0?"A":"B"),()->selectPage(pane,shownPages[pane]+1)),
+                new LinearLayout.LayoutParams(dp(44),dp(44)));
             bar.addView(action("⛶","Agrandir le Mushaf "+(side==0?"A":"B"),()->toggleEnlarge(pane)),
-                new LinearLayout.LayoutParams(dp(40),dp(40)));
-            column.addView(bar,new LinearLayout.LayoutParams(-1,dp(40)));
+                new LinearLayout.LayoutParams(dp(44),dp(44)));
+            column.addView(bar,new LinearLayout.LayoutParams(-1,dp(44)));
             MapQcfThumbnails surface=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
                 @Override public void onPageChosen(int page){selectPage(pane,page);}
                 @Override public void onRendered(int page,boolean success){
@@ -184,23 +189,10 @@ public final class CorrespondenceComparisonActivity extends Activity {
             surface.setAtlasSinglePageCompact(true);
             pages[side]=surface;
             column.addView(surface,new LinearLayout.LayoutParams(-1,dp(paperHeight)));
-            LinearLayout pager=Ui.row(this);pager.setGravity(Gravity.CENTER_VERTICAL);
-            pager.addView(action("‹","Page précédente "+(side==0?"A":"B"),()->selectPage(pane,shownPages[pane]-1)),
-                new LinearLayout.LayoutParams(dp(44),dp(44)));
-            TextView pageNumber=caption(side==0?"A":"B",12,false);
-            pageNumber.setGravity(Gravity.CENTER);
-            pager.addView(pageNumber,new LinearLayout.LayoutParams(0,dp(44),1));
-            pager.addView(action("›","Page suivante "+(side==0?"A":"B"),()->selectPage(pane,shownPages[pane]+1)),
-                new LinearLayout.LayoutParams(dp(44),dp(44)));
-            column.addView(pager,new LinearLayout.LayoutParams(-1,dp(44)));
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
             lp.setMargins(dp(3),0,dp(3),0);folioRow.addView(column,lp);
         }
         content.addView(folioRow);
-        TextView note=caption("Pourquoi ces passages se répondent   ›",12,true);
-        note.setPadding(dp(8),dp(6),dp(8),dp(6));
-        note.setOnClickListener(v->showSources());
-        content.addView(note,new LinearLayout.LayoutParams(-1,dp(32)));
         root.addView(middle,new LinearLayout.LayoutParams(-1,0,1));
 
         LinearLayout tafsirHead=Ui.row(this);tafsirHead.setGravity(Gravity.CENTER_VERTICAL);
@@ -254,19 +246,28 @@ public final class CorrespondenceComparisonActivity extends Activity {
         partnerOffset=Math.floorMod(partnerOffset+delta,alternatives);
         selectedVerses[1]=relation.partner(origin,partnerOffset);
         shownPages[1]=geometry.pageForVerse(selectedVerses[1]);
-        updateComparison();
+        updateRelationLabel();
+        showFolio(1);
+        if(tafsirOpen)loadTafsir(1,selectedVerses[1]);
     }
     private void selectPage(int side,int page){
         if(page<1||page>604||side<0||side>1||page==shownPages[side])return;
         shownPages[side]=page;
+        if(!isOnPage(selectedVerses[side],page)){
+            selectedVerses[side]=null;
+            if(tafsirOpen)loadTafsir(side,null);
+        }
         showFolio(side);
+    }
+    private boolean isOnPage(VerseRef verse,int page){
+        return verse!=null&&geometry.pageForVerse(verse)<=page
+            &&MawdudiMapModel.lastPageForVerse(verse,geometry)>=page;
     }
     private void selectVerse(int side,int page,int surah,int ayah){
         if(page!=shownPages[side])return;
         try{
             VerseRef verse=new VerseRef(surah,ayah);
-            if(geometry.pageForVerse(verse)>page||
-                MawdudiMapModel.lastPageForVerse(verse,geometry)<page)return;
+            if(!isOnPage(verse,page))return;
             selectedVerses[side]=verse;
             if(tafsirOpen)loadTafsir(side,verse);
         }catch(RuntimeException invalid){/* Ignore stale polygon taps. */}
@@ -291,17 +292,17 @@ public final class CorrespondenceComparisonActivity extends Activity {
             default:return "";
         }
     }
-    private void updateComparison(){
+    private void updateRelationLabel(){
         relationLine.setText(relation.type+" · "+pattern()+" · "+relation.id+" · "+
             (partnerOffset+1)+"/"+(relation.verses.size()-1));
-        showFolio(0);showFolio(1);
-        selectedVerses[0]=origin;
-        selectedVerses[1]=relation.partner(origin,partnerOffset);
-        if(tafsirOpen)for(int i=0;i<2;i++)loadTafsir(i,selectedVerses[i]);
     }
     private void loadTafsir(int side,VerseRef verse){
-        if(disposed||tafsir==null||verse==null)return;
+        if(disposed||tafsir==null)return;
         final int request=++tafsirTokens[side];
+        if(verse==null){
+            commentaries[side].setText("Touchez un verset du folio.");
+            return;
+        }
         commentaries[side].setText("…");
         tafsirIo.submit(()->{
             String content;
@@ -329,19 +330,33 @@ public final class CorrespondenceComparisonActivity extends Activity {
             .setPositiveButton("Fermer",null).show();
     }
     private void openReading(int side){
-        if(selectedVerses[side]==null)return;
         VerseRef target=selectedVerses[side];
-        startActivity(new Intent(this,StudyReaderActivity.class)
-            .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,shownPages[side])
-            .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,target.toString()));
+        Intent reader=new Intent(this,StudyReaderActivity.class)
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,shownPages[side]);
+        if(target!=null)reader.putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,target.toString());
+        startActivity(reader);
     }
     boolean bothAuthenticQcfPanesReadyForTest(){return authenticQcfRendered[0]&&authenticQcfRendered[1];}
+    boolean visibleTafsirReadyForTest(){
+        if(!tafsirOpen)return true;
+        for(TextView commentary:commentaries){
+            String text=commentary.getText().toString();
+            if(text.isEmpty()||"…".equals(text)||"Commentaire indisponible.".equals(text))return false;
+        }
+        return true;
+    }
     boolean booxTafsirOpenForTest(){return booxPortrait&&tafsirOpen&&tafsirPanel.getVisibility()==View.VISIBLE;}
     MapQcfThumbnails[] qcfPagesForTest(){return pages.clone();}
     @Override protected void onSaveInstanceState(Bundle out){
         out.putInt("partnerOffset",partnerOffset);out.putInt("page0",shownPages[0]);
         out.putInt("page1",shownPages[1]);out.putBoolean("tafsirOpen",tafsirOpen);
-        out.putInt("enlarged",enlarged);super.onSaveInstanceState(out);
+        out.putInt("enlarged",enlarged);
+        for(int i=0;i<2;i++){
+            VerseRef selected=selectedVerses[i];
+            out.putInt("selectedSurah"+i,selected==null?0:selected.getSurah());
+            out.putInt("selectedAyah"+i,selected==null?0:selected.getAyah());
+        }
+        super.onSaveInstanceState(out);
     }
     @Override protected void onDestroy(){
         disposed=true;tafsirIo.shutdownNow();

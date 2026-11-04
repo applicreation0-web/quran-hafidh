@@ -40,7 +40,7 @@ public final class CorrespondenceContextInstrumentedTest {
             AtomicBoolean rendered=new AtomicBoolean();
             for(int retry=0;retry<90;retry++){
                 scenario.onActivity(a->{
-                    rendered.set(a.bothAuthenticQcfPanesReadyForTest());
+                    rendered.set(a.bothAuthenticQcfPanesReadyForTest()&&a.visibleTafsirReadyForTest());
                     assertEquals(2,a.qcfPagesForTest().length);
                     if(rendered.get()){
                         for(MapQcfThumbnails pane:a.qcfPagesForTest()){
@@ -83,7 +83,7 @@ public final class CorrespondenceContextInstrumentedTest {
     }
     private void awaitVisualFrame(ActivityScenario<CorrespondenceComparisonActivity> scenario,
                                   int visiblePanes)throws Exception {
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        EmulatorLauncherAnr.requireApplicationForeground(InstrumentationRegistry.getInstrumentation());
         CountDownLatch frames=new CountDownLatch(visiblePanes);
         scenario.onActivity(a->{
             MapQcfThumbnails[] panes=a.qcfPagesForTest();
@@ -97,6 +97,20 @@ public final class CorrespondenceContextInstrumentedTest {
             }
         });
         assertTrue("QCF WebViews must submit the captured frame",frames.await(15,TimeUnit.SECONDS));
+        for(int side=0;side<visiblePanes;side++){
+            int index=side;
+            AtomicBoolean folio=new AtomicBoolean();
+            CountDownLatch measured=new CountDownLatch(1);
+            scenario.onActivity(a->a.qcfPagesForTest()[index].evaluateJavascript(
+                "(function(){var s=document.querySelector('.paper svg');if(!s)return false;"
+                +"var r=s.getBoundingClientRect(),v=s.viewBox.baseVal,m=s.getScreenCTM();"
+                +"return r.width>40&&r.height>60&&v.width===345&&v.height===550"
+                +"&&!!m&&Math.abs(m.a-m.d)<0.001"
+                +"&&!!s.querySelector('path.ayahPolygon');})()",
+                value->{folio.set("true".equals(value));measured.countDown();}));
+            assertTrue(measured.await(10,TimeUnit.SECONDS));
+            assertTrue("Visible folio must keep its original proportions and QCF polygons",folio.get());
+        }
     }
 
     private void capture(String name)throws Exception {
@@ -109,9 +123,59 @@ public final class CorrespondenceContextInstrumentedTest {
         }
     }
 
+    @Test public void readerGutterOpensCorrespondenceAndReturnsToSameFolio()throws Exception{
+        Context c=ApplicationProvider.getApplicationContext();
+        int page=GeometryRepository.get(c).pageForVerse(new VerseRef(2,47));
+        android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+        android.app.Instrumentation.ActivityMonitor monitor=
+            ins.addMonitor(CorrespondenceComparisonActivity.class.getName(),null,false);
+        try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(
+                new Intent(c,StudyReaderActivity.class).putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page))){
+            HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Lecture · repère R030");
+            java.util.concurrent.atomic.AtomicReference<float[]> point=new java.util.concurrent.atomic.AtomicReference<>();
+            CountDownLatch located=new CountDownLatch(1);
+            scenario.onActivity(a->{
+                MushafView mushaf=(MushafView)readField(a,"mushaf");
+                mushaf.evaluateJavascript(
+                    "(function(){var b=document.querySelector('button[aria-label=\"Correspondances 2:47\"]');"
+                    +"if(!b||getComputedStyle(b).visibility!=='visible')return null;"
+                    +"var r=b.getBoundingClientRect(),q=document.querySelector('#mushaf').getBoundingClientRect();"
+                    +"return [ (r.left+r.width/2)/innerWidth, r.top+r.height/2, innerWidth,r.left>=q.right ];})()",
+                    value->{
+                        try{
+                            org.json.JSONArray bounds=new org.json.JSONArray(value);
+                            int[] offset=new int[2];
+                            mushaf.getLocationOnScreen(offset);
+                            float scale=(float)(mushaf.getWidth()/bounds.getDouble(2));
+                            if(bounds.getBoolean(3))point.set(new float[]{
+                                offset[0]+(float)bounds.getDouble(0)*mushaf.getWidth(),
+                                offset[1]+(float)bounds.getDouble(1)*scale});
+                        }catch(org.json.JSONException invalid){ /* Readiness is asserted below. */ }
+                        located.countDown();
+                    });
+            });
+            assertTrue(located.await(10,TimeUnit.SECONDS));
+            assertNotNull("Visible R030 touch target must be outside Arabic",point.get());
+            capture("lecture-reperes");
+            long now=android.os.SystemClock.uptimeMillis();
+            android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,
+                android.view.MotionEvent.ACTION_DOWN,point.get()[0],point.get()[1],0);
+            android.view.MotionEvent up=android.view.MotionEvent.obtain(now,now,
+                android.view.MotionEvent.ACTION_UP,point.get()[0],point.get()[1],0);
+            try{ins.sendPointerSync(down);ins.sendPointerSync(up);}
+            finally{down.recycle();up.recycle();}
+            android.app.Activity opened=ins.waitForMonitorWithTimeout(monitor,20000);
+            assertNotNull("Gutter touch must open the comparison",opened);
+            ins.runOnMainSync(opened::finish);
+            ins.waitForIdleSync();
+            scenario.onActivity(a->assertEquals(page,((Integer)readField(a,"page")).intValue()));
+            capture("retour-lecture");
+        }finally{ins.removeMonitor(monitor);}
+    }
+
     @Test public void passiveSelectorFreezesClockOnCancelAndThroughComparison()throws Exception{
         Context c=ApplicationProvider.getApplicationContext();
-        HifzPrefs prefs=new HifzPrefs(c);
+        new HifzPrefs(c);
         org.json.JSONObject original=HifzBackup.export(c);
         android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
         android.app.Instrumentation.ActivityMonitor comparison=
@@ -121,6 +185,7 @@ public final class CorrespondenceContextInstrumentedTest {
         try{
             assertTrue(c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE)
                 .edit().clear().commit());
+            HifzPrefs prefs=new HifzPrefs(c);
             assertTrue(prefs.setV6AcquiredRanges(java.util.Collections.singletonList(
                 new com.quransafeguard.hifz.core.VerseRange(source,new VerseRef(2,51))),
                 GeometryRepository.get(c)));
@@ -164,8 +229,8 @@ public final class CorrespondenceContextInstrumentedTest {
                 ins.waitForIdleSync();
                 scenario.onActivity(a->{
                     assertTrue(clock(a).isRunning());
-                    assertEquals(page,((Integer)field(a,"currentPage")).intValue());
-                    assertEquals(0,((Integer)field(a,"currentMask")).intValue());
+                    assertEquals(page,((Integer)readField(a,"currentPage")).intValue());
+                    assertEquals(0,((Integer)readField(a,"currentMask")).intValue());
                 });
             }
         }finally{
@@ -174,20 +239,20 @@ public final class CorrespondenceContextInstrumentedTest {
         }
     }
 
-    private static Object field(HifzSessionActivity activity,String name){
+    private static Object readField(Object activity,String name){
         try{
-            java.lang.reflect.Field field=HifzSessionActivity.class.getDeclaredField(name);
+            java.lang.reflect.Field field=activity.getClass().getDeclaredField(name);
             field.setAccessible(true);
             return field.get(activity);
         }catch(ReflectiveOperationException failure){throw new AssertionError(failure);}
     }
 
     private static SessionClock clock(HifzSessionActivity activity){
-        return (SessionClock)field(activity,"clock");
+        return (SessionClock)readField(activity,"clock");
     }
 
     private static android.app.AlertDialog selector(HifzSessionActivity activity){
-        return (android.app.AlertDialog)field(activity,"correspondenceSelector");
+        return (android.app.AlertDialog)readField(activity,"correspondenceSelector");
     }
 
     private static void showSelector(HifzSessionActivity activity,VerseRef source,

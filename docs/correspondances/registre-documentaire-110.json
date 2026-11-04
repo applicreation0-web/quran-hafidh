@@ -55,7 +55,7 @@
       "statutHistorique": "RETENUE_DOCUMENTÉE",
       "objectionHistorique": "LECTURE_INDEPENDANTE_MANQUANTE",
       "decisionDocumentaire": "EXCLURE",
-      "justification": "Deux obligations éthiques sans développement littéraire explicite entre les sourates.",
+      "justification": "Al-Suyūṭī, Asrār Tartīb al-Qurʾān, section al-Māʾidah (Islamweb, p. 94), atteste un raccord dépôts–contrats. Ce raccord ne démontre pas la progression classée historiquement.",
       "admissionProduction": false,
       "apercuDebug": false
     },
@@ -313,6 +313,7 @@
     },
     {
       "id": "R026",
+      "noyauDocumentaire": "91:3–4 ; 92:1–2",
       "versets": "91:1–4 ; 92:1–2",
       "bornesHistoriques": "91:1–4 ; 92:1–2",
       "typeHistorique": "INVERSION",
@@ -451,7 +452,7 @@
       "statutHistorique": "RETENUE_DOCUMENTÉE",
       "objectionHistorique": "AUTEUR_EXPLICITE_POUR_LE_LIEN_NON_REPERTORIE  ;  STRUCTURE_RAPPROCHEMENT_A_JUSTIFIER_PAR_TEXTE",
       "decisionDocumentaire": "PRESELECTION_FORTE",
-      "justification": "12:4 rapporte la vision de Yūsuf; 12:100 la désigne expressément comme vision antérieure devenue vraie. Jalalayn aux pages PDF 235 et 245 confirme cette référence. La certification porte sur cette relation locale, sans schéma global.",
+      "justification": "12:4 rapporte la vision de Yūsuf; 12:100 la désigne expressément comme vision antérieure devenue vraie. Jalalayn aux pages PDF 235 et 245 confirme cette référence. La présélection porte sur cette relation locale. L’admission et les coordonnées QCF restent à valider.",
       "admissionProduction": false,
       "apercuDebug": true
     },
@@ -481,6 +482,7 @@
     },
     {
       "id": "R040",
+      "noyauDocumentaire": "26:9 ; 26:68 ; 26:104 ; 26:122 ; 26:140 ; 26:159 ; 26:175 ; 26:191",
       "versets": "26:8–9 ; 26:67–68 ; 26:103–104 ; 26:121–122 ; 26:139–140 ; 26:158–159 ; 26:174–175 ; 26:190–191",
       "bornesHistoriques": "26:8–9 ; 26:67–68 ; 26:103–104 ; 26:121–122 ; 26:139–140 ; 26:158–159 ; 26:174–175 ; 26:190–191",
       "typeHistorique": "REPETITION",
@@ -637,6 +639,7 @@
     },
     {
       "id": "R053",
+      "noyauDocumentaire": "65:2 ; 65:4 ; 65:5 (formule infraverset)",
       "versets": "65:2–3 ; 65:4–5",
       "bornesHistoriques": "65:2–3 ; 65:4–5",
       "typeHistorique": "REPETITION",
