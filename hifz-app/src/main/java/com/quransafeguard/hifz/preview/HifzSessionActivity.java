@@ -2564,7 +2564,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             org.json.JSONArray corrRows=new org.json.JSONArray();
             java.util.Set<VerseRef> corrSeen=new java.util.HashSet<>();
             if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&!sessionCompleted){
-                for(VerseRef verse:murajaahPlan.traversalVerses)
+                // Only current-page relation anchors, not every verse in the full revision corpus.
+                for(VerseRef verse:CorrespondenceCases.versesOnPage(currentPage,geometry))
                     if(canCompareCorrespondenceVerse(verse)&&corrSeen.add(verse))
                         corrRows.put(verse.toString());
             }else if(MURAJAAH_ACTIVE.equals(mode)&&sessionCompleted

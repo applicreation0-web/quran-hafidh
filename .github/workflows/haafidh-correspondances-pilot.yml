@@ -37,7 +37,7 @@ jobs:
       - name: Compile actual Android sources and check icon/revision invariants
         run: |
           gradle --no-daemon :hifz-app:compileDebugJavaWithJavac :hifz-app:testDebugUnitTest --tests com.quransafeguard.hifz.preview.CorrespondenceContextContractTest
-          gradle --no-daemon :hifz-app:testDebugUnitTest --tests com.quransafeguard.hifz.preview.AtlasDiscriminantSourceContractTest
+          gradle --no-daemon :hifz-app:sourceContractTest
       - uses: actions/upload-artifact@v4
         if: always()
         with:
