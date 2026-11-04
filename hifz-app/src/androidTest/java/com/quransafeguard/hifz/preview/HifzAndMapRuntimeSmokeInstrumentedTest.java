@@ -25,6 +25,7 @@ import static org.junit.Assert.*;
 public final class HifzAndMapRuntimeSmokeInstrumentedTest {
     @Test public void eachOfficialHifzModeOpensWithoutCrash() {
         Context context=ApplicationProvider.getApplicationContext();
+        new HifzPrefs(context); // valid schema-6 bootstrap before opening any official mode
         String[] modes={
             HifzSessionActivity.SABQI,
             HifzSessionActivity.ITQAN,
@@ -36,6 +37,7 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
             HifzSessionActivity.MURAJAAH
         };
         for(String mode:modes) {
+            java.util.concurrent.atomic.AtomicBoolean sessionDrawn=new java.util.concurrent.atomic.AtomicBoolean();
             Intent intent=new Intent(context,HifzSessionActivity.class)
                 .putExtra(HifzSessionActivity.EXTRA_MODE,mode);
             try(ActivityScenario<HifzSessionActivity> scenario=ActivityScenario.launch(intent)) {
@@ -45,11 +47,25 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
                     assertNotNull("Missing Hifz view "+mode,
                         activity.findViewById(android.R.id.content));
                     TextView program=(TextView)reflect(activity,"program");
+                    if(program==null){
+                        // Current Hifz forbids a lesson that is NOT in the dated
+                        // attendance backlog. The dialog appears before buildUi().
+                        // This is not a crash; never fabricate progress to force
+                        // an empty new-install test into a valid lesson.
+                        assertTrue("Only a non-due Sabqi/Itqan can be legitimately gated",
+                            HifzSessionActivity.SABQI.equals(mode)||HifzSessionActivity.ITQAN.equals(mode));
+                        assertTrue("No debt => no artificial lesson credit",
+                            new HifzPrefs(activity).lastSabqiDate().isEmpty()
+                                && new HifzPrefs(activity).lastItqanDate().isEmpty());
+                        return;
+                    }
+                    sessionDrawn.set(true);
                     String title=program.getText().toString();
                     assertFalse("Hifz "+mode+" rendered an error instead of a session: "+title,
                         title.contains("état à vérifier"));
                 });
-                if(HifzSessionActivity.SABQI.equals(mode) || HifzSessionActivity.ITQAN.equals(mode))
+                if(sessionDrawn.get() &&
+                    (HifzSessionActivity.SABQI.equals(mode) || HifzSessionActivity.ITQAN.equals(mode)))
                     awaitMushafPage(scenario,"mushaf",mode);
                 saveScreenshot("audit-hifz-"+mode.toLowerCase(java.util.Locale.ROOT)+".png");
             }
@@ -232,7 +248,7 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
             scenario.onActivity(activity->{
                 TextView selector=(TextView)reflect(activity,"dashboardTitle");
                 assertNotNull(selector);
-                assertEquals("Choisir le programme hebdomadaire",
+                assertEquals("Voir le calendrier sur sept jours",
                     selector.getContentDescription().toString());
                 try {
                     java.lang.reflect.Method show=MainActivity.class.getDeclaredMethod("showParcours");
@@ -248,8 +264,16 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
                 selector.performClick();
             });
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            saveScreenshot("audit-calendrier-dialogue.png");
+            scenario.onActivity(activity->{
+                assertFalse("Calendar must not close MainActivity",activity.isFinishing());
+                // The program selector moved to the Parcours control; the
+                // dashboardTitle now explicitly opens the 7-day calendar.
+                // Invoke the real new menu rather than asserting the old label.
+                invoke(activity,"chooseWeeklyProgram");
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             saveScreenshot("audit-programme-dialogue.png");
-            scenario.onActivity(activity->assertFalse("Schedule selector must not close MainActivity",activity.isFinishing()));
         }
 
         Context context=ApplicationProvider.getApplicationContext();
