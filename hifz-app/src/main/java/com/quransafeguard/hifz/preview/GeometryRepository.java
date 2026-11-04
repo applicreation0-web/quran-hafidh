@@ -458,12 +458,11 @@ public final class GeometryRepository {
 
         int lineIndex = firstLineIndex(cursor);
         int counted = 0;
-        int guard = 0;
+        int linesWithoutProgress = 0;
         VerseRef last = cursor;
         ArrayList<VerseRef> traversal = new ArrayList<>();
         VerseRef expectedCursor = cursor;
         while (counted < requestedLines) {
-            if (guard++ > lines.size() * 20) throw new IllegalStateException("Eligible line planner failed to make progress");
             LineMeta line = lines.get(lineIndex);
             boolean eligibleLine = false;
             for (VerseRef ref : line.verses) {
@@ -474,7 +473,12 @@ public final class GeometryRepository {
                     last = ref;
                 }
             }
-            if (eligibleLine) counted++;
+            if (eligibleLine) {
+                counted++;
+                linesWithoutProgress = 0;
+            } else if (++linesWithoutProgress >= lines.size()) {
+                throw new IllegalStateException("Eligible line planner failed to make progress");
+            }
             lineIndex++;
             if (lineIndex >= lines.size()) lineIndex = 0;
         }

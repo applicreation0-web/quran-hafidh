@@ -48,3 +48,7 @@ Restent ouverts avant un GO technique. Résultats du parcours actif instrumenté
 ### Résultat intermédiaire du candidat 1a9c371a
 
 Sur le run 41901522697, le JVM est vert. Le smartphone a exécuté six tests. Cinq ont passé, dont le toucher du repère R030 et la suspension du sélecteur passif. Le test actif a échoué en localisant le bouton de validation par description, avant tout appel à l’action. Le test cible désormais le vrai bouton créé par la séance. Le registre R032 distingue aussi la proposition locale attribuée à Farrin du découpage global, en maintenant la suspension.
+
+### P0 reproduit sur un petit corpus acquis
+
+Le journal Android de 41902777189, job BOOX émulé 126829314114, localise le bouton absent en amont de l’interface. La Révision active de la fixture 2:47–51 échoue dans `GeometryRepository.planEligibleLines`. La limite historique de vingt tours du Mushaf s’appliquait aussi lorsqu’à chaque tour le planificateur trouvait des lignes acquises. Le garde mesure maintenant un tour complet sans aucune ligne éligible. Le test instrumenté de validation active sert de reproduction. Le changement ne touche ni les crédits ni le stockage des reçus. La nouvelle exécution doit établir le résultat Android après correction.
