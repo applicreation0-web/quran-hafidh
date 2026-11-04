@@ -2926,7 +2926,12 @@ public final class HifzPrefs {
         String weekAnchor = mondayOf(today).toString();
         if (!weekAnchor.equals(p.getString(snowballAnchorKey(family), ""))) return new JSONArray();
         try { return new JSONArray(p.getString(snowballUnitsKey(family), "[]")); }
-        catch (Exception error) { return new JSONArray(); }
+        catch (Exception error) {
+            // An invalid in-week accumulator cannot be interpreted as zero
+            // completed physical units. Block the edit instead of overwriting
+            // the missing historic queue or losing access to its receipts.
+            throw new IllegalStateException("Corrupt weekly Hifz snowball units: preserve backup",error);
+        }
     }
 
     /**
@@ -2975,7 +2980,12 @@ public final class HifzPrefs {
         String weekAnchor = mondayOf(today).toString();
         JSONArray history;
         try { history = new JSONArray(p.getString(snowballHistoryKey(family), "[]")); }
-        catch (Exception malformed) { history = new JSONArray(); }
+        catch (Exception malformed) {
+            // P0: silently resetting corrupt multi-week history loses every
+            // ungraduated older Sabqi/Itqan block at the next lesson commit.
+            // No credit, cursor or receipt may advance when provenance is damaged.
+            throw new IllegalStateException("Corrupt Hifz snowball history: preserve original",malformed);
+        }
 
         try {
             JSONObject currentWeek = null;
