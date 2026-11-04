@@ -36,7 +36,7 @@ jobs:
           bash scripts/fetch_mushaf_pages.sh
       - name: Compile actual Android sources and check icon/revision invariants
         run: |
-          gradle --no-daemon :hifz-app:compileDebugJavaWithJavac :hifz-app:testDebugUnitTest --tests com.quransafeguard.hifz.preview.CorrespondenceContextContractTest
+          gradle --no-daemon :hifz-app:compileDebugJavaWithJavac :hifz-app:testDebugUnitTest --tests com.quransafeguard.hifz.preview.CorrespondenceContextContractTest --tests com.quransafeguard.hifz.preview.GeometryEligiblePlannerBooxRegressionTest
           gradle --no-daemon :hifz-app:sourceContractTest
           node scripts/test-correspondence-gutter-density.cjs hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceGutterMarkers.java
       - uses: actions/upload-artifact@v4
@@ -78,6 +78,25 @@ jobs:
         run: |
           sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
           bash scripts/fetch_mushaf_pages.sh
+      # sdkmanager occasionally returns a truncated Google APIs image archive
+      # on GitHub-hosted runners. A boot failure is infrastructure, not Hifz.
+      - name: Verify Android 35 emulator image with bounded clean retries
+        run: |
+          set -euo pipefail
+          image_dir="$ANDROID_HOME/system-images/android-35/google_apis/x86_64"
+          for attempt in 1 2 3; do
+            if sdkmanager --install "system-images;android-35;google_apis;x86_64" --channel=0 \
+                && test -s "$image_dir/system.img" \
+                && test -s "$image_dir/source.properties"; then
+              echo "ANDROID_AVD_IMAGE_VERIFIED on attempt $attempt"
+              exit 0
+            fi
+            echo "Transient AVD image fetch failure (attempt $attempt/3), purging incomplete download" >&2
+            rm -rf "$image_dir"
+            sleep "$((attempt * 5))"
+          done
+          echo "ANDROID_AVD_IMAGE_UNAVAILABLE: fail closed, not an application regression" >&2
+          exit 1
       - name: Enable disposable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -94,13 +113,18 @@ jobs:
           script: |
             adb shell wm size ${{ matrix.size }}
             adb shell wm density ${{ matrix.density }}
+            # Always collect real screenshot evidence, even when instrumentation
+            # fails. Never convert a failed Android test into a green result.
+            set +e
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.CorrespondenceContextInstrumentedTest
+            test_status=$?
             mkdir -p hifz-app/build/android-proof
-            adb pull /data/local/tmp/haafidh-progression.png hifz-app/build/android-proof/
-            adb pull /data/local/tmp/haafidh-repetition.png hifz-app/build/android-proof/
-            adb pull /data/local/tmp/haafidh-agrandissement.png hifz-app/build/android-proof/
-            adb pull /data/local/tmp/haafidh-lecture-reperes.png hifz-app/build/android-proof/
-            adb pull /data/local/tmp/haafidh-retour-lecture.png hifz-app/build/android-proof/
+            for capture in progression repetition agrandissement lecture-reperes retour-lecture; do
+              adb pull "/data/local/tmp/haafidh-$capture.png" hifz-app/build/android-proof/ \
+                >/dev/null 2>&1 || echo "NO_VERIFIED_CAPTURE: $capture"
+            done
+            if [ "$test_status" -ne 0 ]; then exit "$test_status"; fi
+            set -e
             bash scripts/run_11711_hifz_parcours_isolated.sh "$(awk -v surface='${{ matrix.surface }}' '$1 == "-" && $2 == "surface:" { match_surface = ($3 == surface) } match_surface && $1 == "classes:" { print $2; exit }' .github/workflows/haafidh-11711-hifz-parcours-exhaustive.yml | tr -d "'")" "${{ matrix.surface }}"
       - uses: actions/upload-artifact@v4
         if: always()
