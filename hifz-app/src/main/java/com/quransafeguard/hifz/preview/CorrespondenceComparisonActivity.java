@@ -27,6 +27,24 @@ public final class CorrespondenceComparisonActivity extends Activity {
     static final String EXTRA_ID="correspondenceId";
     static final String EXTRA_ORIGIN="correspondenceOrigin";
 
+    static void chooseCase(Activity activity, VerseRef verse,
+                           java.util.function.Consumer<CorrespondenceCases.Entry> open) {
+        java.util.List<CorrespondenceCases.Entry> entries=CorrespondenceCases.forVerse(verse);
+        if(entries.isEmpty())return;
+        if(entries.size()==1){
+            open.accept(entries.get(0));
+            return;
+        }
+        String[] labels=new String[entries.size()];
+        for(int i=0;i<entries.size();i++){
+            CorrespondenceCases.Entry entry=entries.get(i);
+            labels[i]=entry.type+" · "+entry.title;
+        }
+        new AlertDialog.Builder(activity).setTitle("Correspondances")
+            .setItems(labels,(dialog,index)->open.accept(entries.get(index)))
+            .setNegativeButton("Fermer",null).show();
+    }
+
     private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
     private final MapQcfThumbnails[] pages=new MapQcfThumbnails[2];
     private final TextView[] pageLabels=new TextView[2];

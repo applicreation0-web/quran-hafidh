@@ -387,16 +387,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     @Override public void onCorrespondenceTap(VerseRef verse){
         if(!canCompareCorrespondenceVerse(verse))return;
-        java.util.List<CorrespondenceCases.Entry> entries=CorrespondenceCases.forVerse(verse);
-        if(entries.isEmpty())return;
-        // Presentation-only: no onVerseTap/checkpoint or artificial Hifz receipt.
-        clock.pause();
-        startActivity(new Intent(this,CorrespondenceComparisonActivity.class)
-            .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,verse.getSurah())
-            .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,verse.getAyah())
-            .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,entries.get(0).id)
-            .putExtra(CorrespondenceComparisonActivity.EXTRA_ORIGIN,
-                MURAJAAH_ACTIVE.equals(mode)?"Révision active":"Révision passive"));
+        CorrespondenceComparisonActivity.chooseCase(this,verse,entry->{
+            if(!canCompareCorrespondenceVerse(verse))return;
+            clock.pause();
+            startActivity(new Intent(this,CorrespondenceComparisonActivity.class)
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,verse.getSurah())
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,verse.getAyah())
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,entry.id)
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_ORIGIN,
+                    MURAJAAH_ACTIVE.equals(mode)?"Révision active":"Révision passive"));
+        });
     }
 
     private void updateDiscriminantAction(){
