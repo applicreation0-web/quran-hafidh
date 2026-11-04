@@ -495,6 +495,23 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         openSelectedDiscriminant();
     }
 
+    /** Correspondences use the same contextual entry policy as Similitudes. */
+    @Override public void onCorrespondenceTap(VerseRef verse) {
+        if(verse==null||freeActiveMask)return;
+        try {
+            GeometryRepository original=GeometryRepository.get(this);
+            if(!CorrespondenceCases.versesOnPage(page,original).contains(verse))return;
+            java.util.List<CorrespondenceCases.Entry> entries=CorrespondenceCases.forVerse(verse);
+            if(entries.isEmpty())return;
+            CorrespondenceCases.Entry entry=entries.get(0);
+            startActivity(new Intent(this,CorrespondenceComparisonActivity.class)
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,verse.getSurah())
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,verse.getAyah())
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,entry.id)
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_ORIGIN,"Lecture"));
+        } catch(RuntimeException unavailable) { /* No QCF means no inferred correspondence. */ }
+    }
+
     @Override public void onPageSwipe(int delta) { go(delta); }
     @Override public void onSurfaceTap() {
         if (isTafsirOpen()) return;
@@ -1311,8 +1328,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         page = shown;
         // The glyph SVG is never changed: add only safe outside-gutter markers.
         try {
-            AtlasDiscriminantMarkers.show(mushaf,shown,
-                freeActiveMask?null:GeometryRepository.get(this),freeActiveMask);
+            GeometryRepository original=freeActiveMask?null:GeometryRepository.get(this);
+            org.json.JSONArray simRows=freeActiveMask?new org.json.JSONArray():
+                AtlasDiscriminantMarkers.onPage(shown,original);
+            org.json.JSONArray corrRows=new org.json.JSONArray();
+            if(!freeActiveMask && original!=null)
+                for(VerseRef ref:CorrespondenceCases.versesOnPage(shown,original))
+                    corrRows.put(ref.toString());
+            CorrespondenceGutterMarkers.show(mushaf,simRows,corrRows);
         }catch(RuntimeException missingQcf){
             AtlasDiscriminantMarkers.show(mushaf,shown,null,true);
         }

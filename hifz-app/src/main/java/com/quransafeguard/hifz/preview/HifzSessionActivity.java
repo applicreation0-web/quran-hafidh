@@ -372,6 +372,32 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             AtlasDiscriminantCases.versesOnPage(currentPage).contains(verse),covered);
     }
 
+    /** Passive: only acquired traversal; Active: never before validated receipt. */
+    private boolean canCompareCorrespondenceVerse(VerseRef verse){
+        if(!isMurajaahMode()||verse==null||geometry==null)return false;
+        boolean active=MURAJAAH_ACTIVE.equals(mode);
+        boolean covered=active ? sessionCompleted && verse.equals(murajaahActualEnd)
+            : murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse);
+        return RevisionAtlasAccess.allowed(active,sessionCompleted,
+            sessionDate.toString().equals(prefs.lastActiveMurajaahDate()),
+            !CorrespondenceCases.forVerse(verse).isEmpty(),
+            CorrespondenceCases.versesOnPage(currentPage,geometry).contains(verse),covered);
+    }
+
+    @Override public void onCorrespondenceTap(VerseRef verse){
+        if(!canCompareCorrespondenceVerse(verse))return;
+        java.util.List<CorrespondenceCases.Entry> entries=CorrespondenceCases.forVerse(verse);
+        if(entries.isEmpty())return;
+        // Presentation-only: no onVerseTap/checkpoint or artificial Hifz receipt.
+        clock.pause();
+        startActivity(new Intent(this,CorrespondenceComparisonActivity.class)
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,verse.getSurah())
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,verse.getAyah())
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,entries.get(0).id)
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_ORIGIN,
+                MURAJAAH_ACTIVE.equals(mode)?"Révision active":"Révision passive"));
+    }
+
     private void updateDiscriminantAction(){
         if(discriminantButton==null)return;
         if(MURAJAAH_ACTIVE.equals(mode))discriminantVerse=validatedDiscriminantVerse;
@@ -2533,7 +2559,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             for(VerseRef verse:murajaahPlan.traversalVerses)
                 if(canCompareRevisionVerse(verse)&&atlasSeen.add(verse))
                     atlasRows.put(verse.toString());
-        AtlasDiscriminantMarkers.show(mushaf,atlasRows);
+        if(isMurajaahMode()){
+            org.json.JSONArray corrRows=new org.json.JSONArray();
+            java.util.Set<VerseRef> corrSeen=new java.util.HashSet<>();
+            if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&!sessionCompleted){
+                for(VerseRef verse:murajaahPlan.traversalVerses)
+                    if(canCompareCorrespondenceVerse(verse)&&corrSeen.add(verse))
+                        corrRows.put(verse.toString());
+            }else if(MURAJAAH_ACTIVE.equals(mode)&&sessionCompleted
+                &&canCompareCorrespondenceVerse(murajaahActualEnd)){
+                corrRows.put(murajaahActualEnd.toString());
+            }
+            CorrespondenceGutterMarkers.show(mushaf,atlasRows,corrRows);
+        }else AtlasDiscriminantMarkers.show(mushaf,atlasRows);
         updateDiscriminantAction();
         if ((isSundayFinalPageRepetition() && currentMask == 100)
                 || (POST_FINAL_RECALL.equals(mode) && currentPostFinalReview != null
