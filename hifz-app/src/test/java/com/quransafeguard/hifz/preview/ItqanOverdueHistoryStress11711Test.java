@@ -65,7 +65,10 @@ public final class ItqanOverdueHistoryStress11711Test {
             HifzPrefs restart=new HifzPrefs(disk);
             LocalDate now=day.plusDays(round);
             List<ConsolidationCycleEngine.Unit> due=restart.stabilizedConsolidationUnits(now);
-            assertEquals(round==0?30:16,due.size()); // 30 x7; then 1 continuous + 15 x7
+            // Already receipted prior-day units do not re-enter a fresh
+            // overdue-only source as a synthetic ×1 pass: 30 then 15 exact
+            // ×7 units, neither batch may be consumed by replaying the other.
+            assertEquals(round==0?30:15,due.size());
             ConsolidationCycleEngine.Cycle cycle=null;
             for(ConsolidationCycleEngine.Unit unit:due){
                 cycle=cycle==null
