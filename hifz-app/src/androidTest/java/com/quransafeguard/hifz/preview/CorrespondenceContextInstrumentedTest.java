@@ -271,11 +271,10 @@ public final class CorrespondenceContextInstrumentedTest {
                 assertNull("A bridge tap cannot reveal an unvalidated dossier",
                     comparison.waitForActivityWithTimeout(500L));
                 scenario.onActivity(a->{
-                    ArrayList<View> actions=new ArrayList<>();
-                    a.getWindow().getDecorView().findViewsWithText(actions,"Valider jusqu’ici",
-                        View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
-                    assertEquals(1,actions.size());
-                    assertTrue(actions.get(0).performClick());
+                    View validate=(View)readField(a,"murajaahFinishButton");
+                    assertNotNull("The active session must expose its validation action",validate);
+                    assertTrue(validate.isEnabled());
+                    assertTrue(validate.performClick());
                 });
                 long deadline=android.os.SystemClock.uptimeMillis()+15000L;
                 while(!date.equals(prefs.lastActiveMurajaahDate())

@@ -44,3 +44,7 @@ Le fichier `registre-documentaire-110.json` rapproche les 110 décisions stricte
 Le diff avec la PR n°8 conserve `hifz-core`, `HifzPrefs` et les classes de sauvegarde. La CI Android reprend la matrice d’essais isolés Hifz de la PR n°8 sur les deux profils, avec des données jetables. Ce contrôle du diff ne constitue pas à lui seul une non-régression runtime.
 
 Restent ouverts avant un GO technique. Résultats du parcours actif instrumenté, rotation et destruction du processus en consultation, regroupement au toucher et coexistence des deux familles sur une page, examen visuel de toutes les captures, huit interactions structurelles, ergonomie et certification individuelle. La validation E-Ink sur BOOX physique reste distincte.
+
+### Résultat intermédiaire du candidat 1a9c371a
+
+Sur le run 41901522697, le JVM est vert. Le smartphone a exécuté six tests. Cinq ont passé, dont le toucher du repère R030 et la suspension du sélecteur passif. Le test actif a échoué en localisant le bouton de validation par description, avant tout appel à l’action. Le test cible désormais le vrai bouton créé par la séance. Le registre R032 distingue aussi la proposition locale attribuée à Farrin du découpage global, en maintenant la suspension.

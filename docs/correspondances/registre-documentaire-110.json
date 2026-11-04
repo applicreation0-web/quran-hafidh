@@ -392,7 +392,7 @@
       "statutHistorique": "EN_ATTENTE_PREUVE",
       "objectionHistorique": "LECTURE_INDEPENDANTE_MANQUANTE  ;  TYPE_NON_ETABLI  ;  CENTRE_DE_SOURATE_NON_DE_LA_TRANCHE_2_142_152",
       "decisionDocumentaire": "SUSPENDRE",
-      "justification": "Le centre est proposé pour l’ensemble 2:1–286, non une structure interne de 2:142–152 ; apparier les anneaux entiers.",
+      "justification": "L’audit J3 attribue à Farrin (2010) une proposition interne à 2:142–152 en cinq membres, avec 2:147–148 au centre, distincte du découpage de la sourate entière. Vérifier les appariements, les bornes et les objections avant admission.",
       "admissionProduction": false,
       "apercuDebug": false
     },
