@@ -96,9 +96,9 @@ jobs:
             adb shell wm density ${{ matrix.density }}
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.CorrespondenceContextInstrumentedTest
             mkdir -p hifz-app/build/android-proof
-            for scenario in progression repetition agrandissement; do
-              adb pull "/data/local/tmp/haafidh-${scenario}.png" hifz-app/build/android-proof/
-            done
+            adb pull /data/local/tmp/haafidh-progression.png hifz-app/build/android-proof/
+            adb pull /data/local/tmp/haafidh-repetition.png hifz-app/build/android-proof/
+            adb pull /data/local/tmp/haafidh-agrandissement.png hifz-app/build/android-proof/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
