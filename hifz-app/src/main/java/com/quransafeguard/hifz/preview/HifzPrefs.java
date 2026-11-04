@@ -3438,10 +3438,18 @@ public final class HifzPrefs {
         }
         List<String> justEarned=earnedFromClosedEvening(completed,family);
         synchronized(V6_STATE_LOCK) {
+            LinkedHashSet<String> receipts=earnedEveningUnits(family);
+            // P0: after a capacity-limited evening closes, the read-only
+            // planner immediately exposes the NEXT outstanding batch. A stale
+            // completed Session object can otherwise be replayed against that
+            // changed snapshot and falsely mark the next batch as completed.
+            // A verified physical ×7/×10 receipt is earned exactly once.
+            // Reject the ENTIRE stale/partially conflicting validation; do
+            // not let it consume an unrelated source snapshot or create credit.
+            for(String id:justEarned)if(receipts.contains(id))return false;
             if(!snowballEveningPending(family,day))return false;
             String snapshot=exactSnowballSnapshotToValidate(family,day);
             if(snapshot.isEmpty())throw new IllegalStateException("Missing frozen evening source");
-            LinkedHashSet<String> receipts=earnedEveningUnits(family);
             receipts.addAll(justEarned);
             String lastDate=family==ConsolidationCycleEngine.Family.LEARNING
                 ?"lastLearningSnowballEveningDate":"lastStabilizationSnowballEveningDate";
