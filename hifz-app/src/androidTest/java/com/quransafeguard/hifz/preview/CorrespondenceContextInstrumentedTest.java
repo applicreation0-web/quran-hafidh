@@ -6,6 +6,10 @@ import android.view.View;
 import android.os.ParcelFileDescriptor;
 import androidx.test.platform.app.InstrumentationRegistry;
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import android.webkit.WebView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -52,9 +56,12 @@ public final class CorrespondenceContextInstrumentedTest {
                     }
                 });
                 if(rendered.get()){
+                    awaitVisualFrame(scenario,2);
                     capture(capture);
                     if("R030".equals(dossier)){
+                        AtomicInteger initialWidth=new AtomicInteger();
                         scenario.onActivity(a->{
+                            initialWidth.set(a.qcfPagesForTest()[0].getWidth());
                             ArrayList<View> buttons=new ArrayList<>();
                             a.getWindow().getDecorView().findViewsWithText(buttons,
                                 "Agrandir le Mushaf A",View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
@@ -62,6 +69,9 @@ public final class CorrespondenceContextInstrumentedTest {
                             assertTrue(buttons.get(0).performClick());
                             assertEquals(View.GONE,((View)a.qcfPagesForTest()[1].getParent()).getVisibility());
                         });
+                        awaitVisualFrame(scenario,1);
+                        scenario.onActivity(a->assertTrue("The selected QCF pane must gain width",
+                            a.qcfPagesForTest()[0].getWidth()>initialWidth.get()));
                         capture("agrandissement");
                     }
                     return;
@@ -71,6 +81,24 @@ public final class CorrespondenceContextInstrumentedTest {
             fail("Both authentic KFQC pages failed to render");
         }
     }
+    private void awaitVisualFrame(ActivityScenario<CorrespondenceComparisonActivity> scenario,
+                                  int visiblePanes)throws Exception {
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        CountDownLatch frames=new CountDownLatch(visiblePanes);
+        scenario.onActivity(a->{
+            MapQcfThumbnails[] panes=a.qcfPagesForTest();
+            for(int side=0;side<visiblePanes;side++){
+                MapQcfThumbnails pane=panes[side];
+                pane.postVisualStateCallback(side,new WebView.VisualStateCallback(){
+                    @Override public void onComplete(long requestId){
+                        pane.postOnAnimation(()->pane.postOnAnimation(frames::countDown));
+                    }
+                });
+            }
+        });
+        assertTrue("QCF WebViews must submit the captured frame",frames.await(15,TimeUnit.SECONDS));
+    }
+
     private void capture(String name)throws Exception {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
         try(ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation()
