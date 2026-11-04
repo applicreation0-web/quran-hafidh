@@ -58,6 +58,12 @@ jobs:
           first = ui_candidate.index(block_start)
           last = ui_candidate.index(block_end, first)
           ui_candidate = ui_candidate[:first] + ui_candidate[last:]
+          shortcut_start = '        // A previously OPEN ×7 evening outranks starting a NEW Sunday finale.'
+          shortcut_end = '        // The maintenance tile must lead to the hizb ×3, not a non-existent'
+          assert ui_candidate.count(shortcut_start) == 1 and ui_candidate.count(shortcut_end) == 1
+          begin = ui_candidate.index(shortcut_start)
+          end = ui_candidate.index(shortcut_end, begin)
+          ui_candidate = ui_candidate[:begin] + ui_candidate[end:]
           new_label = ('                    else if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(item.mode))'
                        'names.add("Consolidation Itqān");' + "\n")
           assert ui_candidate.count(new_label) == 1
