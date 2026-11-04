@@ -124,4 +124,5 @@ jobs:
             hifz-app/build/reports/androidTests/
             hifz-app/build/android-proof/
             hifz-app/build/parcours-android-logs/
+            hifz-app/build/boox-audit/*.log
           retention-days: 14

@@ -50,8 +50,16 @@ if [[ -z "$classes" || "$classes" != com.quransafeguard.hifz.preview.* ]]; then
   exit 3
 fi
 adb logcat -d -s HaafidhGutterTouch > hifz-app/build/android-proof/gutter-touch.log || true
+# The two process-death fixtures need separate instrumentations and a real
+# external force-stop. Running the whole class provides no such boundary.
+classes="$(printf '%s\n' "$classes" | tr ',' '\n' |
+  sed '/\.ProcessDeathPersistenceInstrumentedTest$/d; /\.SundayFinalProcessDeathInstrumentedTest$/d' |
+  paste -sd, -)"
 audit_status=0
 bash scripts/run_11711_hifz_parcours_isolated.sh "$classes" "$surface" || audit_status=$?
+death_status=0
+bash scripts/run_1175_process_death_audit.sh || death_status=$?
 if (( test_status != 0 )); then exit "$test_status"; fi
 if (( audit_status != 0 )); then exit "$audit_status"; fi
+if (( death_status != 0 )); then exit "$death_status"; fi
 exit "$capture_status"
