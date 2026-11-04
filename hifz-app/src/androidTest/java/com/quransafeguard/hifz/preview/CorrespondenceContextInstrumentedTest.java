@@ -239,6 +239,86 @@ public final class CorrespondenceContextInstrumentedTest {
         }
     }
 
+    @Test public void activeCorrespondenceRequiresPersistedValidationAndSurvivesRecreation()throws Exception{
+        Context c=ApplicationProvider.getApplicationContext();
+        new HifzPrefs(c);
+        org.json.JSONObject original=HifzBackup.export(c);
+        android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+        android.app.Instrumentation.ActivityMonitor comparison=
+            ins.addMonitor(CorrespondenceComparisonActivity.class.getName(),null,false);
+        VerseRef source=new VerseRef(2,47);
+        GeometryRepository geometry=GeometryRepository.get(c);
+        String date="2026-10-29";
+        try{
+            assertTrue(c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE)
+                .edit().clear().commit());
+            HifzPrefs prefs=new HifzPrefs(c);
+            assertTrue(prefs.setV6AcquiredRanges(java.util.Collections.singletonList(
+                new com.quransafeguard.hifz.core.VerseRange(source,new VerseRef(2,51))),geometry));
+            prefs.setActiveMurajaahCursor(source);
+            prefs.setActiveMurajaahPage(geometry.pageForVerse(source));
+            try(ActivityScenario<HifzSessionActivity> scenario=ActivityScenario.launch(
+                    new Intent(c,HifzSessionActivity.class)
+                        .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE)
+                        .putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,date))){
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Active Correspondances");
+                scenario.onActivity(a->{
+                    a.onVerseTap(source);
+                    a.onCorrespondenceTap(source);
+                    assertEquals(View.GONE,((View)readField(a,"validatedCorrespondenceButton")).getVisibility());
+                    assertEquals("",prefs.lastActiveMurajaahDate());
+                });
+                assertNull("A bridge tap cannot reveal an unvalidated dossier",
+                    comparison.waitForActivityWithTimeout(500L));
+                scenario.onActivity(a->{
+                    ArrayList<View> actions=new ArrayList<>();
+                    a.getWindow().getDecorView().findViewsWithText(actions,"Valider jusqu’ici",
+                        View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
+                    assertEquals(1,actions.size());
+                    assertTrue(actions.get(0).performClick());
+                });
+                long deadline=android.os.SystemClock.uptimeMillis()+15000L;
+                while(!date.equals(prefs.lastActiveMurajaahDate())
+                      &&android.os.SystemClock.uptimeMillis()<deadline){
+                    EmulatorLauncherAnr.requireApplicationForeground(ins);
+                    android.view.accessibility.AccessibilityNodeInfo root=
+                        ins.getUiAutomation().getRootInActiveWindow();
+                    if(root!=null){
+                        for(android.view.accessibility.AccessibilityNodeInfo node:
+                                root.findAccessibilityNodeInfosByText("Valider quand même")){
+                            if(node.isVisibleToUser()&&node.isEnabled()
+                               &&"Valider quand même".equalsIgnoreCase(String.valueOf(node.getText())))
+                                node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK);
+                        }
+                    }
+                    Thread.sleep(100L);
+                }
+                assertEquals(date,prefs.lastActiveMurajaahDate());
+                scenario.onActivity(a->assertEquals(View.VISIBLE,
+                    ((View)readField(a,"validatedCorrespondenceButton")).getVisibility()));
+                scenario.recreate();
+                scenario.onActivity(a->{
+                    assertEquals(1,((Integer)readField(a,"currentPage")).intValue());
+                    View button=(View)readField(a,"validatedCorrespondenceButton");
+                    assertEquals(View.VISIBLE,button.getVisibility());
+                    assertTrue(button.performClick());
+                });
+                android.app.Activity opened=ins.waitForMonitorWithTimeout(comparison,20000L);
+                assertNotNull(opened);
+                ins.runOnMainSync(opened::finish);
+                ins.waitForIdleSync();
+                scenario.onActivity(a->{
+                    assertEquals(1,((Integer)readField(a,"currentPage")).intValue());
+                    assertFalse(clock(a).isRunning());
+                    assertEquals(date,prefs.lastActiveMurajaahDate());
+                });
+            }
+        }finally{
+            ins.removeMonitor(comparison);
+            HifzBackup.restore(c,original);
+        }
+    }
+
     private static Object readField(Object activity,String name){
         try{
             java.lang.reflect.Field field=activity.getClass().getDeclaredField(name);

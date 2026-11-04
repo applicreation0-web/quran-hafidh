@@ -417,7 +417,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean wasRunning=clock.isRunning()||correspondenceSelectorClockWasRunning;
         correspondenceSelectorVerse=verse;
         correspondenceSelectorClockWasRunning=wasRunning;
-        clock.pause();
+        long elapsed=clock.pause();
+        if(MURAJAAH.equals(mode)){
+            prefs.setElapsedFor(mode,elapsed);
+            checkpointMurajaah(elapsed);
+        }
         correspondenceSelector=CorrespondenceComparisonActivity.chooseCase(this,entries,entry->{
             if(!sessionResumed||!canCompareCorrespondenceVerse(verse))return false;
             correspondenceSelectorVerse=null;
