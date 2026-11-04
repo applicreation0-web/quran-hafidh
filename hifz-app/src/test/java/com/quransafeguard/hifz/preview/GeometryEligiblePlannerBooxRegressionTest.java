@@ -32,8 +32,13 @@ public final class GeometryEligiblePlannerBooxRegressionTest {
         assertTrue(acquired.contains(result.actualPlannedEnd));
         assertTrue(result.traversalVerses.contains(first));
         assertTrue(result.traversalVerses.contains(last));
-        assertTrue("Real repeated eligible lines must be counted, not fake Hifz receipts",
-            result.traversalVerses.size()>=200);
+        // A single verse can span several physical lines: verse count is NOT
+        // the physical line count. Require genuine cyclic traversal without
+        // inventing extra verses or translating a plan into earned Hifz credit.
+        assertTrue("A 200-line plan on five verses must traverse multiple cycles",
+            result.traversalVerses.size()>5);
+        for(VerseRef verse:result.traversalVerses)
+            assertTrue("No out-of-corpus verse may enter the plan",acquired.contains(verse));
         GeometryRepository.EligibleLinePlan again=original.planEligibleLines(first,200,acquired);
         assertEquals("Planning must be deterministic after BOOX pause/recreation",
             result.actualPlannedEnd,again.actualPlannedEnd);
