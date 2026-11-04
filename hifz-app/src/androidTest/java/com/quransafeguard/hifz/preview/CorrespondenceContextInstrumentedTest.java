@@ -3,6 +3,9 @@ package com.quransafeguard.hifz.preview;
 import android.content.Context;
 import android.content.Intent;
 import android.view.View;
+import android.os.ParcelFileDescriptor;
+import androidx.test.platform.app.InstrumentationRegistry;
+import java.util.ArrayList;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -13,13 +16,21 @@ import static org.junit.Assert.*;
 /** Actual KFQC paired SVG and window layout, phone + BOOX portrait emulator. */
 public final class CorrespondenceContextInstrumentedTest {
     @Test public void authenticDoubleQcfAndResponsiveTafsir()throws Exception {
+        verifyPair(12,4,"R037","progression");
+    }
+
+    @Test public void repetitionAndIndividualEnlargement()throws Exception {
+        verifyPair(2,47,"R030","repetition");
+    }
+
+    private void verifyPair(int surah,int ayah,String dossier,String capture)throws Exception {
         assertTrue("Isolated workflow must explicitly enable editorial pilot",
             BuildConfig.CORRESPONDENCES_EDITORIAL_PREVIEW);
         Context context=ApplicationProvider.getApplicationContext();
         Intent intent=new Intent(context,CorrespondenceComparisonActivity.class)
-            .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,12)
-            .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,4)
-            .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,"R037")
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,surah)
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,ayah)
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,dossier)
             .putExtra(CorrespondenceComparisonActivity.EXTRA_ORIGIN,"Lecture");
         try(ActivityScenario<CorrespondenceComparisonActivity> scenario=ActivityScenario.launch(intent)){
             AtomicBoolean rendered=new AtomicBoolean();
@@ -40,12 +51,36 @@ public final class CorrespondenceContextInstrumentedTest {
                         if(boox)assertTrue("BOOX portrait opens Jalalayn beneath original QCF",a.booxTafsirOpenForTest());
                     }
                 });
-                if(rendered.get())return;
+                if(rendered.get()){
+                    capture(capture);
+                    if("R030".equals(dossier)){
+                        scenario.onActivity(a->{
+                            ArrayList<View> buttons=new ArrayList<>();
+                            a.getWindow().getDecorView().findViewsWithText(buttons,
+                                "Agrandir le Mushaf A",View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
+                            assertEquals(1,buttons.size());
+                            assertTrue(buttons.get(0).performClick());
+                            assertEquals(View.GONE,((View)a.qcfPagesForTest()[1].getParent()).getVisibility());
+                        });
+                        capture("agrandissement");
+                    }
+                    return;
+                }
                 Thread.sleep(250L);
             }
             fail("Both authentic KFQC pages failed to render");
         }
     }
+    private void capture(String name)throws Exception {
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        try(ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation()
+                .executeShellCommand("screencap -p /data/local/tmp/haafidh-"+name+".png");
+            java.io.InputStream output=new ParcelFileDescriptor.AutoCloseInputStream(
+                ParcelFileDescriptor.dup(fd.getFileDescriptor()))){
+            while(output.read()!=-1){ /* Wait for the emulator command to finish. */ }
+        }
+    }
+
     @Test public void originalVerseAnchorsAreNotGuessed(){
         Context c=ApplicationProvider.getApplicationContext();
         GeometryRepository geometry=GeometryRepository.get(c);

@@ -38,6 +38,7 @@ jobs:
         run: |
           gradle --no-daemon :hifz-app:compileDebugJavaWithJavac :hifz-app:testDebugUnitTest --tests com.quransafeguard.hifz.preview.CorrespondenceContextContractTest
           gradle --no-daemon :hifz-app:sourceContractTest
+          node scripts/test-correspondence-gutter-density.cjs hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceGutterMarkers.java
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -94,6 +95,10 @@ jobs:
             adb shell wm size ${{ matrix.size }}
             adb shell wm density ${{ matrix.density }}
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.CorrespondenceContextInstrumentedTest
+            mkdir -p hifz-app/build/android-proof
+            for scenario in progression repetition agrandissement; do
+              adb pull "/data/local/tmp/haafidh-${scenario}.png" hifz-app/build/android-proof/
+            done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -101,4 +106,5 @@ jobs:
           path: |
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
+            hifz-app/build/android-proof/
           retention-days: 14
