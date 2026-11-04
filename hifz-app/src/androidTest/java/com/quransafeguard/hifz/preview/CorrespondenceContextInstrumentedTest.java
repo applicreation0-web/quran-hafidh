@@ -165,13 +165,62 @@ public final class CorrespondenceContextInstrumentedTest {
     }
 
     private void capture(String name)throws Exception {
-        EmulatorLauncherAnr.requireApplicationForeground(InstrumentationRegistry.getInstrumentation());
-        try(ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation()
-                .executeShellCommand("screencap -p /data/local/tmp/haafidh-"+name+".png");
-            java.io.InputStream output=new ParcelFileDescriptor.AutoCloseInputStream(
-                ParcelFileDescriptor.dup(fd.getFileDescriptor()))){
-            while(output.read()!=-1){ /* Wait for the emulator command to finish. */ }
+        android.app.Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        EmulatorLauncherAnr.requireApplicationForeground(instrumentation);
+        String path="/data/local/tmp/haafidh-"+name+".png";
+        long deadline=android.os.SystemClock.uptimeMillis()+15000L;
+        do{
+            try(java.io.InputStream output=shellOutput("screencap -p "+path)){
+                while(output.read()!=-1){ /* Wait for SurfaceFlinger capture to finish. */ }
+            }
+            try(java.io.InputStream input=shellOutput("cat "+path)){
+                android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeStream(input);
+                if(bitmap!=null){
+                    try{
+                        if(hasExpectedFolioInk(name,bitmap))return;
+                    }finally{bitmap.recycle();}
+                }
+            }
+            android.os.SystemClock.sleep(220L);
+        }while(android.os.SystemClock.uptimeMillis()<deadline);
+        fail("Original Android PNG did not contain the expected painted QCF folios: "+name);
+    }
+
+    private java.io.InputStream shellOutput(String command){
+        return new ParcelFileDescriptor.AutoCloseInputStream(
+            InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command));
+    }
+
+    private boolean hasExpectedFolioInk(String name,android.graphics.Bitmap bitmap){
+        switch(name){
+            case "lecture-reperes":
+            case "retour-lecture":
+                // A real reader folio has continuous Arabic across the screen centre.
+                return hasFolioInk(bitmap,.48f,.52f,40);
+            case "agrandissement":
+                // A stale half-width folio on the left cannot satisfy the wider crop.
+                return hasFolioInk(bitmap,.27f,.42f,60)&&hasFolioInk(bitmap,.58f,.72f,60);
+            default:
+                // Reject an empty pane or one single "Chargement du Mushaf QCF" label.
+                return hasFolioInk(bitmap,.10f,.40f,100)&&hasFolioInk(bitmap,.60f,.90f,100);
         }
+    }
+
+    private boolean hasFolioInk(android.graphics.Bitmap bitmap,float left,float right,int minimum){
+        int width=bitmap.getWidth(),height=bitmap.getHeight();
+        for(int band=0;band<2;band++){
+            int top=Math.round(height*(.34f+band*.115f));
+            int bottom=Math.round(height*(.455f+band*.115f));
+            int dark=0;
+            for(int y=top;y<bottom;y+=3)
+                for(int x=Math.round(width*left);x<Math.round(width*right);x+=3){
+                    int pixel=bitmap.getPixel(x,y);
+                    if(android.graphics.Color.red(pixel)<125&&android.graphics.Color.green(pixel)<125
+                        &&android.graphics.Color.blue(pixel)<125)dark++;
+                }
+            if(dark<minimum)return false;
+        }
+        return true;
     }
 
     private void awaitReaderFrame(ActivityScenario<StudyReaderActivity> scenario)throws Exception {
