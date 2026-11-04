@@ -60,7 +60,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private GeometryRepository geometry;
     private TafsirRepository tafsir;
     private VerseRef origin;
-    private LinearLayout root,folioRow,tafsirPanel,pairHeader;
+    private LinearLayout root,folioRow,tafsirPanel,tafsirHead,pairHeader;
     private final LinearLayout[] folioColumns=new LinearLayout[2];
     private TextView relationLine,tafsirHeading;
     private boolean booxPortrait,tafsirOpen,expanded;
@@ -160,7 +160,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         normalFolioHeightDp=paperHeight;
         expandedFolioHeightDp=Math.max(paperHeight,Math.min(
             Math.round((width-16)*550f/345f),
-            Math.max(195,height-(booxPortrait?340:landscape?125:165))));
+            Math.max(195,height-(landscape?125:booxPortrait?140:150))));
         for(int side=0;side<2;side++){
             final int pane=side;
             LinearLayout column=Ui.column(this);
@@ -195,7 +195,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         content.addView(folioRow);
         root.addView(middle,new LinearLayout.LayoutParams(-1,0,1));
 
-        LinearLayout tafsirHead=Ui.row(this);tafsirHead.setGravity(Gravity.CENTER_VERTICAL);
+        tafsirHead=Ui.row(this);tafsirHead.setGravity(Gravity.CENTER_VERTICAL);
         tafsirHeading=caption("Tafsīr al-Jalālayn",14,true);
         tafsirHeading.setPadding(dp(8),0,0,0);
         tafsirHead.addView(tafsirHeading,new LinearLayout.LayoutParams(0,dp(42),1));
@@ -224,7 +224,8 @@ public final class CorrespondenceComparisonActivity extends Activity {
         updateExpanded();
     }
     private void setTafsirOpen(boolean value){
-        tafsirOpen=value;tafsirPanel.setVisibility(value?View.VISIBLE:View.GONE);
+        tafsirOpen=value;
+        if(enlarged<0)tafsirPanel.setVisibility(value?View.VISIBLE:View.GONE);
         if(value)for(int i=0;i<2;i++)loadTafsir(i,selectedVerses[i]);
     }
     private void toggleEnlarge(int pane){
@@ -232,12 +233,22 @@ public final class CorrespondenceComparisonActivity extends Activity {
         updateExpanded();
     }
     private void updateExpanded(){
+        // Focus is a real QCF enlargement, not merely hiding the second column:
+        // reclaim the Tafsir's reserved height but restore its prior state on exit.
+        boolean focus=enlarged>=0;
+        if(tafsirHead!=null)tafsirHead.setVisibility(focus?View.GONE:View.VISIBLE);
+        if(tafsirPanel!=null)tafsirPanel.setVisibility(focus?View.GONE:tafsirOpen?View.VISIBLE:View.GONE);
         for(int i=0;i<2;i++)if(folioColumns[i]!=null){
-            folioColumns[i].setVisibility(enlarged<0||enlarged==i?View.VISIBLE:View.GONE);
+            folioColumns[i].setVisibility(!focus||enlarged==i?View.VISIBLE:View.GONE);
             if(pages[i]!=null&&pages[i].getLayoutParams()!=null){
                 android.view.ViewGroup.LayoutParams params=pages[i].getLayoutParams();
-                params.height=dp(enlarged==i?expandedFolioHeightDp:normalFolioHeightDp);
+                params.height=dp(focus&&enlarged==i?expandedFolioHeightDp:normalFolioHeightDp);
                 pages[i].setLayoutParams(params);
+                if(!focus||enlarged==i){
+                    final MapQcfThumbnails page=pages[i];
+                    page.post(()->page.evaluateJavascript(
+                        "if(typeof fit==='function'){fit();requestAnimationFrame(fit);}",null));
+                }
             }
         }
     }

@@ -70,8 +70,28 @@ public final class CorrespondenceContextInstrumentedTest {
                             assertEquals(View.GONE,((View)a.qcfPagesForTest()[1].getParent()).getVisibility());
                         });
                         awaitVisualFrame(scenario,1);
-                        scenario.onActivity(a->assertTrue("The selected QCF pane must gain width",
-                            a.qcfPagesForTest()[0].getWidth()>initialWidth.get()));
+                        scenario.onActivity(a->{
+                            assertTrue("The selected QCF WebView must gain width",
+                                a.qcfPagesForTest()[0].getWidth()>initialWidth.get());
+                            assertFalse("Focus must reclaim the Tafsir's unused height",
+                                a.booxTafsirOpenForTest());
+                        });
+                        // The old BOOX screenshot only expanded the container,
+                        // leaving the Arabic itself at half-page width. Measure the
+                        // actual imported QCF SVG after a real layout frame.
+                        final java.util.concurrent.atomic.AtomicInteger renderedInk=
+                            new java.util.concurrent.atomic.AtomicInteger();
+                        final CountDownLatch svgMeasured=new CountDownLatch(1);
+                        scenario.onActivity(a->a.qcfPagesForTest()[0].evaluateJavascript(
+                            "(function(){var p=document.querySelector('.paper svg');return p?Math.round(p.getBoundingClientRect().width):0;})()",
+                            value->{
+                                try{renderedInk.set(Integer.parseInt(value));}
+                                catch(NumberFormatException ignored){}
+                                svgMeasured.countDown();
+                            }));
+                        assertTrue(svgMeasured.await(10,TimeUnit.SECONDS));
+                        assertTrue("BOOX focus must enlarge the ORIGINAL Arabic SVG, not just its container: "+renderedInk.get(),
+                            renderedInk.get()>0);
                         capture("agrandissement");
                     }
                     return;
