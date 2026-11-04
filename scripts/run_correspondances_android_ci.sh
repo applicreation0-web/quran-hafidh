@@ -32,7 +32,7 @@ else
 fi
 
 capture_status=0
-for capture in progression repetition agrandissement lecture-reperes retour-lecture; do
+for capture in progression repetition agrandissement lecture-reperes tafsir retour-lecture; do
   if ! adb pull "/data/local/tmp/haafidh-$capture.png" hifz-app/build/android-proof/ >/dev/null 2>&1; then
     echo "NO_VERIFIED_CAPTURE: $capture"
     capture_status=1

@@ -58,6 +58,25 @@ public final class CorrespondenceContextInstrumentedTest {
                 if(rendered.get()){
                     awaitVisualFrame(scenario,2);
                     capture(capture);
+                    if("R037".equals(dossier)){
+                        scenario.onActivity(a->{
+                            if(!a.booxTafsirOpenForTest()){
+                                ArrayList<View> buttons=new ArrayList<>();
+                                a.getWindow().getDecorView().findViewsWithText(buttons,
+                                    "Afficher ou masquer le Tafsīr",View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
+                                assertEquals(1,buttons.size());
+                                assertTrue(buttons.get(0).performClick());
+                            }
+                        });
+                        AtomicBoolean commentary=new AtomicBoolean();
+                        for(int attempt=0;attempt<60&&!commentary.get();attempt++){
+                            scenario.onActivity(a->commentary.set(a.visibleTafsirReadyForTest()));
+                            if(!commentary.get())android.os.SystemClock.sleep(100L);
+                        }
+                        assertTrue("Jalalayn must finish loading before capture",commentary.get());
+                        awaitVisualFrame(scenario,2);
+                        capture("tafsir");
+                    }
                     if("R030".equals(dossier)){
                         AtomicInteger initialWidth=new AtomicInteger();
                         AtomicInteger initialInkWidth=new AtomicInteger();
@@ -155,6 +174,25 @@ public final class CorrespondenceContextInstrumentedTest {
         }
     }
 
+    private void awaitReaderFrame(ActivityScenario<StudyReaderActivity> scenario)throws Exception {
+        AtomicBoolean focused=new AtomicBoolean();
+        for(int attempt=0;attempt<50&&!focused.get();attempt++){
+            scenario.onActivity(a->focused.set(a.hasWindowFocus()));
+            if(!focused.get())android.os.SystemClock.sleep(100L);
+        }
+        assertTrue("Lecture must own the focused window before the capture",focused.get());
+        CountDownLatch drawn=new CountDownLatch(1);
+        scenario.onActivity(a->{
+            MushafView mushaf=(MushafView)readField(a,"mushaf");
+            mushaf.postVisualStateCallback(0,new WebView.VisualStateCallback(){
+                @Override public void onComplete(long id){
+                    mushaf.postOnAnimation(()->mushaf.postOnAnimation(drawn::countDown));
+                }
+            });
+        });
+        assertTrue("Lecture QCF frame must be drawable",drawn.await(10,TimeUnit.SECONDS));
+    }
+
     @Test public void readerGutterOpensCorrespondenceAndReturnsToSameFolio()throws Exception{
         Context c=ApplicationProvider.getApplicationContext();
         int page=GeometryRepository.get(c).pageForVerse(new VerseRef(2,47));
@@ -164,6 +202,7 @@ public final class CorrespondenceContextInstrumentedTest {
         try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(
                 new Intent(c,StudyReaderActivity.class).putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page))){
             HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Lecture · repère R030");
+            awaitReaderFrame(scenario);
             capture("lecture-reperes");
             java.util.concurrent.atomic.AtomicReference<float[]> point=new java.util.concurrent.atomic.AtomicReference<>();
             java.util.concurrent.atomic.AtomicReference<String> diagnostic=new java.util.concurrent.atomic.AtomicReference<>();
@@ -220,6 +259,7 @@ public final class CorrespondenceContextInstrumentedTest {
             ins.runOnMainSync(opened::finish);
             ins.waitForIdleSync();
             scenario.onActivity(a->assertEquals(page,((Integer)readField(a,"page")).intValue()));
+            awaitReaderFrame(scenario);
             capture("retour-lecture");
         }finally{ins.removeMonitor(monitor);}
     }

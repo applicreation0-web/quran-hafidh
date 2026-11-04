@@ -157,6 +157,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         middle.setFillViewport(false);
         middle.setVerticalScrollBarEnabled(false);
         LinearLayout content=Ui.column(this);
+        content.setPadding(dp(4),0,dp(4),0);
         middle.addView(content,new ScrollView.LayoutParams(-1,-2));
         folioRow=Ui.row(this);folioRow.setGravity(Gravity.TOP);
         int halfWidth=Math.max(130,(width-18)/2);
@@ -170,13 +171,15 @@ public final class CorrespondenceComparisonActivity extends Activity {
         for(int side=0;side<2;side++){
             final int pane=side;
             LinearLayout column=Ui.column(this);
+            column.setPadding(0,0,0,0);
             folioColumns[side]=column;
-            LinearLayout bar=Ui.row(this);bar.setGravity(Gravity.CENTER_VERTICAL);
-            TextView loc=caption("",12,true);loc.setGravity(Gravity.CENTER_VERTICAL);
+            LinearLayout bar=Ui.row(this);bar.setGravity(Gravity.CENTER);
+            TextView loc=caption("",12,true);loc.setGravity(Gravity.CENTER);
+            loc.setSingleLine(true);
+            column.addView(loc,new LinearLayout.LayoutParams(-1,dp(24)));
             pageLabels[side]=loc;
             bar.addView(action("‹","Page précédente "+(side==0?"A":"B"),()->selectPage(pane,shownPages[pane]-1)),
                 new LinearLayout.LayoutParams(dp(44),dp(44)));
-            bar.addView(loc,new LinearLayout.LayoutParams(0,dp(44),1));
             bar.addView(action("›","Page suivante "+(side==0?"A":"B"),()->selectPage(pane,shownPages[pane]+1)),
                 new LinearLayout.LayoutParams(dp(44),dp(44)));
             bar.addView(action("⛶","Agrandir le Mushaf "+(side==0?"A":"B"),()->toggleEnlarge(pane)),
