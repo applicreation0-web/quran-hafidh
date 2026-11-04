@@ -369,6 +369,9 @@ android {
 
     buildTypes {
         getByName("debug") {
+            // Non-production editorial preview; never changes a signed private upgrade.
+            buildConfigField("boolean", "CORRESPONDENCES_EDITORIAL_PREVIEW",
+                (System.getenv("HAAFIDH_CORRESPONDENCES_PILOT") == "1").toString())
             buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", private114.toString())
             // Private BOOX preview: display user-approved wording without granting source/rights certification.
             buildConfigField("boolean", "ATLAS_PRIVATE_EDITORIAL_PREVIEW", private114.toString())
@@ -379,6 +382,7 @@ android {
             versionNameSuffix = if (boox1175Preview) "-BOOX-HOME-PRIVATE-DEBUG" else if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
+            buildConfigField("boolean", "CORRESPONDENCES_EDITORIAL_PREVIEW", "false")
             // Private Atlas content is enabled only by an explicit local build flag.
             // The official package identity and launcher label remain unchanged.
             buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", privateReleaseUpgrade.toString())
