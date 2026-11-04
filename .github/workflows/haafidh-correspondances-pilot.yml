@@ -110,22 +110,9 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: |
-            adb shell wm size ${{ matrix.size }}
-            adb shell wm density ${{ matrix.density }}
-            # Always collect real screenshot evidence, even when instrumentation
-            # fails. Never convert a failed Android test into a green result.
-            set +e
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.CorrespondenceContextInstrumentedTest
-            test_status=$?
-            mkdir -p hifz-app/build/android-proof
-            for capture in progression repetition agrandissement lecture-reperes retour-lecture; do
-              adb pull "/data/local/tmp/haafidh-$capture.png" hifz-app/build/android-proof/ \
-                >/dev/null 2>&1 || echo "NO_VERIFIED_CAPTURE: $capture"
-            done
-            if [ "$test_status" -ne 0 ]; then exit "$test_status"; fi
-            set -e
-            bash scripts/run_11711_hifz_parcours_isolated.sh "$(awk -v surface='${{ matrix.surface }}' '$1 == "-" && $2 == "surface:" { match_surface = ($3 == surface) } match_surface && $1 == "classes:" { print $2; exit }' .github/workflows/haafidh-11711-hifz-parcours-exhaustive.yml | tr -d "'")" "${{ matrix.surface }}"
+          # The runner executes each script line in a fresh sh -c; keep the
+          # compound shell logic in a real bash file, not inline YAML.
+          script: bash scripts/run_correspondances_android_ci.sh '${{ matrix.size }}' '${{ matrix.density }}' '${{ matrix.surface }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
