@@ -3456,7 +3456,8 @@ public final class HifzPrefs {
             // A verified physical ×7/×10 receipt is earned exactly once.
             // Reject the ENTIRE stale/partially conflicting validation; do
             // not let it consume an unrelated source snapshot or create credit.
-            for(String id:justEarned)if(receipts.contains(id))return false;
+            for(String physicalReceiptId:justEarned)
+                if(receipts.contains(physicalReceiptId))return false;
             if(!snowballEveningPending(family,day))return false;
             String snapshot=exactSnowballSnapshotToValidate(family,day);
             if(snapshot.isEmpty())throw new IllegalStateException("Missing frozen evening source");
