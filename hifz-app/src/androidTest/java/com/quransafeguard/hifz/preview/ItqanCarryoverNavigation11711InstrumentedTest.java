@@ -35,6 +35,35 @@ public final class ItqanCarryoverNavigation11711InstrumentedTest {
         HifzClock.resetClockForTests();
     }
 
+    @Test public void sundayShortcutPrefersFrozenPreviousEveningOverAnUnstartedFinal() throws Exception {
+        HifzClock.setClockForTests(Clock.fixed(
+            Instant.parse("2026-11-08T09:00:00Z"),ZoneId.of("UTC")));
+        HifzPrefs prefs=new HifzPrefs(context);
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        String id=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+            Arrays.asList("525:8","525:9","525:10","525:11","525:12","525:13","525:14"));
+        ConsolidationCycleEngine.Cycle cycle=engine.startCycle(
+            "stabilization-2026-11-07",ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit(id,
+                ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        assertTrue(prefs.persistConsolidationSession(
+            engine.openSession(cycle,"frozen-saturday-evening")));
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(activity->{
+                try {
+                    Method m=MainActivity.class.getDeclaredMethod("consolidationQuickAccessMode");
+                    m.setAccessible(true);
+                    assertEquals("The tile must reopen Saturday ×7, not an unearned Sunday final",
+                        HifzSessionActivity.RECENT_SABQI_REVIEW,m.invoke(activity));
+                } catch(Exception error){throw new AssertionError(error);}
+            });
+        }
+        assertEquals("No credits from looking at navigation","[]",
+            disk.getString("v6AcquiredCreditLineIds","[]"));
+        assertEquals("2026-11-07",new HifzPrefs(context).unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"));
+    }
+
     @Test public void tuesdayUnfinishedItqanMustBeShownOnWednesdayTodayAndKeepFrozenDate() throws Exception {
         HifzPrefs prefs=new HifzPrefs(context);
         ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
