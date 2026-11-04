@@ -43,8 +43,12 @@ public final class CorrespondenceContextContractTest {
         assertTrue(glyph.contains("M21,18a3,3"));
         assertTrue(gutter.contains("M13 6h3a2 2 0 0 1 2 2v7"));
         assertTrue(gutter.contains("M11 18H8a2 2 0 0 1-2-2V9"));
-        assertTrue(gutter.contains("M10 13a5"));
-        assertTrue(similarity.contains("M10,13"));
+        assertTrue(gutter.contains("M9 17H7A5 5 0 0 1 7 7h2"));
+        assertTrue(gutter.contains("M15 7h2a5 5 0 1 1 0 10h-2"));
+        assertTrue(gutter.contains("stroke-width=\\\"2\\\""));
+        assertTrue(similarity.contains("M9 17H7A5 5 0 0 1 7 7h2 M15 7h2a5 5 0 1 1 0 10h-2 M8 12H16"));
+        assertTrue(similarity.contains("android:strokeWidth=\"2\""));
+        assertTrue(glyph.contains("android:strokeWidth=\"2\""));
         assertFalse(glyph.contains("M10,13"));
     }
     @Test public void bothMarkersStayOutsideTheAuthenticQcf()throws Exception{

@@ -4,12 +4,7 @@
     android:viewportWidth="24" android:viewportHeight="24">
     <!-- Two visibly interlocking chain links; identical to the contextual QCF gutter icon. -->
     <path android:fillColor="@android:color/transparent"
-        android:strokeColor="#121211" android:strokeWidth="2.4"
+        android:strokeColor="#121211" android:strokeWidth="2"
         android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M10,13 C12,15 15.1,15.6 17.54,13.54
-          L20.54,10.54 C22.49,8.59 22.49,5.41 20.54,3.46
-          C18.59,1.51 15.41,1.51 13.46,3.46 L11.74,5.17
-          M14,11 C12,9 8.9,8.4 6.46,10.46
-          L3.46,13.46 C1.51,15.41 1.51,18.59 3.46,20.54
-          C5.41,22.49 8.59,22.49 10.54,20.54 L12.25,18.83"/>
+        android:pathData="M9 17H7A5 5 0 0 1 7 7h2 M15 7h2a5 5 0 1 1 0 10h-2 M8 12H16"/>
 </vector>
