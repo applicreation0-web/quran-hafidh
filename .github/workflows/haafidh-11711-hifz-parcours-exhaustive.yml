@@ -6,6 +6,7 @@ on:
       - 'hifz-app/src/main/**'
       - 'hifz-app/src/androidTest/**'
       - '.github/workflows/haafidh-11711-hifz-parcours-exhaustive.yml'
+      - 'scripts/run_11711_hifz_parcours_isolated.sh'
   workflow_dispatch:
 permissions:
   contents: read
@@ -59,49 +60,9 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            set -eu
             adb shell wm size ${{ matrix.size }}
             adb shell wm density ${{ matrix.density }}
-            # Build/install both Android APKs once; run the first real QCF
-            # test through Gradle. Remaining suites use the same instrumentation
-            # binary but receive FRESH target-app storage independently.
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest
-            # AGP/UTP removes the test instrumentation package after connected*
-            # completes. Restore the exact already-built DEBUG APKs only on
-            # this disposable emulator (never package/publish a private APK).
-            app_apk="$(find hifz-app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' | head -n 1)"
-            test_apk="$(find hifz-app/build/outputs/apk/androidTest/debug -maxdepth 1 -type f -name '*.apk' | head -n 1)"
-            test -f "$app_apk" && test -f "$test_apk"
-            adb install -r "$app_apk"
-            adb install -r "$test_apk"
-            adb shell pm list instrumentation
-            line="$(adb shell pm list instrumentation | grep '(target=com.quransafeguard.hifz' | head -n 1)"
-            test -n "$line"
-            instrumentation="$(printf '%s' "$line" | sed -E 's/^instrumentation:([^ ]+).*/\1/')"
-            target="$(printf '%s' "$line" | sed -E 's/.*\(target=([^)]*)\).*/\1/')"
-            test -n "$instrumentation"
-            test -n "$target"
-            out="hifz-app/build/parcours-android-logs/${{ matrix.surface }}"
-            mkdir -p "$out"
-            printf '%s' '${{ matrix.classes }}' | tr ',' '\n' > "$out/classes.txt"
-            while IFS= read -r cls; do
-              test -n "$cls" || continue
-              simple="${cls##*.}"
-              echo "ISOLATED CLASS: $cls"
-              adb shell am force-stop "$target" || true
-              adb shell pm clear "$target" | grep -q Success
-              adb shell am instrument -w -r -e class "$cls" "$instrumentation" > "$out/$simple.log" 2>&1 || {
-                tail -n 110 "$out/$simple.log"
-                exit 1
-              }
-              tail -n 5 "$out/$simple.log"
-              if ! grep -Eq 'OK \([1-9][0-9]* tests?\)' "$out/$simple.log"; then
-                echo "NO-GO: $cls failed or finished without a real passing test"
-                tail -n 110 "$out/$simple.log"
-                exit 1
-              fi
-              adb pull "/sdcard/Android/data/$target/files/." "$out/$simple-screens" > /dev/null 2>&1 || true
-            done < "$out/classes.txt"
+            bash scripts/run_11711_hifz_parcours_isolated.sh '${{ matrix.classes }}' '${{ matrix.surface }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
