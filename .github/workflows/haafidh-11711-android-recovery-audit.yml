@@ -4,6 +4,8 @@ on:
     branches: [fix/haafidh-11711-itqan-overdue-receipts-20261103]
     paths:
       - 'hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/AtTur11711RecoveryInstrumentedTest.java'
+      - 'hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ItqanCarryoverNavigation11711InstrumentedTest.java'
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java'
       - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java'
       - '.github/workflows/haafidh-11711-android-recovery-audit.yml'
   workflow_dispatch:
@@ -59,7 +61,7 @@ jobs:
           script: |
             adb shell wm size ${{ matrix.size }}
             adb shell wm density ${{ matrix.density }}
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710RecoveryInstrumentedTest
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.Independent11710RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest
       - uses: actions/upload-artifact@v4
         if: always()
         with:
