@@ -45,6 +45,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private boolean booxPortrait,tafsirOpen,expanded;
     private int enlarged=-1,partnerOffset;
     private boolean disposed;
+    private int normalFolioHeightDp,expandedFolioHeightDp;
 
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
@@ -126,6 +127,10 @@ public final class CorrespondenceComparisonActivity extends Activity {
         int natural=Math.round(halfWidth*550f/345f);
         int cap=Math.max(195,height-(booxPortrait?405:landscape?160:250));
         int paperHeight=Math.min(natural,cap);
+        normalFolioHeightDp=paperHeight;
+        expandedFolioHeightDp=Math.max(paperHeight,Math.min(
+            Math.round((width-16)*550f/345f),
+            Math.max(195,height-(booxPortrait?380:landscape?160:200))));
         for(int side=0;side<2;side++){
             final int pane=side;
             LinearLayout column=Ui.column(this);
@@ -206,8 +211,14 @@ public final class CorrespondenceComparisonActivity extends Activity {
         updateExpanded();
     }
     private void updateExpanded(){
-        for(int i=0;i<2;i++)if(folioColumns[i]!=null)
+        for(int i=0;i<2;i++)if(folioColumns[i]!=null){
             folioColumns[i].setVisibility(enlarged<0||enlarged==i?View.VISIBLE:View.GONE);
+            if(pages[i]!=null&&pages[i].getLayoutParams()!=null){
+                android.view.ViewGroup.LayoutParams params=pages[i].getLayoutParams();
+                params.height=dp(enlarged==i?expandedFolioHeightDp:normalFolioHeightDp);
+                pages[i].setLayoutParams(params);
+            }
+        }
     }
     private void changePartner(int delta){
         int alternatives=relation.verses.size()-1;
@@ -238,8 +249,21 @@ public final class CorrespondenceComparisonActivity extends Activity {
         pages[side].showPages(shownPages[side],shownPages[side],shownPages[side],
             target.getSurah(),target.getAyah(),target.getAyah(),false);
     }
+    private String pattern(){
+        switch(relation.type){
+            case "Répétition":return "A = A′";
+            case "Progression":return "A → A′";
+            case "Opposition":return "A ≠ B";
+            case "Parallélisme":return "A ∥ A′";
+            case "Alternance":return "A B A′ B′";
+            case "Inversion":return "A B / B′ A′";
+            case "Centre":return "A B X B′ A′";
+            case "Début–Fin":return "A … A′";
+            default:return "";
+        }
+    }
     private void updateComparison(){
-        relationLine.setText(relation.type+" · "+relation.id+" · "+
+        relationLine.setText(relation.type+" · "+pattern()+" · "+relation.id+" · "+
             (partnerOffset+1)+"/"+(relation.verses.size()-1));
         showFolio(0);showFolio(1);
         selectedVerses[0]=origin;
