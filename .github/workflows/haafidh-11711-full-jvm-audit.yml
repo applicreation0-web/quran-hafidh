@@ -37,8 +37,8 @@ jobs:
       - name: Validate source invariants and public catalogue
         run: |
           # The 1.17.10 invariant is intentionally a no-core-change release guard.
-          # This 1.17.11 fix changes exactly HifzPrefs.java, so compare instead
-          # against the pinned, fully reviewed 1.17.10 source candidate.
+          # This 1.17.11 audit approves only HifzPrefs.java and a guarded MainActivity navigation fix.
+          # Check them against the pinned, reviewed 1.17.10 source candidate.
           python - <<'PY'
           from subprocess import check_output
           baseline = "3edf0a46abc87798ee2fc1c693b16003b63e5a65"
@@ -46,7 +46,23 @@ jobs:
           changed = check_output(["git", "diff", "--name-only", baseline, "HEAD", "--",
               "hifz-core/src", "hifz-app/src/main", "hifz-app/src/private114"],
               text=True).splitlines()
-          assert set(changed) == {path}, f"Unauthorized production changes: {changed}"
+          ui_path = "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java"
+          assert set(changed) == {path, ui_path}, f"Unauthorized production changes: {changed}"
+          # The parcours fix is deliberately restricted to exposing an existing
+          # frozen Itqan evening. No Hifz credits, schedule or layout changes.
+          ui_original = check_output(["git", "show", baseline + ":" + ui_path]).decode()
+          ui_candidate = open(ui_path, encoding="utf-8").read()
+          block_start = '        // A frozen Itqan evening has its own slot and original calendar date,'
+          block_end = '        String sabqiFinal=prefs.unfinishedConsolidationSessionDate('
+          assert ui_candidate.count(block_start) == 1 and ui_candidate.count(block_end) == 1
+          first = ui_candidate.index(block_start)
+          last = ui_candidate.index(block_end, first)
+          ui_candidate = ui_candidate[:first] + ui_candidate[last:]
+          new_label = ('                    else if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(item.mode))'
+                       'names.add("Consolidation Itqān");' + "\n")
+          assert ui_candidate.count(new_label) == 1
+          ui_candidate = ui_candidate.replace(new_label, "", 1)
+          assert ui_candidate == ui_original, "Parcours changed outside the approved frozen-Itqan navigation patch"
           filename = "hifz-app/build.gradle.kts"
           old = check_output(["git", "show", baseline + ":" + filename])
           current = open(filename, "rb").read()
@@ -54,7 +70,7 @@ jobs:
           assert current == expected, "Build modified beyond exact versionName/code 1.17.11/49"
           manifest = "hifz-app/src/main/AndroidManifest.xml"
           assert check_output(["git", "show", baseline + ":" + manifest]) == open(manifest, "rb").read(), "Manifest identity changed"
-          print("PASS: 1.17.11 only changes approved Itqan engine and exact code49/versionName metadata")
+          print("PASS: only approved Itqan engine, prior-day OPEN-session navigation and code49 metadata")
           PY
           python scripts/materialize_mutash_catalogue.py --check
           python scripts/verify_mutash_catalogue.py
