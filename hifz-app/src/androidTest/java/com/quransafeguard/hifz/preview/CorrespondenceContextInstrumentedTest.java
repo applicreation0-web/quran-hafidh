@@ -334,7 +334,20 @@ public final class CorrespondenceContextInstrumentedTest {
                 // revealed page, not a missed Hifz receipt. The production flow
                 // MUST require visible rereading and then fully masked recall.
                 ActiveReviewCorrectionStore correction=new ActiveReviewCorrectionStore(c);
-                ActiveReviewCorrectionStore.State pending=correction.pending();
+                // Android dialog dismissal and the QCF correction transition can be
+                // posted after the original button callback. A single immediate
+                // preferences read races that transition on e-ink-size emulators.
+                // Observe a real durable state (pending reread OR receipt), never
+                // synthesize a checkpoint, force a credit, or bypass the masked recall.
+                ActiveReviewCorrectionStore.State pending=null;
+                for(int wait=0;wait<120;wait++){
+                    ins.waitForIdleSync();
+                    pending=correction.pending();
+                    if(pending!=null||date.equals(prefs.lastActiveMurajaahDate()))break;
+                    Thread.sleep(125L);
+                }
+                assertTrue("Active validation must reach a real persisted replay or receipt",
+                    pending!=null||date.equals(prefs.lastActiveMurajaahDate()));
                 if(pending!=null){
                     assertEquals("Missing QCF anchors must never bypass the reread", "READ",pending.stage);
                     assertEquals(date,pending.date);
