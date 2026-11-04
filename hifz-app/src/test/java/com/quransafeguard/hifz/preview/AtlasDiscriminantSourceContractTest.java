@@ -96,13 +96,14 @@ public final class AtlasDiscriminantSourceContractTest {
         assertFalse(excerpts.contains("java.net."));
         assertFalse(excerpts.contains("http://"));
     }
-    @Test public void oneCrispInterlockingChainIconOnEveryEligiblePage() throws Exception {
+    @Test public void officialLinkTwoIconOnEveryEligiblePage() throws Exception {
         String xml=read("hifz-app/src/main/res/drawable/ic_ui_atlas_similar.xml");
         String markers=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasDiscriminantMarkers.java");
-        assertTrue(xml.contains("M10,13"));
-        assertTrue(xml.contains("M14,11"));
-        assertTrue(markers.contains("M10 13a5"));
-        assertTrue(markers.contains("M14 11a5"));
+        assertTrue(xml.contains("M9 17H7A5 5 0 0 1 7 7h2 M15 7h2a5 5 0 1 1 0 10h-2 M8 12H16"));
+        assertTrue(xml.contains("android:strokeWidth=\"2\""));
+        assertTrue(markers.contains("M9 17H7A5 5 0 0 1 7 7h2"));
+        assertTrue(markers.contains("M15 7h2a5 5 0 1 1 0 10h-2"));
+        assertTrue(markers.contains("stroke-width=\\\"2\\\""));
         assertTrue(markers.contains("AtlasDiscriminantCases.versesOnPage(page)"));
         assertEquals("A page has one grouped chain marker",1,occurrences(markers,"document.createElement('button')"));
         assertTrue("Choose the verse anchor before creating one grouped marker",
