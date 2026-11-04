@@ -100,13 +100,105 @@ public final class CorrespondenceContextInstrumentedTest {
     }
 
     private void capture(String name)throws Exception {
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        EmulatorLauncherAnr.requireApplicationForeground(InstrumentationRegistry.getInstrumentation());
         try(ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation()
                 .executeShellCommand("screencap -p /data/local/tmp/haafidh-"+name+".png");
             java.io.InputStream output=new ParcelFileDescriptor.AutoCloseInputStream(
                 ParcelFileDescriptor.dup(fd.getFileDescriptor()))){
             while(output.read()!=-1){ /* Wait for the emulator command to finish. */ }
         }
+    }
+
+    @Test public void passiveSelectorFreezesClockOnCancelAndThroughComparison()throws Exception{
+        Context c=ApplicationProvider.getApplicationContext();
+        HifzPrefs prefs=new HifzPrefs(c);
+        org.json.JSONObject original=HifzBackup.export(c);
+        android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+        android.app.Instrumentation.ActivityMonitor comparison=
+            ins.addMonitor(CorrespondenceComparisonActivity.class.getName(),null,false);
+        VerseRef source=new VerseRef(2,47);
+        int page=GeometryRepository.get(c).pageForVerse(source);
+        try{
+            assertTrue(c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE)
+                .edit().clear().commit());
+            assertTrue(prefs.setV6AcquiredRanges(java.util.Collections.singletonList(
+                new com.quransafeguard.hifz.core.VerseRange(source,new VerseRef(2,51))),
+                GeometryRepository.get(c)));
+            prefs.setMurajaahCursor(source);
+            prefs.setMurajaahPage(page);
+            try(ActivityScenario<HifzSessionActivity> scenario=ActivityScenario.launch(
+                    new Intent(c,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,
+                        HifzSessionActivity.MURAJAAH))){
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Passive Correspondances");
+                CorrespondenceCases.Entry pilot=CorrespondenceCases.forVerse(source).get(0);
+                // Synthetic second choice exercises the real dialog without changing the catalogue.
+                CorrespondenceCases.Entry synthetic=new CorrespondenceCases.Entry(
+                    "TEST","TEST","Choix synthétique","TEST","TEST",source,new VerseRef(2,48));
+                java.util.List<CorrespondenceCases.Entry> entries=java.util.Arrays.asList(pilot,synthetic);
+                java.util.concurrent.atomic.AtomicLong frozen=new java.util.concurrent.atomic.AtomicLong();
+                scenario.onActivity(a->{
+                    assertTrue(clock(a).isRunning());
+                    showSelector(a,source,entries);
+                    assertFalse(clock(a).isRunning());
+                    frozen.set(clock(a).elapsedMs());
+                });
+                Thread.sleep(1150L);
+                scenario.onActivity(a->{
+                    assertEquals(frozen.get(),clock(a).elapsedMs());
+                    selector(a).cancel();
+                });
+                ins.waitForIdleSync();
+                scenario.onActivity(a->{
+                    assertTrue(clock(a).isRunning());
+                    showSelector(a,source,entries);
+                    frozen.set(clock(a).elapsedMs());
+                    android.widget.ListView list=selector(a).getListView();
+                    assertTrue(list.performItemClick(list.getChildAt(0),0,list.getItemIdAtPosition(0)));
+                });
+                android.app.Activity opened=ins.waitForMonitorWithTimeout(comparison,20000L);
+                assertNotNull(opened);
+                Thread.sleep(1150L);
+                assertEquals(frozen.get(),prefs.elapsedFor(HifzSessionActivity.MURAJAAH));
+                assertEquals(page,prefs.murajaahPage());
+                ins.runOnMainSync(opened::finish);
+                ins.waitForIdleSync();
+                scenario.onActivity(a->{
+                    assertTrue(clock(a).isRunning());
+                    assertEquals(page,((Integer)field(a,"currentPage")).intValue());
+                    assertEquals(0,((Integer)field(a,"currentMask")).intValue());
+                });
+            }
+        }finally{
+            ins.removeMonitor(comparison);
+            HifzBackup.restore(c,original);
+        }
+    }
+
+    private static Object field(HifzSessionActivity activity,String name){
+        try{
+            java.lang.reflect.Field field=HifzSessionActivity.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return field.get(activity);
+        }catch(ReflectiveOperationException failure){throw new AssertionError(failure);}
+    }
+
+    private static SessionClock clock(HifzSessionActivity activity){
+        return (SessionClock)field(activity,"clock");
+    }
+
+    private static android.app.AlertDialog selector(HifzSessionActivity activity){
+        return (android.app.AlertDialog)field(activity,"correspondenceSelector");
+    }
+
+    private static void showSelector(HifzSessionActivity activity,VerseRef source,
+                                     java.util.List<CorrespondenceCases.Entry> entries){
+        try{
+            java.lang.reflect.Method select=HifzSessionActivity.class.getDeclaredMethod(
+                "selectRevisionCorrespondence",VerseRef.class,java.util.List.class);
+            select.setAccessible(true);
+            select.invoke(activity,source,entries);
+            assertNotNull(selector(activity));
+        }catch(ReflectiveOperationException failure){throw new AssertionError(failure);}
     }
 
     @Test public void originalVerseAnchorsAreNotGuessed(){

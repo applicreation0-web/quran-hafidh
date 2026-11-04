@@ -65,6 +65,20 @@ public final class CorrespondenceContextContractTest {
         assertFalse(marker.contains("m.appendChild"));
         assertFalse(marker.contains("new HifzPrefs("));
     }
+    @Test public void passiveClockPausesBeforeTheSelectorAndResumesOnCancellation()throws Exception{
+        String hifz=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        int start=hifz.indexOf("private void selectRevisionCorrespondence");
+        int pause=hifz.indexOf("clock.pause();",start);
+        int select=hifz.indexOf("CorrespondenceComparisonActivity.chooseCase(",start);
+        assertTrue(start>=0&&pause>start&&select>pause);
+        assertTrue(hifz.contains("if(!opened&&wasRunning)resumeSessionClock();"));
+    }
+    @Test public void activeComparisonUsesValidatedAnchorIndependentOfClosingFolio()throws Exception{
+        String hifz=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(hifz.contains("verse.equals(validatedCorrespondenceVerse)"));
+        assertTrue(hifz.contains("openValidatedCorrespondence"));
+        assertTrue(hifz.contains("state.putString(\"correspondenceValidated\""));
+    }
     @Test public void readerAndReviewGateNoRecitationLeaks()throws Exception{
         String reader=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String hifz=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");

@@ -98,6 +98,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private VerseRef discriminantVerse;
     // UI-only authorization, populated only after the existing active validation succeeds.
     private VerseRef validatedDiscriminantVerse;
+    private VerseRef validatedCorrespondenceVerse;
+    private Button validatedCorrespondenceButton;
+    private AlertDialog correspondenceSelector;
+    private boolean sessionResumed;
     /** Automatic page correction: visible reread, then 100% masked recall, no flags. */
     private ActiveReviewCorrectionStore correctionStore;
     private ActiveReviewCorrectionStore.State correctionState;
@@ -226,8 +230,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
         if(state!=null){
             discriminantVerse=readAtlasVerse(state,"atlasSelected");
-            if(MURAJAAH_ACTIVE.equals(mode)&&sessionDate.toString().equals(prefs.lastActiveMurajaahDate()))
+            if(MURAJAAH_ACTIVE.equals(mode)&&sessionDate.toString().equals(prefs.lastActiveMurajaahDate())){
                 validatedDiscriminantVerse=readAtlasVerse(state,"atlasValidated");
+                validatedCorrespondenceVerse=readAtlasVerse(state,"correspondenceValidated");
+            }
             updateDiscriminantAction();
         }
     }
@@ -289,6 +295,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         discriminantButton=Ui.iconButton(this,"","Similitudes",v->openRevisionDiscriminant());
         discriminantButton.setVisibility(View.GONE);
         controlBar.addView(discriminantButton);
+        if(MURAJAAH_ACTIVE.equals(mode)){
+            validatedCorrespondenceButton=Ui.iconButton(this,"","Correspondances",
+                v->openValidatedCorrespondence());
+            validatedCorrespondenceButton.setVisibility(View.GONE);
+            controlBar.addView(validatedCorrespondenceButton);
+        }
         if (!MURAJAAH_ACTIVE.equals(mode)) {
             annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
             annotationButton.setSelected(annotationEnabled);
@@ -376,30 +388,48 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean canCompareCorrespondenceVerse(VerseRef verse){
         if(!isMurajaahMode()||verse==null||geometry==null)return false;
         boolean active=MURAJAAH_ACTIVE.equals(mode);
-        if(!CorrespondenceCases.versesOnPage(currentPage,geometry).contains(verse))return false;
-        boolean covered=active ? sessionCompleted && verse.equals(murajaahActualEnd)
+        boolean covered=active ? verse.equals(validatedCorrespondenceVerse)
             : murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse);
-        return RevisionAtlasAccess.allowed(active,sessionCompleted,
+        return !sessionRenderFailed&&correctionState==null&&RevisionAtlasAccess.allowed(active,sessionCompleted,
             sessionDate.toString().equals(prefs.lastActiveMurajaahDate()),
             !CorrespondenceCases.forVerse(verse).isEmpty(),
-            CorrespondenceCases.versesOnPage(currentPage,geometry).contains(verse),covered);
+            !active&&CorrespondenceCases.versesOnPage(currentPage,geometry).contains(verse),covered);
     }
 
     @Override public void onCorrespondenceTap(VerseRef verse){
+        if(!MURAJAAH.equals(mode)||!canCompareCorrespondenceVerse(verse))return;
+        selectRevisionCorrespondence(verse,CorrespondenceCases.forVerse(verse));
+    }
+
+    private void openValidatedCorrespondence(){
+        VerseRef verse=validatedCorrespondenceVerse;
         if(!canCompareCorrespondenceVerse(verse))return;
-        CorrespondenceComparisonActivity.chooseCase(this,verse,entry->{
-            if(!canCompareCorrespondenceVerse(verse))return;
-            clock.pause();
+        selectRevisionCorrespondence(verse,CorrespondenceCases.forVerse(verse));
+    }
+
+    private void selectRevisionCorrespondence(VerseRef verse,List<CorrespondenceCases.Entry> entries){
+        if(!sessionResumed||correspondenceSelector!=null||!canCompareCorrespondenceVerse(verse))return;
+        boolean wasRunning=clock.isRunning();
+        clock.pause();
+        correspondenceSelector=CorrespondenceComparisonActivity.chooseCase(this,entries,entry->{
+            if(!sessionResumed||!canCompareCorrespondenceVerse(verse))return false;
             startActivity(new Intent(this,CorrespondenceComparisonActivity.class)
                 .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,verse.getSurah())
                 .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,verse.getAyah())
                 .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,entry.id)
                 .putExtra(CorrespondenceComparisonActivity.EXTRA_ORIGIN,
                     MURAJAAH_ACTIVE.equals(mode)?"Révision active":"Révision passive"));
+            return true;
+        },opened->{
+            correspondenceSelector=null;
+            if(!opened&&wasRunning)resumeSessionClock();
         });
     }
 
     private void updateDiscriminantAction(){
+        if(validatedCorrespondenceButton!=null)
+            validatedCorrespondenceButton.setVisibility(
+                canCompareCorrespondenceVerse(validatedCorrespondenceVerse)?View.VISIBLE:View.GONE);
         if(discriminantButton==null)return;
         if(MURAJAAH_ACTIVE.equals(mode))discriminantVerse=validatedDiscriminantVerse;
         else if(!canCompareRevisionVerse(discriminantVerse)){
@@ -441,6 +471,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override protected void onSaveInstanceState(Bundle state){
         if(discriminantVerse!=null)state.putString("atlasSelected",discriminantVerse.toString());
         if(validatedDiscriminantVerse!=null)state.putString("atlasValidated",validatedDiscriminantVerse.toString());
+        if(validatedCorrespondenceVerse!=null)
+            state.putString("correspondenceValidated",validatedCorrespondenceVerse.toString());
         super.onSaveInstanceState(state);
     }
 
@@ -2051,6 +2083,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if(!correctionStore.clear())
                 onError("Révision validée ; nettoyage de la relecture à vérifier.");
             correctionState=null;
+            validatedCorrespondenceVerse=CorrespondenceCases.forVerse(murajaahActualEnd).isEmpty()
+                ? null : murajaahActualEnd;
             validatedDiscriminantVerse=null;
             if(AtlasDiscriminantCases.indexFor(murajaahActualEnd.getSurah(),murajaahActualEnd.getAyah())>=0)
                 validatedDiscriminantVerse=murajaahActualEnd;
@@ -2568,9 +2602,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 for(VerseRef verse:CorrespondenceCases.versesOnPage(currentPage,geometry))
                     if(canCompareCorrespondenceVerse(verse)&&corrSeen.add(verse))
                         corrRows.put(verse.toString());
-            }else if(MURAJAAH_ACTIVE.equals(mode)&&sessionCompleted
-                &&canCompareCorrespondenceVerse(murajaahActualEnd)){
-                corrRows.put(murajaahActualEnd.toString());
             }
             CorrespondenceGutterMarkers.show(mushaf,atlasRows,corrRows);
         }else AtlasDiscriminantMarkers.show(mushaf,atlasRows);
@@ -2609,18 +2640,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
     @Override protected void onResume(){
         super.onResume();
+        sessionResumed=true;
         if(clock==null)return;
         clock.syncPersistedElapsed(prefs.elapsedFor(mode));
-        if(!sessionCompleted&&!awaitingValidation&&correctionState==null
+        resumeSessionClock();
+    }
+    private void resumeSessionClock(){
+        if(sessionResumed&&!isFinishing()&&correspondenceSelector==null&&!sessionCompleted&&!awaitingValidation&&correctionState==null
                 &&(!timedSessionLimitReached||isMurajaahMode()))clock.resume();
     }
     @Override protected void onPause(){
+        sessionResumed=false;
         if(clock==null){super.onPause();return;}
         long elapsed=clock.pause();
         if(sessionCompleted&&!awaitingValidation&&!sessionRenderFailed)prefs.setElapsedFor(mode,0L);
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(correctionState!=null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

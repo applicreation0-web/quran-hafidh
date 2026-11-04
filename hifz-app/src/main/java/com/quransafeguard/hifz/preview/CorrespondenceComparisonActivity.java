@@ -29,20 +29,31 @@ public final class CorrespondenceComparisonActivity extends Activity {
 
     static void chooseCase(Activity activity, VerseRef verse,
                            java.util.function.Consumer<CorrespondenceCases.Entry> open) {
-        java.util.List<CorrespondenceCases.Entry> entries=CorrespondenceCases.forVerse(verse);
-        if(entries.isEmpty())return;
-        if(entries.size()==1){
-            open.accept(entries.get(0));
-            return;
+        chooseCase(activity,CorrespondenceCases.forVerse(verse),entry->{
+            open.accept(entry);
+            return true;
+        },opened->{});
+    }
+
+    static AlertDialog chooseCase(Activity activity, java.util.List<CorrespondenceCases.Entry> entries,
+                                  java.util.function.Predicate<CorrespondenceCases.Entry> open,
+                                  java.util.function.Consumer<Boolean> finished) {
+        if(entries.size()<2){
+            finished.accept(!entries.isEmpty()&&open.test(entries.get(0)));
+            return null;
         }
         String[] labels=new String[entries.size()];
         for(int i=0;i<entries.size();i++){
             CorrespondenceCases.Entry entry=entries.get(i);
             labels[i]=entry.type+" · "+entry.title;
         }
-        new AlertDialog.Builder(activity).setTitle("Correspondances")
-            .setItems(labels,(dialog,index)->open.accept(entries.get(index)))
-            .setNegativeButton("Fermer",null).show();
+        boolean[] opened={false};
+        AlertDialog dialog=new AlertDialog.Builder(activity).setTitle("Correspondances")
+            .setItems(labels,(ignored,index)->opened[0]=open.test(entries.get(index)))
+            .setNegativeButton("Fermer",null).create();
+        dialog.setOnDismissListener(ignored->finished.accept(opened[0]));
+        dialog.show();
+        return dialog;
     }
 
     private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
