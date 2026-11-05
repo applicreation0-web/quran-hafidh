@@ -11,12 +11,15 @@ public final class HifzBacklogScreenContractTest {
         if(!Files.exists(f)) f=Paths.get("../hifz-app/src/main/java/com/quransafeguard/hifz/preview/"+suffix);
         return new String(Files.readAllBytes(f),StandardCharsets.UTF_8);
     }
-    @Test public void overdueBypassesAreGuardedAtBothAndroidEntryPoints()throws Exception {
+    @Test public void missedDatesCannotBypassTodayOnlyFamilyGuards()throws Exception {
         String home=file("MainActivity.java"),session=file("HifzSessionActivity.java");
         assertTrue(home.contains("HifzBacklog.pending(prefs,ledger"));
-        assertTrue(home.contains("oldest.date.equals(scheduledDate)"));
+        assertTrue(home.contains("HifzBacklog.onDate(slots,today)"));
+        assertTrue(home.contains("!today.equals(scheduledDate)"));
+        assertTrue(home.contains("historical missed"));
         assertTrue(session.contains("HifzBacklog.pending("));
-        assertTrue(session.contains("oldest.date.equals(sessionDate)"));
+        assertTrue(session.contains("HifzBacklog.onDate(HifzBacklog.pending("));
+        assertTrue(session.contains("!capturedToday.equals(sessionDate)"));
         assertTrue(session.contains("attendance.capture(prefs)"));
     }
     @Test public void booxPalaceIconsAreRealAndLarge()throws Exception {
