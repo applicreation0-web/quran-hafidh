@@ -186,33 +186,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         if (SABQI.equals(mode) || ITQAN.equals(mode)) {
-            // The source of truth is the persistent dated receipt ledger, not the
-            // current weekday or a shortcut that could create a duplicate credit.
+            // Each family carries its own real physical cursor. An absent
+            // Tuesday Itqan or Monday Sabqi leaves its date unearned; the next
+            // eligible own-family weekday completes the same next lines with
+            // TODAY's dated receipt. Never replay an old date or create credit.
             DashboardLedger attendance=new DashboardLedger(this);
             attendance.capture(prefs);
             RoadmapPolicy.Decision roadmap=prefs.currentRoadmapDecision(geometry);
             int learningDays=roadmap==null?prefs.learningDaysPerWeek():roadmap.learningDays;
-            HifzBacklog.Due oldest=HifzBacklog.first(HifzBacklog.pending(
-                prefs,attendance,capturedToday,learningDays));
-            if(oldest==null || !oldest.mode.equals(mode) || !oldest.date.equals(sessionDate)) {
-                if(oldest==null) {
-                    new AlertDialog.Builder(this).setTitle("Séance non due")
-                        .setMessage("Aucune nouvelle séance Sabqi ou Itqān n’est due.")
-                        .setPositiveButton("Retour",(dialog,which)->finish())
-                        .setOnCancelListener(dialog->finish()).show();
-                } else {
-                    new AlertDialog.Builder(this).setTitle("Leçon en retard")
-                        .setMessage("La priorité est "+oldest.frenchName()+" du "+oldest.date+
-                            ". L’avancement actuel restera inchangé.")
-                        .setPositiveButton("Ouvrir le report",(dialog,which)->{
-                            Intent intent=new Intent(this,HifzSessionActivity.class);
-                            intent.putExtra(EXTRA_MODE,oldest.mode);
-                            intent.putExtra(EXTRA_SCHEDULED_DATE,oldest.date.toString());
-                            finish();
-                            startActivity(intent);
-                        }).setNegativeButton("Retour",(dialog,which)->finish())
-                        .setOnCancelListener(dialog->finish()).show();
-                }
+            HifzBacklog.Due slot=HifzBacklog.onDate(HifzBacklog.pending(
+                prefs,attendance,capturedToday,learningDays),capturedToday);
+            if(slot==null || !slot.mode.equals(mode) || !capturedToday.equals(sessionDate)) {
+                new AlertDialog.Builder(this).setTitle("Séance non prévue")
+                    .setMessage("Les lignes non travaillées restent au prochain jour "
+                        +"Sabqi ou Itqān de leur discipline. Rien n’est crédité "
+                        +"pour un ancien créneau manqué.")
+                    .setPositiveButton("Retour",(dialog,which)->finish())
+                    .setOnCancelListener(dialog->finish()).show();
                 return;
             }
         }
