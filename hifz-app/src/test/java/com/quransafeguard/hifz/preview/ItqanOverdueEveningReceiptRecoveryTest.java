@@ -103,6 +103,13 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals(frozen.stage(),restored.stage());
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,restored.cycle().units().get(0).protocol());
         assertEquals(before,disk.disk);
+        while(!restored.readyToClose()){
+            restored=engine.recordRepetition(restored);
+            assertTrue(prefs.persistConsolidationSession(restored));
+        }
+        assertTrue("A resumed legacy OPEN still closes with its authentic ×7 receipt",
+            prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION,CURRENT.toString(),restored));
+        assertEquals("Legacy completion does not promote any page","[]",disk.getString("v6AcquiredCreditLineIds",""));
     }
 
     @Test public void skippedThursdayCannotInventLinesOrReceiptsOnSaturdayOrSunday() throws Exception {
