@@ -1,0 +1,4095 @@
+{
+  "date": "2026-11-05",
+  "base": "a266b279e3f0c1a9684861aa703ca5e2125ef3d9",
+  "similitudesPairs": 280,
+  "similitudesSha256": "0e9aac31831d0b485c53f28cafc1f222966498cc6777cc2fd6fe44e0b8918b74",
+  "methode": "Comparaison exacte des arêtes autorisées, puis lecture du mécanisme ; les seuls versets partagés ne suffisent pas. Les portées reprennent les notices existantes et ne valent pas nouvelle collation externe.",
+  "bilan": {
+    "activesAvant": 60,
+    "activesApres": 60,
+    "desactiveesPourDoublon": 0,
+    "conditionnelles": 2,
+    "exclusionsHistoriques": 48
+  },
+  "dossiers": [
+    {
+      "id": "R007",
+      "partenaires": {
+        "10:71": [
+          "11:25"
+        ],
+        "11:25": [
+          "10:71"
+        ]
+      },
+      "nature": "Progression",
+      "explication": "Yūnus condense le récit de Nūḥ : avertissement, refus et salut. Hūd développe la prédication, la construction de l’arche, le déluge et le salut. Al-Suyūṭī rapproche ce récit bref de son développement dans Hūd. La flèche représente résumé → développement, sans dater les sourates ni les événements.",
+      "enBref": "Yūnus condense le récit de Nūḥ : avertissement, refus et salut. Hūd développe la prédication, la construction de l’arche, le déluge et le salut. Al-Suyūṭī rapproche ce récit bref de son développement dans Hūd.",
+      "sources": [
+        {
+          "titre": "al-Suyūṭī, Asrār tartīb al-Qurʾān, section Hūd",
+          "url": "https://www.islamweb.net/ar/library/content/223/12/سورة-هود",
+          "portee": "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+        },
+        {
+          "titre": "Texte coranique arabe, 10:71",
+          "url": "https://quran.com/10/71",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 11:25",
+          "url": "https://quran.com/11/25",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R008",
+      "partenaires": {
+        "11:120": [
+          "12:3"
+        ],
+        "12:3": [
+          "11:120"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "11:120 explique la fonction des récits racontés au Prophète : affermir son cœur. 12:3 annonce le récit raconté au Prophète par la révélation. Al-Suyūṭī relève ce raccord entre les deux sourates ; les deux versets ne sont pas identiques.",
+      "enBref": "11:120 explique la fonction des récits racontés au Prophète : affermir son cœur. 12:3 annonce le récit raconté au Prophète par la révélation. Al-Suyūṭī relève ce raccord entre les deux sourates ; les deux versets ne sont pas identiques.",
+      "sources": [
+        {
+          "titre": "al-Suyūṭī, Asrār tartīb al-Qurʾān, section Yūsuf, pagination du site p.109",
+          "url": "https://www.islamweb.net/ar/library/content/223/13/سورة-يوسف",
+          "portee": "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+        },
+        {
+          "titre": "Texte coranique arabe, 11:120",
+          "url": "https://quran.com/11/120",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 12:3",
+          "url": "https://quran.com/12/3",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R011",
+      "partenaires": {
+        "17:111": [
+          "18:1"
+        ],
+        "18:1": [
+          "17:111"
+        ]
+      },
+      "nature": "Début–Fin",
+      "explication": "La dernière injonction de 17:111 et l’ouverture de 18:1 reprennent le noyau de louange « al-ḥamdu li-llāhi alladhī ». En 17, elle écarte les associés et la filiation ; en 18, elle introduit le don du Livre. Reprise locale fin–début : cette formule n’est pas unique dans le Coran et les versets entiers diffèrent.",
+      "enBref": "La dernière injonction de 17:111 et l’ouverture de 18:1 reprennent le noyau de louange « al-ḥamdu li-llāhi alladhī ». En 17, elle écarte les associés et la filiation ; en 18, elle introduit le don du Livre. Reprise locale fin–début : cette formule n’est pas unique dans le Coran et les versets entiers diffèrent.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 17:111",
+          "url": "https://quran.com/17/111",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 18:1",
+          "url": "https://quran.com/18/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R014",
+      "partenaires": {
+        "33:73": [
+          "34:2"
+        ],
+        "34:2": [
+          "33:73"
+        ]
+      },
+      "nature": "Inversion",
+      "explication": "Les deux attributs pardon puis miséricorde en 33:73 deviennent miséricorde puis pardon en 34:2. Le croisement porte seulement sur ces deux attributs et leurs variantes grammaticales, sans miroir global.",
+      "enBref": "Les deux attributs pardon puis miséricorde en 33:73 deviennent miséricorde puis pardon en 34:2. Le croisement porte seulement sur ces deux attributs et leurs variantes grammaticales, sans miroir global.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 33:73",
+          "url": "https://quran.com/33/73",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 34:2",
+          "url": "https://quran.com/34/2",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R015",
+      "partenaires": {
+        "34:1": [
+          "35:1"
+        ],
+        "35:1": [
+          "34:1"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Deux ouvertures par la louange, suivies des cieux et de la terre; la relation de possession en 34:1 diffère de création en 35:1. Jalalayn35:1 renvoie expressément au début de Saba pour la louange.",
+      "enBref": "Deux ouvertures par la louange, suivies des cieux et de la terre; la relation de possession en 34:1 diffère de création en 35:1. Jalalayn35:1 renvoie expressément au début de Saba pour la louange.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 34:1",
+          "url": "https://quran.com/34/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 35:1",
+          "url": "https://quran.com/35/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R018",
+      "partenaires": {
+        "39:1": [
+          "40:2"
+        ],
+        "40:2": [
+          "39:1"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Même noyau de révélation du Livre provenant de Dieu le Puissant; seul le dernier nom de cette formule diffère. Répétition partielle, pas identité entière ni premier verset pour40:2.",
+      "enBref": "Même noyau de révélation du Livre provenant de Dieu le Puissant; seul le dernier nom de cette formule diffère. Répétition partielle, pas identité entière ni premier verset pour40:2.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 39:1",
+          "url": "https://quran.com/39/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 40:2",
+          "url": "https://quran.com/40/2",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R019",
+      "partenaires": {
+        "40:1": [
+          "41:1",
+          "42:1",
+          "43:1",
+          "44:1",
+          "45:1",
+          "46:1"
+        ],
+        "41:1": [
+          "42:1",
+          "43:1",
+          "44:1",
+          "45:1",
+          "46:1",
+          "40:1"
+        ],
+        "42:1": [
+          "43:1",
+          "44:1",
+          "45:1",
+          "46:1",
+          "40:1",
+          "41:1"
+        ],
+        "43:1": [
+          "44:1",
+          "45:1",
+          "46:1",
+          "40:1",
+          "41:1",
+          "42:1"
+        ],
+        "44:1": [
+          "45:1",
+          "46:1",
+          "40:1",
+          "41:1",
+          "42:1",
+          "43:1"
+        ],
+        "45:1": [
+          "46:1",
+          "40:1",
+          "41:1",
+          "42:1",
+          "43:1",
+          "44:1"
+        ],
+        "46:1": [
+          "40:1",
+          "41:1",
+          "42:1",
+          "43:1",
+          "44:1",
+          "45:1"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Les sept références originales consécutives commencent par Hā-Mīm. Lecture littérale des lettres seulement; Jalalayn ne leur attribue pas un sens ésotérique connu.",
+      "enBref": "Les sept références originales consécutives commencent par Hā-Mīm. Lecture littérale des lettres seulement; Jalalayn ne leur attribue pas un sens ésotérique connu.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 40:1",
+          "url": "https://quran.com/40/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 41:1",
+          "url": "https://quran.com/41/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 42:1",
+          "url": "https://quran.com/42/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 43:1",
+          "url": "https://quran.com/43/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 44:1",
+          "url": "https://quran.com/44/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 45:1",
+          "url": "https://quran.com/45/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 46:1",
+          "url": "https://quran.com/46/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R023",
+      "partenaires": {
+        "79:34": [
+          "80:33"
+        ],
+        "80:33": [
+          "79:34"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Même construction quand survient, avec al-ṭāmmah et al-ṣākhkhah distincts. Jalalayn identifie les deux comme second souffle; ressemblance de construction et de fonction, pas succession de deux événements.",
+      "enBref": "Même construction quand survient, avec al-ṭāmmah et al-ṣākhkhah distincts. Jalalayn identifie les deux comme second souffle; ressemblance de construction et de fonction, pas succession de deux événements.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 79:34",
+          "url": "https://quran.com/79/34",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 80:33",
+          "url": "https://quran.com/80/33",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R025",
+      "partenaires": {
+        "89:17": [
+          "90:15"
+        ],
+        "89:18": [
+          "90:14",
+          "90:16"
+        ],
+        "90:14": [
+          "89:18"
+        ],
+        "90:15": [
+          "89:17"
+        ],
+        "90:16": [
+          "89:18"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "89 reproche de ne pas honorer l'orphelin ni encourager à nourrir le pauvre;90 décrit affranchissement/nourriture à l'orphelin ou au pauvre comme franchissement de l'obstacle,après reproche de ne pas le franchir. Contraste de conduites décrites,et non récit d'actes déjà accomplis.",
+      "enBref": "89 reproche de ne pas honorer l'orphelin ni encourager à nourrir le pauvre;90 décrit affranchissement/nourriture à l'orphelin ou au pauvre comme franchissement de l'obstacle,après reproche de ne pas le franchir. Contraste de conduites décrites,et non récit d'actes déjà accomplis.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 89:17",
+          "url": "https://quran.com/89/17",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 89:18",
+          "url": "https://quran.com/89/18",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 90:14",
+          "url": "https://quran.com/90/14",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 90:15",
+          "url": "https://quran.com/90/15",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 90:16",
+          "url": "https://quran.com/90/16",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R026",
+      "partenaires": {
+        "91:3": [
+          "92:2"
+        ],
+        "91:4": [
+          "92:1"
+        ],
+        "92:1": [
+          "91:4"
+        ],
+        "92:2": [
+          "91:3"
+        ]
+      },
+      "nature": "Inversion",
+      "explication": "L'ordre jour/nuit dans91:3–4 devient nuit/jour dans92:1–2. Les91:1–2 sont contexte, pas membres supplémentaires appariés. Inversion locale des deux motifs uniquement.",
+      "enBref": "L'ordre jour/nuit dans91:3–4 devient nuit/jour dans92:1–2. Les91:1–2 sont contexte, pas membres supplémentaires appariés. Inversion locale des deux motifs uniquement.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 91:3",
+          "url": "https://quran.com/91/3",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 91:4",
+          "url": "https://quran.com/91/4",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 92:1",
+          "url": "https://quran.com/92/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 92:2",
+          "url": "https://quran.com/92/2",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R027",
+      "partenaires": {
+        "93:6": [
+          "94:1"
+        ],
+        "94:1": [
+          "93:6"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "93:6–8 rappelle protection, guidance et enrichissement ; 94:1–4 rappelle ouverture de la poitrine, allègement du fardeau et élévation de la mention. Les deux séries rappellent des bienfaits au même destinataire. Il s’agit d’un parallélisme thématique, sans correspondance terme à terme des membres.",
+      "enBref": "93:6–8 rappelle protection, guidance et enrichissement ; 94:1–4 rappelle ouverture de la poitrine, allègement du fardeau et élévation de la mention. Les deux séries rappellent des bienfaits au même destinataire. Il s’agit d’un parallélisme thématique, sans correspondance terme à terme des membres.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 93:6",
+          "url": "https://quran.com/93/6",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 94:1",
+          "url": "https://quran.com/94/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R028",
+      "partenaires": {
+        "105:1": [
+          "106:1"
+        ],
+        "106:1": [
+          "105:1"
+        ]
+      },
+      "nature": "Progression",
+      "explication": "105 rapporte la destruction du stratagème de l'armée;Jalalayn106:4 relie expressément la peur supprimée à l'armée de l'Éléphant. La relation protection/sécurité est documentée comme lecture de Jalalayn,non causalité littéralement nommée dans106 ou datation historique autonome.",
+      "enBref": "105 rapporte la destruction du stratagème de l'armée;Jalalayn106:4 relie expressément la peur supprimée à l'armée de l'Éléphant. La relation protection/sécurité est documentée comme lecture de Jalalayn,non causalité littéralement nommée dans106 ou datation historique autonome.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 105:1",
+          "url": "https://quran.com/105/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 106:1",
+          "url": "https://quran.com/106/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R029",
+      "partenaires": {
+        "113:1": [
+          "114:1"
+        ],
+        "114:1": [
+          "113:1"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Les deux sourates commencent par demande de refuge au Seigneur et présentent les maux visés;113 développe plusieurs maux,114 le chuchotement et ses auteurs. Ressemblance d'acte et d'organisation attestée,sans division simpliste extérieur/intérieur.",
+      "enBref": "Les deux sourates commencent par demande de refuge au Seigneur et présentent les maux visés;113 développe plusieurs maux,114 le chuchotement et ses auteurs. Ressemblance d'acte et d'organisation attestée,sans division simpliste extérieur/intérieur.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 113:1",
+          "url": "https://quran.com/113/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 114:1",
+          "url": "https://quran.com/114/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R030",
+      "partenaires": {
+        "2:47": [
+          "2:122"
+        ],
+        "2:122": [
+          "2:47"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Les versets entiers 2:47 et 2:122 sont identiques octet pour octet dans le fichier Tanzil vérifié; 2:40 est différent.",
+      "enBref": "Les versets entiers 2:47 et 2:122 sont identiques dans le témoin arabe vérifié. 2:40 est différent et ne fait pas partie de cette identité.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 2:47",
+          "url": "https://quran.com/2/47",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 2:122",
+          "url": "https://quran.com/2/122",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R031",
+      "partenaires": {
+        "2:134": [
+          "2:141"
+        ],
+        "2:141": [
+          "2:134"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Les deux versets entiers sont identiques dans le témoin arabe; Jalalayn2:141 renvoie au verset similaire déjà mentionné. Les contextes voisins ne sont pas identiques.",
+      "enBref": "Les deux versets entiers sont identiques dans le témoin arabe; Jalalayn2:141 renvoie au verset similaire déjà mentionné. Les contextes voisins ne sont pas identiques.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 2:134",
+          "url": "https://quran.com/2/134",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 2:141",
+          "url": "https://quran.com/2/141",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R032",
+      "partenaires": {
+        "2:142": []
+      },
+      "nature": "Centre",
+      "explication": "L’audit J3 attribue à Farrin (2010) une proposition interne à 2:142–152 en cinq membres, avec 2:147–148 au centre, distincte du découpage de la sourate entière. Vérifier les appariements, les bornes et les objections avant admission.",
+      "enBref": "L’audit J3 attribue à Farrin (2010) une proposition interne à 2:142–152 en cinq membres, avec 2:147–148 au centre, distincte du découpage de la sourate entière. Vérifier les appariements, les bornes et les objections avant admission.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 2:142",
+          "url": "https://quran.com/2/142",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Attribution historique Farrin 2010 ; référence détaillée à compléter",
+          "url": "https://doi.org/10.1111/j.1478-1913.2009.01299.x",
+          "portee": "R032 : Farrin, Surat al-Baqara: A Structural Analysis, The Muslim World 100 (2010). Ne certifie pas les bornes locales ni l’attribution de R033."
+        }
+      ],
+      "porteeAttribution": [
+        "R032 : Farrin, Surat al-Baqara: A Structural Analysis, The Muslim World 100 (2010). Ne certifie pas les bornes locales ni l’attribution de R033."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Référence primaire exacte et tableau des cinq membres de 2:142–152 (bornes, appariements et objections de Sinai) absents des preuves accessibles. Ne pas confondre cette structure locale avec les sept ou neuf sections proposées pour la sourate entière.",
+      "verdict": "INACTIF_CONDITIONNEL",
+      "destination": "Absence de l’interface active",
+      "motif": "Référence primaire exacte et tableau des cinq membres de 2:142–152 (bornes, appariements et objections de Sinai) absents des preuves accessibles. Ne pas confondre cette structure locale avec les sept ou neuf sections proposées pour la sourate entière."
+    },
+    {
+      "id": "R033",
+      "partenaires": {
+        "2:255": []
+      },
+      "nature": "Centre",
+      "explication": "Le centre verbal supposé de 2:255 exige les neuf segments concentriques vérifiés ; pas de centre présumé depuis 6 mots seulement.",
+      "enBref": "Le centre verbal supposé de 2:255 exige les neuf segments concentriques vérifiés ; pas de centre présumé depuis 6 mots seulement.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 2:255",
+          "url": "https://quran.com/2/255",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Attribution historique Farrin 2010 ; référence détaillée à compléter",
+          "url": "https://doi.org/10.1111/j.1478-1913.2009.01299.x",
+          "portee": "R032 : Farrin, Surat al-Baqara: A Structural Analysis, The Muslim World 100 (2010). Ne certifie pas les bornes locales ni l’attribution de R033."
+        }
+      ],
+      "porteeAttribution": [
+        "R032 : Farrin, Surat al-Baqara: A Structural Analysis, The Muslim World 100 (2010). Ne certifie pas les bornes locales ni l’attribution de R033."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Les neuf segments attribués à Farrin/Azaiez, leurs appariements et leurs positions de mots exactes ne sont pas reproduits dans les preuves accessibles. Les polygones du verset sont vérifiables, mais ne certifient pas les foyers infraverset. Admission et représentation interne bloquées ; aucune comparaison artificielle de deux exemplaires du même verset.",
+      "verdict": "INACTIF_CONDITIONNEL",
+      "destination": "Absence de l’interface active",
+      "motif": "Les neuf segments attribués à Farrin/Azaiez, leurs appariements et leurs positions de mots exactes ne sont pas reproduits dans les preuves accessibles. Les polygones du verset sont vérifiables, mais ne certifient pas les foyers infraverset. Admission et représentation interne bloquées ; aucune comparaison artificielle de deux exemplaires du même verset."
+    },
+    {
+      "id": "R034",
+      "partenaires": {
+        "7:59": [
+          "7:65",
+          "7:73",
+          "7:85"
+        ],
+        "7:65": [
+          "7:73",
+          "7:85",
+          "7:59"
+        ],
+        "7:73": [
+          "7:85",
+          "7:59",
+          "7:65"
+        ],
+        "7:85": [
+          "7:59",
+          "7:65",
+          "7:73"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "La même injonction à adorer Dieu sans autre divinité revient dans les quatre récits de Nūḥ,Hūd,Ṣāliḥ,Shuʿayb. Les versets entiers et leurs suites diffèrent. Aucune exhaustivité globale du motif revendiquée.",
+      "enBref": "La même injonction à adorer Dieu sans autre divinité revient dans les quatre récits de Nūḥ,Hūd,Ṣāliḥ,Shuʿayb. Les versets entiers et leurs suites diffèrent. Aucune exhaustivité globale du motif revendiquée.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 7:59",
+          "url": "https://quran.com/7/59",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 7:65",
+          "url": "https://quran.com/7/65",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 7:73",
+          "url": "https://quran.com/7/73",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 7:85",
+          "url": "https://quran.com/7/85",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R035",
+      "partenaires": {
+        "9:67": [
+          "9:71"
+        ],
+        "9:71": [
+          "9:67"
+        ],
+        "9:68": [
+          "9:72"
+        ],
+        "9:72": [
+          "9:68"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Les groupes hypocrites/croyants, commander le blâmable/le bien et interdire le bien/le blâmable, puis Feu/jardins sont explicitement opposés.9:68 ajoute les mécréants; aucun appariement intégral verset à verset imposé.",
+      "enBref": "9:67 et 9:71 opposent les conduites des hypocrites et des croyants : ce qu’ils commandent et interdisent est inversé. Le Feu de 9:68 contraste avec les jardins de 9:72, sans appariement intégral imposé entre chaque verset.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 9:67",
+          "url": "https://quran.com/9/67",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 9:71",
+          "url": "https://quran.com/9/71",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 9:68",
+          "url": "https://quran.com/9/68",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 9:72",
+          "url": "https://quran.com/9/72",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R036",
+      "partenaires": {
+        "11:40": [
+          "11:58",
+          "11:66",
+          "11:82",
+          "11:94"
+        ],
+        "11:58": [
+          "11:66",
+          "11:82",
+          "11:94",
+          "11:40"
+        ],
+        "11:66": [
+          "11:82",
+          "11:94",
+          "11:40",
+          "11:58"
+        ],
+        "11:82": [
+          "11:94",
+          "11:40",
+          "11:58",
+          "11:66"
+        ],
+        "11:94": [
+          "11:40",
+          "11:58",
+          "11:66",
+          "11:82"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Le récit de Nūḥ emploie la venue du commandement en 11:40 ; ceux de Hūd, Ṣāliḥ, Lūṭ et Shuʿayb reprennent cette arrivée en 11:58, 66, 82 et 94. Les formes temporelles et les suites varient : embarquement, salut des croyants ou destruction. Le parallèle porte sur ce jalon narratif, pas sur cinq récits identiques.",
+      "enBref": "Le récit de Nūḥ emploie la venue du commandement en 11:40 ; ceux de Hūd, Ṣāliḥ, Lūṭ et Shuʿayb reprennent cette arrivée en 11:58, 66, 82 et 94. Les formes temporelles et les suites varient : embarquement, salut des croyants ou destruction. Le parallèle porte sur ce jalon narratif, pas sur cinq récits identiques.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 11:40",
+          "url": "https://quran.com/11/40",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 11:58",
+          "url": "https://quran.com/11/58",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 11:66",
+          "url": "https://quran.com/11/66",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 11:82",
+          "url": "https://quran.com/11/82",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 11:94",
+          "url": "https://quran.com/11/94",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [
+        [
+          "11:66",
+          "11:82"
+        ]
+      ],
+      "mecanismeComplementaire": "Similitudes compare une variation locale de 11:66 / 11:82. Correspondances situe cinq retours du commandement et leurs issues différentes dans cinq récits ; aucun récit intégralement identique n’est prétendu.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Similitudes compare une variation locale de 11:66 / 11:82. Correspondances situe cinq retours du commandement et leurs issues différentes dans cinq récits ; aucun récit intégralement identique n’est prétendu."
+    },
+    {
+      "id": "R037",
+      "partenaires": {
+        "12:4": [
+          "12:100"
+        ],
+        "12:100": [
+          "12:4"
+        ]
+      },
+      "nature": "Progression",
+      "explication": "12:4 rapporte la vision de Yūsuf ; 12:100 la désigne expressément comme sa vision antérieure que son Seigneur a rendue vraie. Jalālayn confirme le renvoi à cette vision. La progression se limite à cette annonce et à cet accomplissement, sans imposer une structure globale au récit.",
+      "enBref": "12:4 rapporte la vision de Yūsuf ; 12:100 la désigne expressément comme sa vision antérieure que son Seigneur a rendue vraie. Jalālayn confirme le renvoi à cette vision. La progression se limite à cette annonce et à cet accomplissement, sans imposer une structure globale au récit.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 12:4",
+          "url": "https://quran.com/12/4",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 12:100",
+          "url": "https://quran.com/12/100",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R039",
+      "partenaires": {
+        "19:16": [
+          "19:41",
+          "19:51",
+          "19:54",
+          "19:56"
+        ],
+        "19:41": [
+          "19:51",
+          "19:54",
+          "19:56",
+          "19:16"
+        ],
+        "19:51": [
+          "19:54",
+          "19:56",
+          "19:16",
+          "19:41"
+        ],
+        "19:54": [
+          "19:56",
+          "19:16",
+          "19:41",
+          "19:51"
+        ],
+        "19:56": [
+          "19:16",
+          "19:41",
+          "19:51",
+          "19:54"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "La même injonction de mentionner dans le Livre précède Maryam,Ibrāhīm,Mūsā,Ismāʿīl,Idrīs aux cinq références. La répétition concerne cette formule introductive et non des récits identiques ou cinq messagers tous qualifiés comme tels.",
+      "enBref": "La même injonction de mentionner dans le Livre précède Maryam,Ibrāhīm,Mūsā,Ismāʿīl,Idrīs aux cinq références. La répétition concerne cette formule introductive et non des récits identiques ou cinq messagers tous qualifiés comme tels.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 19:16",
+          "url": "https://quran.com/19/16",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 19:41",
+          "url": "https://quran.com/19/41",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 19:51",
+          "url": "https://quran.com/19/51",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 19:54",
+          "url": "https://quran.com/19/54",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 19:56",
+          "url": "https://quran.com/19/56",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R040",
+      "partenaires": {
+        "26:9": [
+          "26:68",
+          "26:104",
+          "26:122",
+          "26:140",
+          "26:159",
+          "26:175",
+          "26:191"
+        ],
+        "26:68": [
+          "26:104",
+          "26:122",
+          "26:140",
+          "26:159",
+          "26:175",
+          "26:191",
+          "26:9"
+        ],
+        "26:104": [
+          "26:122",
+          "26:140",
+          "26:159",
+          "26:175",
+          "26:191",
+          "26:9",
+          "26:68"
+        ],
+        "26:122": [
+          "26:140",
+          "26:159",
+          "26:175",
+          "26:191",
+          "26:9",
+          "26:68",
+          "26:104"
+        ],
+        "26:140": [
+          "26:159",
+          "26:175",
+          "26:191",
+          "26:9",
+          "26:68",
+          "26:104",
+          "26:122"
+        ],
+        "26:159": [
+          "26:175",
+          "26:191",
+          "26:9",
+          "26:68",
+          "26:104",
+          "26:122",
+          "26:140"
+        ],
+        "26:175": [
+          "26:191",
+          "26:9",
+          "26:68",
+          "26:104",
+          "26:122",
+          "26:140",
+          "26:159"
+        ],
+        "26:191": [
+          "26:9",
+          "26:68",
+          "26:104",
+          "26:122",
+          "26:140",
+          "26:159",
+          "26:175"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Les huit paires contiennent le même noyau signe/incrédulité suivi de la formule Puissant/Miséricordieux.139 et158 ont des préambules supplémentaires;les paires entières ne sont donc pas toutes identiques. Le titre Huit retours du refrain est adéquat;pas après huit récits ni alternance formelle automatique.",
+      "enBref": "Les huit paires contiennent le même noyau signe/incrédulité suivi de la formule Puissant/Miséricordieux.139 et158 ont des préambules supplémentaires;les paires entières ne sont donc pas toutes identiques. Le titre Huit retours du refrain est adéquat;pas après huit récits ni alternance formelle automatique.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 26:9",
+          "url": "https://quran.com/26/9",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 26:68",
+          "url": "https://quran.com/26/68",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 26:104",
+          "url": "https://quran.com/26/104",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 26:122",
+          "url": "https://quran.com/26/122",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 26:140",
+          "url": "https://quran.com/26/140",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 26:159",
+          "url": "https://quran.com/26/159",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 26:175",
+          "url": "https://quran.com/26/175",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 26:191",
+          "url": "https://quran.com/26/191",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R041",
+      "partenaires": {
+        "28:7": [
+          "28:13"
+        ],
+        "28:13": [
+          "28:7"
+        ]
+      },
+      "nature": "Progression",
+      "explication": "28:7 promet de rendre Mūsā à sa mère;28:13 raconte ce retour et affirme la vérité de la promesse. Jalalayn28:13 désigne expressément la promesse de retour. La mission future n'est pas dite accomplie ici.",
+      "enBref": "28:7 promet de rendre Mūsā à sa mère;28:13 raconte ce retour et affirme la vérité de la promesse. Jalalayn28:13 désigne expressément la promesse de retour. La mission future n'est pas dite accomplie ici.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 28:7",
+          "url": "https://quran.com/28/7",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 28:13",
+          "url": "https://quran.com/28/13",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R043",
+      "partenaires": {
+        "37:79": [
+          "37:109",
+          "37:120",
+          "37:130"
+        ],
+        "37:109": [
+          "37:120",
+          "37:130",
+          "37:79"
+        ],
+        "37:120": [
+          "37:130",
+          "37:79",
+          "37:109"
+        ],
+        "37:130": [
+          "37:79",
+          "37:109",
+          "37:120"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Les quatre références originales reprennent la salutation avec destinataires distincts.37:181 est une cinquième formule collective,explicitement reconnue comme hors sélection originale. Série documentée de quatre occurrences sélectionnées,sans exhaustivité globale;variante de lecture de130 non appliquée au texte Hafs.",
+      "enBref": "Les quatre références originales reprennent la salutation avec destinataires distincts.37:181 est une cinquième formule collective,explicitement reconnue comme hors sélection originale. Série documentée de quatre occurrences sélectionnées,sans exhaustivité globale;variante de lecture de130 non appliquée au texte Hafs.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 37:79",
+          "url": "https://quran.com/37/79",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 37:109",
+          "url": "https://quran.com/37/109",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 37:120",
+          "url": "https://quran.com/37/120",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 37:130",
+          "url": "https://quran.com/37/130",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R044",
+      "partenaires": {
+        "39:71": [
+          "39:73"
+        ],
+        "39:73": [
+          "39:71"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "71–72 opposent le groupe conduit vers le Feu à73–74 conduit vers les jardins,mêmes portes/gardiens avec modalités et issues distinctes.75 conclut le jugement des deux groupes selon Jalalayn,et n'est pas attribué aux seuls pieux.",
+      "enBref": "39:71–72 présente le groupe conduit vers le Feu ; 39:73–74 présente celui conduit vers les jardins. Les portes, les gardiens et les issues diffèrent dans ces deux scènes. 39:75 conclut le jugement des deux groupes.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 39:71",
+          "url": "https://quran.com/39/71",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 39:73",
+          "url": "https://quran.com/39/73",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [
+        [
+          "39:71",
+          "39:73"
+        ]
+      ],
+      "mecanismeComplementaire": "Similitudes compare les variations lexicales de 39:71 / 39:73. Correspondances expose les deux groupes et les issues des scènes 71–74, avec la clôture commune du jugement en 75 ; ce n’est pas une simple différence de mot.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Similitudes compare les variations lexicales de 39:71 / 39:73. Correspondances expose les deux groupes et les issues des scènes 71–74, avec la clôture commune du jugement en 75 ; ce n’est pas une simple différence de mot."
+    },
+    {
+      "id": "R045",
+      "partenaires": {
+        "46:15": [
+          "46:17"
+        ],
+        "46:17": [
+          "46:15"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Un discours de reconnaissance/repentir envers les parents et son issue favorable est suivi d'un discours de mépris/déni de résurrection et de condamnation. Contraste explicite des attitudes et issues; aucune identification historique du second personnage nécessaire.",
+      "enBref": "Un discours de reconnaissance/repentir envers les parents et son issue favorable est suivi d'un discours de mépris/déni de résurrection et de condamnation. Contraste explicite des attitudes et issues; aucune identification historique du second personnage nécessaire.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 46:15",
+          "url": "https://quran.com/46/15",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 46:17",
+          "url": "https://quran.com/46/17",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R047",
+      "partenaires": {
+        "54:17": [
+          "54:22",
+          "54:32",
+          "54:40"
+        ],
+        "54:22": [
+          "54:32",
+          "54:40",
+          "54:17"
+        ],
+        "54:32": [
+          "54:40",
+          "54:17",
+          "54:22"
+        ],
+        "54:40": [
+          "54:17",
+          "54:22",
+          "54:32"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Le même verset entier apparaît exactement en 54:17, 54:22, 54:32 et 54:40. Ni 54:15 ni 54:51 ne sont ce refrain. Al-Qurṭubī explique le retour de cet appel au rappel à travers les récits. La frise éditoriale distingue le récit précédent et le début du suivant, jusqu’à Pharaon après 54:40.",
+      "enBref": "Le même verset entier apparaît exactement en 54:17, 54:22, 54:32 et 54:40. Ni 54:15 ni 54:51 ne sont ce refrain. Al-Qurṭubī explique le retour de cet appel au rappel à travers les récits.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 54:17",
+          "url": "https://quran.com/54/17",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 54:22",
+          "url": "https://quran.com/54/22",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 54:32",
+          "url": "https://quran.com/54/32",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 54:40",
+          "url": "https://quran.com/54/40",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        },
+        {
+          "titre": "al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 54:17",
+          "url": "https://quran.ksu.edu.sa/tafseer/qortobi/sura54-aya17.html",
+          "portee": "Retour de l’appel au rappel dans les récits ; ne fournit pas les stations mnémotechniques de cette application."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche.",
+        "Retour de l’appel au rappel dans les récits ; ne fournit pas les stations mnémotechniques de cette application."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Une seule fiche structurelle, frise de contextes avant/après sourcée ; aucun même couple dans Similitudes actif. Les occurrences restent des nœuds et des marqueurs, pas des dossiers dupliqués.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Une seule fiche structurelle, frise de contextes avant/après sourcée ; aucun même couple dans Similitudes actif. Les occurrences restent des nœuds et des marqueurs, pas des dossiers dupliqués."
+    },
+    {
+      "id": "R048",
+      "partenaires": {
+        "55:13": [
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77"
+        ],
+        "55:16": [
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13"
+        ],
+        "55:18": [
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16"
+        ],
+        "55:21": [
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18"
+        ],
+        "55:23": [
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21"
+        ],
+        "55:25": [
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23"
+        ],
+        "55:28": [
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25"
+        ],
+        "55:30": [
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28"
+        ],
+        "55:32": [
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30"
+        ],
+        "55:34": [
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32"
+        ],
+        "55:36": [
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34"
+        ],
+        "55:38": [
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36"
+        ],
+        "55:40": [
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38"
+        ],
+        "55:42": [
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40"
+        ],
+        "55:45": [
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42"
+        ],
+        "55:47": [
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45"
+        ],
+        "55:49": [
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47"
+        ],
+        "55:51": [
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49"
+        ],
+        "55:53": [
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51"
+        ],
+        "55:55": [
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53"
+        ],
+        "55:57": [
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55"
+        ],
+        "55:59": [
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57"
+        ],
+        "55:61": [
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59"
+        ],
+        "55:63": [
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61"
+        ],
+        "55:65": [
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63"
+        ],
+        "55:67": [
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65"
+        ],
+        "55:69": [
+          "55:71",
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67"
+        ],
+        "55:71": [
+          "55:73",
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69"
+        ],
+        "55:73": [
+          "55:75",
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71"
+        ],
+        "55:75": [
+          "55:77",
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73"
+        ],
+        "55:77": [
+          "55:13",
+          "55:16",
+          "55:18",
+          "55:21",
+          "55:23",
+          "55:25",
+          "55:28",
+          "55:30",
+          "55:32",
+          "55:34",
+          "55:36",
+          "55:38",
+          "55:40",
+          "55:42",
+          "55:45",
+          "55:47",
+          "55:49",
+          "55:51",
+          "55:53",
+          "55:55",
+          "55:57",
+          "55:59",
+          "55:61",
+          "55:63",
+          "55:65",
+          "55:67",
+          "55:69",
+          "55:71",
+          "55:73",
+          "55:75"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Le même verset entier apparaît exactement aux 31 références originales de R048. Jalalayn 55:13, page PDF 552, confirme le décompte de trente et une répétitions. Al-Baghawī explique le rappel renouvelé des bienfaits. La frise éditoriale situe les 31 retours parmi les thèmes successifs, sans attribuer ses stations au commentateur.",
+      "enBref": "Le même verset entier apparaît exactement aux 31 références originales de R048. Jalalayn 55:13, page PDF 552, confirme le décompte de trente et une répétitions. Al-Baghawī explique le rappel renouvelé des bienfaits.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 55:13",
+          "url": "https://quran.com/55/13",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:16",
+          "url": "https://quran.com/55/16",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:18",
+          "url": "https://quran.com/55/18",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:21",
+          "url": "https://quran.com/55/21",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:23",
+          "url": "https://quran.com/55/23",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:25",
+          "url": "https://quran.com/55/25",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:28",
+          "url": "https://quran.com/55/28",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:30",
+          "url": "https://quran.com/55/30",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:32",
+          "url": "https://quran.com/55/32",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:34",
+          "url": "https://quran.com/55/34",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:36",
+          "url": "https://quran.com/55/36",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:38",
+          "url": "https://quran.com/55/38",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:40",
+          "url": "https://quran.com/55/40",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:42",
+          "url": "https://quran.com/55/42",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:45",
+          "url": "https://quran.com/55/45",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:47",
+          "url": "https://quran.com/55/47",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:49",
+          "url": "https://quran.com/55/49",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:51",
+          "url": "https://quran.com/55/51",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:53",
+          "url": "https://quran.com/55/53",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:55",
+          "url": "https://quran.com/55/55",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:57",
+          "url": "https://quran.com/55/57",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:59",
+          "url": "https://quran.com/55/59",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:61",
+          "url": "https://quran.com/55/61",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:63",
+          "url": "https://quran.com/55/63",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:65",
+          "url": "https://quran.com/55/65",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:67",
+          "url": "https://quran.com/55/67",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:69",
+          "url": "https://quran.com/55/69",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:71",
+          "url": "https://quran.com/55/71",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:73",
+          "url": "https://quran.com/55/73",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:75",
+          "url": "https://quran.com/55/75",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 55:77",
+          "url": "https://quran.com/55/77",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        },
+        {
+          "titre": "al-Baghawī, Maʿālim al-tanzīl, 55:13",
+          "url": "https://quran.ksu.edu.sa/tafseer/baghawy/sura55-aya13.html",
+          "portee": "Répétition pour rappeler et faire reconnaître les bienfaits ; ne fixe pas les bornes des stations éditoriales."
+        },
+        {
+          "titre": "al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 55:13",
+          "url": "https://quran.ksu.edu.sa/tafseer/qortobi/sura55-aya13.html",
+          "portee": "Adresse aux humains et aux djinns et sens des bienfaits ; pas une méthode mnémotechnique attribuée."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche.",
+        "Répétition pour rappeler et faire reconnaître les bienfaits ; ne fixe pas les bornes des stations éditoriales.",
+        "Adresse aux humains et aux djinns et sens des bienfaits ; pas une méthode mnémotechnique attribuée."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Une seule fiche structurelle, frise de contextes avant/après sourcée ; aucun même couple dans Similitudes actif. Les occurrences restent des nœuds et des marqueurs, pas des dossiers dupliqués.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Une seule fiche structurelle, frise de contextes avant/après sourcée ; aucun même couple dans Similitudes actif. Les occurrences restent des nœuds et des marqueurs, pas des dossiers dupliqués."
+    },
+    {
+      "id": "R049",
+      "partenaires": {
+        "56:7": [
+          "56:88",
+          "56:91",
+          "56:92"
+        ],
+        "56:8": [
+          "56:91"
+        ],
+        "56:9": [
+          "56:92"
+        ],
+        "56:10": [
+          "56:88"
+        ],
+        "56:88": [
+          "56:7",
+          "56:10"
+        ],
+        "56:91": [
+          "56:7",
+          "56:8"
+        ],
+        "56:92": [
+          "56:7",
+          "56:9"
+        ]
+      },
+      "nature": "Début–Fin",
+      "explication": "L’ouverture annonce trois catégories : les gens de la droite, ceux de la gauche et les devanciers. La fin reprend les rapprochés, les gens de la droite et les négateurs égarés, avec leurs issues. Al-Suyūṭī décrit cette reprise des trois catégories. 56:11 relie les devanciers aux rapprochés mais demeure un contexte extérieur à la première plage. L’ordre final ne forme pas un miroir strict.",
+      "enBref": "L’ouverture annonce trois catégories : les gens de la droite, ceux de la gauche et les devanciers. La fin reprend les rapprochés, les gens de la droite et les négateurs égarés, avec leurs issues. Al-Suyūṭī décrit cette reprise des trois catégories.",
+      "sources": [
+        {
+          "titre": "al-Suyūṭī, Marāṣid al-Maṭāliʿ, éd. al-ʿAskar, Dār al-Minhāj, 2005, p.69",
+          "url": "https://quranpedia.app/books/b38158/s4.html",
+          "portee": "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+        },
+        {
+          "titre": "Texte coranique arabe, 56:7",
+          "url": "https://quran.com/56/7",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 56:8",
+          "url": "https://quran.com/56/8",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 56:9",
+          "url": "https://quran.com/56/9",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 56:10",
+          "url": "https://quran.com/56/10",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 56:88",
+          "url": "https://quran.com/56/88",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 56:91",
+          "url": "https://quran.com/56/91",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 56:92",
+          "url": "https://quran.com/56/92",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R051",
+      "partenaires": {
+        "59:1": [
+          "59:24"
+        ],
+        "59:24": [
+          "59:1"
+        ]
+      },
+      "nature": "Début–Fin",
+      "explication": "Premier et dernier versets de59 reprennent glorification des cieux et de la terre et les deux noms finaux. Jalalayn59:24 renvoie expressément à l'explication du début de la sourate. Encadrement par reprise vérifiable,sans identité intégrale.",
+      "enBref": "Premier et dernier versets de59 reprennent glorification des cieux et de la terre et les deux noms finaux. Jalalayn59:24 renvoie expressément à l'explication du début de la sourate. Encadrement par reprise vérifiable,sans identité intégrale.",
+      "sources": [
+        {
+          "titre": "al-Suyūṭī, Marāṣid al-Maṭāliʿ, éd. al-ʿAskar, 2005, p.70",
+          "url": "https://quranpedia.app/books/b38158/s4.html",
+          "portee": "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+        },
+        {
+          "titre": "Texte coranique arabe, 59:1",
+          "url": "https://quran.com/59/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 59:24",
+          "url": "https://quran.com/59/24",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid.",
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R053",
+      "partenaires": {
+        "65:2": [
+          "65:4",
+          "65:5"
+        ],
+        "65:4": [
+          "65:5",
+          "65:2"
+        ],
+        "65:5": [
+          "65:2",
+          "65:4"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "La même condition de crainte de Dieu apparaît trois fois en2,4,5 avec suites différentes.3 prolonge la première promesse et introduit aussi une condition distincte de confiance. Répétition partielle des trois conditions,non deux promesses accomplies.",
+      "enBref": "La même condition de crainte de Dieu apparaît trois fois en2,4,5 avec suites différentes.3 prolonge la première promesse et introduit aussi une condition distincte de confiance. Répétition partielle des trois conditions,non deux promesses accomplies.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 65:2",
+          "url": "https://quran.com/65/2",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 65:4",
+          "url": "https://quran.com/65/4",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 65:5",
+          "url": "https://quran.com/65/5",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [
+        [
+          "65:2",
+          "65:4"
+        ],
+        [
+          "65:4",
+          "65:5"
+        ]
+      ],
+      "mecanismeComplementaire": "Similitudes compare les variantes entre deux conditions de piété. Correspondances rassemble les trois conditions 65:2/4/5 et leurs suites distinctes ; les versets entiers ne sont pas annoncés identiques.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Similitudes compare les variantes entre deux conditions de piété. Correspondances rassemble les trois conditions 65:2/4/5 et leurs suites distinctes ; les versets entiers ne sont pas annoncés identiques."
+    },
+    {
+      "id": "R054",
+      "partenaires": {
+        "66:10": [
+          "66:11",
+          "66:12"
+        ],
+        "66:11": [
+          "66:10"
+        ],
+        "66:12": [
+          "66:10"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Le texte marque exemples pour les négateurs en10,pour les croyants en11;Marie est ajoutée en12 par coordination,confirmée par Jalalayn. Deux contre-exemples puis deux exemples;Marie n'est pas dite épouse d'un prophète,et la trahison est religieuse dans Jalalayn.",
+      "enBref": "Le texte marque exemples pour les négateurs en10,pour les croyants en11;Marie est ajoutée en12 par coordination,confirmée par Jalalayn. Deux contre-exemples puis deux exemples;Marie n'est pas dite épouse d'un prophète,et la trahison est religieuse dans Jalalayn.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 66:10",
+          "url": "https://quran.com/66/10",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 66:11",
+          "url": "https://quran.com/66/11",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 66:12",
+          "url": "https://quran.com/66/12",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R055",
+      "partenaires": {
+        "69:19": [
+          "69:25"
+        ],
+        "69:25": [
+          "69:19"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Deux scènes explicitement introduites par quant à opposent livre remis à droite et à gauche,joie et regret,jardin et Feu. La seconde scène expose aussi les causes de son issue;aucune égalité de longueur ou symétrie intégrale.",
+      "enBref": "Deux scènes explicitement introduites par quant à opposent livre remis à droite et à gauche,joie et regret,jardin et Feu. La seconde scène expose aussi les causes de son issue;aucune égalité de longueur ou symétrie intégrale.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 69:19",
+          "url": "https://quran.com/69/19",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 69:25",
+          "url": "https://quran.com/69/25",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R057",
+      "partenaires": {
+        "73:1": [
+          "73:20"
+        ],
+        "73:20": [
+          "73:1"
+        ]
+      },
+      "nature": "Début–Fin",
+      "explication": "La clôture reprend veille nocturne et fractions de nuit de l'ouverture. Jalalayn73:20 renvoie expressément à l'ordre au début de cette sourate. Encadrement local attesté;les interprétations d'abrogation restent celles du commentaire,non une nouvelle règle.",
+      "enBref": "La clôture reprend veille nocturne et fractions de nuit de l'ouverture. Jalalayn73:20 renvoie expressément à l'ordre au début de cette sourate. Encadrement local attesté;les interprétations d'abrogation restent celles du commentaire,non une nouvelle règle.",
+      "sources": [
+        {
+          "titre": "al-Suyūṭī, Marāṣid al-Maṭāliʿ, éd. al-ʿAskar, 2005, p.75",
+          "url": "https://quranpedia.app/books/b38158/s4.html",
+          "portee": "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+        },
+        {
+          "titre": "Texte coranique arabe, 73:1",
+          "url": "https://quran.com/73/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 73:20",
+          "url": "https://quran.com/73/20",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid.",
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R058",
+      "partenaires": {
+        "75:22": [
+          "75:24"
+        ],
+        "75:24": [
+          "75:22"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Deux tableaux reprennent visages ce jour-là avec éclat/vision du Seigneur et assombrissement/crainte de catastrophe. Opposition locale explicite des qualifications et issues;aucune confusion avec les tableaux de80.",
+      "enBref": "Deux tableaux reprennent visages ce jour-là avec éclat/vision du Seigneur et assombrissement/crainte de catastrophe. Opposition locale explicite des qualifications et issues;aucune confusion avec les tableaux de80.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 75:22",
+          "url": "https://quran.com/75/22",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 75:24",
+          "url": "https://quran.com/75/24",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R059",
+      "partenaires": {
+        "77:15": [
+          "77:19",
+          "77:24",
+          "77:28",
+          "77:34",
+          "77:37",
+          "77:40",
+          "77:45",
+          "77:47",
+          "77:49"
+        ],
+        "77:19": [
+          "77:24",
+          "77:28",
+          "77:34",
+          "77:37",
+          "77:40",
+          "77:45",
+          "77:47",
+          "77:49",
+          "77:15"
+        ],
+        "77:24": [
+          "77:28",
+          "77:34",
+          "77:37",
+          "77:40",
+          "77:45",
+          "77:47",
+          "77:49",
+          "77:15",
+          "77:19"
+        ],
+        "77:28": [
+          "77:34",
+          "77:37",
+          "77:40",
+          "77:45",
+          "77:47",
+          "77:49",
+          "77:15",
+          "77:19",
+          "77:24"
+        ],
+        "77:34": [
+          "77:37",
+          "77:40",
+          "77:45",
+          "77:47",
+          "77:49",
+          "77:15",
+          "77:19",
+          "77:24",
+          "77:28"
+        ],
+        "77:37": [
+          "77:40",
+          "77:45",
+          "77:47",
+          "77:49",
+          "77:15",
+          "77:19",
+          "77:24",
+          "77:28",
+          "77:34"
+        ],
+        "77:40": [
+          "77:45",
+          "77:47",
+          "77:49",
+          "77:15",
+          "77:19",
+          "77:24",
+          "77:28",
+          "77:34",
+          "77:37"
+        ],
+        "77:45": [
+          "77:47",
+          "77:49",
+          "77:15",
+          "77:19",
+          "77:24",
+          "77:28",
+          "77:34",
+          "77:37",
+          "77:40"
+        ],
+        "77:47": [
+          "77:49",
+          "77:15",
+          "77:19",
+          "77:24",
+          "77:28",
+          "77:34",
+          "77:37",
+          "77:40",
+          "77:45"
+        ],
+        "77:49": [
+          "77:15",
+          "77:19",
+          "77:24",
+          "77:28",
+          "77:34",
+          "77:37",
+          "77:40",
+          "77:45",
+          "77:47"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Dix versets arabes identiques aux dix références originales; Jalalayn 77:19 indique une reprise emphatique. Al-Qurṭubī explique le retour de l’avertissement selon les dénégations. La frise éditoriale distingue les dix contextes et conserve la clôture 77:50.",
+      "enBref": "Dix versets arabes identiques aux dix références originales; Jalalayn 77:19 indique une reprise emphatique. Al-Qurṭubī explique le retour de l’avertissement selon les dénégations. La frise éditoriale distingue les dix contextes et conserve la clôture 77:50.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 77:15",
+          "url": "https://quran.com/77/15",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:19",
+          "url": "https://quran.com/77/19",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:24",
+          "url": "https://quran.com/77/24",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:28",
+          "url": "https://quran.com/77/28",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:34",
+          "url": "https://quran.com/77/34",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:37",
+          "url": "https://quran.com/77/37",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:40",
+          "url": "https://quran.com/77/40",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:45",
+          "url": "https://quran.com/77/45",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:47",
+          "url": "https://quran.com/77/47",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 77:49",
+          "url": "https://quran.com/77/49",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        },
+        {
+          "titre": "al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 77:15",
+          "url": "https://quran-tafsir.net/qortoby/sura77-aya15.html",
+          "portee": "Retour de l’avertissement selon les occasions de dénégation ; les dix titres contextuels sont éditoriaux."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche.",
+        "Retour de l’avertissement selon les occasions de dénégation ; les dix titres contextuels sont éditoriaux."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Une seule fiche structurelle, frise de contextes avant/après sourcée ; aucun même couple dans Similitudes actif. Les occurrences restent des nœuds et des marqueurs, pas des dossiers dupliqués.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Une seule fiche structurelle, frise de contextes avant/après sourcée ; aucun même couple dans Similitudes actif. Les occurrences restent des nœuds et des marqueurs, pas des dossiers dupliqués."
+    },
+    {
+      "id": "R060",
+      "partenaires": {
+        "79:37": [
+          "79:40"
+        ],
+        "79:40": [
+          "79:37"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Deux quant à opposent rébellion/préférence du monde et crainte/retenue du désir, puis Feu/Paradis dans une même construction.",
+      "enBref": "79:37–39 associe rébellion et préférence de la vie présente au Feu. 79:40–41 oppose la crainte du Seigneur et la retenue du désir, avec le Paradis comme séjour.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 79:37",
+          "url": "https://quran.com/79/37",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 79:40",
+          "url": "https://quran.com/79/40",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R061",
+      "partenaires": {
+        "80:38": [
+          "80:40"
+        ],
+        "80:40": [
+          "80:38"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Deux tableaux reprennent visages ce jour-là: éclat et joie, puis poussière et obscurité; 42 identifie le second groupe.",
+      "enBref": "80:38–39 décrit des visages rayonnants et joyeux. 80:40–42 oppose des visages couverts de poussière et d’obscurité, puis identifie ce second groupe.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 80:38",
+          "url": "https://quran.com/80/38",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 80:40",
+          "url": "https://quran.com/80/40",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R063",
+      "partenaires": {
+        "83:7": [
+          "83:18"
+        ],
+        "83:18": [
+          "83:7"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Les registres des débauchés/pieux sont présentés avec les mêmes questions et livre inscrit; les suites opposent Feu et délices.",
+      "enBref": "83:7 et 83:18 introduisent les registres des débauchés et des pieux avec des constructions voisines. Leurs suites opposent le Feu et les délices.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 83:7",
+          "url": "https://quran.com/83/7",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 83:18",
+          "url": "https://quran.com/83/18",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R064",
+      "partenaires": {
+        "84:7": [
+          "84:10"
+        ],
+        "84:10": [
+          "84:7"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Même introduction du livre remis avec droite/derrière le dos; compte facile et joie contrastent avec appel à destruction et brasier.",
+      "enBref": "84:7 et 84:10 reprennent l’introduction du livre remis, à droite ou derrière le dos. Compte facile et joie contrastent avec appel à la destruction et brasier.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 84:7",
+          "url": "https://quran.com/84/7",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 84:10",
+          "url": "https://quran.com/84/10",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R065",
+      "partenaires": {
+        "85:10": [
+          "85:11"
+        ],
+        "85:11": [
+          "85:10"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "85:10 annonce le châtiment de ceux qui persécutent les croyants et les croyantes sans se repentir. 85:11 promet des jardins à ceux qui croient et accomplissent de bonnes œuvres. Les deux annonces adjacentes opposent conditions et issues. 85:4–9 donne le contexte des persécutions, sans être le premier membre de cette comparaison.",
+      "enBref": "85:10 annonce le châtiment de ceux qui persécutent les croyants et les croyantes sans se repentir. 85:11 promet des jardins à ceux qui croient et accomplissent de bonnes œuvres. Les deux annonces adjacentes opposent conditions et issues.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 85:10",
+          "url": "https://quran.com/85/10",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 85:11",
+          "url": "https://quran.com/85/11",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R066",
+      "partenaires": {
+        "88:2": [
+          "88:8"
+        ],
+        "88:8": [
+          "88:2"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Visages accablés puis satisfaits; feu/boisson brûlante contrastent avec jardin/source courante et repos.",
+      "enBref": "88:2–7 décrit des visages accablés, le feu et une boisson brûlante. 88:8–16 présente des visages satisfaits, le jardin, une source courante et le repos.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 88:2",
+          "url": "https://quran.com/88/2",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 88:8",
+          "url": "https://quran.com/88/8",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R068",
+      "partenaires": {
+        "91:9": [
+          "91:10"
+        ],
+        "91:10": [
+          "91:9"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Même construction oppose succès/purification et échec/corruption de l’âme.",
+      "enBref": "91:9 associe la réussite à la purification de l’âme. 91:10 oppose l’échec à sa corruption dans une construction parallèle.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 91:9",
+          "url": "https://quran.com/91/9",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 91:10",
+          "url": "https://quran.com/91/10",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R069",
+      "partenaires": {
+        "92:5": [
+          "92:8"
+        ],
+        "92:8": [
+          "92:5"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Les constructions quant à opposent donner/piété/confirmation et avarice/suffisance/dénégation, puis aisance/difficulté.",
+      "enBref": "92:5–7 associe don, piété et confirmation à la voie facile. 92:8–10 oppose avarice, suffisance et dénégation, avec une issue difficile.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 92:5",
+          "url": "https://quran.com/92/5",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 92:8",
+          "url": "https://quran.com/92/8",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R070",
+      "partenaires": {
+        "93:6": [
+          "93:9"
+        ],
+        "93:9": [
+          "93:6"
+        ],
+        "93:7": [
+          "93:11"
+        ],
+        "93:11": [
+          "93:7"
+        ],
+        "93:8": [
+          "93:10"
+        ],
+        "93:10": [
+          "93:8"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Lecture croisée proposée : l’orphelin accueilli en 93:6 éclaire l’interdit de l’opprimer en 93:9 ; la guidance de 93:7 éclaire la proclamation du bienfait en 93:11 ; l’enrichissement de 93:8 éclaire l’accueil du demandeur en 93:10. Seule la paire orphelin possède une reprise lexicale directe. Les deux autres appariements sont une lecture argumentée, et non des identités textuelles ; « demandeur » peut aussi concerner une demande de savoir.",
+      "enBref": "Lecture croisée proposée : l’orphelin accueilli en 93:6 éclaire l’interdit de l’opprimer en 93:9 ; la guidance de 93:7 éclaire la proclamation du bienfait en 93:11 ; l’enrichissement de 93:8 éclaire l’accueil du demandeur en 93:10. Seule la paire orphelin possède une reprise lexicale directe. Les deux autres appariements sont une lecture argumentée, et non des identités textuelles ; « demandeur » peut aussi concerner une demande de savoir.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 93:6",
+          "url": "https://quran.com/93/6",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 93:9",
+          "url": "https://quran.com/93/9",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 93:7",
+          "url": "https://quran.com/93/7",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 93:11",
+          "url": "https://quran.com/93/11",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 93:8",
+          "url": "https://quran.com/93/8",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 93:10",
+          "url": "https://quran.com/93/10",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Synthèse adaptée d’Ibn ʿĀshūr, contexte des bienfaits et de la gratitude",
+          "url": "https://quran.com/surah/93/info",
+          "portee": "Contexte général seulement ; ne démontre pas les trois appariements proposés."
+        }
+      ],
+      "porteeAttribution": [
+        "Contexte général seulement ; ne démontre pas les trois appariements proposés."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R071",
+      "partenaires": {
+        "94:5": [
+          "94:6"
+        ],
+        "94:6": [
+          "94:5"
+        ]
+      },
+      "nature": "Répétition",
+      "explication": "Même noyau arabe difficulté/facilité; le premier verset ajoute un fā initial.",
+      "enBref": "94:5 et 94:6 reprennent le même noyau difficulté et facilité. Le premier verset ajoute un fā initial : les versets entiers ne sont pas identiques.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 94:5",
+          "url": "https://quran.com/94/5",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 94:6",
+          "url": "https://quran.com/94/6",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R073",
+      "partenaires": {
+        "98:6": [
+          "98:7"
+        ],
+        "98:7": [
+          "98:6"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Deux groupes sont qualifiés pires/meilleurs de la création; le Feu de 6 contraste avec jardins et récompense en 8.",
+      "enBref": "98:6 et 98:7 qualifient deux groupes de pires et de meilleurs de la création. Le Feu de 98:6 contraste avec les jardins et la récompense de 98:8.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 98:6",
+          "url": "https://quran.com/98/6",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 98:7",
+          "url": "https://quran.com/98/7",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R074",
+      "partenaires": {
+        "99:7": [
+          "99:8"
+        ],
+        "99:8": [
+          "99:7"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Même condition du poids infime d’action et même conséquence voir; bien/mal sont opposés.",
+      "enBref": "99:7 et 99:8 reprennent la même condition du poids infime d’une action et la même annonce de la voir. Les termes bien et mal sont opposés.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 99:7",
+          "url": "https://quran.com/99/7",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 99:8",
+          "url": "https://quran.com/99/8",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R075",
+      "partenaires": {
+        "101:6": [
+          "101:8"
+        ],
+        "101:8": [
+          "101:6"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Deux quant à opposent balances lourdes/légères et vie agréable/abîme; 10–11 explicite ce dernier par le feu.",
+      "enBref": "101:6–7 et 101:8–9 opposent balances lourdes et légères, puis vie agréable et abîme. 101:10–11 explicite ce dernier par le feu.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 101:6",
+          "url": "https://quran.com/101/6",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 101:8",
+          "url": "https://quran.com/101/8",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R078",
+      "partenaires": {
+        "109:2": [
+          "109:3",
+          "109:4",
+          "109:5"
+        ],
+        "109:3": [
+          "109:4",
+          "109:5",
+          "109:2"
+        ],
+        "109:4": [
+          "109:5",
+          "109:2",
+          "109:3"
+        ],
+        "109:5": [
+          "109:2",
+          "109:3",
+          "109:4"
+        ]
+      },
+      "nature": "Alternance",
+      "explication": "Alternance de positions grammaticales A–B–A′–B′ dans 109:2–5, avec 109:3=109:5.",
+      "enBref": "109:2–5 alterne les positions grammaticales de je et vous. 109:3 et 109:5 sont identiques, mais l’ensemble n’est pas un dialogue entre deux locuteurs.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 109:2",
+          "url": "https://quran.com/109/2",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 109:3",
+          "url": "https://quran.com/109/3",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 109:4",
+          "url": "https://quran.com/109/4",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 109:5",
+          "url": "https://quran.com/109/5",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R079",
+      "partenaires": {
+        "8:4": [
+          "8:74"
+        ],
+        "8:74": [
+          "8:4"
+        ]
+      },
+      "nature": "Début–Fin",
+      "explication": "Vrais croyants puis pardon et subsistance généreuse reviennent en 4 et 74 dans les ensembles initial et final de 8.",
+      "enBref": "8:4 et 8:74 reprennent vrais croyants, pardon et subsistance généreuse. Cette reprise relie les ensembles initial et final de la sourate selon al-Suyūṭī, sans identité intégrale des deux versets.",
+      "sources": [
+        {
+          "titre": "al-Suyūṭī, Marāṣid al-Maṭāliʿ, éd. al-ʿAskar, 2005, p.51",
+          "url": "https://quranpedia.app/books/b38158/s1.html",
+          "portee": "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+        },
+        {
+          "titre": "Texte coranique arabe, 8:4",
+          "url": "https://quran.com/8/4",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 8:74",
+          "url": "https://quran.com/8/74",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid."
+      ],
+      "pairesSimilitudes": [
+        [
+          "8:4",
+          "8:74"
+        ]
+      ],
+      "mecanismeComplementaire": "Similitudes compare la formule de 8:4 / 8:74. Correspondances documente la reprise aux frontières de la sourate, avec al-Suyūṭī, Marāṣid p.51 ; le mécanisme est l’encadrement et non la variation lexicale.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Similitudes compare la formule de 8:4 / 8:74. Correspondances documente la reprise aux frontières de la sourate, avec al-Suyūṭī, Marāṣid p.51 ; le mécanisme est l’encadrement et non la variation lexicale."
+    },
+    {
+      "id": "R082",
+      "partenaires": {
+        "38:17": [
+          "38:30"
+        ],
+        "38:30": [
+          "38:17"
+        ],
+        "38:25": [
+          "38:40"
+        ],
+        "38:40": [
+          "38:25"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Pénitent qualifie Dāwūd et Sulaymān en 17/30; proximité et beau retour reviennent en 25/40. Jalalayn 40 signale la reprise.",
+      "enBref": "Pénitent qualifie Dāwūd et Sulaymān en 17/30; proximité et beau retour reviennent en 25/40. Jalalayn 40 signale la reprise.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 38:17",
+          "url": "https://quran.com/38/17",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 38:30",
+          "url": "https://quran.com/38/30",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 38:25",
+          "url": "https://quran.com/38/25",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 38:40",
+          "url": "https://quran.com/38/40",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R083",
+      "partenaires": {
+        "62:9": [
+          "62:11"
+        ],
+        "62:11": [
+          "62:9"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "9 demande de délaisser commerce à l’appel; 11 décrit dispersion vers commerce/divertissement en laissant le Prophète debout.",
+      "enBref": "62:9 demande de délaisser le commerce à l’appel de la prière. 62:11 décrit la dispersion vers commerce et divertissement en laissant le Prophète debout. 62:10 permet le commerce après la prière.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 62:9",
+          "url": "https://quran.com/62/9",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 62:11",
+          "url": "https://quran.com/62/11",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R091",
+      "partenaires": {
+        "22:77": [
+          "23:1"
+        ],
+        "23:1": [
+          "22:77"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "22:77 associe l’adresse aux croyants, la prière (inclinaison et prosternation), le bien et la réussite espérée. 23:1–2 proclame la réussite des croyants puis leur humilité dans la prière. Les deux foyers précis sont la réussite et la prière ; cette proximité entre sourates ne prouve ni identité des prescriptions ni causalité chronologique.",
+      "enBref": "22:77 associe l’adresse aux croyants, la prière (inclinaison et prosternation), le bien et la réussite espérée. 23:1–2 proclame la réussite des croyants puis leur humilité dans la prière. Les deux foyers précis sont la réussite et la prière ; cette proximité entre sourates ne prouve ni identité des prescriptions ni causalité chronologique.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 22:77",
+          "url": "https://quran.com/22/77",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 23:1",
+          "url": "https://quran.com/23/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R092",
+      "partenaires": {
+        "73:1": [
+          "74:1"
+        ],
+        "74:1": [
+          "73:1"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Même vocatif initial avec deux épithètes différentes du vêtement; Jalalayn identifie dans les deux cas le Prophète.",
+      "enBref": "73:1 et 74:1 commencent par le même vocatif, avec deux épithètes différentes du vêtement. Jalalayn identifie le Prophète dans les deux passages.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 73:1",
+          "url": "https://quran.com/73/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 74:1",
+          "url": "https://quran.com/74/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R093",
+      "partenaires": {
+        "81:14": [
+          "82:5"
+        ],
+        "82:5": [
+          "81:14"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Deux séries en quand aboutissent à une âme sait: 81:14 et 82:5. Jalalayn 81:13/82:4 indique les réponses des conditionnelles.",
+      "enBref": "Deux séries en quand aboutissent à une âme sait: 81:14 et 82:5. Jalalayn 81:13/82:4 indique les réponses des conditionnelles.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 81:14",
+          "url": "https://quran.com/81/14",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 82:5",
+          "url": "https://quran.com/82/5",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées",
+          "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+          "portee": "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+        }
+      ],
+      "porteeAttribution": [
+        "Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R094",
+      "partenaires": {
+        "24:35": [
+          "24:40"
+        ],
+        "24:40": [
+          "24:35"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Lumière sur lumière dans l’image de la lampe contraste avec ténèbres superposées et absence de lumière en 40.",
+      "enBref": "24:35 présente la lumière sur lumière dans l’image de la lampe. 24:40 oppose les ténèbres superposées et l’absence de lumière, sans épuiser l’interprétation du premier verset.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 24:35",
+          "url": "https://quran.com/24/35",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 24:40",
+          "url": "https://quran.com/24/40",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R096",
+      "partenaires": {
+        "29:2": [
+          "29:10"
+        ],
+        "29:10": [
+          "29:2"
+        ],
+        "29:3": [
+          "29:11"
+        ],
+        "29:11": [
+          "29:3"
+        ]
+      },
+      "nature": "Parallélisme",
+      "explication": "Deux déclarations de foi sont confrontées à l’épreuve; 3/11 annoncent la distinction des groupes et reprennent une formule de connaissance.",
+      "enBref": "29:2 et 29:10 confrontent deux déclarations de foi à l’épreuve. 29:3 et 29:11 annoncent la distinction des groupes avec une formule de connaissance reprise.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 29:2",
+          "url": "https://quran.com/29/2",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 29:10",
+          "url": "https://quran.com/29/10",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 29:3",
+          "url": "https://quran.com/29/3",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 29:11",
+          "url": "https://quran.com/29/11",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R098",
+      "partenaires": {
+        "47:1": [
+          "47:2"
+        ],
+        "47:2": [
+          "47:1"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Actions perdues des négateurs et effacement des fautes/redressement des croyants sont opposés; 3 explicite faux/vrai en revenant aux deux groupes.",
+      "enBref": "47:1 et 47:2 opposent les actions perdues des négateurs à l’effacement des fautes et au redressement des croyants. 47:3 revient aux deux groupes en explicitant faux et vrai.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 47:1",
+          "url": "https://quran.com/47/1",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 47:2",
+          "url": "https://quran.com/47/2",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R102",
+      "partenaires": {
+        "60:8": [
+          "60:9"
+        ],
+        "60:9": [
+          "60:8"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Non-combat/non-expulsion et combat/expulsion/soutien à expulsion sont portés par constructions négative puis affirmative avec conduites différentes.",
+      "enBref": "60:8 décrit le non-combat et la non-expulsion ; 60:9 évoque combat, expulsion et soutien à l’expulsion. Les constructions négative et affirmative portent sur des conduites différentes, sans règle nouvelle déduite du seul rapprochement.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 60:8",
+          "url": "https://quran.com/60/8",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 60:9",
+          "url": "https://quran.com/60/9",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    },
+    {
+      "id": "R106",
+      "partenaires": {
+        "78:21": [
+          "78:31"
+        ],
+        "78:31": [
+          "78:21"
+        ]
+      },
+      "nature": "Opposition",
+      "explication": "Deux séjours sont annoncés pour rebelles et pieux; boisson et rétribution diffèrent, avec reprise rétribution en26/36.",
+      "enBref": "78:21 et 78:31 annoncent deux séjours pour les rebelles et les pieux. Les boissons et les rétributions diffèrent, avec reprise du terme rétribution en 78:26 et 78:36.",
+      "sources": [
+        {
+          "titre": "Texte coranique arabe, 78:21",
+          "url": "https://quran.com/78/21",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        },
+        {
+          "titre": "Texte coranique arabe, 78:31",
+          "url": "https://quran.com/78/31",
+          "portee": "Passage primaire ; ne constitue pas une attribution littéraire savante."
+        }
+      ],
+      "porteeAttribution": [
+        "Observation éditoriale du texte primaire ; aucune attribution savante."
+      ],
+      "pairesSimilitudes": [],
+      "mecanismeComplementaire": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée.",
+      "verdict": "CONSERVER",
+      "destination": "Correspondances",
+      "motif": "Aucun même couple actif dans Similitudes ; mécanisme et partenaires limités à la notice documentée."
+    }
+  ]
+}

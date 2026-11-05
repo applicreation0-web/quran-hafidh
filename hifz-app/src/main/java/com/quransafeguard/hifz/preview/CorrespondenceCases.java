@@ -13,7 +13,7 @@ import java.util.List;
  */
 final class CorrespondenceCases {
     static final class Entry {
-        final String id, type, title, mechanism, source;
+        final String id, type, title, mechanism, source, brief;
         final List<VerseRef> verses;
         private final int[][] partners;
         Entry(String id, String type, String title, String mechanism, String source,
@@ -22,10 +22,14 @@ final class CorrespondenceCases {
         }
         Entry(String id, String type, String title, String mechanism, String source,
               int[][] allowedPartners, VerseRef... verses) {
+            this(id,type,title,mechanism,source,mechanism,allowedPartners,verses);
+        }
+        Entry(String id, String type, String title, String mechanism, String source, String brief,
+              int[][] allowedPartners, VerseRef... verses) {
             if(verses.length<2||allowedPartners.length!=verses.length)
                 throw new IllegalArgumentException("A relationship needs explicit partners");
             this.id=id;this.type=type;this.title=title;this.mechanism=mechanism;
-            this.source=source;this.verses=Collections.unmodifiableList(Arrays.asList(verses.clone()));
+            this.source=source;this.brief=brief;this.verses=Collections.unmodifiableList(Arrays.asList(verses.clone()));
             partners=new int[verses.length][];
             for(int i=0;i<verses.length;i++){
                 if(allowedPartners[i]==null||allowedPartners[i].length==0)

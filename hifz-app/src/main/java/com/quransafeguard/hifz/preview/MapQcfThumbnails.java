@@ -36,6 +36,7 @@ final class MapQcfThumbnails extends WebView {
  private boolean markOnlyBoundaries;
  private boolean mosaicMode;
  private boolean atlasSinglePageCompact;
+ private boolean dynamicVerseSelection;
  private com.quransafeguard.hifz.core.VerseRef atlasDifferenceVerse;
  private int[] atlasDifferenceWords=new int[0];
  void setAtlasWordDifferences(com.quransafeguard.hifz.core.VerseRef verse,int[] words){
@@ -46,6 +47,14 @@ final class MapQcfThumbnails extends WebView {
  void cancelPendingAtlasRender(){
   if(!atlasSinglePageCompact||disposed)return;
   ++fullGeneration;pendingCompactSvg=null;renderKey="";stopLoading();
+ }
+ /** Change only the exact verse-polygon style; never reload the SVG or WebView. */
+ void setSelectedVerse(int surah,int ayah){
+  if(disposed||!atlasSinglePageCompact)return;
+  if(surah<1||surah>114||ayah<1)throw new IllegalArgumentException("QCF selection");
+  dynamicVerseSelection=true;
+  markSurah=surah;markFirst=ayah;markLast=ayah;markOnlyBoundaries=false;
+  evaluateJavascript("if(window.selectQcfVerse)selectQcfVerse("+surah+","+ayah+");",null);
  }
  private String highlightAtlasWords(String svg,int page)throws Exception{
   if(!atlasSinglePageCompact||atlasDifferenceVerse==null)return svg;
@@ -147,7 +156,7 @@ final class MapQcfThumbnails extends WebView {
   * line-based boxes that also cover neighboring verses. */
  private String highlightExactVersePolygons(String svg,int surah,int firstAyah,int lastAyah,boolean boundariesOnly){
   if(surah==0||firstAyah==0)return svg;
-  StringBuilder css=new StringBuilder("<style>");
+  StringBuilder css=new StringBuilder("<style id='haafidh-active-verse'>");
   if(boundariesOnly){
    appendSelector(css,surah,firstAyah);
    if(lastAyah!=firstAyah){css.append(',');appendSelector(css,surah,lastAyah);}
@@ -278,6 +287,12 @@ final class MapQcfThumbnails extends WebView {
   }
   html.append("<script>var fullGeneration=").append(generation).append(";var currentSvgPage=").append(selected)
       .append(";var inlineQcf=").append(atlasSinglePageCompact?"true":"false").append(";")
+      .append("var selectionSurah=").append(markSurah).append(";var selectionAyah=").append(markFirst).append(";")
+      .append("function selectQcfVerse(s,a){dynamicVerseSelection=true;selectionSurah=s;selectionAyah=a;applyVerseSelection();}")
+      .append("var dynamicVerseSelection=").append(dynamicVerseSelection?"true":"false").append(";")
+      .append("function applyVerseSelection(){if(!inlineQcf||!dynamicVerseSelection)return;var svg=document.querySelector('.paper svg');if(!svg)return;")
+      .append("var style=svg.querySelector('#haafidh-active-verse');if(!style){style=document.createElementNS('http://www.w3.org/2000/svg','style');style.id='haafidh-active-verse';svg.appendChild(style);}")
+      .append("style.textContent=\"path.ayahPolygon[surah='\"+selectionSurah+\"'][ayah='\"+selectionAyah+\"']{fill:#999!important;fill-opacity:0.23!important;stroke:#333!important;stroke-width:0.25!important;}\";}")
       .append("var fullParts=[],fullExpected=0;")
       .append("function qcfError(reason,gen){MapPages.describe(gen,String(reason).slice(0,220));MapPages.fullStatus(currentSvgPage,gen,false);}")
       .append("function receiveFullChunk(i,total,part,gen){if(gen!==fullGeneration)return;")
@@ -292,7 +307,7 @@ final class MapQcfThumbnails extends WebView {
       .append("var parsed=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'image/svg+xml');")
       .append("var svg=parsed.documentElement;if(!svg||svg.localName!=='svg'||parsed.getElementsByTagName('parsererror').length)throw Error('SVG XML invalid');")
       .append("if(!svg.querySelector('path.ayahPolygon'))throw Error('Missing original QCF ayah polygon');")
-      .append("var imported=document.importNode(svg,true);box.textContent='';box.appendChild(imported);fit();")
+      .append("var imported=document.importNode(svg,true);box.textContent='';box.appendChild(imported);applyVerseSelection();fit();")
       .append("requestAnimationFrame(function(){requestAnimationFrame(function(){fit();var rect=imported.getBoundingClientRect();")
       .append("if(rect.width<=40||rect.height<=60||Math.abs(rect.width/rect.height-345/550)>0.015){")
       .append("qcfError('inline SVG fitted viewport '+rect.width+'x'+rect.height,gen);")

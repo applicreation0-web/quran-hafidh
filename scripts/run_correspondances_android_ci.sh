@@ -21,6 +21,9 @@ adb shell wm size "$size"
 adb shell wm density "$density"
 mkdir -p hifz-app/build/android-proof
 
+# Capture BEFORE from the pinned original source on the same disposable display.
+bash scripts/run_mandat_before_after.sh
+
 # Reproduce the diagnosed home lifecycle boundary before the full matrix.
 # Each old failing class is repeated with a fresh process and preferences.
 regressions=com.quransafeguard.hifz.preview.HomeLoaderLifecycleInstrumentedTest
@@ -33,7 +36,7 @@ bash scripts/run_11711_hifz_parcours_isolated.sh "$regressions" "$surface"
 # Collect evidence and audit Hifz even when the correspondence test fails.
 test_status=0
 if gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.CorrespondenceContextInstrumentedTest; then
+  -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.CorrespondenceContextInstrumentedTest,com.quransafeguard.hifz.preview.CorrespondenceNavigationInstrumentedTest,com.quransafeguard.hifz.preview.MandatCaptureInstrumentedTest,com.quransafeguard.hifz.preview.SimilitudesMandatInstrumentedTest; then
   echo "CORRESPONDENCES_ANDROID_CATALOGUE_TESTS_PASS: $surface"
 else
   test_status=$?
@@ -41,7 +44,7 @@ else
 fi
 
 capture_status=0
-for capture in progression repetition opposition-85 crossed-93 agrandissement lecture-reperes lecture-deux-familles similitudes tafsir retour-lecture; do
+for capture in navigation-p235 navigation-p293 frise-R047 frise-R048 frise-R059 apres-lecture-p11 apres-lecture-p14 apres-lecture-p532 apres-lecture-p235 apres-lecture-p529 apres-lecture-p293 apres-comparaison-p235 apres-sources sim-161 sim-166 sim-168 progression repetition opposition-85 crossed-93 agrandissement lecture-reperes lecture-deux-familles similitudes tafsir retour-lecture; do
   if ! adb pull "/data/local/tmp/haafidh-$capture.png" hifz-app/build/android-proof/ >/dev/null 2>&1; then
     echo "NO_VERIFIED_CAPTURE: $capture"
     capture_status=1

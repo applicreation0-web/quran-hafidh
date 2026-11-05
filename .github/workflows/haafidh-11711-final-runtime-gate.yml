@@ -25,6 +25,8 @@ jobs:
       HAAFIDH_CORRESPONDENCES_PILOT: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -72,6 +74,8 @@ jobs:
       HAAFIDH_CORRESPONDENCES_PILOT: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

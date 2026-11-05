@@ -53,6 +53,9 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private final TextView[] pageLabels=new TextView[2];
     private final TextView[] commentaries=new TextView[2];
     private final int[] shownPages=new int[2];
+    private final int[] navigationSurahs=new int[2];
+    private final TextView[] tafsirLabels=new TextView[2];
+    private final Button[] previousVerses=new Button[2],nextVerses=new Button[2];
     private final VerseRef[] selectedVerses=new VerseRef[2];
     private final int[] tafsirTokens=new int[2];
     private final boolean[] authenticQcfRendered=new boolean[2];
@@ -67,6 +70,9 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private boolean booxPortrait,tafsirOpen,expanded;
     private int enlarged=-1,partnerOffset;
     private boolean disposed;
+    private RefrainTimeline.State timelineState;
+    private boolean sourcesOpen;
+    private AlertDialog sourcesDialog;
     private int normalFolioHeightDp,expandedFolioHeightDp;
     private ScrollView folioViewport;
 
@@ -90,25 +96,31 @@ public final class CorrespondenceComparisonActivity extends Activity {
         tafsirOpen=state==null?booxPortrait:state.getBoolean("tafsirOpen",booxPortrait);
         selectedVerses[0]=origin;
         selectedVerses[1]=relation.partner(origin,partnerOffset);
+        navigationSurahs[0]=origin.getSurah();
+        navigationSurahs[1]=selectedVerses[1].getSurah();
         shownPages[0]=geometry.pageForVerse(selectedVerses[0]);
         shownPages[1]=geometry.pageForVerse(selectedVerses[1]);
         if(state!=null){
             for(int i=0;i<2;i++){
-                int p=state.getInt("page"+i,shownPages[i]);
-                if(p>=1&&p<=604)shownPages[i]=p;
+                // Folios stay fixed to the relation partner, including after recreation.
                 int surah=state.getInt("selectedSurah"+i,0);
                 int ayah=state.getInt("selectedAyah"+i,0);
                 if(state.containsKey("selectedSurah"+i))
                     selectedVerses[i]=surah>0&&ayah>0?new VerseRef(surah,ayah):null;
-                if(!isOnPage(selectedVerses[i],shownPages[i]))selectedVerses[i]=null;
+                if(!isOnPage(selectedVerses[i],shownPages[i])){
+                    selectedVerses[i]=i==0?origin:relation.partner(origin,partnerOffset);
+                }
+                navigationSurahs[i]=selectedVerses[i].getSurah();
             }
         }
+        timelineState=new RefrainTimeline.State(state);
         build();
         updateRelationLabel();
         for(int i=0;i<2;i++){
             showFolio(i);
             if(tafsirOpen)loadTafsir(i,selectedVerses[i]);
         }
+        if(state!=null&&state.getBoolean("sourcesOpen",false))root.post(this::showSources);
     }
 
     private TextView caption(String value,float size,boolean bold){
@@ -181,17 +193,17 @@ public final class CorrespondenceComparisonActivity extends Activity {
             loc.setSingleLine(true);
             column.addView(loc,new LinearLayout.LayoutParams(-1,dp(24)));
             pageLabels[side]=loc;
-            bar.addView(action("‹","Page précédente "+(side==0?"A":"B"),()->selectPage(pane,shownPages[pane]-1)),
-                new LinearLayout.LayoutParams(dp(44),dp(44)));
-            bar.addView(action("›","Page suivante "+(side==0?"A":"B"),()->selectPage(pane,shownPages[pane]+1)),
-                new LinearLayout.LayoutParams(dp(44),dp(44)));
             bar.addView(action("⛶","Agrandir le Mushaf "+(side==0?"A":"B"),()->toggleEnlarge(pane)),
                 new LinearLayout.LayoutParams(dp(44),dp(44)));
             column.addView(bar,new LinearLayout.LayoutParams(-1,dp(44)));
             MapQcfThumbnails surface=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
-                @Override public void onPageChosen(int page){selectPage(pane,page);}
+                @Override public void onPageChosen(int page){/* Fixed relation folio. */}
                 @Override public void onRendered(int page,boolean success){
-                    if(page==shownPages[pane])authenticQcfRendered[pane]=success;
+                    if(page==shownPages[pane]){
+                        authenticQcfRendered[pane]=success;
+                        VerseRef active=selectedVerses[pane];
+                        if(success&&active!=null)pages[pane].setSelectedVerse(active.getSurah(),active.getAyah());
+                    }
                 }
                 @Override public void onOpenReading(int page){openReading(pane);}
                 @Override public void onVerseChosen(int page,int surah,int ayah){
@@ -218,12 +230,19 @@ public final class CorrespondenceComparisonActivity extends Activity {
         for(int side=0;side<2;side++){
             final int pane=side;
             LinearLayout part=Ui.column(this);
-            TextView label=caption(side==0?"A · Tafsīr":"B · Tafsīr",12,true);
-            label.setPadding(dp(8),0,0,0);
-            label.setOnClickListener(v->openReading(pane));
-            part.addView(label,new LinearLayout.LayoutParams(-1,dp(28)));
+            LinearLayout header=Ui.row(this);header.setGravity(Gravity.CENTER_VERTICAL);
+            String sideName=side==0?"A":"B";
+            previousVerses[side]=action("‹","Verset précédent "+sideName,()->stepVerse(pane,-1));
+            nextVerses[side]=action("›","Verset suivant "+sideName,()->stepVerse(pane,1));
+            header.addView(previousVerses[side],new LinearLayout.LayoutParams(dp(44),dp(44)));
+            TextView label=caption("",booxPortrait?14:12,true);
+            label.setGravity(Gravity.CENTER);label.setMaxLines(2);
+            tafsirLabels[side]=label;
+            header.addView(label,new LinearLayout.LayoutParams(0,dp(44),1));
+            header.addView(nextVerses[side],new LinearLayout.LayoutParams(dp(44),dp(44)));
+            part.addView(header,new LinearLayout.LayoutParams(-1,dp(44)));
             ScrollView scroll=new ScrollView(this);
-            TextView commentary=caption("",14,false);commentary.setPadding(dp(8),0,dp(8),dp(8));
+            TextView commentary=caption("",booxPortrait?18:14,false);commentary.setPadding(dp(8),0,dp(8),dp(8));
             commentaries[side]=commentary;
             scroll.addView(commentary,new ScrollView.LayoutParams(-1,-2));
             part.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
@@ -282,19 +301,38 @@ public final class CorrespondenceComparisonActivity extends Activity {
         int alternatives=relation.partnerCount(origin);
         partnerOffset=Math.floorMod(partnerOffset+delta,alternatives);
         selectedVerses[1]=relation.partner(origin,partnerOffset);
+        navigationSurahs[1]=selectedVerses[1].getSurah();
+        ++tafsirTokens[1];
         shownPages[1]=geometry.pageForVerse(selectedVerses[1]);
         updateRelationLabel();
         showFolio(1);
         if(tafsirOpen)loadTafsir(1,selectedVerses[1]);
     }
-    private void selectPage(int side,int page){
-        if(page<1||page>604||side<0||side>1||page==shownPages[side])return;
-        shownPages[side]=page;
-        if(!isOnPage(selectedVerses[side],page)){
-            selectedVerses[side]=null;
-            if(tafsirOpen)loadTafsir(side,null);
-        }
-        showFolio(side);
+    private java.util.List<VerseRef> navigationVerses(int side){
+        java.util.ArrayList<VerseRef> result=new java.util.ArrayList<>();
+        for(VerseRef verse:geometry.versesOnLines(geometry.lineIdsOnPage(shownPages[side])))
+            if(verse.getSurah()==navigationSurahs[side])result.add(verse);
+        result.sort(java.util.Comparator.comparingInt(VerseRef::getAyah));
+        return result;
+    }
+    private void stepVerse(int side,int delta){
+        java.util.List<VerseRef> allowed=navigationVerses(side);
+        int index=allowed.indexOf(selectedVerses[side]);
+        int next=index+(delta<0?-1:1);
+        if(index<0||next<0||next>=allowed.size())return;
+        VerseRef verse=allowed.get(next);
+        selectVerse(side,shownPages[side],verse.getSurah(),verse.getAyah());
+    }
+    private void updateSelection(int side){
+        VerseRef verse=selectedVerses[side];
+        String name=side==0?"A":"B";
+        pageLabels[side].setText(name+" · "+verse+" · p."+shownPages[side]);
+        tafsirLabels[side].setText(name+" · Tafsīr\n"+verse);
+        java.util.List<VerseRef> allowed=navigationVerses(side);
+        int index=allowed.indexOf(verse);
+        previousVerses[side].setEnabled(index>0);
+        nextVerses[side].setEnabled(index>=0&&index<allowed.size()-1);
+        pages[side].setSelectedVerse(verse.getSurah(),verse.getAyah());
     }
     private boolean isOnPage(VerseRef verse,int page){
         return verse!=null&&geometry.pageForVerse(verse)<=page
@@ -306,15 +344,19 @@ public final class CorrespondenceComparisonActivity extends Activity {
             VerseRef verse=new VerseRef(surah,ayah);
             if(!isOnPage(verse,page))return;
             selectedVerses[side]=verse;
+            navigationSurahs[side]=verse.getSurah();
+            ++tafsirTokens[side];
+            updateSelection(side);
             if(tafsirOpen)loadTafsir(side,verse);
         }catch(RuntimeException invalid){/* Ignore stale polygon taps. */}
     }
     private void showFolio(int side){
         authenticQcfRendered[side]=false;
-        VerseRef target=side==0?origin:relation.partner(origin,partnerOffset);
+        VerseRef target=selectedVerses[side];
         pageLabels[side].setText((side==0?"A":"B")+" · "+target+" · p."+shownPages[side]);
         pages[side].showPages(shownPages[side],shownPages[side],shownPages[side],
             target.getSurah(),target.getAyah(),target.getAyah(),false);
+        updateSelection(side);
     }
     private String pattern(){
         switch(relation.type){
@@ -374,12 +416,31 @@ public final class CorrespondenceComparisonActivity extends Activity {
             });
         });
     }
+    private void sourceSection(LinearLayout column,String heading,String text){
+        TextView title=caption(heading,16,true);title.setPadding(0,dp(12),0,dp(4));
+        column.addView(title);column.addView(caption(text,16,false));
+    }
     private void showSources(){
         if(relation==null)return;
-        new AlertDialog.Builder(this).setTitle(relation.title+" · "+relation.id)
-            .setMessage(relation.mechanism+"\n\nSource : "+relation.source+
-                "\n\nLecture limitée aux passages indiqués.")
-            .setPositiveButton("Fermer",null).show();
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout column=Ui.column(this);column.setPadding(dp(20),dp(8),dp(20),dp(16));
+        scroll.addView(column,new ScrollView.LayoutParams(-1,-2));
+        String[] parts=relation.mechanism.split("\\n\\n");
+        column.addView(caption(parts[0],14,true));
+        String explanation=parts.length>1?parts[1]:relation.mechanism;
+        sourceSection(column,"En bref",relation.brief);
+        column.addView(caption("Note pédagogique éditoriale ; les attributions sont précisées ci-dessous.",12,false));
+        RefrainTimeline.append(this,column,relation.id,timelineState);
+        sourceSection(column,"Sources",relation.source);
+        for(String part:parts)if(part.startsWith("Limites : "))
+            sourceSection(column,"Limites",part.substring("Limites : ".length()));
+        if(!relation.brief.equals(explanation))sourceSection(column,"Notice complète",explanation);
+        if(sourcesDialog!=null&&sourcesDialog.isShowing())return;
+        sourcesOpen=true;
+        sourcesDialog=new AlertDialog.Builder(this).setTitle(relation.title+" · "+relation.id)
+            .setView(scroll).setPositiveButton("Fermer",null).create();
+        sourcesDialog.setOnDismissListener(dialog->sourcesOpen=false);
+        sourcesDialog.show();
     }
     private void openReading(int side){
         VerseRef target=selectedVerses[side];
@@ -400,11 +461,13 @@ public final class CorrespondenceComparisonActivity extends Activity {
     boolean booxTafsirOpenForTest(){return booxPortrait&&tafsirOpen&&tafsirPanel.getVisibility()==View.VISIBLE;}
     MapQcfThumbnails[] qcfPagesForTest(){return pages.clone();}
     @Override protected void onSaveInstanceState(Bundle out){
+        out.putBoolean("sourcesOpen",sourcesOpen);timelineState.save(out);
         out.putInt("partnerOffset",partnerOffset);out.putInt("page0",shownPages[0]);
         out.putInt("page1",shownPages[1]);out.putBoolean("tafsirOpen",tafsirOpen);
         out.putInt("enlarged",enlarged);
         for(int i=0;i<2;i++){
             VerseRef selected=selectedVerses[i];
+            out.putInt("navigationSurah"+i,navigationSurahs[i]);
             out.putInt("selectedSurah"+i,selected==null?0:selected.getSurah());
             out.putInt("selectedAyah"+i,selected==null?0:selected.getAyah());
         }
@@ -412,6 +475,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
     }
     @Override protected void onDestroy(){
         disposed=true;tafsirIo.shutdownNow();
+        if(sourcesDialog!=null)sourcesDialog.dismiss();
         for(MapQcfThumbnails page:pages)if(page!=null)page.destroy();
         super.onDestroy();
     }

@@ -43,6 +43,13 @@ jobs:
           python3 scripts/build_correspondences_catalogue.py
           git diff --exit-code -- docs/correspondances/catalogue-62.json hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceCatalogue.java
           python3 scripts/test_correspondences_catalogue.py
+          python3 scripts/build_correspondence_refrains.py
+          python3 scripts/audit_correspondence_overlap.py
+          python3 scripts/test_correspondence_notices.py
+          python3 scripts/test_correspondence_refrains.py
+          python3 scripts/test_correspondence_tafsir_navigation.py
+          python3 scripts/test_similitudes_mandat.py
+          git diff --exit-code -- docs/correspondances hifz-app/src/main/java/com/quransafeguard/hifz/preview/RefrainTimelineData.java
           python3 scripts/test_correspondence_icon_contract.py
           python3 scripts/correspondence_icon_vectors.py --check
           node scripts/test-correspondence-gutter-density.cjs hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceGutterMarkers.java
