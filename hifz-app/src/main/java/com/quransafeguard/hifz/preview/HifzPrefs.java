@@ -3150,14 +3150,17 @@ public final class HifzPrefs {
         }
         if(newBlocks.isEmpty())return Collections.emptyList();
         ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
+        // Fresh cycles recover unreceipted physical work first (At-Tur ×7).
+        // restoreConsolidationSession reads the persisted unit/protocol vector
+        // directly: never reorder an already OPEN legacy snapshot.
+        for(String id:newBlocks)units.add(new ConsolidationCycleEngine.Unit(id,
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
         if(!alreadyRepeated.isEmpty()){
             String combined=alreadyRepeated.size()==1?alreadyRepeated.get(0)
                 :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(alreadyRepeated);
             units.add(new ConsolidationCycleEngine.Unit(combined,
                 ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
         }
-        for(String id:newBlocks)units.add(new ConsolidationCycleEngine.Unit(id,
-            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
         if(units.size()>ConsolidationCycleEngine.maxUnitsFor(
                 ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN))
             throw new IllegalStateException("Composite snowball exceeds safe frozen capacity");

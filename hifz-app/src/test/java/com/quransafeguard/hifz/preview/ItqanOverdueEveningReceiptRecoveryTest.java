@@ -69,10 +69,10 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertTrue(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION, CURRENT));
         List<ConsolidationCycleEngine.Unit> due = prefs.stabilizedConsolidationUnits(CURRENT);
         assertEquals(2, due.size());
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS, due.get(0).protocol());
-        assertEquals(NEW, due.get(0).id()); // already receipted this week: only ×1
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN, due.get(1).protocol());
-        assertEquals(OLD, due.get(1).id()); // older block really requires ×7
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS, due.get(1).protocol());
+        assertEquals(NEW, due.get(1).id()); // already receipted this week: only ×1
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN, due.get(0).protocol());
+        assertEquals(OLD, due.get(0).id()); // older block really requires ×7
         assertEquals("Read-only catch-up planning must never grant any credit", before, disk.disk);
         assertEquals("53:1", disk.getString("itqanCursor", ""));
     }
@@ -103,6 +103,23 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals(frozen.stage(),restored.stage());
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,restored.cycle().units().get(0).protocol());
         assertEquals(before,disk.disk);
+    }
+
+    @Test public void skippedThursdayCannotInventLinesOrReceiptsOnSaturdayOrSunday() throws Exception {
+        InMemoryPrefs disk=fixture(true,false);
+        Map<String,Object> before=new HashMap<>(disk.disk);
+        HifzPrefs prefs=new HifzPrefs(disk);
+        for(LocalDate day:Arrays.asList(LocalDate.of(2026,11,5),LocalDate.of(2026,11,7))){
+            List<ConsolidationCycleEngine.Unit> units=prefs.stabilizedConsolidationUnits(day);
+            assertEquals(2,units.size());assertEquals(OLD,units.get(0).id());
+            assertEquals(NEW,units.get(1).id());
+            assertEquals(15,ConsolidationPhysicalUnitPolicy.decodeLineUnit(OLD).size()
+                +ConsolidationPhysicalUnitPolicy.decodeLineUnit(NEW).size());
+        }
+        assertEquals("A skipped morning cannot be converted to stabilized work",before,disk.disk);
+        List<ConsolidationCycleEngine.Unit> finale=prefs.stabilizationSnowballFinalUnits(SUNDAY);
+        assertFalse("Unreceipted At-Tur is not admissible",finale.stream().anyMatch(u->OLD.equals(u.id())));
+        assertEquals("Final planning must grant no Acquis credit","[]",disk.getString("v6AcquiredCreditLineIds",""));
     }
 
     @Test public void aLateSevenRepCycleEarnsOnlyItsReceiptAndEnablesFutureSunday() throws Exception {
@@ -169,10 +186,10 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
             prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,CURRENT));
         List<ConsolidationCycleEngine.Unit> due=prefs.stabilizedConsolidationUnits(CURRENT);
         assertEquals(2,due.size());
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,due.get(0).protocol());
-        assertEquals(NEW,due.get(0).id());
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(1).protocol());
-        assertEquals(laterId,due.get(1).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,due.get(1).protocol());
+        assertEquals(NEW,due.get(1).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(0).protocol());
+        assertEquals(laterId,due.get(0).id());
         assertEquals("No automatic extra Acquis","[]",disk.getString("v6AcquiredCreditLineIds",""));
         ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
         ConsolidationCycleEngine.Cycle cycle=engine.startCycle(

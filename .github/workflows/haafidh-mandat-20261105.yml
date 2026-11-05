@@ -28,8 +28,13 @@ jobs:
       - run: sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
       - name: Actual production JVM tests, including priority and frozen legacy OPEN
         run: gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:testDebugUnitTest --tests '*ItqanOverdueEveningReceiptRecoveryTest'
+      - name: Export public JVM runtime for deterministic local replay
+        if: always()
+        run: gradle --no-daemon -I scripts/export_jvm_audit_runtime.init.gradle :hifz-app:exportJvmAuditRuntime
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mandat-priority-jvm
-          path: hifz-app/build/test-results/
+          path: |
+            hifz-app/build/test-results/
+            hifz-app/build/jvm-audit-runtime/

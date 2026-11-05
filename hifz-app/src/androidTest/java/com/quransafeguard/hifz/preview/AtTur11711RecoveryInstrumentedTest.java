@@ -134,10 +134,10 @@ public final class AtTur11711RecoveryInstrumentedTest {
                 ConsolidationCycleEngine.Family.STABILIZATION,WEDNESDAY));
             List<ConsolidationCycleEngine.Unit> due=prefs.stabilizedConsolidationUnits(WEDNESDAY);
             assertEquals(2,due.size());
-            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,due.get(0).protocol());
-            assertEquals(enc(NEW_STABILIZED),due.get(0).id());
-            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(1).protocol());
-            assertEquals(enc(MISSING),due.get(1).id());
+            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,due.get(1).protocol());
+            assertEquals(enc(NEW_STABILIZED),due.get(1).id());
+            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(0).protocol());
+            assertEquals(enc(MISSING),due.get(0).id());
             assertEquals("Read-only planner must preserve exact byte values",before,disk.getAll());
 
             // Before ×7, the Sunday finale MUST NOT include unreceipted 525:8..14.
