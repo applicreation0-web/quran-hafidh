@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 /**
  * Read-only correspondence comparison using the SAME authentic paired KFQC SVG
  * renderer and Jalalayn repository as Similitudes. No HifzPrefs/receipts/timers.
- * The pilot is never included in a release until source and BOOX gates pass.
+ * Admission is documentary; release validation is tracked separately in GitHub.
  */
 public final class CorrespondenceComparisonActivity extends Activity {
     static final String EXTRA_SURAH="correspondenceSurah";
@@ -144,9 +144,9 @@ public final class CorrespondenceComparisonActivity extends Activity {
         relationIconLayout.setMarginStart(dp(8));
         pairHeader.addView(relationIcon,relationIconLayout);
         relationLine=caption("",13,true);relationLine.setGravity(Gravity.CENTER_VERTICAL);
-        relationLine.setSingleLine(true);relationLine.setPadding(dp(8),0,0,0);
+        relationLine.setSingleLine(false);relationLine.setMaxLines(2);relationLine.setPadding(dp(8),0,0,0);
         pairHeader.addView(relationLine,new LinearLayout.LayoutParams(0,dp(40),1));
-        if(relation.verses.size()>2){
+        if(relation.partnerCount(origin)>1){
             pairHeader.addView(action("‹","Occurrence précédente",()->changePartner(-1)),
                 new LinearLayout.LayoutParams(dp(44),dp(40)));
             pairHeader.addView(action("›","Occurrence suivante",()->changePartner(1)),
@@ -279,7 +279,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         }
     }
     private void changePartner(int delta){
-        int alternatives=relation.verses.size()-1;
+        int alternatives=relation.partnerCount(origin);
         partnerOffset=Math.floorMod(partnerOffset+delta,alternatives);
         selectedVerses[1]=relation.partner(origin,partnerOffset);
         shownPages[1]=geometry.pageForVerse(selectedVerses[1]);
@@ -345,8 +345,8 @@ public final class CorrespondenceComparisonActivity extends Activity {
 
     private void updateRelationLabel(){
         relationIcon.setImageResource(relationIconFor(relation.type));
-        relationLine.setText(relation.type+" · "+pattern()+" · "+relation.id+" · "+
-            (partnerOffset+1)+"/"+(relation.verses.size()-1));
+        relationLine.setText(relation.type+("R070".equals(relation.id)?" · lecture proposée\n":" · ")+pattern()+" · "+relation.id+" · "+
+            (partnerOffset+1)+"/"+(relation.partnerCount(origin)));
     }
     private void loadTafsir(int side,VerseRef verse){
         if(disposed||tafsir==null)return;
@@ -378,7 +378,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         if(relation==null)return;
         new AlertDialog.Builder(this).setTitle(relation.title+" · "+relation.id)
             .setMessage(relation.mechanism+"\n\nSource : "+relation.source+
-                "\n\nAperçu éditorial privé. Les validations QCF et BOOX restent obligatoires.")
+                "\n\nLecture limitée aux passages indiqués.")
             .setPositiveButton("Fermer",null).show();
     }
     private void openReading(int side){

@@ -1,11 +1,8 @@
 name: Haafidh Correspondances contextual pilot (NO APK)
+# Manual only: this historical runtime suite assembles disposable test APKs.
+# The 2026-11-05 mandate forbids assembling ANY APK. Current automatic checks
+# are in haafidh-correspondances-62-no-apk.yml; runtime evidence stays pending.
 on:
-  push:
-    branches:
-      - work/haafidh-correspondances-context-qcf-20261104
-  pull_request:
-    branches:
-      - fix/haafidh-11711-itqan-overdue-receipts-20261103
   workflow_dispatch:
 permissions:
   contents: read

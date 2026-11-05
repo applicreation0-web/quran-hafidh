@@ -369,6 +369,7 @@ android {
 
     buildTypes {
         getByName("debug") {
+            buildConfigField("boolean", "CORRESPONDENCES_CATALOGUE", "true")
             // Non-production editorial preview; never changes a signed private upgrade.
             buildConfigField("boolean", "CORRESPONDENCES_EDITORIAL_PREVIEW",
                 (System.getenv("HAAFIDH_CORRESPONDENCES_PILOT") == "1").toString())
@@ -382,6 +383,7 @@ android {
             versionNameSuffix = if (boox1175Preview) "-BOOX-HOME-PRIVATE-DEBUG" else if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
+            buildConfigField("boolean", "CORRESPONDENCES_CATALOGUE", "true")
             buildConfigField("boolean", "CORRESPONDENCES_EDITORIAL_PREVIEW", "false")
             // Private Atlas content is enabled only by an explicit local build flag.
             // The official package identity and launcher label remain unchanged.

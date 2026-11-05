@@ -1,0 +1,70 @@
+name: Haafidh Correspondances 62 - validation sans APK
+on:
+  push:
+    branches: [work/haafidh-correspondances-context-qcf-20261104]
+    paths:
+      - hifz-app/**
+      - scripts/*correspondence*
+      - docs/correspondances/catalogue-62.json
+      - .github/workflows/haafidh-correspondances-62-no-apk.yml
+  pull_request:
+    branches: [fix/haafidh-11711-itqan-overdue-receipts-20261103]
+    paths:
+      - hifz-app/**
+      - scripts/*correspondence*
+      - docs/correspondances/catalogue-62.json
+      - .github/workflows/haafidh-correspondances-62-no-apk.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: correspondances-62-no-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  catalogue-and-android-compilation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install compilation SDK only
+        run: sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Verify 62 dossiers and all real QCF margin anchors
+        run: |
+          python3 scripts/build_correspondences_catalogue.py
+          git diff --exit-code -- docs/correspondances/catalogue-62.json hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceCatalogue.java
+          python3 scripts/test_correspondences_catalogue.py
+          python3 scripts/test_correspondence_icon_contract.py
+          python3 scripts/correspondence_icon_vectors.py --check
+          node scripts/test-correspondence-gutter-density.cjs hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceGutterMarkers.java
+          node scripts/test-correspondence-real-folios.cjs
+      - name: Compile Android sources and instrumented tests, without packaging
+        run: |
+          gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileDebugJavaWithJavac :hifz-app:compileDebugAndroidTestJavaWithJavac
+      - name: Execute affected JVM and review-rights contracts without APK
+        run: |
+          gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:testDebugUnitTest --tests '*CorrespondenceContextContractTest' --tests '*RevisionAtlasAccessTest' --tests '*ActiveReviewCorrectionPlanTest' --tests '*ActiveReviewCorrectionStoreTest'
+          gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:sourceContractTest
+      - name: Prove no APK was assembled
+        if: always()
+        run: |
+          if find hifz-app/build -type f -name '*.apk' -print -quit | grep -q .; then
+            echo 'Forbidden APK generated'; exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: correspondances-62-compilation-contracts-NO-APK
+          path: |
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+          retention-days: 14

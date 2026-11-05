@@ -25,10 +25,47 @@ public final class CorrespondenceContextContractTest {
         assertFalse(CorrespondenceCases.editorialPilotForTest().get(3)
             .contains(new com.quransafeguard.hifz.core.VerseRef(55,76)));
     }
-    @Test public void productionNeverActivatesUncertifiedCatalogue()throws Exception{
+    @Test public void admittedRelationsAreReachableAndNeverIncludeConditionalOrExcludedIds(){
+        assertEquals(60,CorrespondenceCatalogue.ADMITTED.size());
+        java.util.Set<String> ids=new java.util.HashSet<>();
+        for(CorrespondenceCases.Entry entry:CorrespondenceCatalogue.ADMITTED){
+            assertTrue(ids.add(entry.id));
+            assertFalse(entry.id.equals("R032")||entry.id.equals("R033"));
+            assertTrue(entry.source.contains("https://"));
+            for(com.quransafeguard.hifz.core.VerseRef verse:entry.verses){
+                assertSame(entry,CorrespondenceCases.forIdAndVerse(entry.id,verse));
+                assertTrue(CorrespondenceCases.forVerse(verse).contains(entry));
+                java.util.Set<com.quransafeguard.hifz.core.VerseRef> partners=new java.util.HashSet<>();
+                for(int n=0;n<entry.partnerCount(verse);n++){
+                    com.quransafeguard.hifz.core.VerseRef partner=entry.partner(verse,n);
+                    assertNotEquals(verse,partner);
+                    assertTrue(entry.contains(partner));
+                    assertTrue(partners.add(partner));
+                }
+                assertEquals(entry.partnerCount(verse),partners.size());
+            }
+        }
+        assertEquals(java.util.Arrays.asList(new com.quransafeguard.hifz.core.VerseRef(85,10),
+            new com.quransafeguard.hifz.core.VerseRef(85,11)),
+            CorrespondenceCases.forIdAndVerse("R065",new com.quransafeguard.hifz.core.VerseRef(85,10)).verses);
+        assertNull(CorrespondenceCases.forIdAndVerse("R065",new com.quransafeguard.hifz.core.VerseRef(85,4)));
+    }
+    @Test public void oppositionAndProposedReadingUseOnlyTheDocumentedPartners(){
+        com.quransafeguard.hifz.core.VerseRef faith=new com.quransafeguard.hifz.core.VerseRef(66,11);
+        CorrespondenceCases.Entry opposite=CorrespondenceCases.forIdAndVerse("R054",faith);
+        assertEquals(1,opposite.partnerCount(faith));
+        assertEquals(new com.quransafeguard.hifz.core.VerseRef(66,10),opposite.partner(faith,0));
+        com.quransafeguard.hifz.core.VerseRef orphan=new com.quransafeguard.hifz.core.VerseRef(93,9);
+        CorrespondenceCases.Entry proposed=CorrespondenceCases.forIdAndVerse("R070",orphan);
+        assertEquals(1,proposed.partnerCount(orphan));
+        assertEquals(new com.quransafeguard.hifz.core.VerseRef(93,6),proposed.partner(orphan,-100));
+    }
+    @Test public void historicalPreviewStaysOffAndRuntimeOnlyUsesExplicitAdmissions()throws Exception{
         String gradle=source("hifz-app/build.gradle.kts");
         assertTrue(gradle.contains("CORRESPONDENCES_EDITORIAL_PREVIEW"));
         assertTrue(gradle.contains("HAAFIDH_CORRESPONDENCES_PILOT"));
+        assertTrue(gradle.contains("buildConfigField(\"boolean\", \"CORRESPONDENCES_CATALOGUE\", \"true\")"));
+        assertEquals(60,CorrespondenceCatalogue.ADMITTED.size());
         assertTrue(gradle.contains("buildConfigField(\"boolean\", \"CORRESPONDENCES_EDITORIAL_PREVIEW\", \"false\")"));
         assertTrue(source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceCases.java")
             .contains("if(!enabled()"));

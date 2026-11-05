@@ -7,28 +7,54 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-/**
- * Strictly offline, read-only editorial demonstration.
- * These four cases are HISTORICALLY EDITORIALLY REVIEWED; they are NOT a
- * production-approved correspondence catalogue or a QCF/BOOX certification.
- * Never silently promote the historical 80/24/6 into this index.
+/** Offline, read-only index of individually admitted relations.
+ * Historical pilots remain fixtures only; conditional dossiers and the frozen
+ * 48 exclusions are absent from CorrespondenceCatalogue.ADMITTED.
  */
 final class CorrespondenceCases {
     static final class Entry {
         final String id, type, title, mechanism, source;
         final List<VerseRef> verses;
+        private final int[][] partners;
         Entry(String id, String type, String title, String mechanism, String source,
               VerseRef... verses) {
-            if (verses.length < 2) throw new IllegalArgumentException("A relationship needs two positions");
-            this.id=id; this.type=type; this.title=title; this.mechanism=mechanism;
-            this.source=source; this.verses=Collections.unmodifiableList(Arrays.asList(verses));
+            this(id,type,title,mechanism,source,allPartners(verses.length),verses);
         }
-        boolean contains(VerseRef verse){return verse != null && verses.contains(verse);}
-        VerseRef partner(VerseRef source,int offset) {
+        Entry(String id, String type, String title, String mechanism, String source,
+              int[][] allowedPartners, VerseRef... verses) {
+            if(verses.length<2||allowedPartners.length!=verses.length)
+                throw new IllegalArgumentException("A relationship needs explicit partners");
+            this.id=id;this.type=type;this.title=title;this.mechanism=mechanism;
+            this.source=source;this.verses=Collections.unmodifiableList(Arrays.asList(verses.clone()));
+            partners=new int[verses.length][];
+            for(int i=0;i<verses.length;i++){
+                if(allowedPartners[i]==null||allowedPartners[i].length==0)
+                    throw new IllegalArgumentException("Missing comparison partners");
+                partners[i]=allowedPartners[i].clone();
+                java.util.Set<Integer> seen=new java.util.HashSet<>();
+                for(int target:partners[i])if(target<0||target>=verses.length||target==i||!seen.add(target))
+                    throw new IllegalArgumentException("Invalid comparison partner");
+            }
+        }
+        private static int[][] allPartners(int count){
+            int[][] result=new int[count][];
+            for(int i=0;i<count;i++){
+                result[i]=new int[Math.max(0,count-1)];
+                for(int n=1;n<count;n++)result[i][n-1]=(i+n)%count;
+            }
+            return result;
+        }
+        boolean contains(VerseRef verse){return verse!=null&&verses.contains(verse);}
+        int partnerCount(VerseRef source){
             int index=verses.indexOf(source);
-            if(index<0) throw new IllegalArgumentException("Unrelated source");
-            int shift=1 + Math.floorMod(offset,verses.size()-1);
-            return verses.get((index+shift)%verses.size());
+            if(index<0)throw new IllegalArgumentException("Unrelated source");
+            return partners[index].length;
+        }
+        VerseRef partner(VerseRef source,int offset){
+            int index=verses.indexOf(source);
+            if(index<0)throw new IllegalArgumentException("Unrelated source");
+            int[] row=partners[index];
+            return verses.get(row[Math.floorMod(offset,row.length)]);
         }
     }
 
@@ -56,13 +82,13 @@ final class CorrespondenceCases {
     ));
     private CorrespondenceCases(){}
 
-    static boolean enabled(){return BuildConfig.CORRESPONDENCES_EDITORIAL_PREVIEW;}
+    static boolean enabled(){return BuildConfig.CORRESPONDENCES_CATALOGUE;}
     /** Stable JUnit fixture; never a production admission switch. */
     static List<Entry> editorialPilotForTest(){return PILOT;}
     static List<Entry> forVerse(VerseRef verse){
         if(!enabled() || verse==null)return Collections.emptyList();
         List<Entry> result=new ArrayList<>();
-        for(Entry candidate:PILOT)if(candidate.contains(verse))result.add(candidate);
+        for(Entry candidate:CorrespondenceCatalogue.ADMITTED)if(candidate.contains(verse))result.add(candidate);
         return Collections.unmodifiableList(result);
     }
     /** Last indexed anchor in traversal order, bounded by the confirmed endpoint. */
@@ -77,13 +103,13 @@ final class CorrespondenceCases {
     }
     static Entry forIdAndVerse(String id,VerseRef verse){
         if(!enabled()||id==null||verse==null)return null;
-        for(Entry entry:PILOT)if(entry.id.equals(id)&&entry.contains(verse))return entry;
+        for(Entry entry:CorrespondenceCatalogue.ADMITTED)if(entry.id.equals(id)&&entry.contains(verse))return entry;
         return null;
     }
     static List<VerseRef> versesOnPage(int page,GeometryRepository geometry){
         if(!enabled()||geometry==null||page<1||page>604)return Collections.emptyList();
         LinkedHashSet<VerseRef> found=new LinkedHashSet<>();
-        for(Entry candidate:PILOT)for(VerseRef verse:candidate.verses)
+        for(Entry candidate:CorrespondenceCatalogue.ADMITTED)for(VerseRef verse:candidate.verses)
             if(geometry.pageForVerse(verse)==page)found.add(verse);
         return Collections.unmodifiableList(new ArrayList<>(found));
     }
