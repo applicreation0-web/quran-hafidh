@@ -21,6 +21,15 @@ adb shell wm size "$size"
 adb shell wm density "$density"
 mkdir -p hifz-app/build/android-proof
 
+# Reproduce the diagnosed home lifecycle boundary before the full matrix.
+# Each old failing class is repeated with a fresh process and preferences.
+regressions=com.quransafeguard.hifz.preview.HomeLoaderLifecycleInstrumentedTest
+for repetition in 1 2 3; do
+  regressions+=,com.quransafeguard.hifz.preview.PostFinalRecallInstrumentedTest
+  regressions+=,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest
+done
+bash scripts/run_11711_hifz_parcours_isolated.sh "$regressions" "$surface"
+
 # Collect evidence and audit Hifz even when the correspondence test fails.
 test_status=0
 if gradle --no-daemon :hifz-app:connectedDebugAndroidTest \

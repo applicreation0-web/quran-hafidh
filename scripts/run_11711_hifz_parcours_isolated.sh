@@ -46,23 +46,38 @@ fi
 IFS=',' read -r -a class_names <<< "$classes"
 failures=0
 completed=0
+attempt=0
 for cls in "${class_names[@]}"; do
   if [[ ! "$cls" =~ ^com\.quransafeguard\.hifz\.preview\.[A-Za-z0-9_]+InstrumentedTest$ ]]; then
     echo "Invalid or out-of-scope test class: $cls" >&2
     exit 6
   fi
   simple="${cls##*.}"
+  ((attempt+=1))
+  simple="$(printf '%02d' "$attempt")-$simple"
+  adb logcat -c
+  adb shell cat /proc/sys/kernel/random/boot_id > "$out/$simple.boot-before.log"
+  adb shell dumpsys activity activities > "$out/$simple.lifecycle-before.log"
   echo "ISOLATED CLASS: $cls"
   adb shell am force-stop "$target" || true
   adb shell pm clear "$target" > /dev/null
   # Also isolate preference state created by instrumentation helpers.
   adb shell pm clear "$test_package" > /dev/null
+  # Persist logcat on either outcome, including Java/native crash buffers.
+  adb logcat -b all -v threadtime > "$out/$simple.logcat.log" 2>&1 &
+  logcat_pid=$!
   if ! adb shell am instrument -w -r -e class "$cls" "$instrumentation" > "$out/$simple.log" 2>&1; then
+    kill "$logcat_pid" 2>/dev/null || true
     echo "FAILED: $cls (instrumentation exit)" >&2
     tail -n 90 "$out/$simple.log" >&2
     ((failures+=1))
     continue
   fi
+  kill "$logcat_pid" 2>/dev/null || true
+  wait "$logcat_pid" 2>/dev/null || true
+  adb shell cat /proc/sys/kernel/random/boot_id > "$out/$simple.boot-after.log"
+  adb shell dumpsys activity activities > "$out/$simple.lifecycle-after.log"
+  adb shell dumpsys activity exit-info "$target" > "$out/$simple.exit-info.log"
   if ! grep -Eq 'OK \([1-9][0-9]* tests?\)' "$out/$simple.log"; then
     echo "FAILED: $cls (no nonzero passing-test assertion)" >&2
     tail -n 90 "$out/$simple.log" >&2
