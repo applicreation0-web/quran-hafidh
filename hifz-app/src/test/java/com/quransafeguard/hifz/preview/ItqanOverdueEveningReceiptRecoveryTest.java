@@ -77,6 +77,34 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals("53:1", disk.getString("itqanCursor", ""));
     }
 
+    @Test public void newCyclesPrioritizeHistoricalSevenButLegacyOpenStaysByteExact() throws Exception {
+        InMemoryPrefs disk=fixture(true,false);
+        HifzPrefs prefs=new HifzPrefs(disk);
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        String cycleId="stabilization-"+CURRENT;
+        // This is an actual legacy persisted OPEN, deliberately CONTINUOUS first.
+        ConsolidationCycleEngine.Cycle old=engine.startCycle(cycleId,
+            ConsolidationCycleEngine.Family.STABILIZATION,new ConsolidationCycleEngine.Unit(NEW,
+                ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+        old=engine.addUnit(old,new ConsolidationCycleEngine.Unit(OLD,
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        ConsolidationCycleEngine.Session frozen=engine.recordRepetition(engine.openSession(old,"legacy-open"));
+        assertTrue(prefs.persistConsolidationSession(frozen));
+        Map<String,Object> before=new HashMap<>(disk.disk);
+        List<ConsolidationCycleEngine.Unit> fresh=prefs.stabilizedConsolidationUnits(CURRENT);
+        assertEquals("New cycles recover At-Tur before the continuous An-Najm pass",OLD,fresh.get(0).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,fresh.get(0).protocol());
+        assertEquals(NEW,fresh.get(1).id());
+        ConsolidationCycleEngine.Session restored=new HifzPrefs(disk).restoreConsolidationSession(engine,
+            ConsolidationCycleEngine.Family.STABILIZATION,cycleId);
+        assertEquals(Arrays.asList(NEW,OLD),restored.unitIds());
+        assertEquals(frozen.donePerStage(),restored.donePerStage());
+        assertEquals(frozen.nextUnitIndex(),restored.nextUnitIndex());
+        assertEquals(frozen.stage(),restored.stage());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,restored.cycle().units().get(0).protocol());
+        assertEquals(before,disk.disk);
+    }
+
     @Test public void aLateSevenRepCycleEarnsOnlyItsReceiptAndEnablesFutureSunday() throws Exception {
         InMemoryPrefs disk = fixture(false, false);
         HifzPrefs prefs = new HifzPrefs(disk);
