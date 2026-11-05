@@ -299,8 +299,14 @@ public final class CorrespondenceContextInstrumentedTest {
     }
 
     private void awaitReaderFrame(ActivityScenario<StudyReaderActivity> scenario)throws Exception {
+        android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+        // An unrelated Pixel Launcher ANR can own focus before the first
+        // reader frame. Recover that exact system dialog before requiring
+        // focus, just as the established Atlas viewport audit does.
+        EmulatorLauncherAnr.requireApplicationForeground(ins);
         AtomicBoolean focused=new AtomicBoolean();
         for(int attempt=0;attempt<50&&!focused.get();attempt++){
+            EmulatorLauncherAnr.resumeIfPresent(ins);
             scenario.onActivity(a->focused.set(a.hasWindowFocus()));
             if(!focused.get())android.os.SystemClock.sleep(100L);
         }
