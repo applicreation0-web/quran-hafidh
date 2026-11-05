@@ -541,40 +541,34 @@ public final class MainActivity extends android.app.Activity {
         if(geometry==null)return;
         backlogPending=HifzBacklog.pending(prefs,ledger,HifzClock.today(),effectiveLearningDaysPerWeek());
         int count=HifzBacklog.lateCount(backlogPending,HifzClock.today());
-        String summary=count+" séance"+(count>1?"s":"")+" à rattraper  ›";
+        String summary=count+" séance"+(count>1?"s":"")+" non effectuée"+(count>1?"s":"")+" · contenu décalé  ›";
         for(TextView label:new TextView[]{backlogHomeRow,backlogParcoursRow}) {
             if(label==null)continue;
             label.setVisibility(count==0?View.GONE:View.VISIBLE);
             label.setText(count==0?"":summary);
-            label.setContentDescription(count+" leçons manquées, ouvrir les dates de rattrapage");
+            label.setContentDescription(count+" créneaux non effectués ; les leçons avancent au prochain jour de leur discipline");
         }
     }
 
     private void showBacklog() {
         int overdue=HifzBacklog.lateCount(backlogPending,HifzClock.today());
         if(overdue==0)return;
-        // Show the real dated queue, not future unearned verse ranges.
+        // Historical misses are attendance facts, not actionable extra sessions.
+        // A missed family remains at its physical cursor until its next own weekday.
         int visible=Math.min(overdue,24);
-        String[] rows=new String[visible];
+        StringBuilder details=new StringBuilder(
+            "Aucune séance supplémentaire n’est imposée. Les lignes non travaillées "
+            +"restent au prochain créneau Sabqi ou Itqān, sans modifier l’autre discipline.\n\n");
         for(int i=0;i<visible;i++) {
-            HifzBacklog.Due due=backlogPending.get(i);
-            rows[i]=(i==0?"▸ ":"  ")+due.date+" · "+due.frenchName()+
-                (i==0?" · à reprendre":" · en attente");
+            HifzBacklog.Due missed=backlogPending.get(i);
+            details.append(missed.date).append(" · ").append(missed.frenchName())
+                .append(" · non effectuée\n");
         }
-        String note=overdue>visible?" (et "+(overdue-visible)+" autres)": "";
+        if(overdue>visible)details.append("… et ").append(overdue-visible).append(" autres");
         new android.app.AlertDialog.Builder(this)
-            .setTitle("Rattrapages · "+overdue+" séance"+(overdue>1?"s":"")+note)
-            .setItems(rows,(dialog,index)->{
-                if(index==0) {
-                    HifzBacklog.Due first=backlogPending.get(0);
-                    openMode(first.mode,first.date);
-                } else {
-                    new android.app.AlertDialog.Builder(this).setTitle("Ordre des leçons")
-                        .setMessage("Terminer d’abord la séance du "+backlogPending.get(0).date+
-                            ". Les plages suivantes seront déterminées par les curseurs validés.")
-                        .setPositiveButton("Compris",null).show();
-                }
-            }).setNegativeButton("Fermer",null).show();
+            .setTitle("Créneaux manqués · "+overdue)
+            .setMessage(details.toString())
+            .setPositiveButton("Fermer",null).show();
     }
 
     /** Describes the selected weekly plan, never a stale fixed 22-line budget. */
@@ -612,16 +606,11 @@ public final class MainActivity extends android.app.Activity {
     private void refreshQuickAccessCadenceGating() {
         if (geometry == null) return;
         LocalDate today=HifzClock.today();
-        HifzBacklog.Due oldest=HifzBacklog.first(backlogPending);
-        if(oldest!=null && oldest.overdue(today)) {
-            // The oldest outstanding lesson alone may advance a learning cursor.
-            setLineEnabled(sabqiQuickAccess,HifzSessionActivity.SABQI.equals(oldest.mode));
-            setLineEnabled(itqanQuickAccess,HifzSessionActivity.ITQAN.equals(oldest.mode));
-            return;
-        }
-        CadenceAction action = WeeklyProgramPolicy.actionFor(HifzClock.today().getDayOfWeek(),prefs.weeklyProgramMode(),effectiveLearningDaysPerWeek());
-        setLineEnabled(sabqiQuickAccess, action == CadenceAction.LEARNING);
-        setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION);
+        // Only today's unvalidated own-family slot is actionable. A skipped
+        // Tuesday never steals Wednesday Sabqi or adds a Thursday catch-up.
+        HifzBacklog.Due slot=HifzBacklog.onDate(backlogPending,today);
+        setLineEnabled(sabqiQuickAccess,slot!=null && HifzSessionActivity.SABQI.equals(slot.mode));
+        setLineEnabled(itqanQuickAccess,slot!=null && HifzSessionActivity.ITQAN.equals(slot.mode));
     }
 
     /** The Révision card opens this compact selector rather than jumping straight to a mode:
@@ -646,22 +635,18 @@ public final class MainActivity extends android.app.Activity {
             return;
         }
         if (HifzSessionActivity.SABQI.equals(mode) || HifzSessionActivity.ITQAN.equals(mode)) {
-            // Also guard launcher/direct access: no credit for a future date while debt exists.
-            List<HifzBacklog.Due> due=HifzBacklog.pending(prefs,ledger,
-                HifzClock.today(),effectiveLearningDaysPerWeek());
-            HifzBacklog.Due oldest=HifzBacklog.first(due);
-            if(oldest==null || !oldest.mode.equals(mode)
-                    || scheduledDate==null || !oldest.date.equals(scheduledDate)) {
-                if(oldest==null) {
-                    new android.app.AlertDialog.Builder(this).setTitle("Séances à jour")
-                        .setMessage("Aucune nouvelle séance de cette catégorie n’est due aujourd’hui.")
-                        .setPositiveButton("Fermer",null).show();
-                } else {
-                    new android.app.AlertDialog.Builder(this).setTitle("Rattrapage prioritaire")
-                        .setMessage("Terminer d’abord : "+oldest.frenchName()+" du "+oldest.date+".")
-                        .setPositiveButton("Ouvrir le report",(dialog,which)->openMode(oldest.mode,oldest.date))
-                        .setNegativeButton("Fermer",null).show();
-                }
+            // Date/weekday and durable completion receipts gate real work;
+            // old misses stay recorded but do not authorize retroactive credits.
+            LocalDate today=HifzClock.today();
+            List<HifzBacklog.Due> slots=HifzBacklog.pending(prefs,ledger,
+                today,effectiveLearningDaysPerWeek());
+            HifzBacklog.Due slot=HifzBacklog.onDate(slots,today);
+            if(slot==null || !slot.mode.equals(mode)
+                    || !today.equals(scheduledDate)) {
+                new android.app.AlertDialog.Builder(this).setTitle("Séance non prévue")
+                    .setMessage("La prochaine leçon est proposée au créneau normal "
+                        +"Sabqi ou Itqān. Aucune ancienne séance ne sera créditée.")
+                    .setPositiveButton("Fermer",null).show();
                 return;
             }
         }
@@ -751,13 +736,13 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private ScheduledCadence nextDueCadence(LocalDate todayDate){
-        LinkedHashSet<LocalDate> completed=new LinkedHashSet<>();
-        LocalDate cursor=prefs.programStartDate();
-        while(!cursor.isAfter(todayDate)){
-            if(ledger.historyUnverifiable(cursor)||cadenceComplete(cursor))completed.add(cursor);
-            cursor=cursor.plusDays(1);
-        }
-        return WeeklyProgramPolicy.nextDue(prefs,prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek());
+        // Follow the real calendar, NOT the oldest historical missed date.
+        // Each family carries its physical cursor forward into its next eligible
+        // slot; today's receipt is dated today. Sunday finals can therefore
+        // legitimately contain fewer than 15 Sabqi or 22 Itqān weekly lines.
+        if(todayDate.isBefore(prefs.programStartDate()) || cadenceComplete(todayDate))return null;
+        return WeeklyProgramPolicy.nextDue(prefs,todayDate,todayDate,
+            java.util.Collections.emptySet(),effectiveLearningDaysPerWeek());
     }
 
     /** Done, or nothing to review this week (rare, e.g. a brand-new install's first week). */
