@@ -54,6 +54,9 @@ jobs:
         run: |
           gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:testDebugUnitTest --tests '*CorrespondenceContextContractTest' --tests '*RevisionAtlasAccessTest' --tests '*ActiveReviewCorrectionPlanTest' --tests '*ActiveReviewCorrectionStoreTest'
           gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:sourceContractTest
+      - name: Stress missed sessions, cumulative receipts and partial finals (production JVM)
+        run: |
+          gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:testDebugUnitTest --tests '*EightWeekStressTest' --tests '*HifzBacklogTest' --tests '*Snowball*Test' --tests '*Consolidation*Test' --tests '*Sunday*Test' --tests '*EarnedEveningProtocolRegressionTest' --tests '*ItqanOverdue*Test' --tests '*HifzV6MigrationTest' --tests '*HifzBackupSchemaValidationTest' --tests '*SevenDayCalendarMigrationTest'
       - name: Prove no APK was assembled
         if: always()
         run: |

@@ -3463,15 +3463,28 @@ public final class HifzPrefs {
         List<String> justEarned=earnedFromClosedEvening(completed,family);
         synchronized(V6_STATE_LOCK) {
             LinkedHashSet<String> receipts=earnedEveningUnits(family);
-            // P0: after a capacity-limited evening closes, the read-only
-            // planner immediately exposes the NEXT outstanding batch. A stale
-            // completed Session object can otherwise be replayed against that
-            // changed snapshot and falsely mark the next batch as completed.
-            // A verified physical ×7/×10 receipt is earned exactly once.
-            // Reject the ENTIRE stale/partially conflicting validation; do
-            // not let it consume an unrelated source snapshot or create credit.
-            for(String physicalReceiptId:justEarned)
-                if(receipts.contains(physicalReceiptId))return false;
+            // Sabqi's Wednesday/Friday snowball legitimately repeats previously
+            // receipted blocks alongside NEW work. Accept that overlap only for
+            // the exact, fully checkpointed OPEN session. An old Session object
+            // must never close a different batch or consume its source snapshot.
+            boolean overlaps=false,hasNewReceipt=false;
+            for(String physicalReceiptId:justEarned) {
+                if(receipts.contains(physicalReceiptId))overlaps=true;
+                else hasNewReceipt=true;
+            }
+            if(!hasNewReceipt)return false;
+            if(overlaps) {
+                if(family!=ConsolidationCycleEngine.Family.LEARNING)return false;
+                ConsolidationCycleEngine.Session frozen=restoreConsolidationSession(
+                    new ConsolidationCycleEngine(),family,id);
+                if(frozen==null || !frozen.readyToClose()
+                        || !frozen.cycle().cycleId().equals(completed.cycle().cycleId())
+                        || !frozen.sessionId().equals(completed.sessionId())
+                        || !frozen.unitIds().equals(completed.unitIds()))return false;
+                for(int i=0;i<frozen.cycle().units().size();i++)
+                    if(frozen.cycle().units().get(i).protocol()
+                            !=completed.cycle().units().get(i).protocol())return false;
+            }
             if(!snowballEveningPending(family,day))return false;
             String snapshot=exactSnowballSnapshotToValidate(family,day);
             if(snapshot.isEmpty())throw new IllegalStateException("Missing frozen evening source");
