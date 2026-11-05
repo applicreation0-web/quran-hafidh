@@ -747,6 +747,61 @@ public final class CorrespondenceContextInstrumentedTest {
         }catch(ReflectiveOperationException failure){throw new AssertionError(failure);}
     }
 
+    /** Final release-candidate runtime gate: all admitted relations, never debug-only fixtures. */
+    @Test public void expandedCatalogueIndexAndSemanticPartnersStayExact(){
+        assertTrue("The admitted catalogue must be enabled in debug and release",
+            BuildConfig.CORRESPONDENCES_CATALOGUE);
+        assertEquals("Release candidate contains exactly sixty admitted relations",
+            60,CorrespondenceCatalogue.ADMITTED.size());
+        Context context=ApplicationProvider.getApplicationContext();
+        GeometryRepository geometry=GeometryRepository.get(context);
+        for(CorrespondenceCases.Entry entry:CorrespondenceCatalogue.ADMITTED){
+            assertTrue("Every relation has a specific explanation: "+entry.id,
+                entry.mechanism!=null&&entry.mechanism.length()>30);
+            for(VerseRef anchor:entry.verses){
+                assertTrue("Runtime index must contain "+entry.id+" "+anchor,
+                    CorrespondenceCases.forVerse(anchor).contains(entry));
+                int folio=geometry.pageForVerse(anchor);
+                assertTrue("Original QCF page missing for "+entry.id+" "+anchor,
+                    folio>=1&&folio<=604);
+                assertTrue("Runtime gutter missing "+entry.id+" "+anchor,
+                    CorrespondenceCases.versesOnPage(folio,geometry).contains(anchor));
+                for(int i=0;i<entry.partnerCount(anchor);i++){
+                    VerseRef partner=entry.partner(anchor,i);
+                    assertNotEquals("Self comparison "+entry.id,anchor,partner);
+                    assertTrue("Partner does not belong to "+entry.id,entry.contains(partner));
+                    boolean reciprocal=false;
+                    for(int j=0;j<entry.partnerCount(partner);j++)
+                        if(anchor.equals(entry.partner(partner,j)))reciprocal=true;
+                    assertTrue("Asymmetric documented comparison "+entry.id,reciprocal);
+                }
+            }
+        }
+        CorrespondenceCases.Entry contrast=CorrespondenceCases.forIdAndVerse(
+            "R054",new VerseRef(66,11));
+        assertNotNull(contrast);
+        assertEquals(1,contrast.partnerCount(new VerseRef(66,11)));
+        assertEquals(new VerseRef(66,10),contrast.partner(new VerseRef(66,11),0));
+        CorrespondenceCases.Entry paired=CorrespondenceCases.forIdAndVerse(
+            "R070",new VerseRef(93,6));
+        assertNotNull(paired);
+        assertEquals(new VerseRef(93,9),paired.partner(new VerseRef(93,6),0));
+        assertEquals(new VerseRef(93,11),paired.partner(new VerseRef(93,7),0));
+        assertEquals(new VerseRef(93,10),paired.partner(new VerseRef(93,8),0));
+        assertNull("R032 must remain conditional",
+            CorrespondenceCases.forIdAndVerse("R032",new VerseRef(2,142)));
+        assertNull("R033 must remain conditional",
+            CorrespondenceCases.forIdAndVerse("R033",new VerseRef(2,255)));
+    }
+
+    @Test public void admittedR065OppositionRendersRealQcf()throws Exception{
+        verifyPair(85,10,"R065","opposition-85");
+    }
+
+    @Test public void admittedR070CrossedReadingRendersRealQcf()throws Exception{
+        verifyPair(93,6,"R070","crossed-93");
+    }
+
     @Test public void originalVerseAnchorsAreNotGuessed(){
         Context c=ApplicationProvider.getApplicationContext();
         GeometryRepository geometry=GeometryRepository.get(c);
