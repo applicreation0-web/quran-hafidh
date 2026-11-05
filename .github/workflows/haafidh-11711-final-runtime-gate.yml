@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/haafidh-11711-final-runtime-gate.yml'
       - 'hifz-app/src/androidTest/**'
+      - 'hifz-app/src/test/**'
       - 'hifz-app/src/main/**'
       - 'scripts/run_correspondances_android_ci.sh'
   workflow_dispatch:
