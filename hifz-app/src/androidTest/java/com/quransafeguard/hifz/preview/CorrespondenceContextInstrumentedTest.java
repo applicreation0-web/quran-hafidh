@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 /** Actual KFQC paired SVG and window layout, phone + BOOX portrait emulator. */
 public final class CorrespondenceContextInstrumentedTest {
+    private android.graphics.Rect[] expectedPivotRects;
     @Test public void eightStructuralHeadersUseTheirActualContractualIcons()throws Exception {
         Context c=ApplicationProvider.getApplicationContext();
         Intent intent=new Intent(c,CorrespondenceComparisonActivity.class)
@@ -247,6 +248,11 @@ public final class CorrespondenceContextInstrumentedTest {
 
     private boolean hasExpectedFolioInk(String name,android.graphics.Bitmap bitmap){
         switch(name){
+            case "similitudes":
+                return expectedPivotRects!=null&&expectedPivotRects.length==2
+                    &&hasPivotInk(bitmap,expectedPivotRects[0])
+                    &&hasPivotInk(bitmap,expectedPivotRects[1])
+                    &&hasFolioInk(bitmap,.10f,.40f,100)&&hasFolioInk(bitmap,.60f,.90f,100);
             case "lecture-reperes":
             case "retour-lecture":
                 // A real reader folio has continuous Arabic across the screen centre.
@@ -258,6 +264,21 @@ public final class CorrespondenceContextInstrumentedTest {
                 // Reject an empty pane or one single "Chargement du Mushaf QCF" label.
                 return hasFolioInk(bitmap,.10f,.40f,100)&&hasFolioInk(bitmap,.60f,.90f,100);
         }
+    }
+
+    /** Same real-pixel acceptance as the established Atlas comparison audit. */
+    private boolean hasPivotInk(android.graphics.Bitmap bitmap,android.graphics.Rect bounds){
+        int left=Math.max(0,bounds.left),top=Math.max(0,bounds.top);
+        int right=Math.min(bitmap.getWidth(),bounds.right),bottom=Math.min(bitmap.getHeight(),bounds.bottom);
+        if(right-left<=40||bottom-top<=20)return false;
+        int dark=0,samples=0;
+        for(int y=top+8;y<bottom-8;y+=3)for(int x=left+8;x<right-8;x+=3){
+            int pixel=bitmap.getPixel(x,y);
+            if(android.graphics.Color.red(pixel)<125&&android.graphics.Color.green(pixel)<125
+                &&android.graphics.Color.blue(pixel)<125)dark++;
+            samples++;
+        }
+        return samples>0&&dark>=60&&dark*1000>=samples*6;
     }
 
     private boolean hasFolioInk(android.graphics.Bitmap bitmap,float left,float right,int minimum){
@@ -401,11 +422,20 @@ public final class CorrespondenceContextInstrumentedTest {
                 if(!ready.get())Thread.sleep(100L);
             }
             assertTrue("Both original Similitudes folios and pivot strips must render",ready.get());
-            CountDownLatch drawn=new CountDownLatch(2);
+            CountDownLatch drawn=new CountDownLatch(3);
             ins.runOnMainSync(()->{
+                expectedPivotRects=comparison.qcfCropBoundsForTest();
+                assertTrue("The two pivot excerpts must be visible, not merely decoded",comparison.qcfStripsVisibleForTest());
                 for(MapQcfThumbnails pane:comparison.qcfViewsForTest())
                     pane.postVisualStateCallback(1,new WebView.VisualStateCallback(){
                         @Override public void onComplete(long id){pane.postOnAnimation(()->pane.postOnAnimation(drawn::countDown));}
+                    });
+                ((QcfAtlasVerseStrips)readField(comparison,"strips")).postVisualStateCallback(2,
+                    new WebView.VisualStateCallback(){
+                        @Override public void onComplete(long id){
+                            comparison.getWindow().getDecorView().postOnAnimation(
+                                ()->comparison.getWindow().getDecorView().postOnAnimation(drawn::countDown));
+                        }
                     });
             });
             assertTrue(drawn.await(15,TimeUnit.SECONDS));
