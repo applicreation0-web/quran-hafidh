@@ -859,15 +859,18 @@ public final class ClaudeNoGoRegressionSourceContractTest {
                 && prefs.contains("if (current.length() < weeklyCap)"));
 
         String mainActivity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue("the quick-access gate must use the configured split (directly or via the P4 "
-                + "Roadmap's effectiveLearningDaysPerWeek(), which falls back to it)",
-            mainActivity.contains("WeeklyProgramPolicy.actionFor(HifzClock.today().getDayOfWeek(),prefs.weeklyProgramMode(),effectiveLearningDaysPerWeek())"));
+        assertTrue("the quick-access gate must use today's receipt-backed own-family slot and "
+                + "the configured split through HifzBacklog.pending()",
+            mainActivity.contains("HifzBacklog.pending(prefs,ledger,")
+                && mainActivity.contains("today,effectiveLearningDaysPerWeek()")
+                && mainActivity.contains("HifzBacklog.onDate(backlogPending,today)"));
         assertTrue("cadence completion checks must use the configured split (directly or via the P4 "
                 + "Roadmap's effectiveLearningDaysPerWeek(), which falls back to it)",
             mainActivity.contains("WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek())"));
-        assertTrue("the automatic due-task lookup must use the configured split (directly or via the P4 "
-                + "Roadmap's effectiveLearningDaysPerWeek(), which falls back to it)",
-            mainActivity.contains("WeeklyProgramPolicy.nextDue(prefs,prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek())"));
+        assertTrue("today's due-task lookup must respect the split without selecting historical "
+                + "missed dates as compulsory catch-up sessions",
+            mainActivity.contains("WeeklyProgramPolicy.nextDue(prefs,todayDate,todayDate,")
+                && mainActivity.contains("java.util.Collections.emptySet(),effectiveLearningDaysPerWeek())"));
         assertTrue("effectiveLearningDaysPerWeek() itself must still fall back to the configured split",
             mainActivity.contains("prefs.learningDaysPerWeek()"));
 
