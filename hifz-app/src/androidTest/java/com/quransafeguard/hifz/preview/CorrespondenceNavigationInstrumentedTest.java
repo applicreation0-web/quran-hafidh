@@ -99,10 +99,98 @@ public final class CorrespondenceNavigationInstrumentedTest {
             screenshot("navigation-p293");
         }
     }
-    private static TextView find(View v,String contains){
-        if(v instanceof TextView&&((TextView)v).getText().toString().contains(contains))return (TextView)v;
-        if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){TextView t=find(g.getChildAt(i),contains);if(t!=null)return t;}}
+    @Test public void initialLoadingSelectionAndDelayedStaleResultsNeverReplaceTheActiveVerse()throws Exception{
+        try(ActivityScenario<CorrespondenceComparisonActivity> scenario=launch(12,3,"R008")){
+            // Move before the original SVG has completed loading.
+            scenario.onActivity(a->{call(a,"setTafsirOpen",new Class<?>[]{boolean.class},true);step(a,0,-1);step(a,0,-1);step(a,1,1);});
+            ready(scenario);assertSelection(scenario,0,new VerseRef(12,1));assertSelection(scenario,1,new VerseRef(11,121));
+            CountDownLatch blocked=new CountDownLatch(1),release=new CountDownLatch(1);
+            java.util.List<String> seen=new java.util.concurrent.CopyOnWriteArrayList<>();
+            String[] stale=new String[1];
+            scenario.onActivity(a->{
+                ((java.util.concurrent.ExecutorService)field(a,"tafsirIo")).submit(()->{blocked.countDown();try{release.await(20,TimeUnit.SECONDS);}catch(InterruptedException e){Thread.currentThread().interrupt();}});
+                try{StringBuilder text=new StringBuilder();for(TafsirRepository.Run run:new TafsirRepository(a).load(new VerseRef(12,2)).commentaryRuns)text.append(run.text);stale[0]=text.toString().trim();}catch(Exception e){throw new AssertionError(e);}
+                ((TextView[])field(a,"commentaries"))[0].addTextChangedListener(new android.text.TextWatcher(){
+                    public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+                    public void onTextChanged(CharSequence s,int start,int before,int count){seen.add(s.toString());}
+                    public void afterTextChanged(android.text.Editable s){}
+                });
+            });
+            assertTrue(blocked.await(5,TimeUnit.SECONDS));
+            try{scenario.onActivity(a->{step(a,0,1);step(a,0,1);step(a,1,1);});}finally{release.countDown();}
+            ready(scenario);assertSelection(scenario,0,new VerseRef(12,3));assertSelection(scenario,1,new VerseRef(11,122));
+            assertFalse("Delayed obsolete 12:2 commentary must never replace active 12:3",seen.contains(stale[0]));
+        }
+    }
+    @Test public void unavailableCommentaryClearsOnlyThatSideAndKeepsItsExactReference()throws Exception{
+        try(ActivityScenario<CorrespondenceComparisonActivity> scenario=launch(12,3,"R008")){
+            scenario.onActivity(a->call(a,"setTafsirOpen",new Class<?>[]{boolean.class},true));ready(scenario);
+            String[] other=new String[1];
+            scenario.onActivity(a->{
+                other[0]=((TextView[])field(a,"commentaries"))[1].getText().toString();
+                android.content.Context broken=new android.content.ContextWrapper(a){
+                    @Override public Context getApplicationContext(){return this;}
+                    @Override public java.io.File getNoBackupFilesDir(){return new java.io.File("/proc/haafidh-unavailable-test");}
+                };
+                try{java.lang.reflect.Field f=a.getClass().getDeclaredField("tafsir");f.setAccessible(true);f.set(a,new TafsirRepository(broken));}catch(Exception e){throw new AssertionError(e);}
+                step(a,0,-1);
+            });
+            AtomicBoolean missing=new AtomicBoolean();long deadline=System.currentTimeMillis()+15000;
+            while(System.currentTimeMillis()<deadline){scenario.onActivity(a->missing.set("Commentaire indisponible.".contentEquals(((TextView[])field(a,"commentaries"))[0].getText())));if(missing.get())break;Thread.sleep(100);}
+            assertTrue(missing.get());assertSelection(scenario,0,new VerseRef(12,2));
+            scenario.onActivity(a->assertEquals(other[0],((TextView[])field(a,"commentaries"))[1].getText().toString()));
+        }
+    }
+    private static View named(View v,String name){
+        if(name.contentEquals(v.getContentDescription()==null?"":v.getContentDescription())
+                ||(v instanceof TextView&&name.contentEquals(((TextView)v).getText())))return v;
+        if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){View t=named(g.getChildAt(i),name);if(t!=null)return t;}}
         return null;
+    }
+    private static View sourcesDecor(Activity a){
+        return ((android.app.AlertDialog)field(a,"sourcesDialog")).getWindow().getDecorView();
+    }
+    private static void tap(ActivityScenario<CorrespondenceComparisonActivity> scenario,String name,boolean dialog)throws Exception{
+        android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();ins.waitForIdleSync();
+        scenario.onActivity(a->{
+            View target=named(dialog?sourcesDecor(a):a.getWindow().getDecorView(),name);
+            assertNotNull("Visible action missing: "+name,target);assertTrue(target.isShown());
+            target.requestRectangleOnScreen(new android.graphics.Rect(0,0,target.getWidth(),target.getHeight()),true);
+        });
+        ins.waitForIdleSync();Thread.sleep(60);
+        float[] point=new float[2];
+        scenario.onActivity(a->{
+            View target=named(dialog?sourcesDecor(a):a.getWindow().getDecorView(),name);
+            android.graphics.Rect visible=new android.graphics.Rect();
+            assertTrue("Action outside scroll viewport: "+name,target.getGlobalVisibleRect(visible));
+            assertTrue(visible.height()>a.getResources().getDisplayMetrics().density*20);
+            point[0]=visible.exactCenterX();point[1]=visible.exactCenterY();
+        });
+        long now=android.os.SystemClock.uptimeMillis();
+        android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,point[0],point[1],0);
+        android.view.MotionEvent up=android.view.MotionEvent.obtain(now,now+50,android.view.MotionEvent.ACTION_UP,point[0],point[1],0);
+        try{ins.sendPointerSync(down);ins.sendPointerSync(up);}finally{down.recycle();up.recycle();}
+        ins.waitForIdleSync();
+    }
+    private static void followReading(ActivityScenario<CorrespondenceComparisonActivity> scenario,String action,String ref,int page,boolean dialog)throws Exception{
+        android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+        android.app.Instrumentation.ActivityMonitor monitor=ins.addMonitor(StudyReaderActivity.class.getName(),null,false);
+        try{
+            tap(scenario,action,dialog);
+            Activity reader=ins.waitForMonitorWithTimeout(monitor,15000);assertNotNull("Reading route must open",reader);
+            assertEquals(ref,reader.getIntent().getStringExtra(StudyReaderActivity.EXTRA_JUMP_VERSE));
+            assertEquals(page,reader.getIntent().getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,-1));
+            ins.runOnMainSync(reader::finish);ins.waitForIdleSync();
+        }finally{ins.removeMonitor(monitor);}
+    }
+    @Test public void eachActiveTafsirHeaderOpensExactVerseInReadingAndReturns()throws Exception{
+        try(ActivityScenario<CorrespondenceComparisonActivity> scenario=launch(12,3,"R008")){
+            scenario.onActivity(a->call(a,"setTafsirOpen",new Class<?>[]{boolean.class},true));ready(scenario);
+            scenario.onActivity(a->{step(a,0,-1);step(a,1,1);});ready(scenario);
+            followReading(scenario,"Lire le verset 12:2 · A","12:2",235,false);
+            followReading(scenario,"Lire le verset 11:121 · B","11:121",235,false);
+            assertSelection(scenario,0,new VerseRef(12,2));assertSelection(scenario,1,new VerseRef(11,121));
+        }
     }
     @Test public void allFortyFiveRefrainsAreReachableInsideSourcesOnly()throws Exception{
         for(String id:new String[]{"R047","R048","R059"}){
@@ -112,20 +200,27 @@ public final class CorrespondenceNavigationInstrumentedTest {
             String[] ref=anchor[5].split(":");
             try(ActivityScenario<CorrespondenceComparisonActivity> scenario=launch(Integer.parseInt(ref[0]),Integer.parseInt(ref[1]),id)){
                 ready(scenario);
-                scenario.onActivity(a->{
-                    call(a,"showSources",new Class<?>[]{});
-                    android.app.AlertDialog dialog=(android.app.AlertDialog)field(a,"sourcesDialog");View decor=dialog.getWindow().getDecorView();
-                    TextView opener=find(decor,"Frise des refrains");assertNotNull(opener);opener.performClick();
-                    assertNotNull(find(decor,total+" occurrences"));
-                    for(String[] node:RefrainTimelineData.NODES)if(id.equals(node[0])){
-                        TextView station=find(decor,node[7]);assertNotNull(station);
-                        View occurrence=find(decor,node[3]+"/"+node[4]+" · "+node[5]);assertNotNull(occurrence);
-                        if(((View)occurrence.getParent()).getVisibility()!=View.VISIBLE)station.performClick();
-                        occurrence.performClick();assertNotNull(find(decor,"Avant · "+node[8]));assertNotNull(find(decor,"Après · "+node[11]));
-                        assertNotNull(find(decor,"Lire "+node[5]));occurrence.performClick();
+                scenario.onActivity(a->call(a,"showSources",new Class<?>[]{}));
+                tap(scenario,"Frise des refrains",true);
+                java.util.Set<String> openStations=new java.util.HashSet<>();
+                for(String[] node:RefrainTimelineData.NODES)if(id.equals(node[0])){
+                    if(openStations.add(node[7]))tap(scenario,"Station "+node[7],true);
+                    String action="Occurrence "+node[3]+" sur "+node[4]+" · "+node[5];
+                    tap(scenario,action,true);
+                    scenario.onActivity(a->{
+                        View before=named(sourcesDecor(a),"Avant · "+node[8]+"\n"+node[9]);
+                        View after=named(sourcesDecor(a),"Après · "+node[11]+"\n"+node[12]);
+                        assertNotNull(before);assertTrue(before.isShown());assertNotNull(after);assertTrue(after.isShown());
+                    });
+                    // Follow every actual Lire action into the existing reader, then return.
+                    followReading(scenario,"Lire "+node[5],node[5],Integer.parseInt(node[6]),true);
+                    if(node[3].equals("1")||node[3].equals(node[4])){
+                        // The screenshot contains real expanded before/refrain/after detail.
+                        scenario.onActivity(a->{View after=named(sourcesDecor(a),"Après · "+node[11]+"\n"+node[12]);((View)after.getParent()).requestRectangleOnScreen(new android.graphics.Rect(0,0,((View)after.getParent()).getWidth(),after.getBottom()),true);});
+                        screenshot("frise-"+id+(node[3].equals("1")?"":"-fin"));
                     }
-                });
-                screenshot("frise-"+id);
+                    tap(scenario,action,true);
+                }
                 scenario.recreate();ready(scenario);
                 scenario.onActivity(a->{assertTrue(((RefrainTimeline.State)field(a,"timelineState")).open);assertTrue((Boolean)field(a,"sourcesOpen"));});
             }

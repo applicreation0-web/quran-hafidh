@@ -44,7 +44,7 @@ else
 fi
 
 capture_status=0
-for capture in navigation-p235 navigation-p293 frise-R047 frise-R048 frise-R059 apres-lecture-p11 apres-lecture-p14 apres-lecture-p532 apres-lecture-p235 apres-lecture-p529 apres-lecture-p293 apres-comparaison-p235 apres-sources sim-161 sim-166 sim-168 progression repetition opposition-85 crossed-93 agrandissement lecture-reperes lecture-deux-familles similitudes tafsir retour-lecture; do
+for capture in navigation-p235 navigation-p293 frise-R047 frise-R047-fin frise-R048 frise-R048-fin frise-R059 frise-R059-fin apres-lecture-p11 apres-lecture-p14 apres-lecture-p532 apres-lecture-p235 apres-lecture-p529 apres-lecture-p293 apres-comparaison-p235 apres-sources sim-161 sim-166 sim-168 progression repetition opposition-85 crossed-93 agrandissement lecture-reperes lecture-deux-familles similitudes tafsir retour-lecture; do
   if ! adb pull "/data/local/tmp/haafidh-$capture.png" hifz-app/build/android-proof/ >/dev/null 2>&1; then
     echo "NO_VERIFIED_CAPTURE: $capture"
     capture_status=1

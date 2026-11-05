@@ -237,6 +237,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
             header.addView(previousVerses[side],new LinearLayout.LayoutParams(dp(44),dp(44)));
             TextView label=caption("",booxPortrait?14:12,true);
             label.setGravity(Gravity.CENTER);label.setMaxLines(2);
+            label.setOnClickListener(v->openReading(pane));
             tafsirLabels[side]=label;
             header.addView(label,new LinearLayout.LayoutParams(0,dp(44),1));
             header.addView(nextVerses[side],new LinearLayout.LayoutParams(dp(44),dp(44)));
@@ -328,6 +329,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         String name=side==0?"A":"B";
         pageLabels[side].setText(name+" · "+verse+" · p."+shownPages[side]);
         tafsirLabels[side].setText(name+" · Tafsīr\n"+verse);
+        tafsirLabels[side].setContentDescription("Lire le verset "+verse+" · "+name);
         java.util.List<VerseRef> allowed=navigationVerses(side);
         int index=allowed.indexOf(verse);
         previousVerses[side].setEnabled(index>0);

@@ -20,6 +20,9 @@ class TafsirNavigationContract(unittest.TestCase):
   self.assertIn('void setSelectedVerse(',t)
   self.assertIn('applyVerseSelection()',t)
   self.assertIn('haafidh-active-verse',t)
+ def test_each_tafsir_header_retains_the_existing_reading_route(self):
+  s=(JAVA/'CorrespondenceComparisonActivity.java').read_text()
+  self.assertIn('label.setOnClickListener(v->openReading(pane))',s)
  def test_sources_dialog_has_editorial_note_without_permanent_panel(self):
   s=(JAVA/'CorrespondenceComparisonActivity.java').read_text()
   self.assertIn('"En bref"',s[s.index('private void showSources'):])

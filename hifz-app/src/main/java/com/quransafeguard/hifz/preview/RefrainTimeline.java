@@ -53,6 +53,7 @@ final class RefrainTimeline {
             state.open=!state.open;body.setVisibility(state.open?View.VISIBLE:View.GONE);
             opener[0].setText((state.open?"⌃ ":"⌄ ")+"Frise des refrains");
         });
+        opener[0].setContentDescription("Frise des refrains");
         column.addView(opener[0]);column.addView(body);
         body.addView(text(a,nodes.get(0)[1]+" · "+nodes.size()+" occurrences",true));
         body.addView(text(a,"Repères pédagogiques éditoriaux. Les sources expliquent le refrain ; elles ne proposent pas cette frise. Avant et après désignent les versets immédiatement voisins.",false));
