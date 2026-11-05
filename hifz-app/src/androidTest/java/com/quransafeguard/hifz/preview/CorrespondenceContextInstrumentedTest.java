@@ -379,7 +379,7 @@ public final class CorrespondenceContextInstrumentedTest {
             awaitReaderFrame(scenario);
             CountDownLatch checked=new CountDownLatch(1);
             AtomicBoolean both=new AtomicBoolean();
-            String markers="var a=document.querySelector('button[aria-label^=\"Versets ressemblants \"]'),"
+            String markers="var a=document.querySelector('button[aria-label^=\"Similitudes \"]'),"
                 +"b=document.querySelector('button[aria-label^=\"Correspondances \"]'),q=document.querySelector('#mushaf');";
             scenario.onActivity(a->((MushafView)readField(a,"mushaf")).evaluateJavascript(
                 "(function(){"+markers+"if(!a||!b||!q)return false;var r=q.getBoundingClientRect();"
