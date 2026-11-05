@@ -286,14 +286,23 @@ public final class CorrespondenceContextInstrumentedTest {
         for(int band=0;band<2;band++){
             int top=Math.round(height*(.34f+band*.115f));
             int bottom=Math.round(height*(.455f+band*.115f));
-            int dark=0;
+            int dark=0,light=0,samples=0;
             for(int y=top;y<bottom;y+=3)
                 for(int x=Math.round(width*left);x<Math.round(width*right);x+=3){
                     int pixel=bitmap.getPixel(x,y);
-                    if(android.graphics.Color.red(pixel)<125&&android.graphics.Color.green(pixel)<125
-                        &&android.graphics.Color.blue(pixel)<125)dark++;
+                    int red=android.graphics.Color.red(pixel);
+                    int green=android.graphics.Color.green(pixel);
+                    int blue=android.graphics.Color.blue(pixel);
+                    if(red<125&&green<125&&blue<125)dark++;
+                    if(red>180&&green>180&&blue>180)light++;
+                    samples++;
                 }
-            if(dark<minimum)return false;
+            // A solid black emulator surface previously satisfied "ink" because
+            // every black pixel counted as a dark Arabic glyph. A real light
+            // QCF folio MUST contain both a substantial paper background and
+            // actual ink in the observed reading bands.
+            if(samples==0||dark<minimum||light*100<samples*25
+                    ||dark*100>samples*55)return false;
         }
         return true;
     }
@@ -748,6 +757,19 @@ public final class CorrespondenceContextInstrumentedTest {
     }
 
     /** Final release-candidate runtime gate: all admitted relations, never debug-only fixtures. */
+    @Test public void solidBlackOrBlankWhiteEmulatorSurfaceNeverPassesQcfInkGate(){
+        android.graphics.Bitmap surface=android.graphics.Bitmap.createBitmap(
+            1404,1872,android.graphics.Bitmap.Config.ARGB_8888);
+        try{
+            surface.eraseColor(android.graphics.Color.BLACK);
+            assertFalse("A black emulator screen is NOT QCF ink",
+                hasFolioInk(surface,.10f,.40f,100));
+            surface.eraseColor(android.graphics.Color.WHITE);
+            assertFalse("A blank white screen is NOT a rendered QCF folio",
+                hasFolioInk(surface,.10f,.40f,100));
+        }finally{surface.recycle();}
+    }
+
     @Test public void expandedCatalogueIndexAndSemanticPartnersStayExact(){
         assertTrue("The admitted catalogue must be enabled in debug and release",
             BuildConfig.CORRESPONDENCES_CATALOGUE);
