@@ -1,0 +1,355 @@
+{
+  "date": "2026-11-05",
+  "edition": {
+    "auteurs": "Jalal al-Din al-Mahalli et Jalal al-Din al-Suyuti",
+    "titre": "Tafsir al-Jalalayn",
+    "traducteur": "Feras Hamza",
+    "editeur": "Fons Vitae / Royal Aal al-Bayt Institute for Islamic Thought",
+    "annee": 2008,
+    "isbn": "9781891785160",
+    "url": "https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf",
+    "pdfSha256": "bcd2abf8d86ff7ce9e10077a6a0268bf3aea8b6c6ef75153f577be542adc8b8a",
+    "pagination": "PDF 1-based, 675 pages"
+  },
+  "texteArabeSha256": "0a5926f8e27b8961e619f2d473db9c5466186ab2b56207c964a043336b174a7d",
+  "qcfSourceCommit": "1b427fab77aae1403fe7e1f0b8c794a5384d5605",
+  "dossiers": [
+    {
+      "id": "R030",
+      "versets": [
+        "2:47",
+        "2:122"
+      ],
+      "relation": "REPETITION",
+      "jalalaynPagesPdf": [
+        37,
+        48
+      ],
+      "ancresQcf": [
+        {
+          "verset": "2:47",
+          "folio": 7,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "76a2052280f0b1127e3ad2b1378b0ea323dac1f47f737f59ae8651c42d4bfb56"
+        },
+        {
+          "verset": "2:122",
+          "folio": 19,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "2066c4d87782150b01ade8a19d5d376f2507e7ba4888d098e669a34b864d88cd"
+        }
+      ],
+      "occurrencesExactes": 2,
+      "statutFinalProduction": "SUSPENDU",
+      "motif": "Relation locale et ancres contrôlées; admission éditoriale indépendante non attestée. Aperçu debug uniquement.",
+      "admissionProduction": false
+    },
+    {
+      "id": "R037",
+      "versets": [
+        "12:4",
+        "12:100"
+      ],
+      "relation": "PROGRESSION",
+      "jalalaynPagesPdf": [
+        235,
+        245
+      ],
+      "ancresQcf": [
+        {
+          "verset": "12:4",
+          "folio": 235,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "7ee4ab3eccdc124eb1fe97e241d70d6b68391ff914b79c627e9e23ce018bd341"
+        },
+        {
+          "verset": "12:100",
+          "folio": 247,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "4b9c765570ef8c5b318d5714ba18a7864917d1cc788a4a30b0a882a1aa1ca71b"
+        }
+      ],
+      "statutFinalProduction": "SUSPENDU",
+      "motif": "Relation locale et ancres contrôlées; admission éditoriale indépendante non attestée. Aperçu debug uniquement.",
+      "admissionProduction": false
+    },
+    {
+      "id": "R047",
+      "versets": [
+        "54:17",
+        "54:22",
+        "54:32",
+        "54:40"
+      ],
+      "relation": "REPETITION",
+      "jalalaynPagesPdf": [
+        548,
+        549,
+        550
+      ],
+      "ancresQcf": [
+        {
+          "verset": "54:17",
+          "folio": 529,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "f02df0ace82adb68b321003e4fbdbda5e6a9dd5ba946881fdd519bc60f482506"
+        },
+        {
+          "verset": "54:22",
+          "folio": 529,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "4bfd0a6e4ebb86b0de324c58bbbdc76eba66b4b8b026c0825e502e6463d0ba56"
+        },
+        {
+          "verset": "54:32",
+          "folio": 530,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "4af27cbb2feeb4d7838d0474e056adaa0db67b80425fa6d2f4e9d79e70fb1ea2"
+        },
+        {
+          "verset": "54:40",
+          "folio": 530,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "464eda94032194c88d6198b00254ce0c30509f3433c7e7f8610bc940069c8924"
+        }
+      ],
+      "occurrencesExactes": 4,
+      "statutFinalProduction": "SUSPENDU",
+      "motif": "Relation locale et ancres contrôlées; admission éditoriale indépendante non attestée. Aperçu debug uniquement.",
+      "admissionProduction": false
+    },
+    {
+      "id": "R048",
+      "versets": [
+        "55:13",
+        "55:16",
+        "55:18",
+        "55:21",
+        "55:23",
+        "55:25",
+        "55:28",
+        "55:30",
+        "55:32",
+        "55:34",
+        "55:36",
+        "55:38",
+        "55:40",
+        "55:42",
+        "55:45",
+        "55:47",
+        "55:49",
+        "55:51",
+        "55:53",
+        "55:55",
+        "55:57",
+        "55:59",
+        "55:61",
+        "55:63",
+        "55:65",
+        "55:67",
+        "55:69",
+        "55:71",
+        "55:73",
+        "55:75",
+        "55:77"
+      ],
+      "relation": "REPETITION",
+      "jalalaynPagesPdf": [
+        552
+      ],
+      "ancresQcf": [
+        {
+          "verset": "55:13",
+          "folio": 531,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "4695c1e722ce260bb0a0cfdafd13f379f221a0b4944840d95164743caf152896"
+        },
+        {
+          "verset": "55:16",
+          "folio": 531,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "0add79e82bf90f9639541e1208cbd62952795cc22317b82e76a51a28262b2605"
+        },
+        {
+          "verset": "55:18",
+          "folio": 531,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "92443a0668bffd8b62197811e43fe08ac0ef4e95c285d74044f8debc2ad2e862"
+        },
+        {
+          "verset": "55:21",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "4d299bf666d27a2cc43408f73f5ca83106e159c2810286ee2d542e8a3f8cdb49"
+        },
+        {
+          "verset": "55:23",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "b4516f2025a30af1999d9f6059d4a170e0aad3252f7d32fe2bf5f46f0ebccc6e"
+        },
+        {
+          "verset": "55:25",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "77a3da9107d8ec118495578329403bb00f53043ca6c04c1572e137c5938e49b3"
+        },
+        {
+          "verset": "55:28",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "37bdab3b29cc0528138c8bea17b467f54af98749178bc7a2ea3d49a1745a094b"
+        },
+        {
+          "verset": "55:30",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "af342594c70ad2e59d00c31ab2321aecb8b3a564984d214bccd93484a4bd7f79"
+        },
+        {
+          "verset": "55:32",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "e7f7a6a6c64285935e5cb01eb3e9ee87e110238ddbcde2a52fff7c65afbb78a0"
+        },
+        {
+          "verset": "55:34",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "b4997674c8b1bdc657a504b86fc75a6d3549a405b6f3673d147558aaccf668fa"
+        },
+        {
+          "verset": "55:36",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "4bb56c5832dbadc21f1db6958257f5abeddcb9203a24417bb48627c9a45d7dbb"
+        },
+        {
+          "verset": "55:38",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "5cf585c8aee215b027e54f88df47b26c7bdb1ffa9e185b3c3a4c6d9d9747adee"
+        },
+        {
+          "verset": "55:40",
+          "folio": 532,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "d8a3d6756ff028905123ac4d2844e4587ffc1e310cfeaa8f8611a6ca0673864d"
+        },
+        {
+          "verset": "55:42",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "bd3fb04e3571925ce4c33b552783fdc8d68e8464ab667fa0a1acf6187db83450"
+        },
+        {
+          "verset": "55:45",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "95c3802ee5f061de5ed760b4085d28568bfad2df91433d643d6fa03030fed0db"
+        },
+        {
+          "verset": "55:47",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "a68bf9707c001e3eb38feec725fa2a88ef6d443d4f7747e05baba0a48855c3d0"
+        },
+        {
+          "verset": "55:49",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "bbc0acab20537878af5e678b04a3b78138cb383226a438364a8667b2be7c4442"
+        },
+        {
+          "verset": "55:51",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "3efe1734b6ddf26f40da965f52cf3a08ec74c516bb9cfb463bc60de8efb1025d"
+        },
+        {
+          "verset": "55:53",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "d5cec7b149a542b813a7a976c6920964ed9d88798ef10bf937440fb22dd64b9d"
+        },
+        {
+          "verset": "55:55",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "311540203cfc2d54d13593b7244eaecefecb279fca9970cd71ad251c3ceb3d05"
+        },
+        {
+          "verset": "55:57",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "31da5eaf0cce823652c97ffc49626e00d70957db2fdd6e7545b71e5312267c2d"
+        },
+        {
+          "verset": "55:59",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "adb57c9909b26da75896788c916f10829ffff8a58679f0f6259ae58b6bce0650"
+        },
+        {
+          "verset": "55:61",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "164bfb9d1c4870e5bd192ed9e62bd252af123895bed5fc9e1381b632448eb2ad"
+        },
+        {
+          "verset": "55:63",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "a2ddbd11bcb56ce72a4166b3f700c4cc827f3f0ad81a929b960071dc8bd73d40"
+        },
+        {
+          "verset": "55:65",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "bc289fa98081a123df84e27b076cc9e78957d90f2f11271af84b06f7c1065c5c"
+        },
+        {
+          "verset": "55:67",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "ca465d0ce934d615598e2e835652fae398ea9939f354eac103737d41bca44f61"
+        },
+        {
+          "verset": "55:69",
+          "folio": 533,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "8405fe39fdc8f400d2d55cbec05354a6e4b1b960025d1c294cfc284138dc3472"
+        },
+        {
+          "verset": "55:71",
+          "folio": 534,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "69c6c3be7b870680064190f3adb8d20c77b191181745116a8c49668b64f9a0a8"
+        },
+        {
+          "verset": "55:73",
+          "folio": 534,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "1f8424a4a4bed356c5a0aa28128d7a187223559fcd009e25f96ee3ba229a5fb6"
+        },
+        {
+          "verset": "55:75",
+          "folio": 534,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "37ddb56570818504a2ea0caa6b26fb6699ce21313d40b75f816b87e9a2e369ab"
+        },
+        {
+          "verset": "55:77",
+          "folio": 534,
+          "viewBox": "0 0 345 550",
+          "polygonSha256": "d0b77e2fc1f6781811db67068369072318790efe37ae15d9d27594299dda562e"
+        }
+      ],
+      "occurrencesExactes": 31,
+      "statutFinalProduction": "SUSPENDU",
+      "motif": "Relation locale et ancres contrôlées; admission éditoriale indépendante non attestée. Aperçu debug uniquement.",
+      "admissionProduction": false
+    }
+  ],
+  "limite": "Polygones originaux vérifiés; aucune certification visuelle des 39 ancres ni activation du catalogue déduite de ces contrôles."
+}

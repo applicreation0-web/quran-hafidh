@@ -44,11 +44,12 @@ class ContractIconsTest(unittest.TestCase):
     def test_comparison_header_uses_all_eight_contractual_drawables(self):
         source = (ROOT / 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceComparisonActivity.java').read_text()
         expected = {
-            'Répétition': 'repetition', 'Ressemblance': 'ressemblance',
+            'Répétition': 'repetition', 'Parallélisme': 'ressemblance',
             'Opposition': 'opposition', 'Progression': 'progression',
             'Alternance': 'alternance', 'Inversion': 'inversion',
             'Centre': 'centre', 'Début–Fin': 'debut_fin_inclusio',
         }
+        source = source.replace('case \"Parallélisme\":case \"Ressemblance\":', 'case \"Parallélisme\":')
         mapping = dict(re.findall(r'case "([^"]+)": return R.drawable.ic_corr_relation_(\w+);', source))
         self.assertEqual(expected, mapping)
         self.assertIn('relationIcon.setImageResource(relationIconFor(relation.type));', source)

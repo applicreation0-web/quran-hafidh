@@ -68,6 +68,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private int enlarged=-1,partnerOffset;
     private boolean disposed;
     private int normalFolioHeightDp,expandedFolioHeightDp;
+    private ScrollView folioViewport;
 
     @Override protected void onCreate(Bundle state){
         super.onCreate(state);
@@ -154,6 +155,8 @@ public final class CorrespondenceComparisonActivity extends Activity {
         root.addView(pairHeader,new LinearLayout.LayoutParams(-1,dp(40)));
 
         ScrollView middle=new ScrollView(this);
+        folioViewport=middle;
+        middle.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->fitFoliosToViewport());
         middle.setFillViewport(false);
         middle.setVerticalScrollBarEnabled(false);
         LinearLayout content=Ui.column(this);
@@ -260,6 +263,20 @@ public final class CorrespondenceComparisonActivity extends Activity {
                 }
             }
         }
+        fitFoliosToViewport();
+        if(folioViewport!=null)folioViewport.scrollTo(0,0);
+    }
+    private void fitFoliosToViewport(){
+        if(folioViewport==null||folioViewport.getHeight()<=dp(68))return;
+        // Configuration screenHeightDp includes space outside this ScrollView.
+        // Fit the complete original SVG below the actual 24+44dp pane controls,
+        // after system insets and Tafsir have consumed their measured space.
+        int available=folioViewport.getHeight()-dp(68);
+        for(int i=0;i<2;i++)if(pages[i]!=null&&folioColumns[i].getVisibility()==View.VISIBLE){
+            android.view.ViewGroup.LayoutParams lp=pages[i].getLayoutParams();
+            int desired=Math.min(available,dp(enlarged==i?expandedFolioHeightDp:normalFolioHeightDp));
+            if(lp.height!=desired){lp.height=desired;pages[i].setLayoutParams(lp);}
+        }
     }
     private void changePartner(int delta){
         int alternatives=relation.verses.size()-1;
@@ -304,7 +321,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
             case "Répétition":return "A = A′";
             case "Progression":return "A → A′";
             case "Opposition":return "A ≠ B";
-            case "Ressemblance":return "A ∥ A′";
+            case "Parallélisme":case "Ressemblance":return "A ∥ A′";
             case "Alternance":return "A B A′ B′";
             case "Inversion":return "A B / B′ A′";
             case "Centre":return "A B X B′ A′";
@@ -315,7 +332,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
     static int relationIconFor(String type) {
         switch(type){
             case "Répétition": return R.drawable.ic_corr_relation_repetition;
-            case "Ressemblance": return R.drawable.ic_corr_relation_ressemblance;
+            case "Parallélisme":case "Ressemblance": return R.drawable.ic_corr_relation_ressemblance;
             case "Opposition": return R.drawable.ic_corr_relation_opposition;
             case "Progression": return R.drawable.ic_corr_relation_progression;
             case "Alternance": return R.drawable.ic_corr_relation_alternance;

@@ -52,3 +52,46 @@ Sur le run 41901522697, le JVM est vert. Le smartphone a exécuté six tests. Ci
 ### P0 reproduit sur un petit corpus acquis
 
 Le journal Android de 41902777189, job BOOX émulé 126829314114, localise le bouton absent en amont de l’interface. La Révision active de la fixture 2:47–51 échoue dans `GeometryRepository.planEligibleLines`. La limite historique de vingt tours du Mushaf s’appliquait aussi lorsqu’à chaque tour le planificateur trouvait des lignes acquises. Le garde mesure maintenant un tour complet sans aucune ligne éligible. Le test instrumenté de validation active sert de reproduction. Le changement ne touche ni les crédits ni le stockage des reçus. La nouvelle exécution doit établir le résultat Android après correction.
+
+## Clôture causale du 5 novembre 2026
+
+Base relue avant écriture : `b659c0988997650607c41f6bfc4d1944ef3c7416` ; base PR n°8 inchangée : `216f4d4b26e048656bc224fe1ade42c99240184d`.
+
+### Deux crashes, une cause démontrée
+
+Les runs initiaux PR `41924131048` et push `41924124615` ont le même arbre Git `91c9166d4334fa0681e97158fe7399308cb528af` (la PR exécute le merge synthétique `06325e16`, le push exécute `b659c098`). L'exception de la classe ItqanCarryover sur BOOX et de PostFinalRecall sur smartphone est `IllegalStateException: Missing Hifz state key: sabqiStart`, dans `MainActivity.refreshAll`, via la complétion du chargeur de géométrie. Il ne s'agit pas d'une assertion ignorée ni d'une défaillance native.
+
+La reproduction déterministe `HomeLoaderLifecycleInstrumentedTest` laisse le véritable chargeur terminer pendant que le thread principal est retenu, ferme l'accueil et efface les préférences jetables avant la livraison de son callback. **RED démontré sur les deux profils**, commit `9284e998bb70f0b4a2581b3aec03902db71c9c46`, run push `41977635439`, jobs BOOX `127080099362` et smartphone `127080099178`. Chaque ancienne classe passe séparément trois fois sur chaque profil ; ce résultat n'annule pas le RED causal. Le run PR parallèle est `41977642730`.
+
+`shutdownNow()` ne retire pas un Runnable déjà posté sur le thread principal. La correction refuse les deux callbacks de chargement quand l'activité est en fermeture ou détruite. Elle ne remplace aucune clé absente, n'invente aucun état et ne modifie ni HifzPrefs ni les crédits.
+
+La collecte par classe conserve désormais logcat tous buffers, boot_id avant/après, état des activités et ApplicationExitInfo. Elle ne relance pas un échec pour le masquer : tous les passages doivent terminer avec une assertion JUnit non nulle.
+
+### Défaut visuel réellement observé
+
+Le PNG `haafidh-agrandissement.png` de l'artefact BOOX `13369312311` du run `41924131048` coupe le bas du folio 7. Le SVG grandit, mais sa WebView est calculée depuis screenHeightDp sans soustraire les commandes, les insets et la hauteur réellement allouée au ScrollView. La correction borne les folios par le viewport Android mesuré, moins les 24+44 dp de leurs commandes. Le contrôle instrumenté exige aussi la hauteur et la largeur complètes visibles de chaque WebView. Le QCF original, ses polygones et son rapport 345/550 restent inchangés.
+
+### Icônes, captures et validation finale
+
+Le contrat Lucide link-2/git-compare reste inchangé. Le nom demandé Parallélisme est accepté par le schéma et le pictogramme historique ressemblance, avec compatibilité de cet ancien libellé. Un test instrumenté vérifie les huit en-têtes, leurs schémas non vides et l'égalité pixel à pixel des drawables affichés et contractuels. Les six familles sans dossier admis sont exercées par des fixtures de présentation synthétiques dans le test uniquement ; aucune relation scientifique n'est ajoutée.
+
+Les captures supplémentaires montrent les deux familles en Lecture p.235 et le vrai comparatif Similitudes ouvert depuis son repère. Les huit contrôles Correspondances incluent aussi les deux pilotes R030/R037, le focus, le Tafsir, le retour de Lecture et les restrictions actives/passives. La matrice finale demande les suites JVM complètes hifz-core/hifz-app, source contracts, Android téléphone 1080×1920/420 et BOOX 1404×1872/226, les classes historiques isolées et la destruction réelle du processus.
+
+**Les résultats de cette matrice et le verdict final sont à consigner dans la description PR n°9 après lecture des résultats et des PNG. Aucun PASS ni GO n'est déduit du simple lancement de la CI.**
+
+### Quatre pilotes, sans activation automatique
+
+`pilotes-preuves-20261105.json` consigne les références et les 39 ancres originales contrôlées. L'édition Jalalayn a été téléchargée de sa source et son SHA-256 a été recoupé avec le checkpoint historique. Al-Mahalli/al-Suyuti, traduction Feras Hamza, Fons Vitae / Royal Aal al-Bayt Institute, 2008, ISBN 9781891785160 ; pagination PDF de 1 à 675.
+
+| Dossier | Preuve locale et source Jalalayn, pages PDF | QCF | Statut production |
+|---|---|---|---|
+| R030 | Répétition exacte 2:47/2:122 ; pp.37 et 48, renvoi explicite du commentaire 2:122 au verset similaire antérieur | p.7 / p.19 | Suspendu : admission éditoriale indépendante non attestée |
+| R037 | Vision 12:4 et accomplissement explicitement désigné en 12:100 ; pp.235 et 245 | p.235 / p.247 | Suspendu : même porte d'admission |
+| R047 | Texte entier identique exactement quatre fois, 54:17/22/32/40 ; pp.548–550 | p.529 / p.530 | Suspendu : même porte d'admission ; aucune structure globale inférée |
+| R048 | Texte entier identique exactement 31 fois ; commentaire 55:13, p.552, confirme ce décompte | p.531–534, 31 ancres | Suspendu : même porte d'admission ; aucune symétrie globale inférée |
+
+Le registre historique 52 présélections / 10 suspensions / 48 exclusions n'est pas reclassé. Aucun dossier activé en production ; les statuts ci-dessus portent sur l'admission finale des quatre pilotes, pas sur la réécriture des décisions historiques.
+
+### Portes distinctes
+
+La PR n°8 reste ouverte et brouillon, non fusionnée, et n'a pas été modifiée. Aucun moteur ou stockage ne doit être déclaré non régressé sans les résultats runtime finaux. La release reste interdite tant que le catalogue n'est pas effectivement admis/activé, que l'intégration 1.17.11 n'est pas validée, et que ressources privées, signature historique et migration sur BOOX physique ne sont pas vérifiées. Aucune APK n'est publiée par ce workflow.

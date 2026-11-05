@@ -36,7 +36,7 @@ jobs:
           bash scripts/fetch_mushaf_pages.sh
       - name: Compile actual Android sources and check icon/revision invariants
         run: |
-          gradle --no-daemon :hifz-app:compileDebugJavaWithJavac :hifz-app:testDebugUnitTest --tests com.quransafeguard.hifz.preview.CorrespondenceContextContractTest --tests com.quransafeguard.hifz.preview.GeometryEligiblePlannerBooxRegressionTest
+          gradle --no-daemon :hifz-app:compileDebugJavaWithJavac :hifz-core:test :hifz-app:testDebugUnitTest
           gradle --no-daemon :hifz-app:sourceContractTest
           python3 scripts/correspondence_icon_vectors.py --check
           python3 scripts/test_correspondence_icon_contract.py
@@ -46,6 +46,7 @@ jobs:
         with:
           name: correspondances-jvm-NO-APK
           path: |
+            hifz-core/build/test-results/
             hifz-app/build/test-results/
             hifz-app/build/reports/tests/
           retention-days: 14

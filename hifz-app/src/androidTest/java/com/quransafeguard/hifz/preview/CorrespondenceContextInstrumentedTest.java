@@ -19,6 +19,51 @@ import static org.junit.Assert.*;
 
 /** Actual KFQC paired SVG and window layout, phone + BOOX portrait emulator. */
 public final class CorrespondenceContextInstrumentedTest {
+    @Test public void eightStructuralHeadersUseTheirActualContractualIcons()throws Exception {
+        Context c=ApplicationProvider.getApplicationContext();
+        Intent intent=new Intent(c,CorrespondenceComparisonActivity.class)
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,2)
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,47)
+            .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,"R030");
+        String[] types={"Répétition","Parallélisme","Opposition","Progression",
+            "Alternance","Inversion","Centre","Début–Fin"};
+        int[] icons={R.drawable.ic_corr_relation_repetition,R.drawable.ic_corr_relation_ressemblance,
+            R.drawable.ic_corr_relation_opposition,R.drawable.ic_corr_relation_progression,
+            R.drawable.ic_corr_relation_alternance,R.drawable.ic_corr_relation_inversion,
+            R.drawable.ic_corr_relation_centre,R.drawable.ic_corr_relation_debut_fin_inclusio};
+        try(ActivityScenario<CorrespondenceComparisonActivity> scenario=ActivityScenario.launch(intent)){
+            for(int i=0;i<types.length;i++){
+                final int index=i;
+                scenario.onActivity(a->{
+                    try{
+                        // Synthetic presentation fixtures only. Never add a dossier
+                        // or a scientific claim to the production catalogue.
+                        java.lang.reflect.Field relation=CorrespondenceComparisonActivity.class.getDeclaredField("relation");
+                        relation.setAccessible(true);
+                        relation.set(a,new CorrespondenceCases.Entry("TEST",types[index],"TEST","TEST","TEST",
+                            new VerseRef(2,47),new VerseRef(2,122)));
+                        java.lang.reflect.Method update=CorrespondenceComparisonActivity.class.getDeclaredMethod("updateRelationLabel");
+                        update.setAccessible(true);update.invoke(a);
+                        android.widget.TextView label=(android.widget.TextView)readField(a,"relationLine");
+                        assertTrue(label.getText().toString().startsWith(types[index]+" · "));
+                        assertFalse("Every family needs its own nonempty structural schema",
+                            label.getText().toString().contains(" ·  · "));
+                        android.widget.ImageView icon=(android.widget.ImageView)readField(a,"relationIcon");
+                        assertEquals(icons[index],CorrespondenceComparisonActivity.relationIconFor(types[index]));
+                        android.graphics.Bitmap actual=android.graphics.Bitmap.createBitmap(72,72,android.graphics.Bitmap.Config.ARGB_8888);
+                        android.graphics.Bitmap expected=android.graphics.Bitmap.createBitmap(72,72,android.graphics.Bitmap.Config.ARGB_8888);
+                        android.graphics.drawable.Drawable shown=icon.getDrawable();
+                        android.graphics.drawable.Drawable contract=a.getDrawable(icons[index]);
+                        shown.setBounds(0,0,72,72);contract.setBounds(0,0,72,72);
+                        shown.draw(new android.graphics.Canvas(actual));contract.draw(new android.graphics.Canvas(expected));
+                        assertTrue("Rendered icon must be the contractual family drawable",actual.sameAs(expected));
+                        actual.recycle();expected.recycle();
+                    }catch(ReflectiveOperationException failure){throw new AssertionError(failure);}
+                });
+            }
+        }
+    }
+
     @Test public void authenticDoubleQcfAndResponsiveTafsir()throws Exception {
         verifyPair(12,4,"R037","progression");
     }
@@ -148,6 +193,15 @@ public final class CorrespondenceContextInstrumentedTest {
             }
         });
         assertTrue("QCF WebViews must submit the captured frame",frames.await(15,TimeUnit.SECONDS));
+        scenario.onActivity(a->{
+            for(int side=0;side<visiblePanes;side++){
+                MapQcfThumbnails pane=a.qcfPagesForTest()[side];
+                android.graphics.Rect visible=new android.graphics.Rect();
+                pane.getGlobalVisibleRect(visible);
+                assertEquals("Complete QCF width must remain inside the viewport",pane.getWidth(),visible.width());
+                assertEquals("Complete QCF height must remain inside the viewport",pane.getHeight(),visible.height());
+            }
+        });
         for(int side=0;side<visiblePanes;side++){
             int index=side;
             AtomicBoolean folio=new AtomicBoolean();
@@ -310,6 +364,56 @@ public final class CorrespondenceContextInstrumentedTest {
             scenario.onActivity(a->assertEquals(page,((Integer)readField(a,"page")).intValue()));
             awaitReaderFrame(scenario);
             capture("retour-lecture");
+        }finally{ins.removeMonitor(monitor);}
+    }
+
+    @Test public void readerShowsBothFamiliesAndOpensActualSimilitudes()throws Exception{
+        Context c=ApplicationProvider.getApplicationContext();
+        int page=GeometryRepository.get(c).pageForVerse(new VerseRef(12,4));
+        android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+        android.app.Instrumentation.ActivityMonitor monitor=
+            ins.addMonitor(AtlasDiscriminantActivity.class.getName(),null,false);
+        try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(
+                new Intent(c,StudyReaderActivity.class).putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page))){
+            HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Lecture · deux familles");
+            awaitReaderFrame(scenario);
+            CountDownLatch checked=new CountDownLatch(1);
+            AtomicBoolean both=new AtomicBoolean();
+            String markers="var a=document.querySelector('button[aria-label^=\"Versets ressemblants \"]'),"
+                +"b=document.querySelector('button[aria-label^=\"Correspondances \"]'),q=document.querySelector('#mushaf');";
+            scenario.onActivity(a->((MushafView)readField(a,"mushaf")).evaluateJavascript(
+                "(function(){"+markers+"if(!a||!b||!q)return false;var r=q.getBoundingClientRect();"
+                +"return [a,b].every(function(e){var x=e.getBoundingClientRect();return x.width>0"
+                +"&&getComputedStyle(e).visibility==='visible'&&(x.right<=r.left+1||x.left>=r.right-1);});})()",
+                value->{both.set("true".equals(value));checked.countDown();}));
+            assertTrue(checked.await(10,TimeUnit.SECONDS));
+            assertTrue("Two distinct contextual families must be visible outside QCF",both.get());
+            capture("lecture-deux-familles");
+            scenario.onActivity(a->((MushafView)readField(a,"mushaf")).evaluateJavascript(
+                "(function(){"+markers+"a.click();})()",null));
+            android.app.Activity opened=ins.waitForMonitorWithTimeout(monitor,20000L);
+            assertTrue("Lecture marker must open actual Similitudes",opened instanceof AtlasDiscriminantActivity);
+            AtlasDiscriminantActivity comparison=(AtlasDiscriminantActivity)opened;
+            AtomicBoolean ready=new AtomicBoolean();
+            for(int retry=0;retry<100&&!ready.get();retry++){
+                ins.runOnMainSync(()->ready.set(comparison.qcfPagesReadyForTest()
+                    &&comparison.qcfStripsReadyForTest()&&comparison.bothQcfPagesFullyVisibleForTest()));
+                if(!ready.get())Thread.sleep(100L);
+            }
+            assertTrue("Both original Similitudes folios and pivot strips must render",ready.get());
+            CountDownLatch drawn=new CountDownLatch(2);
+            ins.runOnMainSync(()->{
+                for(MapQcfThumbnails pane:comparison.qcfViewsForTest())
+                    pane.postVisualStateCallback(1,new WebView.VisualStateCallback(){
+                        @Override public void onComplete(long id){pane.postOnAnimation(()->pane.postOnAnimation(drawn::countDown));}
+                    });
+            });
+            assertTrue(drawn.await(15,TimeUnit.SECONDS));
+            capture("similitudes");
+            ins.runOnMainSync(comparison::finish);
+            ins.waitForIdleSync();
+            scenario.onActivity(a->assertEquals(page,((Integer)readField(a,"page")).intValue()));
+            awaitReaderFrame(scenario);
         }finally{ins.removeMonitor(monitor);}
     }
 

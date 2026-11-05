@@ -235,6 +235,10 @@ public final class MainActivity extends android.app.Activity {
                 // startup. Only separately prepared future readings are resumed.
                 geometry = loaded;
                 runOnUiThread(() -> {
+                    // shutdownNow cannot remove a completion already queued on
+                    // the Android main thread. A closed home must not refresh
+                    // from stale preferences (e.g. after restore or teardown).
+                    if (isFinishing() || isDestroyed()) return;
                     setTodayEnabled(true);
                     setGeometryActionsEnabled(true);
                     ledger.capture(prefs);
@@ -242,6 +246,7 @@ public final class MainActivity extends android.app.Activity {
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
                     setToday("Parcours indisponible", false);
                     setGeometryActionsEnabled(false);
                 });

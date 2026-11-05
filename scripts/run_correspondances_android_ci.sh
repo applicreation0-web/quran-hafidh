@@ -34,14 +34,14 @@ bash scripts/run_11711_hifz_parcours_isolated.sh "$regressions" "$surface"
 test_status=0
 if gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.CorrespondenceContextInstrumentedTest; then
-  echo "CORRESPONDENCES_ANDROID_6_TESTS_PASS: $surface"
+  echo "CORRESPONDENCES_ANDROID_8_TESTS_PASS: $surface"
 else
   test_status=$?
   echo "CORRESPONDENCES_ANDROID_TEST_FAILURE: $surface exit=$test_status" >&2
 fi
 
 capture_status=0
-for capture in progression repetition agrandissement lecture-reperes tafsir retour-lecture; do
+for capture in progression repetition agrandissement lecture-reperes lecture-deux-familles similitudes tafsir retour-lecture; do
   if ! adb pull "/data/local/tmp/haafidh-$capture.png" hifz-app/build/android-proof/ >/dev/null 2>&1; then
     echo "NO_VERIFIED_CAPTURE: $capture"
     capture_status=1
