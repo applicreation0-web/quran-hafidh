@@ -162,9 +162,12 @@ public final class CorrespondenceNavigationInstrumentedTest {
         scenario.onActivity(a->{
             View target=named(dialog?sourcesDecor(a):a.getWindow().getDecorView(),name);
             android.graphics.Rect visible=new android.graphics.Rect();
-            assertTrue("Action outside scroll viewport: "+name,target.getGlobalVisibleRect(visible));
+            assertTrue("Action outside scroll viewport: "+name,target.getLocalVisibleRect(visible));
             assertTrue(visible.height()>a.getResources().getDisplayMetrics().density*20);
-            point[0]=visible.exactCenterX();point[1]=visible.exactCenterY();
+            // Dialog roots are offset from the screen. Inject SCREEN coordinates,
+            // not root-relative getGlobalVisibleRect coordinates.
+            int[] screen=new int[2];target.getLocationOnScreen(screen);
+            point[0]=screen[0]+visible.exactCenterX();point[1]=screen[1]+visible.exactCenterY();
         });
         long now=android.os.SystemClock.uptimeMillis();
         android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,point[0],point[1],0);
