@@ -3250,6 +3250,16 @@ public final class HifzPrefs {
      * New Sunday sessions use QCF page boundaries; existing OPEN finals retain the
      * pinned SNOWBALL_EXTENDED protocol on restore. Never synthesize a combined pass.
      * The source receipts continue to describe their original physical subblocks.
+     *
+     * A missed calendar lesson has NO physical line receipt; it remains at the
+     * same family cursor and is offered on the NEXT eligible lesson day.
+     * Consequently Sunday's current-week finale can legitimately contain
+     * FEWER than 15 Sabqi lines (5+5+5) or 22 Itqan lines (8+7+7).
+     * These are weekly targets, never minima for graduation. Even a single
+     * verified physical block may qualify; zero verified blocks yields no
+     * finale, never a fake completed one. Previous weeks' truly outstanding
+     * units can also appear through extendedSnowballUnits(). Every promoted
+     * line must still have its real evening receipt and page repetition.
      */
     private List<ConsolidationCycleEngine.Unit> sundayFinalPageUnits(
             ConsolidationCycleEngine.Family family, LocalDate today, GeometryRepository geometry) {
