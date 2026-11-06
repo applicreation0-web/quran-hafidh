@@ -1,4 +1,4 @@
-# Quran Haafidh 1.17.11 — P0 Itqān physical-proof candidate (NO-GO)
+# Quran Haafidh 1.17.11 — P0 Itqān physical-proof SOURCE JVM GREEN / RELEASE NO-GO
 
 Date: 2026-11-06. This is measured progress, **not** a release attestation.
 
@@ -26,7 +26,7 @@ A genuinely executed Android SDK compile exposed 43 checked-JSONException compil
 
 ## Conditions not met
 
-- **NO-GO SOURCE** until full JVM/Core/source suite is green and independently reviewed, old fixtures are rewritten to actually earn physical repetitions (not simply bypassed), and audit T01–T30 fully tested for both negative and canonical positive paths.
+- **SOURCE JVM GATE GREEN at 9afb9fc only**: the complete Android Java compile, P0 focused tests, JVM/Core regression and source-contract jobs all returned success in CI 42260147939. Prior scalar-era fixtures were rewritten to earn true token-bound physical repetitions and test canonical subblocks. This **does not** certify Android device behavior, full independent T01–T30, original data import, or private release readiness.
 - In particular, tests that inject `setItqanProgress(total)` directly and then complete a block, or substitute a five-line arbitrary fragment for a canonical Itqān plan, must be corrected using authentic geometry/session tokens and repeated protocol steps. Merely removing or skipping these tests is forbidden.
 - No full T01–T30 matrix evidence on latest HEAD; no Android instrumentation or two-profile QCF screenshots; no disk persistence-failure proof, fault injection, DST/import/corrupt snapshot adjudication, release assemble/sign/physical BOOX upgrade proof.
 - **NO-GO APK**: no private assets uploaded; no signed `com.quransafeguard.hifz` code-49 version 1.17.11 APK created by this work.
@@ -36,3 +36,19 @@ A genuinely executed Android SDK compile exposed 43 checked-JSONException compil
 Source CI: https://github.com/applicreation0-web/quran-hafidh/actions/runs/42256238011
 Follow-up CI: https://github.com/applicreation0-web/quran-hafidh/actions/runs/42257020033
 Latest CI: https://github.com/applicreation0-web/quran-hafidh/actions/runs/42257457600
+
+## GREEN JVM CLOSEOUT — 2026-11-06
+
+- Tested exact source/test SHA: `9afb9fc17b071ae158116da6c4941a50cb373d43`
+- GitHub Actions: https://github.com/applicreation0-web/quran-hafidh/actions/runs/42260147939 — `status=completed, conclusion=success`, job `real-jvm-and-android-compile` success.
+- Real Android Java compile: PASS (`hifz-app:compileDebugJavaWithJavac`).
+- Existing physical P0 test and legacy fraudulent payload test: PASS (targeted `testDebugUnitTest`).
+- Full Hifz JVM + core tests: PASS (`hifz-core:test`, `hifz-app:testDebugUnitTest`).
+- Source contracts: PASS (`hifz-app:sourceContractTest`).
+- No APK assembled or signed. The no-APK guard passed.
+- The previously failing 56 parameterized absent-week cases now run through actual QCF 8/7/7 blocks and earned physical repetition receipts; all prior failing classes reached success in the full suite.
+- The physically authenticated test helper never creates credits via `setItqanProgress(total)`; historic fake scalar fixtures were repaired rather than skipped.
+- Exactly the 11 commits ahead of PR #10 audit starting HEAD are isolated in the P0 branch. Candidate PR #9 unchanged.
+- Remaining release obligations: audit full adversarial T01–T30, Android instrumentation and BOOX portrait emulator, process-death/backup/restore and encryption/key certificate review, in-place upgrade on actual BOOX before recommending private install. **RELEASE/DEVICE: NO-GO**.
+
+This last section supersedes the provisional earlier CI status and the earlier source-JVM NO-GO wording. It does not establish a signed user-installable 1.17.11.
