@@ -223,6 +223,27 @@ public final class CorrespondenceNavigationInstrumentedTest {
         }
         return null;
     }
+    private static void waitForSelectedRefrainQcf(
+        ActivityScenario<CorrespondenceComparisonActivity> scenario,String ref)throws Exception{
+        String[] pair=ref.split(":");
+        final int surah=Integer.parseInt(pair[0]),ayah=Integer.parseInt(pair[1]);
+        AtomicBoolean matched=new AtomicBoolean(false);
+        long deadline=android.os.SystemClock.uptimeMillis()+45000;
+        while(android.os.SystemClock.uptimeMillis()<deadline){
+            CountDownLatch completion=new CountDownLatch(1);
+            scenario.onActivity(a->a.qcfPagesForTest()[1].evaluateJavascript(
+                "(function(){var s=document.querySelector('#haafidh-active-verse');"
+                +"return !!s && s.textContent.indexOf(\"surah='"+surah+"'\")>=0"
+                +" && s.textContent.indexOf(\"ayah='"+ayah+"'\")>=0"
+                +" && document.body.innerText.indexOf('Chargement du Mushaf QCF')<0;})()",
+                value->{matched.set("true".equals(value));completion.countDown();}));
+            assertTrue("QCF callback timed out",completion.await(5,TimeUnit.SECONDS));
+            if(matched.get())break;
+            Thread.sleep(150);
+        }
+        assertTrue("The actual second QCF must finish displaying "+ref+
+            " before a release screenshot",matched.get());
+    }
     @Test public void allFortyFiveRefrainsAreReachableInCompactAtlasRail()throws Exception{
         for(String id:new String[]{"R047","R048","R059"}){
             String[] first=null,last=null;int count=0;
@@ -264,6 +285,7 @@ public final class CorrespondenceNavigationInstrumentedTest {
                 followReading(scenario,readingAction[0],finalNode[5],
                     Integer.parseInt(finalNode[6]),false);
                 ready(scenario);
+                waitForSelectedRefrainQcf(scenario,finalNode[5]);
                 screenshot("frise-"+id+"-fin");
                 scenario.recreate();ready(scenario);
                 scenario.onActivity(a->{
