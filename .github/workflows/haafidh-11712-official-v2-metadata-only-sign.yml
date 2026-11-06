@@ -4,6 +4,7 @@ on:
     branches: [release-candidate/haafidh-11712-integrity-20261106]
     paths:
       - 'signing-input/signed_data_11712_p0.b64'
+      - '.github/workflows/haafidh-11712-official-v2-metadata-only-sign.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -44,7 +45,7 @@ jobs:
             public static void main(String[] a) throws Exception {
               final String expectedCert="66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14";
               final String expectedData="5c652b30dc51eb67148639d477c7dcad4d1ebd67d6b509283226adc0f6b952b2";
-              byte[] signedData=Base64.getMimeDecoder().decode(Files.readString(Path.of("signing-input/signed_data_11712.b64")));
+              byte[] signedData=Base64.getMimeDecoder().decode(Files.readString(Path.of("signing-input/signed_data_11712_p0.b64")));
               if(signedData.length!=1449 || !sha(signedData).equals(expectedData))
                 throw new SecurityException("Refuse any SignedData other than the audited 1.17.12 payload");
               Path temp=Path.of(a[0],"haafidh-official-11712.jks");
@@ -82,7 +83,7 @@ jobs:
         with:
           name: haafidh-11712-OFFICIAL-V2-SIGNATURE-ONLY-NO-APK
           path: |
-            ${{ runner.temp }}/signature_11712.b64
+            ${{ runner.temp }}/signature_11712_p0.b64
             ${{ runner.temp }}/attestation.txt
           if-no-files-found: error
           retention-days: 2
