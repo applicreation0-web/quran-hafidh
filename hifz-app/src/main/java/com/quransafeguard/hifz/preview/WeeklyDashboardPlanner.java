@@ -142,11 +142,17 @@ final class WeeklyDashboardPlanner {
                         morning="Apprentissage"+learningCue+" · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
-                    boolean snowballDone=snowballActual!=null || (date.equals(today)
-                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,date));
-                    evening=snowballDone?"✓ Renforcement":"Renforcement · révision cumulative";
                     boolean lessonDone=morningActual!=null;
-                    state=lessonDone&&snowballDone?"Validé":lessonDone?"Soir à faire":"À faire";
+                    // No dated evening receipt means NOT completed. In particular, a
+                    // Wednesday snapshot matching Friday's pre-Sabqi snapshot merely
+                    // means there is no NEW block YET: it is never a Friday ✓.
+                    boolean eveningDue=!date.equals(today)
+                        || prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,date);
+                    EveningReviewDisplay.Status learningEvening=EveningReviewDisplay.forDay(
+                        lessonDone,snowballActual!=null,eveningDue);
+                    evening=EveningReviewDisplay.learningLabel(learningEvening);
+                    state=lessonDone&&EveningReviewDisplay.resolved(learningEvening)?"Validé"
+                        :lessonDone?"Soir à faire":"À faire";
                     break;
                 }
                 case STABILIZATION:{
@@ -220,12 +226,14 @@ final class WeeklyDashboardPlanner {
                         break;
                     }
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
-                    boolean snowballDone=snowballActual!=null || (date.equals(today)
-                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date));
-                    evening=snowballDone?"✓ Consolidation":prefs.itqanPostNasMaintenance()
-                        ? "Consolidation · maintiens de la semaine · ×1 masqué"
-                        : "Consolidation · révision cumulative";
-                    state=morningDone&&snowballDone?"Validé":morningDone?"Soir à faire":"À faire";
+                    boolean eveningDue=!date.equals(today)
+                        || prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date);
+                    EveningReviewDisplay.Status stabilizationEvening=EveningReviewDisplay.forDay(
+                        morningDone,snowballActual!=null,eveningDue);
+                    evening=EveningReviewDisplay.stabilizationLabel(
+                        stabilizationEvening,prefs.itqanPostNasMaintenance());
+                    state=morningDone&&EveningReviewDisplay.resolved(stabilizationEvening)?"Validé"
+                        :morningDone?"Soir à faire":"À faire";
                     break;
                 }
                 case REVISION:{
@@ -291,7 +299,8 @@ final class WeeklyDashboardPlanner {
                         ?HifzSessionActivity.SABQI:HifzSessionActivity.ITQAN)!=null
                         || (action==CadenceAction.STABILIZATION
                             && date.toString().equals(prefs.lastItqanDate()));
-                    state=activeDone&&passiveDone&&lessonDone&&snowball.startsWith("✓ ")?"Validé"
+                    state=activeDone&&passiveDone&&lessonDone
+                        &&(snowball.startsWith("✓ ")||snowball.endsWith("aucune nouvelle unité"))?"Validé"
                         :activeDone&&passiveDone?"Soir à faire":"À faire";
                 } else {
                     morning=active+" + "+passive;

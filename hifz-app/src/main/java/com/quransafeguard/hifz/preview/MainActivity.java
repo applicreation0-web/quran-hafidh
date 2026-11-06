@@ -1008,13 +1008,25 @@ public final class MainActivity extends android.app.Activity {
         switch(action){
             case LEARNING:
                 addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Apprentissage",HifzSessionActivity.SABQI,today,modeComplete(today,HifzSessionActivity.SABQI),nextMode);
-                if(!prefs.learningConsolidationUnits(today).isEmpty())
-                    addToday(out,"Renforcement · révision cumulative du soir",HifzSessionActivity.LEARNING_CONSOLIDATION,today,!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,today),nextMode);
+                EveningReviewDisplay.Status learningEvening=EveningReviewDisplay.forDay(
+                    modeComplete(today,HifzSessionActivity.SABQI),
+                    modeComplete(today,HifzSessionActivity.LEARNING_CONSOLIDATION),
+                    prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,today));
+                if(learningEvening!=EveningReviewDisplay.Status.NO_NEW_UNITS)
+                    addToday(out,EveningReviewDisplay.learningTodayLabel(learningEvening),
+                        HifzSessionActivity.LEARNING_CONSOLIDATION,today,
+                        learningEvening==EveningReviewDisplay.Status.COMPLETED,nextMode);
                 break;
             case STABILIZATION:
                 addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Stabilisation",HifzSessionActivity.ITQAN,today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
-                if(!prefs.stabilizedConsolidationUnits(today).isEmpty())
-                    addToday(out,"Consolidation · révision cumulative du soir",HifzSessionActivity.RECENT_SABQI_REVIEW,today,!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today),nextMode);
+                EveningReviewDisplay.Status stabilizationEvening=EveningReviewDisplay.forDay(
+                    modeComplete(today,HifzSessionActivity.ITQAN),
+                    modeComplete(today,HifzSessionActivity.RECENT_SABQI_REVIEW),
+                    prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today));
+                if(stabilizationEvening!=EveningReviewDisplay.Status.NO_NEW_UNITS)
+                    addToday(out,EveningReviewDisplay.stabilizationTodayLabel(stabilizationEvening),
+                        HifzSessionActivity.RECENT_SABQI_REVIEW,today,
+                        stabilizationEvening==EveningReviewDisplay.Status.COMPLETED,nextMode);
                 break;
             case REVISION:
                 if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
@@ -1064,7 +1076,8 @@ public final class MainActivity extends android.app.Activity {
             // Completed finales are identified independently from the Itqān
             // line geometry. Never present a Sabqi finale as Itqān repetition.
             items[i]=(s.done?"✓ ":s.next?"▸ ":"  ")+slot+title+
-                (s.done?" · Terminé":" · À faire")+
+                (s.label.contains("en attente du")?" · En attente":
+                    (s.done?" · Terminé":" · À faire"))+
                 ("Détails disponibles".equals(essential) || "Terminée".equals(essential)
                     ? "" : "\n"+essential);
         }
@@ -1092,6 +1105,13 @@ public final class MainActivity extends android.app.Activity {
             .setTitle("Aujourd’hui · Choisir une séance")
             .setAdapter(adapter,(dialog,which)->{
                 TodaySession session=sessions.get(which);
+                if(session.label.contains("en attente du") && !session.done) {
+                    new android.app.AlertDialog.Builder(this)
+                        .setTitle("Séance en attente")
+                        .setMessage("Termine d’abord la séance du jour avant la révision cumulative du soir.")
+                        .setPositiveButton("Fermer",null).show();
+                    return;
+                }
                 if(HifzSessionActivity.POST_FINAL_RECALL.equals(session.mode)
                         && session.postFinalFamily!=null)
                     startActivity(new Intent(this,HifzSessionActivity.class)
