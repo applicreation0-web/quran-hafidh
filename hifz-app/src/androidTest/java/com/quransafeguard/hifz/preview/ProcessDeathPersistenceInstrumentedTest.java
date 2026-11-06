@@ -53,10 +53,18 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         assertNotNull(entry);
         VerseRef start = GeometryRepository.parseVerse(entry.start);
         VerseRef end = GeometryRepository.parseVerse(entry.end);
-        assertTrue(prefs.advanceItqanBlock(2, start, end, HifzClock.today().toString(),
-            "Ancrage fractionné · process death fixture"));
-        assertTrue(prefs.setItqanProgress(3, 1, 1, start, end));
-        assertTrue(prefs.setSabqiProgress(11, 3));
+        // Preserve a REALISTIC legacy V6 OPEN snapshot as imported data.
+        // This test verifies byte-exact backup/rollback fidelity, not earned
+        // completion. Never invoke the retired legacy credit endpoints.
+        assertTrue(raw.edit()
+            .putInt("itqanBlockIndex",2)
+            .putInt("itqanRep",3)
+            .putInt("itqanAssisted",1)
+            .putInt("itqanFinalReveals",1)
+            .putString("itqanUnitStart",start.toString())
+            .putString("itqanUnitEnd",end.toString())
+            .putInt("sabqiRep",11).putInt("sabqiAssisted",3)
+            .commit());
         prefs.setElapsedFor(HifzSessionActivity.MURAJAAH_ACTIVE, ACTIVE_REVIEW_ELAPSED_MS);
         assertTrue(context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE)
             .edit().putBoolean(ARMED, true)

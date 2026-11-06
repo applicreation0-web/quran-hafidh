@@ -6,7 +6,7 @@ on:
       - 'hifz-app/src/main/**'
       - 'hifz-app/src/androidTest/**'
       - '.github/workflows/haafidh-11712-hifz-parcours-exhaustive.yml'
-      - 'scripts/run_11711_hifz_parcours_isolated.sh'
+      - 'scripts/run_11712_hifz_parcours_isolated.sh'
   workflow_dispatch:
 permissions:
   contents: read
@@ -62,7 +62,7 @@ jobs:
           script: |
             adb shell wm size ${{ matrix.size }}
             adb shell wm density ${{ matrix.density }}
-            bash scripts/run_11711_hifz_parcours_isolated.sh '${{ matrix.classes }}' '${{ matrix.surface }}'
+            bash scripts/run_11712_hifz_parcours_isolated.sh '${{ matrix.classes }}' '${{ matrix.surface }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
