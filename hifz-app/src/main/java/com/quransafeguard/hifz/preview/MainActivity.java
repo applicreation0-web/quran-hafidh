@@ -1076,7 +1076,7 @@ public final class MainActivity extends android.app.Activity {
             // Completed finales are identified independently from the Itqān
             // line geometry. Never present a Sabqi finale as Itqān repetition.
             items[i]=(s.done?"✓ ":s.next?"▸ ":"  ")+slot+title+
-                (s.label.contains("en attente du")?" · En attente":
+                (s.label.contains("en attente")?" · En attente":
                     (s.done?" · Terminé":" · À faire"))+
                 ("Détails disponibles".equals(essential) || "Terminée".equals(essential)
                     ? "" : "\n"+essential);
@@ -1105,7 +1105,7 @@ public final class MainActivity extends android.app.Activity {
             .setTitle("Aujourd’hui · Choisir une séance")
             .setAdapter(adapter,(dialog,which)->{
                 TodaySession session=sessions.get(which);
-                if(session.label.contains("en attente du") && !session.done) {
+                if(session.label.contains("en attente") && !session.done) {
                     new android.app.AlertDialog.Builder(this)
                         .setTitle("Séance en attente")
                         .setMessage("Termine d’abord la séance du jour avant la révision cumulative du soir.")

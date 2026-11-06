@@ -31,7 +31,7 @@ final class EveningReviewDisplay {
     static String stabilizationLabel(Status status,boolean postNasMaintenance) {
         switch(status) {
             case COMPLETED:return "✓ Consolidation";
-            case WAITING_FOR_LESSON:return "Consolidation · en attente du Itqān";
+            case WAITING_FOR_LESSON:return "Consolidation · en attente de l’Itqān";
             case TO_DO:return postNasMaintenance
                 ?"Consolidation · maintiens de la semaine · ×1 masqué"
                 :"Consolidation · révision cumulative";

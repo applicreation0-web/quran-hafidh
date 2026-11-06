@@ -51,7 +51,7 @@ public final class EveningReviewDisplayRegression11711Test {
 
     @Test public void itqanUsesSameRealReceiptRuleWithoutChangingPostNasProtocol() {
         EveningReviewDisplay.Status before=EveningReviewDisplay.forDay(false,false,false);
-        assertEquals("Consolidation · en attente du Itqān",
+        assertEquals("Consolidation · en attente de l’Itqān",
             EveningReviewDisplay.stabilizationLabel(before,false));
         EveningReviewDisplay.Status pending=EveningReviewDisplay.forDay(true,false,true);
         assertEquals("Consolidation · maintiens de la semaine · ×1 masqué",

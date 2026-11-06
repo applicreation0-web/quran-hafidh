@@ -30,6 +30,6 @@ public final class EveningReviewDisplayWiring11711Test {
         assertTrue(main.contains("learningEvening==EveningReviewDisplay.Status.COMPLETED,nextMode"));
         assertTrue(main.contains("stabilizationEvening==EveningReviewDisplay.Status.COMPLETED,nextMode"));
         assertFalse(main.contains("today,!prefs.snowballEveningPending("));
-        assertTrue(main.contains("session.label.contains(\"en attente du\") && !session.done"));
+        assertTrue(main.contains("session.label.contains(\"en attente\") && !session.done"));
     }
 }
