@@ -328,9 +328,9 @@ public final class ItqanPostNasMaintenanceTest {
         // Completing that unit and advancing the rotation still never writes a Sabqi key.
         HifzPrefs prefs = new HifzPrefs(store);
         seedSchema6(store, Collections.emptyList(), Collections.emptyList(), owned(selected));
-        assertTrue(prefs.completeItqanMaintenanceUnitV6(owned(selected), GeometryRepository.parseVerse(selected.start),
-            GeometryRepository.parseVerse(selected.end), null, "2026-10-04", "test", geometry));
-        assertTrue(prefs.advanceItqanRotationPast(GeometryRepository.parseVerse(selected.end)));
+        assertTrue(completedMaintenance(prefs,store,selected,owned(selected),"2026-10-04"));
+        // Successful physical closure already rotated exactly once; a second
+        // explicit advance would incorrectly skip a full hizb.
         assertEquals(sabqiBefore, sabqiKeys(store));
     }
 
@@ -477,8 +477,7 @@ public final class ItqanPostNasMaintenanceTest {
 
         HifzPrefs prefs = new HifzPrefs(store);
         for (int lap = 0; lap < 2; lap++) {
-            assertTrue(prefs.completeItqanMaintenanceUnitV6(lines, GeometryRepository.parseVerse(unit.start),
-                GeometryRepository.parseVerse(unit.end), null, "2026-10-0" + (4 + lap), "lap", geometry));
+            assertTrue(completedMaintenance(prefs,store,unit,lines,"2026-10-0" + (4 + lap)));
         }
         for (String key : new String[]{"v6LearnedLineIds", "v6StabilizedLineIds", "v6AcquiredCreditLineIds"}) {
             assertEquals(key, before.get(key), store.disk.get(key));
@@ -503,8 +502,7 @@ public final class ItqanPostNasMaintenanceTest {
         Map<String, Object> sabqiBefore = sabqiKeys(store);
 
         HifzPrefs prefs = new HifzPrefs(store);
-        assertTrue(prefs.completeItqanMaintenanceUnitV6(lines, GeometryRepository.parseVerse(unit.start),
-            GeometryRepository.parseVerse(unit.end), null, "2026-10-04", "first", geometry));
+        assertTrue(completedMaintenance(prefs,store,unit,lines,"2026-10-04"));
         assertEquals("only never-credited lines become Stabilisé", fresh, jsonList(store, "v6StabilizedLineIds"));
         assertEquals("Appris stays in its Apprentissage chain", learned, jsonList(store, "v6LearnedLineIds"));
         assertEquals(acquired, jsonList(store, "v6AcquiredCreditLineIds"));
@@ -525,8 +523,7 @@ public final class ItqanPostNasMaintenanceTest {
         String unitsAfterFirst = (String) store.disk.get("stabilizationSnowballUnitIds");
 
         // The next lap over the same unit is pure reinforcement: nothing credited or enrolled again.
-        assertTrue(prefs.completeItqanMaintenanceUnitV6(lines, GeometryRepository.parseVerse(unit.start),
-            GeometryRepository.parseVerse(unit.end), null, "2026-10-04", "second", geometry));
+        assertTrue(completedMaintenance(prefs,store,unit,lines,"2026-10-05"));
         assertEquals(fresh, jsonList(store, "v6StabilizedLineIds"));
         assertEquals(history, store.disk.get("stabilizationSnowball8WeekHistory"));
         assertEquals(unitsAfterFirst, store.disk.get("stabilizationSnowballUnitIds"));
@@ -545,6 +542,28 @@ public final class ItqanPostNasMaintenanceTest {
         } catch (IllegalStateException expected) {
             assertTrue(expected.getMessage().contains("hizb"));
         }
+    }
+
+    /** Real maintenance pass: the three stored repetitions authenticate the
+     * same canonical whole-hizb payload and date. No scalar fake credits. */
+    private static boolean completedMaintenance(HifzPrefs prefs,InMemoryPrefs store,
+            AnchoringQueue.Entry unit,List<String> lines,String date) {
+        VerseRef start=GeometryRepository.parseVerse(unit.start);
+        VerseRef end=GeometryRepository.parseVerse(unit.end);
+        store.disk.put("itqanRanges","[{\"start\":\"49:1\",\"end\":\"114:6\"}]");
+        store.disk.put("itqanRotationStart","49:1");
+        store.disk.put(ItqanRegimeStore.INITIAL_TAIL_COMPLETED,true);
+        if(!prefs.setItqanProgress(0,0,start,end))return false;
+        ItqanRegimeStore.UnitPlan plan=prefs.itqanUnitPlan(unit);
+        if(plan.regime!=ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+                ||!prefs.stampItqanUnitPlan(unit,plan)
+                ||!prefs.ensureItqanBlockProofV7(geometry,lines,start,end,plan,date))return false;
+        String token=prefs.itqanBlockProofTokenV7();
+        for(int n=0;n<ItqanMaintenancePolicy.totalReps(plan);n++)
+            if(!prefs.recordItqanRepV7(token,n,false,plan))return false;
+        VerseRef next=prefs.itqanWorkCorpus().nextAnchored(end,prefs.repairedItqanRotationStart());
+        return prefs.completeItqanMaintenanceUnitV6(
+            lines,start,end,next,date,"real maintenance pass",geometry);
     }
 
     // ---- helpers ----

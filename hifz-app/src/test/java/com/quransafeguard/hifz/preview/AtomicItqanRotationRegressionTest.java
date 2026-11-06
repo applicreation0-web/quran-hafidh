@@ -24,7 +24,9 @@ public final class AtomicItqanRotationRegressionTest {
      "v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})p.disk.put(key,"[]");
    p.disk.put("sabqiStart","2:75");p.disk.put("sabqiEnd","48:29");
    p.disk.put("sabqiLineCursor",geometry.firstLineIndex(new VerseRef(2,75)));
-   p.disk.put("itqanRanges","[]");p.disk.put("promotedRanges","[]");
+   p.disk.put("itqanRanges","[{\"start\":\"49:1\",\"end\":\"114:6\"}]");
+   p.disk.put("itqanRotationStart","49:1");
+   p.disk.put("promotedRanges","[]");
    p.disk.put("unconsolidatedPromotedRanges","[]");p.disk.put("forcedPromotedRanges","[]");
    p.disk.put("anchoringQueue","[]");p.disk.put("anchoringQueueInitialized",true);
    return p;
@@ -70,13 +72,13 @@ public final class AtomicItqanRotationRegressionTest {
    List<String> ids=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
    String date="2026-10-11";
    MorningProtocolFixture.prepareItqan(original,start,end);
-   assertTrue(original.completeStabilizationBlockV6(ids,1,true,start,end,end,
+   assertTrue(original.completeStabilizationBlockV6(ids,1,true,start,end,new VerseRef(49,1),
        date,"once",Collections.emptyList()));
    HifzPrefs restored=new HifzPrefs(disk);
    ItqanRotationPolicy.State after=restored.itqanRotationState();
    int commits=disk.commits;
    assertFalse("A replay cannot repeat the final V6 transition",
-       restored.completeStabilizationBlockV6(ids,1,true,start,end,end,date,
+       restored.completeStabilizationBlockV6(ids,1,true,start,end,new VerseRef(49,1),date,
           "duplicate",Collections.emptyList()));
    assertEquals("No second write",commits,disk.commits);
    assertEquals(after.cursor,new HifzPrefs(disk).itqanRotationState().cursor);
