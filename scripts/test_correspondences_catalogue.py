@@ -67,7 +67,15 @@ class CatalogueTest(unittest.TestCase):
         self.assertEqual(60, len(admitted))
         self.assertEqual({'R032', 'R033'}, {d['id'] for d in dossiers if d['statut'] == 'CONDITIONNEL'})
         source = (ROOT / 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceCatalogue.java').read_text()
-        self.assertEqual({d['id'] for d in admitted}, set(re.findall(r'new CorrespondenceCases.Entry\("(R\d+)"', source)))
+        addenda = json.loads((ROOT / 'docs/correspondances/additions-11712.json').read_text())['dossiers']
+        self.assertEqual(1, len(addenda))
+        self.assertEqual('R111', addenda[0]['id'])
+        self.assertEqual('ADMIS', addenda[0]['statut'])
+        self.assertEqual(['2:113', '2:118'], addenda[0]['reperes'])
+        self.assertEqual({'2:113': ['2:118'], '2:118': ['2:113']}, addenda[0]['comparaisons'])
+        self.assertEqual(18, addenda[0]['folioQcfAttendu'])
+        self.assertEqual({d['id'] for d in admitted} | {d['id'] for d in addenda},
+                         set(re.findall(r'new CorrespondenceCases.Entry\("(R\d+)"', source)))
         r065 = next(d for d in dossiers if d['id'] == 'R065')
         self.assertEqual(['85:10', '85:11'], r065['reperes'])
         self.assertEqual(hashlib.sha256((ROOT / 'docs/correspondances/registre-documentaire-110.json').read_bytes()).hexdigest(), data['registreHistoriqueSha256'])
