@@ -1,118 +1,73 @@
 package com.quransafeguard.hifz.preview;
-
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.LinkedHashMap;
+import java.util.*;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-
-/** J5 behavioural replay: identical validated cumulative sets are never due again. */
+/** Real persisted protocols replace the old tests that expected date-only synthetic completion. */
 public final class SnowballValidationIdempotenceTest {
-    private static String unit(String ... lines) {
-        return ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList(lines));
-    }
-    private static HifzPrefs prepare(InMemoryPrefs disk, LocalDate day,
-                                      ConsolidationCycleEngine.Family family) {
-        String prefix=family==ConsolidationCycleEngine.Family.LEARNING?"learning":"stabilization";
-        String monday=day.minusDays(day.getDayOfWeek().getValue()-1).toString();
-        disk.disk.put(prefix+"SnowballWeekAnchor",monday);
-        disk.disk.put(prefix+"SnowballUnitIds","[\""+unit("p520-l01","p520-l02")+"\"]");
-        return new HifzPrefs(disk);
-    }
-    @Test public void mondayRenforcementThenTuesdayNeverRecreditsSameCumulativeLines() {
-        LocalDate monday=LocalDate.of(2026,10,5);
-        InMemoryPrefs disk=new InMemoryPrefs();
-        HifzPrefs prefs=prepare(disk,monday,ConsolidationCycleEngine.Family.LEARNING);
-        assertTrue(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,monday));
-        assertTrue(prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.LEARNING,monday.toString()));
-        assertFalse(prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.LEARNING,monday.toString()));
-        HifzPrefs afterReboot=new HifzPrefs(disk);
-        assertFalse(afterReboot.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,monday.plusDays(1)));
-        assertFalse(afterReboot.completeSnowballEvening(ConsolidationCycleEngine.Family.LEARNING,monday.plusDays(1).toString()));
-        assertEquals(monday.toString(),afterReboot.lastLearningSnowballEveningDate());
-        // A genuinely new block on Wednesday creates a new cumul, rather than a replay.
-        String later=unit("p521-l01");
-        disk.disk.put("learningSnowballUnitIds","[\""+unit("p520-l01","p520-l02")+"\",\""+later+"\"]");
-        assertTrue(afterReboot.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,monday.plusDays(2)));
-        assertTrue(afterReboot.completeSnowballEvening(ConsolidationCycleEngine.Family.LEARNING,monday.plusDays(2).toString()));
-        assertFalse(afterReboot.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,monday.plusDays(3)));
-    }
-    @Test public void tueThuSatConsolidationSameVersusNewUnits() {
-        LocalDate tuesday=LocalDate.of(2026,10,6);
-        InMemoryPrefs disk=new InMemoryPrefs();
-        HifzPrefs p=prepare(disk,tuesday,ConsolidationCycleEngine.Family.STABILIZATION);
-        assertTrue(p.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION,tuesday.toString()));
-        assertFalse(new HifzPrefs(disk).snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,tuesday.plusDays(1)));
-        disk.disk.put("stabilizationSnowballUnitIds","[\""+unit("p520-l01","p520-l02")+"\",\""+unit("p521-l04")+"\"]");
-        assertTrue(p.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,tuesday.plusDays(2)));
-        assertTrue(p.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION,tuesday.plusDays(2).toString()));
-        assertFalse(p.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,tuesday.plusDays(3)));
-        disk.disk.put("stabilizationSnowballUnitIds","[\""+unit("p520-l01","p520-l02")+"\",\""+unit("p521-l04")+"\",\""+unit("p521-l05")+"\"]");
-        assertTrue(p.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,tuesday.plusDays(4)));
-    }
-    @Test public void nextWeekDoesNotTreatLastWeekSnapshotAsCompletedAndProgramSwitchPreservesData() {
-        LocalDate saturday=LocalDate.of(2026,10,10);
-        InMemoryPrefs disk=new InMemoryPrefs();
-        HifzPrefs prefs=prepare(disk,saturday,ConsolidationCycleEngine.Family.STABILIZATION);
-        assertTrue(prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION,saturday.toString()));
-        Map<String,Object> before=new LinkedHashMap<>(disk.disk);
-        assertTrue(prefs.setWeeklyProgramMode(HifzPrefs.WeeklyProgram.RECOMMENDED));
-        assertFalse(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,saturday.plusDays(1)));
-        LocalDate nextTuesday=LocalDate.of(2026,10,13);
-        disk.disk.put("stabilizationSnowballWeekAnchor","2026-10-12");
-        assertTrue(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,nextTuesday));
-        for(Map.Entry<String,Object> e:before.entrySet()) {
-            if(e.getKey().equals("stabilizationSnowballWeekAnchor"))continue; // deliberate next-week transition
-            assertEquals("No unrelated saved progression may change: "+e.getKey(),e.getValue(),disk.disk.get(e.getKey()));
+    static GeometryRepository geo;
+    @BeforeClass public static void setup() throws Exception {EarnedEveningProtocolRegressionTest.setup();geo=EarnedEveningProtocolRegressionTest.geometry;}
+    static void morning(HifzPrefs p,ConsolidationCycleEngine.Family f,LocalDate day,int offset) {
+        int start=geo.firstLineIndex(new com.quransafeguard.hifz.core.VerseRef(2,75))+offset;
+        List<String> ids=new ArrayList<>();for(int i=0;i<5;i++)ids.add(geo.line(start+i).id);
+        if(f==ConsolidationCycleEngine.Family.LEARNING)assertTrue(MorningProtocolFixture.completeSabqi(p,start,start+4,start+5,ids,day.toString(),"fixture"));
+        else {
+            GeometryRepository.VerseUnit week=MorningProtocolFixture.canonicalWeeklyItqan(
+                new com.quransafeguard.hifz.core.VerseRef(2,75),
+                new com.quransafeguard.hifz.core.VerseRef(2,286));
+            List<StabilizationHalfPagePolicy.Unit> blocks=MorningProtocolFixture.canonicalItqanBlocks(
+                week.start,week.end);
+            int nextIndex=p.itqanBlockIndex()+1;
+            List<String> authentic=blocks.get(p.itqanBlockIndex()).lineIds;
+            com.quransafeguard.hifz.core.VerseRef next=p.itqanWorkCorpus().nextAnchored(
+                week.end,p.repairedItqanRotationStart());
+            assertTrue(MorningProtocolFixture.completeItqan(p,authentic,nextIndex,
+                nextIndex==blocks.size(),week.start,week.end,next,
+                day.toString(),"fixture",Collections.emptyList()));
         }
     }
-    @Test public void interruptedSessionRemainsPersistedUntilSuccessfulValidation() {
-        LocalDate date=LocalDate.of(2026,10,6);
-        InMemoryPrefs disk=new InMemoryPrefs();
-        HifzPrefs p=prepare(disk,date,ConsolidationCycleEngine.Family.STABILIZATION);
-        disk.disk.put("v6ConsolidationStabilizationState","interrupted-placeholder");
-        assertTrue(p.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date));
-        assertTrue(disk.disk.containsKey("v6ConsolidationStabilizationState"));
-        assertTrue(p.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION,date.toString()));
-        assertFalse(disk.disk.containsKey("v6ConsolidationStabilizationState"));
-        assertFalse(new HifzPrefs(disk).snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date));
+    static ConsolidationCycleEngine.Session open(HifzPrefs p,ConsolidationCycleEngine.Family f,LocalDate day) {
+        List<ConsolidationCycleEngine.Unit> units=f==ConsolidationCycleEngine.Family.LEARNING?p.learningConsolidationUnits(day):p.stabilizedConsolidationUnits(day);
+        ConsolidationCycleEngine e=new ConsolidationCycleEngine();ConsolidationCycleEngine.Cycle c=null;
+        String id=(f==ConsolidationCycleEngine.Family.LEARNING?"learning-":"stabilization-")+day;
+        for(ConsolidationCycleEngine.Unit u:units)c=c==null?e.startCycle(id,f,u):e.addUnit(c,u);
+        return e.openSession(c,"fixture-"+day);
     }
-    @Test public void pausedTuesdaySessionResumesWednesdayWithFrozenUnitsAndLeavesNewBlockDue() {
-        LocalDate tue=LocalDate.of(2026,10,6);
-        InMemoryPrefs disk=new InMemoryPrefs();
-        HifzPrefs prefs=prepare(disk,tue,ConsolidationCycleEngine.Family.STABILIZATION);
-        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
-        String originalUnit=unit("p520-l01","p520-l02");
-        ConsolidationCycleEngine.Cycle cycle=engine.startCycle("stabilization-"+tue,
-            ConsolidationCycleEngine.Family.STABILIZATION,
-            new ConsolidationCycleEngine.Unit(originalUnit,
-                ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
-        ConsolidationCycleEngine.Session open=engine.openSession(cycle,"session-"+tue);
-        assertTrue(prefs.persistConsolidationSession(open));
-        String fingerprint=prefs.frozenConsolidationSnapshot(
-            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"+tue);
-        assertTrue(fingerprint.contains(originalUnit));
-        disk.disk.put("stabilizationSnowballUnitIds",new org.json.JSONArray().put(originalUnit).put(unit("p521-l03")).toString());
-        HifzPrefs reboot=new HifzPrefs(disk);
-        assertEquals(tue.toString(),reboot.unfinishedConsolidationSessionDate(
-            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"));
-        ConsolidationCycleEngine.Session resumed=reboot.restoreConsolidationSession(
-            engine,ConsolidationCycleEngine.Family.STABILIZATION);
-        assertEquals(open.unitIds(),resumed.unitIds());
-        assertTrue(reboot.persistConsolidationSession(resumed)); // repeated checkpoint
-        assertEquals(fingerprint,reboot.frozenConsolidationSnapshot(
-            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"+tue));
-        assertTrue(reboot.completeSnowballEvening(
-            ConsolidationCycleEngine.Family.STABILIZATION,tue.toString()));
-        assertFalse(reboot.completeSnowballEvening(
-            ConsolidationCycleEngine.Family.STABILIZATION,tue.toString()));
-        assertTrue("Wednesday new cumulative set MUST remain due after old session closes",
-            reboot.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,
-                tue.plusDays(1)));
-        assertNull("Completed session must not be OPEN after validation",
-            reboot.unfinishedConsolidationSessionDate(
-                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"));
+    static void close(HifzPrefs p,ConsolidationCycleEngine.Family f,LocalDate day,ConsolidationCycleEngine.Session s) {
+        ConsolidationCycleEngine e=new ConsolidationCycleEngine();assertTrue(p.persistConsolidationSession(s));
+        while(!s.readyToClose()){s=e.recordRepetition(s);assertTrue(p.persistConsolidationSession(s));}
+        assertTrue(p.completeSnowballEvening(f,day.toString(),s));
+        assertFalse(p.completeSnowballEvening(f,day.toString(),s));
     }
-
+    @Test public void mondayRenforcementThenTuesdayNeverRecreditsSameCumulativeLines() {
+        InMemoryPrefs d=EarnedEveningProtocolRegressionTest.disk();HifzPrefs p=new HifzPrefs(d);
+        ConsolidationCycleEngine.Family f=ConsolidationCycleEngine.Family.LEARNING;LocalDate mon=LocalDate.of(2026,10,5);
+        morning(p,f,mon,0);close(p,f,mon,open(p,f,mon));
+        assertFalse(new HifzPrefs(d).snowballEveningPending(f,mon.plusDays(1)));
+        morning(p,f,mon.plusDays(2),5);assertTrue(p.snowballEveningPending(f,mon.plusDays(2)));
+        close(p,f,mon.plusDays(2),open(p,f,mon.plusDays(2)));assertFalse(p.snowballEveningPending(f,mon.plusDays(3)));
+    }
+    @Test public void tueThuSatConsolidationSameVersusNewUnits() {
+        InMemoryPrefs d=EarnedEveningProtocolRegressionTest.disk();HifzPrefs p=new HifzPrefs(d);
+        ConsolidationCycleEngine.Family f=ConsolidationCycleEngine.Family.STABILIZATION;LocalDate tue=LocalDate.of(2026,10,6);
+        for(int slot=0;slot<3;slot++){LocalDate day=tue.plusDays(slot*2);morning(p,f,day,slot*5);close(p,f,day,open(p,f,day));assertFalse(p.snowballEveningPending(f,day.plusDays(1)));}
+    }
+    @Test public void legacyDateOnlyCompletionNeverDeletesAnInterruptedOpen() {
+        InMemoryPrefs d=EarnedEveningProtocolRegressionTest.disk();HifzPrefs p=new HifzPrefs(d);
+        ConsolidationCycleEngine.Family f=ConsolidationCycleEngine.Family.LEARNING;LocalDate day=LocalDate.of(2026,10,5);
+        morning(p,f,day,0);ConsolidationCycleEngine.Session s=open(p,f,day);assertTrue(p.persistConsolidationSession(s));
+        Map<String,Object> before=new LinkedHashMap<>(d.disk);assertFalse(p.completeSnowballEvening(f,day.toString()));assertEquals(before,d.disk);
+        assertNotNull(new HifzPrefs(d).restoreConsolidationSession(new ConsolidationCycleEngine(),f));
+    }
+    @Test public void pausedTuesdaySessionResumesThursdayWithFrozenUnitsAndLeavesNewBlockDue() {
+        InMemoryPrefs d=EarnedEveningProtocolRegressionTest.disk();HifzPrefs p=new HifzPrefs(d);
+        ConsolidationCycleEngine.Family f=ConsolidationCycleEngine.Family.STABILIZATION;LocalDate tue=LocalDate.of(2026,10,6);
+        morning(p,f,tue,0);ConsolidationCycleEngine.Session old=open(p,f,tue);assertTrue(p.persistConsolidationSession(old));
+        String snapshot=p.frozenConsolidationSnapshot(f,"stabilization-"+tue);morning(p,f,tue.plusDays(2),5);
+        p=new HifzPrefs(d);old=p.restoreConsolidationSession(new ConsolidationCycleEngine(),f);
+        assertEquals(snapshot,p.frozenConsolidationSnapshot(f,"stabilization-"+tue));
+        close(p,f,tue,old);assertEquals(tue.toString(),p.lastStabilizationSnowballEveningDate());
+        assertTrue(p.snowballEveningPending(f,tue.plusDays(2)));
+    }
 }

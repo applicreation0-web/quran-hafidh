@@ -77,6 +77,8 @@ public final class ItqanBonusDialogSourceContractTest {
         assertTrue(session.contains("List<String> bonusLineIds = itqanBonusDecision != null\n"
             + "                && itqanBonusDecision.decision == ItqanPlanSnapshot.Decision.EXTEND\n"
             + "            ? itqanBonusDecision.bonusLineIds : Collections.emptyList();"));
-        assertTrue(session.contains("sessionDate.toString(), label, bonusLineIds);"));
+        assertTrue("date must come from the frozen physical witness, not the current clock",
+            session.contains("String proofDate=prefs.itqanBlockProofDateV7();"));
+        assertTrue(session.contains("proofDate, label, bonusLineIds);"));
     }
 }

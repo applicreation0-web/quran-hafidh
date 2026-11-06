@@ -14,6 +14,7 @@ public final class LongHorizonHifzPersistenceStressTest {
  static InMemoryPrefs freshV6Disk(){
    InMemoryPrefs db=new InMemoryPrefs();
    db.disk.put("schema",6);
+        db.disk.put("sabqiStart","1:1");db.disk.put("sabqiEnd","114:6");
    for(String key:new String[]{"v6LearnedLineIds","v6StabilizedLineIds","v6AcquiredCreditLineIds",
      "v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})db.disk.put(key,"[]");
    return db;
@@ -55,25 +56,17 @@ public final class LongHorizonHifzPersistenceStressTest {
    assertEquals(before.acquired,after.acquired);
    assertEquals(1000,after.acquired.size());
  }
- @Test public void fiftyTwoWeeksOfSnowballsAreIdempotentAndDoNotLeakAcrossWeeks() {
-   InMemoryPrefs db=freshV6Disk();
-   HifzPrefs prefs=new HifzPrefs(db);
+ @Test public void fiftyTwoWeeksOfSnowballsAreIdempotentAndDoNotLeakAcrossWeeks() throws Exception {
+   SnowballValidationIdempotenceTest.setup();
+   InMemoryPrefs db=freshV6Disk();HifzPrefs p=new HifzPrefs(db);
+   ConsolidationCycleEngine.Family f=ConsolidationCycleEngine.Family.LEARNING;
    LocalDate monday=LocalDate.of(2026,10,5);
    for(int w=0;w<52;w++) {
-     LocalDate date=monday.plusWeeks(w).plusDays(1); // Tuesday
-     String id=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
-       Collections.singletonList(String.format(Locale.ROOT,"p%03d-l01",100+w)));
-     db.disk.put("stabilizationSnowballWeekAnchor",monday.plusWeeks(w).toString());
-     db.disk.put("stabilizationSnowballUnitIds",new JSONArray().put(id).toString());
-     prefs=new HifzPrefs(db);
-     assertTrue("New week pending "+w,prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date));
-     assertTrue("First close must succeed "+w,prefs.completeSnowballEvening(
-        ConsolidationCycleEngine.Family.STABILIZATION,date.toString()));
-     prefs=new HifzPrefs(db);
-     assertFalse("Same week already completed "+w,prefs.snowballEveningPending(
-       ConsolidationCycleEngine.Family.STABILIZATION,date.plusDays(1)));
-     assertFalse("No double validation allowed "+w,prefs.completeSnowballEvening(
-       ConsolidationCycleEngine.Family.STABILIZATION,date.toString()));
+     LocalDate day=monday.plusWeeks(w);
+     SnowballValidationIdempotenceTest.morning(p,f,day,w*5);
+     SnowballValidationIdempotenceTest.close(p,f,day,SnowballValidationIdempotenceTest.open(p,f,day));
+     p=new HifzPrefs(db);assertFalse(p.snowballEveningPending(f,day.plusDays(1)));
+     assertFalse(p.completeSnowballEvening(f,day.toString()));
    }
  }
  @Test public void aSkippedPromotionIsAlwaysRejectedEvenAfterRestart() {

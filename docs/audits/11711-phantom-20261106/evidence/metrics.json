@@ -1,0 +1,13 @@
+{
+  "junit_cases": 1150,
+  "failures": 1,
+  "source_contract_cases": 297,
+  "oracle_seed": 416886626065,
+  "oracle_traces": 10000,
+  "oracle_actions": 425179,
+  "concurrent_close_attempts": 1000,
+  "concurrent_pairs": 500,
+  "concurrent_duplicate_receipts": 0,
+  "android_new_head_executed": false,
+  "physical_release_executed": false
+}

@@ -64,7 +64,7 @@ public final class AuditClosureSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(prefs.contains("forcedPromotedRanges"));
         assertTrue(session.contains("promotion de sécurité"));
-        assertTrue(prefs.contains("if (completedIndex < 0) return false"));
+        assertTrue(prefs.contains("return false; // Retired completion without physical protocol proof."));
     }
 
     @Test public void slidingDashboardStartsWithToday() throws Exception {

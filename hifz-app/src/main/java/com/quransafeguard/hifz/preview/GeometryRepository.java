@@ -268,11 +268,18 @@ public final class GeometryRepository {
      * then naturally starts at the following surah's first line.
      */
     public FiveLineBlock fiveLineBlock(int startLineIndex) {
+        return fiveLineBlock(startLineIndex,lines.size()-1);
+    }
+
+    /** A range-end remnant still follows the full repetition protocol. */
+    public FiveLineBlock fiveLineBlock(int startLineIndex,int endLimit) {
+        if(endLimit<startLineIndex || endLimit>=lines.size())
+            throw new IllegalArgumentException("Invalid Sabqi range end");
         if (startLineIndex < 0 || startLineIndex >= lines.size()) {
             throw new IllegalArgumentException("Invalid global Mushaf line " + startLineIndex);
         }
         int startSurah = lines.get(startLineIndex).verses.get(0).getSurah();
-        int maxIndex = Math.min(lines.size() - 1, startLineIndex + PreviewConfig.SABQI_LINES - 1);
+        int maxIndex = Math.min(endLimit, startLineIndex + PreviewConfig.SABQI_LINES - 1);
         int endIndex = startLineIndex;
         while (endIndex < maxIndex && lines.get(endIndex + 1).verses.get(0).getSurah() == startSurah) endIndex++;
         ArrayList<String> ids = new ArrayList<>();

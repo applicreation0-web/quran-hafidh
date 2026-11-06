@@ -1,0 +1,202 @@
+WORK HIGH — QURAN HAAFIDH 1.17.11
+REPRISE DIRECTE DE L’AUDIT · CORRECTION DU P0 ITQĀN · VALIDATION FINALE · PRÉPARATION DE LA RELEASE PRIVÉE
+6 novembre 2026
+
+MANDAT D’EXÉCUTION
+Corriger le défaut restant et terminer les vérifications manquantes avant de préparer la release privée. Ne pas retourner un nouveau prompt ou un simple plan : lire le dépôt, reproduire, corriger, tester, intégrer les changements validés et fournir les preuves.
+Ne pas recommencer les recherches scientifiques ou les fonctionnalités déjà approuvées. Conserver le travail existant et les données authentiques. Ne pas confondre préparation technique, APK signée et validation sur BOOX physique.
+
+1. POINT GITHUB EXACT — À CONTRÔLER AVANT TOUT CHANGEMENT
+
+Dépôt : applicreation0-web/quran-hafidh
+PR d’audit à reprendre : https://github.com/applicreation0-web/quran-hafidh/pull/10
+Branche : audit/haafidh-11711-phantom-validations-20261106
+Commit applicatif d’audit publié : 68d143eb2b8bd4bb9ea77affcc285331ad97b444
+Arbre Git audité : 142066381bcc45abb528df4528750ec7d82de158
+Commit local d’origine : a294a9f4a996507d6474b7ec275e03d29afaefae
+
+IMPORTANT : 68d143eb contient EXACTEMENT le même arbre/fichiers que a294a9f4. La connexion Git directe ne disposait pas d’identifiants ; les objets ont été publiés via la connexion GitHub authentifiée. Le SHA du commit a changé avec les métadonnées, pas le contenu. Le commit local a294a9f4 ne doit pas être présumé accessible directement sur GitHub : utiliser 68d143eb et la PR n°10.
+
+La branche d’audit peut contenir ensuite un commit DOCUMENTAIRE ajoutant ce prompt. Vérifier son HEAD réel et le diff depuis 68d143eb. Ne pas perdre un nouveau correctif concurrent ou revenir de force à une ancienne référence.
+
+Candidate à intégrer seulement APRÈS validation :
+- PR n°9 : https://github.com/applicreation0-web/quran-hafidh/pull/9
+- Branche : work/haafidh-correspondances-context-qcf-20261104
+- Dernier HEAD constaté : 6c9ce6f045310c905e18ecb6bd34014958395c78
+- Base PR n°9 / PR n°8 : fix/haafidh-11711-itqan-overdue-receipts-20261103
+- SHA base : 216f4d4b26e048656bc224fe1ade42c99240184d
+
+Lire les HEAD et bases réels, la filiation, les modifications et les derniers runs. Ne jamais reset/rebase/force-push à l’aveugle. Continuer depuis le point le plus récent contrôlé. La PR n°10 est un BROUILLON NO-GO et ne doit pas être fusionnée en l’état. Aucun merge dans main et aucune publication publique de l’APK privée.
+
+2. LECTURES OBLIGATOIRES — ÉVITER DE REFAIRE L’AUDIT INITIAL
+
+Lire dans la branche d’audit :
+- docs/audits/11711-phantom-20261106/README.md
+- docs/audits/11711-phantom-20261106/evidence/junit.xml
+- docs/audits/11711-phantom-20261106/evidence/cases.csv
+- docs/audits/11711-phantom-20261106/evidence/metrics.json
+- docs/audits/11711-phantom-20261106/evidence/tested-production-sha256.json
+- Les logs RED/GREEN et verified-suite.log du même dossier.
+- AuditLegacyItqanPayload11711Test.java
+- AuditRemainingBypasses11711Test.java
+- EveningMutationGate11711Test.java
+- MorningMutationGate11711Test.java
+- EveningOracleStress11711Test.java
+
+Ces documents signalent explicitement les tests NON EXÉCUTÉS. Ils ne donnent aucun GO source ou release.
+
+État de référence réellement mesuré sur cet arbre :
+- 1 150 cas JUnit locaux : 1 149 PASS, 1 FAIL, 0 ignoré.
+- Parmi eux : 297 contrats de source, à distinguer des tests comportementaux.
+- Oracle indépendant Sabqi : seed 416886626065, 10 000 traces, 425 179 actions.
+- Concurrence : 500 paires de threads, 1 000 tentatives de clôture, zéro doublon observé.
+- Suites réexécutées : 512 calendriers de retard, 128 variantes de finales, 16 reprises OPEN 1–8 semaines ; parcours 180/365/548 jours.
+- Ces volumes ne s’ajoutent pas au nombre JUnit et ne prouvent pas des pannes disque Android.
+- Exécution locale via Java 21, sources/target 17, classes modifiées recompilées sur un export public des dépendances/classes inchangées du HEAD 6c9ce6f (run 42206651132, artifact 13496079326).
+- Aucune nouvelle compilation Gradle/SDK, instrumentation Android ou migration BOOX physique du code d’audit n’a été certifiée.
+
+Ne pas présenter les anciens runs verts du HEAD 6c9ce6f comme des tests du prochain HEAD corrigé. Ne pas annoncer que seul « 1 test » reste à exécuter : un seul FAIL est connu dans la suite locale, mais plusieurs volets de la matrice complète restent NON EXÉCUTÉS.
+
+3. P0 BLOQUANT À CORRIGER D’ABORD
+
+Test RED existant :
+AuditLegacyItqanPayload11711Test.earnedItqanRepetitionsMustNotAuthenticateForeignLinesOrSkipToEnd
+
+Reproduction réelle sur préférences synthétiques persistantes :
+- Unité Itqān 52:1–52:10.
+- Protocole FULL réel du code courant, compteur complet et plan persisté.
+- Appel à completeStabilizationBlockV6 avec lineIds ["604:0","604:1"], finalBlock=true et nextCursor=114:6.
+- Résultat incorrect actuel : accepted=true ; les lignes étrangères sont créditées Stabilisé, une preuve quotidienne incorrecte est écrite, la séance est clôturée et le curseur fourni est accepté.
+
+Ce défaut existait dans le contrôle du payload ancien et alimente désormais les nouveaux certificats quotidiens. Un verrou du soir ne peut pas réparer un certificat de leçon incorrect produit en amont.
+
+Exigences du correctif :
+A. Lier les répétitions à la séance ET au lot physique exact, pas seulement à un total scalaire et à deux bornes de versets.
+B. Geler et persister identité de séance, date d’origine, lignes ordonnées, bloc courant, protocole/quotas, bonus acceptés, répétitions/étapes et position attendue.
+C. Calculer les lignes canoniques depuis la géométrie et le vrai plan actif. Pour l’ancien parcours, examiner ordinaryItqanLineIds, CorpusLinePolicy, StabilizationHalfPagePolicy.planPage, les continuations physiques itqanFourNextPhysicalLineIdV1, les bonus consommés et ItqanPlanSnapshot. Ne pas copier sans vérification le payload d’un appelant.
+D. Vérifier l’ordre exact et l’exhaustivité des IDs ; refuser lignes étrangères, doublons, préfixe incomplet, omission d’une continuation de verset, mauvais bloc/finalBlock, faux nextCursor, date et identifiant de séance périmés.
+E. Dériver le caractère final et le curseur attendu depuis le plan ; ne pas faire confiance aux flags fournis à la clôture.
+F. Lier chaque écriture de répétition à un identifiant gelé ET un compteur/étape attendu. Une ancienne fenêtre ne peut pas remplir le compteur de la séance suivante.
+G. Préserver les anciennes OPEN authentiques et leur protocole/date/lot. Une preuve historique inconnue n’autorise aucun nouveau crédit ni redatage silencieux. Définir une récupération explicite qui conserve l’état et ne bloque pas définitivement l’utilisateur.
+H. Fermer atomiquement : état physique, curseur, snapshot, certificat daté et marqueurs associés doivent rester cohérents après double appel, échec d’écriture et redémarrage.
+I. Fermer toutes les anciennes surcharges ou entrées qui contourneraient ces contrôles. Ne pas faire une correction uniquement dans l’affichage ou l’Activity.
+
+Conserver le test RED tel que son invariant reste strict ; démontrer GREEN après correction. Ajouter un contrôle sur le chemin de production réellement utilisé, pour qu’un simple refus d’une vieille surcharge ne cache pas le même défaut dans la nouvelle. Ajouter un cas POSITIF de vraie séance canonique complète et de reprise legacy authentique. Ne pas rendre tous les appels faux pour obtenir artificiellement du vert.
+
+4. PROTÉGER LES CORRECTIFS D’AUDIT DÉJÀ PRÉSENTS
+
+Contre-vérifier, sans les annuler :
+- La clôture du soir par simple date ne crée plus de reçu et ne supprime pas une OPEN.
+- Toute clôture, y compris le premier crédit, exige la session exacte entièrement répétée ET persistée.
+- Le Renforcement neuf exige la vraie leçon Sabqi de sa date, avec certificat physique durable. Un lastSabqiDate seul ne constitue pas une preuve.
+- Sur les jours Itqān, la Consolidation neuve exige sa leçon propre. Les rattrapages/OPEN historiques conservent leur date d’origine et ne créditent pas aujourd’hui.
+- Une ancienne empreinte ne valide pas un nouveau bloc du même jour.
+- Une passe continue ×1 ne remplace jamais le premier protocole ×7 non encore gagné.
+- Sabqi gèle lot/date/identité, écrit les répétitions avec token + compteur attendu et refuse les écritures tardives d’une ancienne séance.
+- Un ancien Sabqi à compteur seul ne se transforme pas en leçon du jour à la mise à jour. La reprise explicite doit fonctionner sur Android et conserver les acquis.
+- Les fragments de fin de plage ne sont plus crédités automatiquement Acquis sans protocole. Revoir les fins de sourates/plages sans réintroduire le raccourci ni créer de blocage.
+- Aucun Acquis réel n’est perdu, recréé ou dédoublé.
+
+Lire les constantes, les plans gelés et les quotas réels du dépôt. Ne pas modifier les seuils pour faire passer les tests ; ne pas remplacer les protocoles courants par des nombres issus d’anciens échanges. Les anciens protocoles réellement ouverts gardent leurs quotas et leurs étapes propres.
+
+5. MATRICE MÉTIER À TERMINER — T01 À T30
+
+Reprendre la matrice détaillée du README. Conserver les résultats historiques ; compléter les cas manquants et réexécuter ceux affectés par les corrections. Chaque ligne doit avoir un test JVM ou Android exécutable, avec résultat, fixture synthétique/anonymisée et preuve d’état persistant. Un grep/contrat de source seul ne vaut pas un test métier.
+
+T01–T05 : cas du vendredi 06/11, empreinte mercredi, vraie leçon du vendredi, vraie clôture, nouveau bloc après un premier reçu le même jour.
+T06–T07 : chaque date Sabqi et Itqān exige sa propre leçon authentique lorsque due ; isolation des familles.
+T08–T10 : matin manqué, soir refusé sans mutation, absences consécutives, passage de semaine, retards 1 à 8 semaines, aucun saut de curseur ni crédit rétroactif.
+T11 : interruptions à zéro répétition, première, n-1, dernière avant commit et après commit ; reprise exacte sans crédit gratuit.
+T12 : OPEN mercredi authentique terminée vendredi avant le Sabqi du vendredi : reçu mercredi seulement, vendredi toujours en attente.
+T13 : dimanche/lundi, mois/année, anciennes OPEN ; identité/date/lot gelés.
+T14 : deux clôtures concurrentes, doubles taps BOOX et anciennes fenêtres ; au plus une validation, aucun compteur reporté sur une autre séance.
+T15 : échecs aux écritures critiques et crash/reprise ; aucune réussite partielle. Tester réellement la sémantique mémoire/disque de SharedPreferences.commit(false), au-delà du double JVM atomique.
+T16 : Aujourd’hui, Palais, notification, Intent explicite, lecteur et reprise : mêmes verrous métier, aucune Fātiḥa de clôture fictive.
+T17 : sans leçon -> en attente ; leçon vraie mais aucun nouveau matériel -> aucune nouvelle unité ; jamais « effectué » sans reçu.
+T18 : JSON/snapshot/certificat incomplet, marqueur legacy seul, préférences corrompues et futur : refus sûr, conservation de la progression authentique.
+T19 : mise à jour, clone, export/import, migration et restauration à chaud ; pas de leçon gagnée/perdue, pas de date réécrite.
+T20 : programmes existants CLASSIC/RECOMMENDED, Sabqi 0–6 jours, Itqān complémentaire, changements de paramètres autorisés ; aucune fenêtre improvisée.
+T21 : finales Sabqi <15 lignes, Itqān <22 lignes et zéro admissible ; promotion limitée aux lignes réellement prouvées.
+T22 : anciens blocs Itqān et frontières physiques, At-Tūr p.525 lignes 8–14, continuité vers An-Najm ; absence de perte/double crédit ; protocoles conservés.
+T23 : passage An-Nās/Entretien, passes masquées obligatoires, aucune finale Itqān non prévue ni promotion détournée par une routine.
+T24 : minuit, date capturée, DST Europe/London, horloge avancée/reculée ; aucune nouvelle date gagnée artificiellement.
+T25 : sourates/pages multiples, verset sur plusieurs lignes/pages, débuts/fins de plage, 0–5 lignes restantes, pages 1/604 ; zéro saut physique.
+T26 : coexistence lecture passive/active et moteurs Hifz ; le corpus de révision ne grossit que par les promotions réellement admissibles.
+T27 : sauvegarde/restauration et retour de processus, 2/10/100 rejeux ; aucune multiplication des reçus.
+T28 : étape visible seule, masque manquant, n-1 répétitions, dernière page non vue : refus sans avancement.
+T29 : historique affiché 120 jours et registre durable plus ancien ; expiration d’affichage sans retrait/invention de reçu.
+T30 : dimanche sans lignes, report partiel et absences : finale sur admissibilité réelle, pas sur projection.
+
+Pour la preuve du 06/11, distinguer explicitement la fixture synthétique construite d’après les faits fournis d’un véritable replay de la sauvegarde personnelle. Si l’export réel est disponible, travailler sur une copie anonymisée hors GitHub. Ne jamais publier le JSON personnel, ni prétendre l’avoir utilisé s’il est absent.
+
+6. STRESS, NON-RÉGRESSION ET ANDROID
+
+- Étendre l’oracle déterministe à Itqān et aux changements de séance/certificat : ne pas se limiter à l’oracle booléen Sabqi existant.
+- Conserver au moins 10 000 traces à seeds enregistrées, fenêtres 1–8 semaines et variations de reprise/import/programme. Mesurer scénarios, actions, durée et échecs ; sauvegarder la trace minimale de chaque FAIL.
+- Exécuter au moins 1 000 transitions concurrentes/adversariales en incluant interruptions et échecs de persistance. Ne pas compter les anciennes 1 000 clôtures concurrentes comme 1 000 pannes de commit.
+- Revalider 512 calendriers, 128 variantes de finales, reprises OPEN et au moins un parcours 180 ou 365 jours ; réutiliser les suites existantes lorsque pertinentes.
+- Corriger les anciennes fixtures Android qui appelaient setSabqiProgress avec un total arbitraire : pour une vraie séance, enregistrer le vrai protocole avec token ; pour un état legacy, le déclarer explicitement comme tel et tester sa migration sûre. Ne pas réautoriser les faux compteurs pour rendre le harnais vert.
+- Faire une compilation Gradle/SDK réelle et les suites JVM/Core/métier/source-contract séparées.
+- Exécuter les profils Android exacts : téléphone 1080×1920/dpi420 et BOOX portrait émulé 1404×1872/dpi226.
+- Ajouter les parcours ciblés aux tests instrumentés existants ; vérifier validation, refus, retour, kill/restart et reprise.
+- Réception visuelle des écrans affectés et contrôle final : Aujourd’hui, Sabqi, Itqān, Renforcement, Consolidation, finales, Fātiḥa, calendrier, révisions, Atlas/Tafsir et QCF.
+- Captures réelles du HEAD final : encre QCF effectivement peinte, pas page blanche/« Chargement », lisibilité BOOX, focus/retour, icônes sans chevauchement. Pas de maquettes substituées.
+
+Préserver le corpus et l’ergonomie approuvés : QCF Médine 604 pages sans reflow, styles BOOX, 60 Correspondances actives +2 conditionnelles, Similitudes, frises Al-Qamar/Ar-Raḥmān/Al-Mursalāt, Jalalayn en anglais lorsque la source est anglaise. Aucun nouvel arbitrage éditorial ni nouvelle fonctionnalité scientifique.
+
+7. INTÉGRATION APRÈS PREUVES VERTES
+
+Publier les corrections et preuves sur la branche d’audit, mettre à jour la PR n°10, puis faire une contre-revue indépendante des dernières mutations, dates, snapshots, curseurs et imports. Le seul passage au vert du test P0 ne clôt pas tout le mandat.
+
+GO SOURCE uniquement si :
+- HEAD final exact vérifié ;
+- compilation et contrôles actuels réellement verts ;
+- zéro P0/P1 ouvert ;
+- matrice métier couverte, limites résiduelles explicitement distinguées ;
+- persistance/reprise et migration sûres, aucune progression perdue ou gagnée artificiellement.
+
+Après GO source, intégrer les correctifs validés vers la candidate de PR n°9 par filiation traçable : fast-forward ou PR n°10 selon l’état GitHub réel. Pas de cherry-pick aveugle, pas de réécriture/destruction du travail concurrent. Vérifier que les corrections de PR n°8 et n°9 sont toutes conservées. Réexécuter les contrôles affectés et la réception finale sur le HEAD intégré exact ; ne pas transférer un GO d’un ancêtre par simple supposition.
+
+Conserver la PR en brouillon et le statut NO-GO tant que ces conditions ne sont pas remplies. Aucun merge dans main dans ce mandat.
+
+8. PRÉPARER ENSUITE LA RELEASE PRIVÉE — PORTE SÉPARÉE
+
+Autorisé : préparer le candidat privé depuis le HEAD intégré validé ; assembler hors CI publique avec les ressources privées disponibles ; signer seulement si le moyen officiel est disponible et autorisé ; contrôler le résultat. Interdit : utiliser une ancienne APK/SignedData comme preuve d’un nouveau code, publier les contenus privés sur GitHub, désinstaller/effacer pour forcer une mise à jour.
+
+Contrôler :
+- package com.quransafeguard.hifz ;
+- versionName 1.17.11 ;
+- versionCode 49, sauf contrainte réelle d’une installation existante à résoudre explicitement et sans downgrade forcé ;
+- sept ressources privées vérifiées contre les empreintes réelles du manifeste/scripts/build_11711_private_offline.py ;
+- présence et intégrité des 604 folios QCF, ressources attendues, ZIP/alignement et absence de doublons ;
+- certificat officiel historique SHA-256 :
+66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14 ;
+- signature APK v2 vérifiée par apksigner sur le nouvel APK exact ;
+- SHA-256 réel du nouvel APK, provenance HEAD et paramètres d’assemblage consignés.
+
+L’ancien workflow qui signe un SignedData verrouillé d’une autre source ne signe pas ce nouveau HEAD. Ne jamais réemployer sa signature sur un autre payload ni déclarer un ancien candidat « nouvelle release ».
+
+Aucune clé, aucun secret, aucune sauvegarde personnelle, APK privée, PDF privé ou asset confidentiel ne doit transiter par le dépôt ou les artifacts GitHub publics. Les preuves publiques doivent être synthétiques/anonymisées. Le candidat privé doit être remis par une voie privée.
+
+BOOX physique, lorsque réellement accessible :
+- sauvegarde complète avant/après ;
+- lecture de la signature/package/version installés ;
+- mise à jour en place sans désinstallation ni effacement ;
+- redémarrage et reprise des séances authentiques ;
+- comparaison Sabqi/Itqān, curseurs, reçus, acquis et révision ;
+- aucun faux reçu, aucune perte, aucun saut.
+
+Si la signature ou le matériel manque, terminer les corrections, les tests possibles et la préparation reproductible ; préciser l’étape réellement bloquée. Statut permis : SOURCE GO / APK NON SIGNÉE ou SOURCE GO / PHYSICAL RELEASE NO-GO selon les preuves réelles. Ne jamais annoncer une installation physique, une signature, des empreintes ou un GO non mesurés.
+
+9. LIVRABLE FINAL — CONCRET, PAS UN NOUVEAU PROMPT
+
+Fournir :
+1) PR/branche/commits correctifs et SHA exact du code intégré ;
+2) cause du P0, preuve RED puis GREEN, contre-revue et éventuels autres défauts corrigés ;
+3) matrice T01–T30 à jour, fichiers JUnit XML/CSV, logs et statistiques/seeds ;
+4) résultats Gradle/SDK et Android sur les deux profils, vraies captures inspectées ;
+5) comportement de migration des OPEN et compteurs anciens, plus limites documentées ;
+6) état de la candidate privée : provenance exacte, signature/empreintes si effectivement réalisées, ou étapes privées/manuelles précisément restantes ;
+7) verdict séparé SOURCE / APK / BOOX PHYSIQUE.
+
+Éviter de faire répéter les décisions déjà présentes dans le dépôt et ce mandat. Continuer jusqu’au résultat techniquement vérifiable ; si un accès manque, terminer d’abord tout le travail indépendant de cet accès. Ne pas clore sur « 1 149 tests passent » alors qu’un P0 ou des contrôles obligatoires manquent.

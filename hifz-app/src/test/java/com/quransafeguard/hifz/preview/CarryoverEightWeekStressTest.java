@@ -15,17 +15,25 @@ public final class CarryoverEightWeekStressTest {
                 ConsolidationCycleEngine.Family.values()) {
             boolean learning=family==ConsolidationCycleEngine.Family.LEARNING;
             String prefix=learning?"learning":"stabilization";
-            LocalDate date=LocalDate.of(2026,12,21).plusDays(learning?0:1);
+            LocalDate date=LocalDate.of(2026,7,6).plusDays(learning?0:1);
             InMemoryPrefs disk=PartialFinalEightWeekStressTest.empty();
             HifzPrefs prefs=new HifzPrefs(disk);
-            List<String> ids=EarnedEveningProtocolRegressionTest.five();
+            GeometryRepository.VerseUnit itqanWeek=MorningProtocolFixture.canonicalWeeklyItqan(
+                new com.quransafeguard.hifz.core.VerseRef(2,75),
+                new com.quransafeguard.hifz.core.VerseRef(2,286));
+            List<StabilizationHalfPagePolicy.Unit> planned=MorningProtocolFixture.canonicalItqanBlocks(
+                itqanWeek.start,itqanWeek.end);
+            List<String> ids=learning?EarnedEveningProtocolRegressionTest.five():planned.get(0).lineIds;
             List<GeometryRepository.LineMeta> meta=geometry.linesForExactIds(ids);
             int start=meta.get(0).globalIndex;
-            if(learning)assertTrue(prefs.completeSabqiBlockV6(start,start+4,start+5,ids,date.toString(),"stress"));
+            if(learning)prefs.setSabqiLineCursor(start);
+            if(learning)assertTrue(MorningProtocolFixture.completeSabqi(prefs,start,start+4,start+5,ids,date.toString(),"stress"));
             else {
-                List<com.quransafeguard.hifz.core.VerseRef> end=meta.get(4).verses;
-                assertTrue(prefs.completeStabilizationBlockV6(ids,1,false,meta.get(0).verses.get(0),
-                    end.get(end.size()-1),end.get(end.size()-1),date.toString(),"stress",Collections.emptyList()));
+                com.quransafeguard.hifz.core.VerseRef next=prefs.itqanWorkCorpus().nextAnchored(
+                    itqanWeek.end,prefs.repairedItqanRotationStart());
+                assertTrue(MorningProtocolFixture.completeItqan(prefs,ids,1,
+                    planned.size()==1,itqanWeek.start,itqanWeek.end,
+                    next,date.toString(),"stress",Collections.emptyList()));
             }
             List<ConsolidationCycleEngine.Unit> units=learning?prefs.learningConsolidationUnits(date):
                 prefs.stabilizedConsolidationUnits(date);
@@ -52,9 +60,11 @@ public final class CarryoverEightWeekStressTest {
             LocalDate sunday=date.plusWeeks(weeks).with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY));
             List<ConsolidationCycleEngine.Unit> finalUnits=learning?prefs.learningSnowballFinalUnits(sunday,geometry):
                 prefs.stabilizationSnowballFinalUnits(sunday,geometry);
-            assertEquals(1,finalUnits.size());
-            ConsolidationCycleEngine.Session finale=engine.openSession(
-                engine.startCycle(prefix+"-final-"+sunday,family,finalUnits.get(0)),"long-final");
+            assertFalse("Authentic Sunday final contains real receipted physical units",finalUnits.isEmpty());
+            ConsolidationCycleEngine.Cycle finalCycle=engine.startCycle(
+                prefix+"-final-"+sunday,family,finalUnits.get(0));
+            for(int i=1;i<finalUnits.size();i++)finalCycle=engine.addUnit(finalCycle,finalUnits.get(i));
+            ConsolidationCycleEngine.Session finale=engine.openSession(finalCycle,"long-final");
             finale=engine.recordRepetition(finale);assertTrue(prefs.persistConsolidationSession(finale));
             String oldKey=learning?"v6ConsolidationLearningState":"v6ConsolidationStabilizationState";
             String raw=disk.getString(oldKey+"FinalV1","");assertFalse(raw.isEmpty());

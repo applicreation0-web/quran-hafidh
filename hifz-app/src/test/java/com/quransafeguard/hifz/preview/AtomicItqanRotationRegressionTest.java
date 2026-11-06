@@ -24,7 +24,9 @@ public final class AtomicItqanRotationRegressionTest {
      "v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})p.disk.put(key,"[]");
    p.disk.put("sabqiStart","2:75");p.disk.put("sabqiEnd","48:29");
    p.disk.put("sabqiLineCursor",geometry.firstLineIndex(new VerseRef(2,75)));
-   p.disk.put("itqanRanges","[]");p.disk.put("promotedRanges","[]");
+   p.disk.put("itqanRanges","[{\"start\":\"49:1\",\"end\":\"114:6\"}]");
+   p.disk.put("itqanRotationStart","49:1");
+   p.disk.put("promotedRanges","[]");
    p.disk.put("unconsolidatedPromotedRanges","[]");p.disk.put("forcedPromotedRanges","[]");
    p.disk.put("anchoringQueue","[]");p.disk.put("anchoringQueueInitialized",true);
    return p;
@@ -48,6 +50,7 @@ public final class AtomicItqanRotationRegressionTest {
    startAt(disk,start);
    HifzPrefs prefs=new HifzPrefs(disk);
    List<String> lines=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+   MorningProtocolFixture.prepareItqan(prefs,start,end);
    int before=disk.commits;
    disk.failCommit=before+1;
    assertFalse(prefs.completeStabilizationBlockV6(lines,1,true,start,end,new VerseRef(49,1),
@@ -68,13 +71,14 @@ public final class AtomicItqanRotationRegressionTest {
    HifzPrefs original=new HifzPrefs(disk);
    List<String> ids=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
    String date="2026-10-11";
-   assertTrue(original.completeStabilizationBlockV6(ids,1,true,start,end,end,
+   MorningProtocolFixture.prepareItqan(original,start,end);
+   assertTrue(original.completeStabilizationBlockV6(ids,1,true,start,end,new VerseRef(49,1),
        date,"once",Collections.emptyList()));
    HifzPrefs restored=new HifzPrefs(disk);
    ItqanRotationPolicy.State after=restored.itqanRotationState();
    int commits=disk.commits;
    assertFalse("A replay cannot repeat the final V6 transition",
-       restored.completeStabilizationBlockV6(ids,1,true,start,end,end,date,
+       restored.completeStabilizationBlockV6(ids,1,true,start,end,new VerseRef(49,1),date,
           "duplicate",Collections.emptyList()));
    assertEquals("No second write",commits,disk.commits);
    assertEquals(after.cursor,new HifzPrefs(disk).itqanRotationState().cursor);
@@ -87,6 +91,7 @@ public final class AtomicItqanRotationRegressionTest {
    startAt(disk,start);
    HifzPrefs prefs=new HifzPrefs(disk);
    List<String> lines=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+   MorningProtocolFixture.prepareItqan(prefs,start,end);
    int before=disk.commits;
    assertTrue(prefs.completeStabilizationBlockV6(lines,1,true,start,end,new VerseRef(49,1),
       "2026-10-11","audit-atomic",Collections.emptyList()));

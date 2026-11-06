@@ -1,7 +1,7 @@
 name: Haafidh 1.17.11 adversarial Hifz + parcours Android audit (NO RELEASE)
 on:
   push:
-    branches: [fix/haafidh-11711-itqan-overdue-receipts-20261103]
+    branches: [fix/haafidh-11711-itqan-overdue-receipts-20261103, audit/haafidh-11711-phantom-validations-20261106]
     paths:
       - 'hifz-app/src/main/**'
       - 'hifz-app/src/androidTest/**'
