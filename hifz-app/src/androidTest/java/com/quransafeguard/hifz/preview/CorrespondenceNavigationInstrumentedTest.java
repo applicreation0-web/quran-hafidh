@@ -152,12 +152,28 @@ public final class CorrespondenceNavigationInstrumentedTest {
     }
     private static void tap(ActivityScenario<CorrespondenceComparisonActivity> scenario,String name,boolean dialog)throws Exception{
         android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();ins.waitForIdleSync();
-        scenario.onActivity(a->{
-            View target=named(dialog?sourcesDecor(a):a.getWindow().getDecorView(),name);
-            assertNotNull("Visible action missing: "+name,target);assertTrue(target.isShown());
-            target.requestRectangleOnScreen(new android.graphics.Rect(0,0,target.getWidth(),target.getHeight()),true);
-        });
-        ins.waitForIdleSync();Thread.sleep(60);
+        // After returning from StudyReaderActivity the BOOX emulator may report
+        // RESUMED before SurfaceFlinger has made the comparison window visible.
+        // Wait for a *real, on-screen* touch target; never performClick offscreen.
+        long deadline=android.os.SystemClock.uptimeMillis()+15000;
+        boolean touchable=false;
+        while(android.os.SystemClock.uptimeMillis()<deadline){
+            AtomicBoolean visible=new AtomicBoolean(false);
+            scenario.onActivity(a->{
+                View target=named(dialog?sourcesDecor(a):a.getWindow().getDecorView(),name);
+                if(target==null||!target.isShown()||target.getWindowVisibility()!=View.VISIBLE)return;
+                target.requestRectangleOnScreen(new android.graphics.Rect(
+                    0,0,target.getWidth(),target.getHeight()),true);
+                android.graphics.Rect rect=new android.graphics.Rect();
+                visible.set(target.getLocalVisibleRect(rect)
+                    &&rect.width()>a.getResources().getDisplayMetrics().density*20
+                    &&rect.height()>a.getResources().getDisplayMetrics().density*20);
+            });
+            ins.waitForIdleSync();
+            if(visible.get()){touchable=true;break;}
+            Thread.sleep(150);
+        }
+        assertTrue("Action did not become physically visible/touchable: "+name,touchable);
         float[] point=new float[2];
         scenario.onActivity(a->{
             View target=named(dialog?sourcesDecor(a):a.getWindow().getDecorView(),name);
