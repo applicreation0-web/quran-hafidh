@@ -23,6 +23,8 @@ public final class UiIconMappingTest {
             {"Verset précédent", R.drawable.ic_ui_previous},
             {"Page suivante", R.drawable.ic_ui_next},
             {"Verset suivant", R.drawable.ic_ui_next},
+            {"Occurrence précédente", R.drawable.ic_ui_previous},
+            {"Occurrence suivante", R.drawable.ic_ui_next},
             {"Lire / pause", R.drawable.ic_ui_play},
             {"Référence", R.drawable.ic_ui_info},
             {"Accueil", R.drawable.ic_palace_home},
