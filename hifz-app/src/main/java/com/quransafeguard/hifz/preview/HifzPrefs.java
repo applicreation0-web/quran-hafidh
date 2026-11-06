@@ -1488,7 +1488,7 @@ public final class HifzPrefs {
 
     String sabqiLessonToken() {
         try{return new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT,"")).getString("sessionId");}
-        catch(RuntimeException invalid){return "";}
+        catch(Exception invalid){return "";}
     }
 
     boolean recordSabqiRepetition(String expectedToken,int expectedRep,boolean revealed) {
@@ -1503,7 +1503,7 @@ public final class HifzPrefs {
                 root.put("reps",next).put("assisted",assisted);
                 return p.edit().putString(SABQI_LESSON_SNAPSHOT,root.toString())
                     .putInt("sabqiRep",next).putInt("sabqiAssisted",assisted).commit();
-            }catch(RuntimeException invalid){return false;}
+            }catch(Exception invalid){return false;}
         }
     }
 
@@ -1523,21 +1523,25 @@ public final class HifzPrefs {
             GeometryRepository.FiveLineBlock block=geometry.fiveLineBlock(cursor,
                 geometry.lastLineIndex(sabqiEnd()));
             String raw=p.getString(SABQI_LESSON_SNAPSHOT,"");
-            if(!raw.isEmpty()) {
-                JSONObject saved=new JSONObject(raw);
-                if(saved.getInt("start")!=cursor || saved.getInt("end")!=block.endLineIndex
-                        || !saved.getJSONArray("lines").toString().equals(new JSONArray(block.lineIds).toString()))
-                    throw new IllegalStateException("Sabqi frozen physical lesson mismatch");
-                return LocalDate.parse(saved.getString("date"));
+            try {
+                if(!raw.isEmpty()) {
+                    JSONObject saved=new JSONObject(raw);
+                    if(saved.getInt("start")!=cursor || saved.getInt("end")!=block.endLineIndex
+                            || !saved.getJSONArray("lines").toString().equals(new JSONArray(block.lineIds).toString()))
+                        throw new IllegalStateException("Sabqi frozen physical lesson mismatch");
+                    return LocalDate.parse(saved.getString("date"));
+                }
+                if(sabqiRep()!=0 || sabqiAssisted()!=0)
+                    throw new IllegalStateException("Legacy Sabqi repetition date is unverified");
+                JSONObject snapshot=new JSONObject().put("version",1).put("date",day.toString())
+                    .put("sessionId",UUID.randomUUID().toString()).put("reps",0).put("assisted",0)
+                    .put("start",cursor).put("end",block.endLineIndex).put("lines",new JSONArray(block.lineIds));
+                if(!p.edit().putString(SABQI_LESSON_SNAPSHOT,snapshot.toString()).commit())
+                    throw new IllegalStateException("Unable to persist Sabqi physical lesson");
+                return day;
+            } catch(org.json.JSONException invalid) {
+                throw new IllegalStateException("Corrupt Sabqi physical lesson; keep original progression",invalid);
             }
-            if(sabqiRep()!=0 || sabqiAssisted()!=0)
-                throw new IllegalStateException("Legacy Sabqi repetition date is unverified");
-            JSONObject snapshot=new JSONObject().put("version",1).put("date",day.toString())
-                .put("sessionId",UUID.randomUUID().toString()).put("reps",0).put("assisted",0)
-                .put("start",cursor).put("end",block.endLineIndex).put("lines",new JSONArray(block.lineIds));
-            if(!p.edit().putString(SABQI_LESSON_SNAPSHOT,snapshot.toString()).commit())
-                throw new IllegalStateException("Unable to persist Sabqi physical lesson");
-            return day;
         }
     }
 
@@ -1550,7 +1554,7 @@ public final class HifzPrefs {
                 && frozen.getInt("start")==start
                 && frozen.getInt("end")==end && frozen.getString("date").equals(date)
                 && frozen.getJSONArray("lines").toString().equals(new JSONArray(lines).toString());
-        }catch(RuntimeException invalid){return false;}
+        }catch(Exception invalid){return false;}
     }
 
     /** Atomically closes Apprentissage and advances exactly these physical lines to Appris. */
@@ -3454,10 +3458,14 @@ public final class HifzPrefs {
     private String appendDailyLessonReceipt(ConsolidationCycleEngine.Family family,
             String date,List<String> lines) {
         LocalDate.parse(date);
-        JSONArray receipts=new JSONArray(p.getString(DAILY_LESSON_RECEIPTS,"[]"));
-        receipts.put(new JSONObject().put("family",family.name()).put("date",date)
-            .put("lines",new JSONArray(lines)));
-        return receipts.toString();
+        try {
+            JSONArray receipts=new JSONArray(p.getString(DAILY_LESSON_RECEIPTS,"[]"));
+            receipts.put(new JSONObject().put("family",family.name()).put("date",date)
+                .put("lines",new JSONArray(lines)));
+            return receipts.toString();
+        } catch(org.json.JSONException invalid) {
+            throw new IllegalStateException("Corrupt daily lesson receipts: preserve prior progression",invalid);
+        }
     }
 
     private boolean hasDailyLessonReceipt(ConsolidationCycleEngine.Family family,
@@ -3480,7 +3488,7 @@ public final class HifzPrefs {
                 for(int j=0;j<lines.length();j++)if(!source.contains(lines.getString(j)))exact=false;
                 if(exact)return true;
             }
-        }catch(RuntimeException invalid){return false;}
+        }catch(Exception invalid){return false;}
         return false;
     }
 
@@ -3558,7 +3566,7 @@ public final class HifzPrefs {
                 for(ConsolidationCycleEngine.Unit unit:completed.cycle().units())
                     actual.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id()));
                 if(expected.isEmpty() || (legacy?!expected.containsAll(actual):!expected.equals(actual)))return false;
-            }catch(RuntimeException invalid){return false;}
+            }catch(Exception invalid){return false;}
             LinkedHashSet<String> receipts=earnedEveningUnits(family);
             if(family==ConsolidationCycleEngine.Family.STABILIZATION) {
                 LinkedHashSet<String> alreadyEarnedLines=new LinkedHashSet<>();
