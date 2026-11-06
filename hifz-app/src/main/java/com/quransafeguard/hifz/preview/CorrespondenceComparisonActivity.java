@@ -465,6 +465,20 @@ public final class CorrespondenceComparisonActivity extends Activity {
                     ?"Al-Jalālayn · 55:13\nAl-Baghawī · 55:13\nAl-Qurṭubī · 55:13"
                     :"Al-Qurṭubī · 77:15";
             sourceSection(column,"Relation",shortRef);
+            RefrainAtlasThemes atlas=RefrainAtlasThemes.load(this);
+            if(atlas!=null){
+                String ref=origin.toString();
+                for(String[] node:RefrainTimelineData.NODES)
+                    if(relation.id.equals(node[0])&&Integer.parseInt(node[3])==timelineState.selected+1)
+                        {ref=node[5];break;}
+                try{
+                    sourceSection(column,"Atlas · Unit (editorial)",atlas.unitTitle(ref));
+                    sourceSection(column,"Atlas · Passage",atlas.passageTitle(ref));
+                    sourceSection(column,"Atlas · Passage ID",atlas.passageId(ref));
+                }catch(RuntimeException invalid){
+                    sourceSection(column,"Atlas","Source unavailable");
+                }
+            }
             sourceSection(column,"Sources",classics);
             LinearLayout complete=Ui.column(this);
             complete.setVisibility(View.GONE);

@@ -40,44 +40,14 @@ final class RefrainTimeline {
         }
     }
 
-    // One or two keywords per refrain: only adjacent verses, never invented Tafsir.
-    private static final String[] RAHMAN_BEFORE = {
-        "Grains", "Djinns", "Orients", "Mers", "Perles", "Navires",
-        "Permanence", "Dépendance", "Deux communautés", "Limites", "Flammes",
-        "Ciel", "Fautes", "Criminels", "Géhenne", "Deux jardins", "Branches",
-        "Sources", "Fruits", "Couches", "Regards", "Rubis", "Bienfaisance",
-        "Deux jardins", "Verdure", "Sources", "Fruits", "Belles", "Pavillons",
-        "Intactes", "Tapis"
-    };
-    private static final String[] RAHMAN_AFTER = {
-        "Création humaine", "Orients", "Deux mers", "Perles", "Navires",
-        "Finitude", "Dépendance", "Deux communautés", "Limites", "Flammes",
-        "Ciel déchiré", "Fautes", "Criminels", "Géhenne", "Deux jardins",
-        "Branches", "Sources", "Fruits", "Couches", "Regards", "Rubis",
-        "Bienfaisance", "Deux jardins", "Verdure", "Sources", "Fruits",
-        "Belles", "Pavillons", "Intactes", "Tapis", "Majesté"
-    };
-    private static final String[] QAMAR_BEFORE = {"Nūḥ", "ʿĀd", "Thamūd", "Lūṭ"};
-    private static final String[] QAMAR_AFTER = {"ʿĀd", "Thamūd", "Lūṭ", "Pharaon"};
-
-    private static String shortWords(String raw) {
-        String text = raw.replace(" : ", " ").replace("’", "'");
-        String[] words = text.split("\\s+");
-        StringBuilder out = new StringBuilder();
-        for (String word : words) {
-            if (word.isEmpty() || word.matches("(?i)(le|la|les|de|des|du|et|en|au|aux|à|un|une|qui|sur|dans|pour|avec|leurs|leur|ses|son|sa|ce|ces|d'|l')")) continue;
-            if (out.length() > 0) out.append(" ");
-            out.append(word);
-            if (out.toString().split(" ").length >= 2) break;
-        }
-        return out.length() > 0 ? out.toString() : raw;
+    private static String cue(RefrainAtlasThemes atlas,String id,String[] node){
+        if(atlas==null)return node[5];
+        try{return atlas.keyword(id,node);}catch(RuntimeException invalid){return node[5];}
     }
-
-    private static String keyword(String id, String[] node, boolean after) {
-        int rank = Integer.parseInt(node[3]) - 1;
-        if ("R048".equals(id)) return (after ? RAHMAN_AFTER : RAHMAN_BEFORE)[rank];
-        if ("R047".equals(id)) return (after ? QAMAR_AFTER : QAMAR_BEFORE)[rank];
-        return shortWords(node[after ? 12 : 9]);
+    private static String context(RefrainAtlasThemes atlas,String id,String[] node,boolean after){
+        if(atlas==null)return node[after?11:8];
+        try{return after?atlas.after(id,node):atlas.before(id,node);}
+        catch(RuntimeException invalid){return node[after?11:8];}
     }
 
     private static GradientDrawable tile(Activity a, boolean active) {
@@ -100,6 +70,7 @@ final class RefrainTimeline {
         for (String[] n : RefrainTimelineData.NODES)
             if (id.equals(n[0])) nodes.add(n);
         if (nodes.isEmpty()) return;
+        final RefrainAtlasThemes atlas=RefrainAtlasThemes.load(a);
 
         final int visible = Math.min(6, nodes.size());
         int screenDp = a.getResources().getConfiguration().screenWidthDp;
@@ -136,10 +107,12 @@ final class RefrainTimeline {
         redraw[0] = () -> {
             state.selected = current[0];
             String[] selected = nodes.get(current[0]);
-            detail.setText("Avant " + keyword(id, selected, false) +
-                "  ·  " + selected[5] + "  ·  Après " + keyword(id, selected, true));
-            detail.setContentDescription("Lire " + selected[5] + " dans le Mushaf. Avant " +
-                keyword(id, selected, false) + ". Après " + keyword(id, selected, true));
+            detail.setText("Before " + context(atlas,id,selected,false) +
+                "  ·  " + selected[5] + "  ·  After " + context(atlas,id,selected,true));
+            String original=atlas==null?"Atlas source unavailable":atlas.passageTitle(selected[5]);
+            detail.setContentDescription("Lire " + selected[5] + " dans le Mushaf. Atlas: " +
+                original + ". Before " + context(atlas,id,selected,false) +
+                ". After " + context(atlas,id,selected,true));
             for (int i = 0; i < cards.size(); i++) {
                 TextView card = cards.get(i);
                 boolean active = i == current[0];
@@ -162,14 +135,14 @@ final class RefrainTimeline {
         };
         for (int i = 0; i < nodes.size(); i++) {
             String[] n = nodes.get(i);
-            TextView card = Ui.text(a, n[3] + "\n" + keyword(id, n, false),
+            TextView card = Ui.text(a, n[3] + "\n" + cue(atlas,id,n),
                 screenDp < 540 ? 11 : 13, false);
             card.setGravity(Gravity.CENTER);
             card.setMaxLines(3);
             card.setMinHeight(Ui.dp(a, 58));
             card.setPadding(Ui.dp(a, 1), 0, Ui.dp(a, 1), 0);
             card.setContentDescription("Refrain " + n[3] + " sur " + n[4] +
-                ", " + n[5] + " : " + keyword(id, n, false));
+                ", " + n[5] + " : " + cue(atlas,id,n));
             final int index = i;
             card.setOnClickListener(v -> {current[0] = index; choose.run();});
             LinearLayout.LayoutParams lp =

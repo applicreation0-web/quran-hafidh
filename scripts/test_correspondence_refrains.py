@@ -36,8 +36,17 @@ class RefrainTest(unittest.TestCase):
   self.assertIn('StudyReaderActivity.EXTRA_JUMP_VERSE',s)
   self.assertNotIn('HifzPrefs',s)
   self.assertNotIn('recordRepetition',s)
-  for key,expected in [('RAHMAN_BEFORE',31),('RAHMAN_AFTER',31),('QAMAR_BEFORE',4),('QAMAR_AFTER',4)]:
-   block=re.search(r'private static final String\[\] '+key+r' = \{(.*?)\};',s,re.S)
+  atlas=(ROOT/'hifz-app/src/main/java/com/quransafeguard/hifz/preview/RefrainAtlasThemes.java').read_text()
+  for token in ['MawdudiMapData.load(activity,passages)','AyahThemesCueIndex.load(activity)',
+                'atlas.displayUnitTitle(', 'atlas.displayPassageTitle(', 'atlas.keyword(id,node)']:
+   self.assertIn(token,atlas+s)
+  for key,expected in [('RAHMAN_EXCERPTS',31),('QAMAR_PEOPLES',4),('MURSALAT_EXCERPTS',10)]:
+   block=re.search(r'private static final String\[\] '+key+r' = \{(.*?)\};',atlas,re.S)
    self.assertIsNotNone(block,key)
    self.assertEqual(expected,len(re.findall(r'"[^"]+"',block.group(1))),key)
+  self.assertNotIn('RAHMAN_BEFORE',s)
+  self.assertNotIn('RAHMAN_AFTER',s)
+  self.assertIn('"Before "',s)
+  self.assertIn('"After "',s)
+  self.assertIn('Atlas · Unit (editorial)',comparison)
 if __name__=='__main__':unittest.main()
