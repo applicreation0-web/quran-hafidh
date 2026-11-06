@@ -60,9 +60,11 @@ public final class CarryoverEightWeekStressTest {
             LocalDate sunday=date.plusWeeks(weeks).with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY));
             List<ConsolidationCycleEngine.Unit> finalUnits=learning?prefs.learningSnowballFinalUnits(sunday,geometry):
                 prefs.stabilizationSnowballFinalUnits(sunday,geometry);
-            assertEquals(1,finalUnits.size());
-            ConsolidationCycleEngine.Session finale=engine.openSession(
-                engine.startCycle(prefix+"-final-"+sunday,family,finalUnits.get(0)),"long-final");
+            assertFalse("Authentic Sunday final contains real receipted physical units",finalUnits.isEmpty());
+            ConsolidationCycleEngine.Cycle finalCycle=engine.startCycle(
+                prefix+"-final-"+sunday,family,finalUnits.get(0));
+            for(int i=1;i<finalUnits.size();i++)finalCycle=engine.addUnit(finalCycle,finalUnits.get(i));
+            ConsolidationCycleEngine.Session finale=engine.openSession(finalCycle,"long-final");
             finale=engine.recordRepetition(finale);assertTrue(prefs.persistConsolidationSession(finale));
             String oldKey=learning?"v6ConsolidationLearningState":"v6ConsolidationStabilizationState";
             String raw=disk.getString(oldKey+"FinalV1","");assertFalse(raw.isEmpty());

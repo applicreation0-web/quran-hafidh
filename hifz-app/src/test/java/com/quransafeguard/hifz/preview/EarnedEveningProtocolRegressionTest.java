@@ -70,7 +70,7 @@ public final class EarnedEveningProtocolRegressionTest {
    List<String> completedMorning=ConsolidationPhysicalUnitPolicy.decodeLineUnit(newB);
    List<GeometryRepository.LineMeta> morningMeta=geometry.linesForExactIds(completedMorning);
    com.quransafeguard.hifz.core.VerseRef morningVerse=morningMeta.get(0).verses.get(0);
-   assertTrue(MorningProtocolFixture.completeItqan(p,completedMorning,1,false,morningVerse,morningVerse,morningVerse,
+   assertTrue(MorningProtocolFixture.completeItqan(p,completedMorning,1,true,morningVerse,morningVerse,morningVerse,
        day.toString(),"genuine same-day prerequisite",Collections.emptyList()));
    List<ConsolidationCycleEngine.Unit> cycle=p.stabilizedConsolidationUnits(day);
    assertEquals(3,cycle.size());

@@ -226,6 +226,8 @@ public final class ItqanFourSessionStoreTest {
  @Test public void ordinaryBridgeKeepsContinuationAndFollowingUnitAcrossQcfBoundaries() {
    for(int page:new int[]{518,520,521,522,523,540,562,599,602}) {
      FaultInjectingPrefs db=new FaultInjectingPrefs();seedV6(db);
+     db.disk.put("itqanRanges","[{\"start\":\"49:1\",\"end\":\"114:6\"}]");
+     db.disk.put("itqanRotationStart","49:1");
      ItqanFourSessionSnapshot original=sample(db,page);
      assertTrue(ItqanFourSessionStore.open(db,original,geo));
      LocalDate day=LocalDate.of(2026,10,13);
@@ -249,9 +251,19 @@ public final class ItqanFourSessionStoreTest {
      assertEquals(ids,new HifzPrefs(db).ordinaryItqanLineIds(GeometryRepository.parseVerse(entry.start),
          GeometryRepository.parseVerse(entry.end),geo));
      assertNull(prefs.frozenItqanSnapshot(geo));
-     assertTrue(MorningProtocolFixture.completeItqan(prefs,ids,1,true,
-         GeometryRepository.parseVerse(entry.start),GeometryRepository.parseVerse(entry.end),
-         GeometryRepository.parseVerse(entry.end),day.plusDays(1).toString(),"ordinary boundary",Collections.emptyList()));
+     // The physical remainder may contain several 8/7/7 blocks: earn every
+     // sub-block on its own protocol, never close the entire range in one tap.
+     VerseRef remainderStart=GeometryRepository.parseVerse(entry.start);
+     VerseRef remainderEnd=GeometryRepository.parseVerse(entry.end);
+     List<StabilizationHalfPagePolicy.Unit> remainderBlocks=
+         StabilizationHalfPagePolicy.planPage(geo.linesForExactIds(ids));
+     for(int b=0;b<remainderBlocks.size();b++) {
+       List<String> earned=remainderBlocks.get(b).lineIds;
+       assertTrue("Authentic legacy continuation block "+b,
+           MorningProtocolFixture.completeItqan(prefs,earned,b+1,b+1==remainderBlocks.size(),
+               remainderStart,remainderEnd,remainderEnd,day.plusDays(1+2*b).toString(),
+               "ordinary boundary",Collections.emptyList()));
+     }
      LinkedHashSet<String> stable=new LinkedHashSet<>(before.stabilized);stable.addAll(ids);
      assertEquals(stable,new HifzPrefs(db).progressionSnapshotV6().stabilized);
      assertEquals(before.acquired,new HifzPrefs(db).progressionSnapshotV6().acquired);
