@@ -31,8 +31,9 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue("MainActivity must expose the existing Consolidation mode",
             main.contains("HifzSessionActivity.RECENT_SABQI_REVIEW"));
-        assertTrue("Home must inspect this week's accumulated Stabilisation units before offering the evening snowball",
-            main.contains("stabilizedConsolidationUnits"));
+        assertTrue("Home must distinguish an actual dated evening receipt from merely pending physical units",
+            main.contains("modeComplete(today,HifzSessionActivity.RECENT_SABQI_REVIEW)")
+            && main.contains("EveningReviewDisplay.forDay("));
         assertTrue("Home must not re-offer tonight's snowball once it was already validated",
             main.contains("prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today)"));
     }
@@ -112,8 +113,9 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("J5 must compute pending from a real weekly physical-unit snapshot",
             prefs.contains("String snapshot=exactSnowballSnapshotToValidate(family,date);")
             && prefs.contains("JSONArray current = rolledSnowballUnits(family,date);"));
-        assertTrue("Home's session list must still read the actual physical stabilization units",
-            main.contains("prefs.stabilizedConsolidationUnits(today)"));
+        assertTrue("Home must use the actual dated receipt and live weekly-unit snapshot",
+            main.contains("modeComplete(today,HifzSessionActivity.RECENT_SABQI_REVIEW)")
+            && main.contains("prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today)"));
     }
 
     @Test public void rangeNormalizationNeverSplitsPerSurah() throws Exception {
