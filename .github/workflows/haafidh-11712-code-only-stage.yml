@@ -3,9 +3,9 @@ name: Haafidh 1.17.12 PRIVATE OFFLINE INPUT — code-only unsigned (NEVER INSTAL
 # Rebuild after the read-only rotation fallback fix; local private signer owns final APK.
 on:
   push:
-    branches: [work/haafidh-correspondances-context-qcf-20261104, audit/haafidh-11712-phantom-validations-20261106]
+    branches: [release-candidate/haafidh-11712-integrity-20261106]
     paths:
-      - '.github/workflows/haafidh-11712-private-offline-code-only-stage.yml'
+      - '.github/workflows/haafidh-11712-code-only-stage.yml'
   workflow_dispatch:
 permissions:
   contents: read
