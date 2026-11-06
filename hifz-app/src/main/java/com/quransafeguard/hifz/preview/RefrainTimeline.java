@@ -16,6 +16,7 @@ import java.util.Set;
 /** Compact, swipeable refrain rail. Quran/Atlas anchors and Tafsir sources are unchanged. */
 final class RefrainTimeline {
     private RefrainTimeline() {}
+    interface OnSelect { void selected(String verse); }
 
     static final class State {
         int selected = -1;
@@ -94,7 +95,7 @@ final class RefrainTimeline {
     }
 
     /** Six visible points for Ar-Rahman, four for Al-Qamar; swipe for the other occurrences. */
-    static void append(Activity a, LinearLayout host, String id, String initialRef, State state) {
+    static void append(Activity a, LinearLayout host, String id, String initialRef, State state, OnSelect onSelect) {
         ArrayList<String[]> nodes = new ArrayList<>();
         for (String[] n : RefrainTimelineData.NODES)
             if (id.equals(n[0])) nodes.add(n);
@@ -155,6 +156,10 @@ final class RefrainTimeline {
             else if (x + viewport < right) scroll.scrollTo(Math.max(0, right - viewport), 0);
         };
 
+        Runnable choose = () -> {
+            redraw[0].run();
+            if (onSelect != null) onSelect.selected(nodes.get(current[0])[5]);
+        };
         for (int i = 0; i < nodes.size(); i++) {
             String[] n = nodes.get(i);
             TextView card = Ui.text(a, n[3] + "\n" + keyword(id, n, false),
@@ -166,7 +171,7 @@ final class RefrainTimeline {
             card.setContentDescription("Refrain " + n[3] + " sur " + n[4] +
                 ", " + n[5] + " : " + keyword(id, n, false));
             final int index = i;
-            card.setOnClickListener(v -> {current[0] = index; redraw[0].run();});
+            card.setOnClickListener(v -> {current[0] = index; choose.run();});
             LinearLayout.LayoutParams lp =
                 new LinearLayout.LayoutParams(Ui.dp(a, slotDp), Ui.dp(a, 58));
             lp.setMargins(Ui.dp(a, 1), 0, Ui.dp(a, 1), 0);
@@ -176,11 +181,11 @@ final class RefrainTimeline {
         scroll.addView(chips, new HorizontalScrollView.LayoutParams(-2, -2));
         Button previous = Ui.iconButton(a, "‹", "Occurrence précédente", v -> {
             current[0] = (current[0] + nodes.size() - 1) % nodes.size();
-            redraw[0].run();
+            choose.run();
         });
         Button next = Ui.iconButton(a, "›", "Occurrence suivante", v -> {
             current[0] = (current[0] + 1) % nodes.size();
-            redraw[0].run();
+            choose.run();
         });
         line.addView(previous, new LinearLayout.LayoutParams(Ui.dp(a, 48), Ui.dp(a, 60)));
         line.addView(scroll, new LinearLayout.LayoutParams(0, Ui.dp(a, 60), 1f));
