@@ -52,6 +52,9 @@ jobs:
           python3 scripts/correspondence_icon_vectors.py --check
           python3 scripts/test_correspondence_icon_contract.py
           python3 scripts/test_correspondences_catalogue.py
+          python3 scripts/test_correspondence_refrains.py
+          python3 scripts/test_correspondence_notices.py
+          python3 scripts/test_correspondence_tafsir_navigation.py
           node scripts/test-correspondence-real-folios.cjs
           python3 scripts/build_correspondences_catalogue.py
           git diff --exit-code -- docs/correspondances/catalogue-62.json hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceCatalogue.java
