@@ -323,7 +323,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         // A different verse on the same authentic QCF folio needs only a
         // polygon/label update, not another asynchronous WebView reload.
         // Prevents BOOX ghosting and stale "loading" after fast refrain taps.
-        if(previousPage==shownPages[1]&&authenticQcfRendered[1]){
+        if(previousPage==shownPages[1]){
             updateSelection(1);
         }else{
             showFolio(1);
