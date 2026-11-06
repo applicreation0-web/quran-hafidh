@@ -95,7 +95,7 @@ final class ItqanPhysicalProof11711 {
             // by checking a physical session. Canonical fallback is read-only.
             com.quransafeguard.hifz.core.EligibleCorpus corpus=h.itqanWorkCorpus();
             VerseRef rotation=h.itqanRotationStart();
-            if(!corpus.contains(rotation))rotation=corpus.getRanges().get(0).getStart();
+            if(rotation==null||!corpus.contains(rotation))rotation=corpus.getRanges().get(0).getStart();
             VerseRef next=corpus.nextAnchored(end,rotation);
             String cursor=next==null?"":next.toString();
             int target=ItqanMaintenancePolicy.totalReps(plan);

@@ -91,6 +91,25 @@ public final class ItqanPhysicalProof11711Test {
             h.completeStabilizationBlockV6(expected,1,isFinal,start,end,next,
                 "2026-11-06","duplicate",Collections.emptyList()));
     }
+    @Test public void absentRotationStartUsesReadOnlyCanonicalFallbackAndEarnsRealBlock(){
+        InMemoryPrefs d=disk();
+        d.disk.remove("itqanRotationStart");
+        HifzPrefs h=new HifzPrefs(d);
+        VerseRef start=new VerseRef(52,1),end=new VerseRef(52,10);
+        AnchoringQueue.Entry e=entry();
+        assertTrue(h.setItqanProgress(0,0,start,end));
+        ItqanRegimeStore.UnitPlan plan=h.itqanUnitPlan(e);
+        assertTrue(h.stampItqanUnitPlan(e,plan));
+        assertFalse(d.disk.containsKey("itqanRotationStart"));
+        assertTrue("Missing optional rotation start must not reject a genuine QCF block",
+            h.ensureItqanBlockProofV7(geometry,blocks().get(0).lineIds,start,end,plan,"2026-11-06"));
+        assertFalse("Proof opening must not manufacture a rotation preference",
+            d.disk.containsKey("itqanRotationStart"));
+        String token=h.itqanBlockProofTokenV7();
+        assertFalse(token.isEmpty());
+        assertTrue(h.recordItqanRepV7(token,0,false,plan));
+        assertEquals(1,h.itqanRep());
+    }
     @Test public void invalidRotationStartIsNotSilentlyRepairedByProofOpening(){
         InMemoryPrefs d=disk();
         d.disk.put("itqanRotationStart","49:1");
