@@ -1,7 +1,7 @@
-name: Haafidh 1.17.12 - catalogue 60 Android release runtime gate
+name: Haafidh 1.17.12 - catalogue 61 Android release runtime gate
 # Builds and installs DISPOSABLE debug+instrumentation APKs only on ephemeral emulators.
 # Never assembles/signs/publishes the private release or transfers private assets.
-# Checks the already-integrated 60-entry production catalogue and existing Hifz protections.
+# Checks the already-integrated 61-entry production catalogue and existing Hifz protections.
 on:
   push:
     branches: [release-candidate/haafidh-11712-integrity-20261106]
@@ -11,6 +11,10 @@ on:
       - 'hifz-app/src/test/**'
       - 'hifz-app/src/main/**'
       - 'scripts/run_correspondances_android_ci.sh'
+      - 'scripts/build_correspondences_catalogue.py'
+      - 'scripts/test_correspondences_catalogue.py'
+      - 'scripts/test-correspondence-real-folios.cjs'
+      - 'docs/correspondances/additions-11712.json'
   workflow_dispatch:
 permissions:
   contents: read
@@ -47,6 +51,10 @@ jobs:
           gradle --no-daemon :hifz-app:sourceContractTest
           python3 scripts/correspondence_icon_vectors.py --check
           python3 scripts/test_correspondence_icon_contract.py
+          python3 scripts/test_correspondences_catalogue.py
+          node scripts/test-correspondence-real-folios.cjs
+          python3 scripts/build_correspondences_catalogue.py
+          git diff --exit-code -- docs/correspondances/catalogue-62.json hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceCatalogue.java
           node scripts/test-correspondence-gutter-density.cjs hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceGutterMarkers.java
       - uses: actions/upload-artifact@v4
         if: always()
@@ -114,7 +122,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Exercise actual 60-case QCF and Hifz on ${{ matrix.surface }}
+      - name: Exercise actual 61-case QCF and Hifz on ${{ matrix.surface }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
