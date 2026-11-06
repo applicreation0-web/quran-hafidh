@@ -91,6 +91,21 @@ public final class ItqanPhysicalProof11711Test {
             h.completeStabilizationBlockV6(expected,1,isFinal,start,end,next,
                 "2026-11-06","duplicate",Collections.emptyList()));
     }
+    @Test public void invalidRotationStartIsNotSilentlyRepairedByProofOpening(){
+        InMemoryPrefs d=disk();
+        d.disk.put("itqanRotationStart","49:1");
+        HifzPrefs h=new HifzPrefs(d);
+        VerseRef start=new VerseRef(52,1),end=new VerseRef(52,10);
+        AnchoringQueue.Entry e=entry();
+        ItqanRegimeStore.UnitPlan plan=h.itqanUnitPlan(e);
+        assertTrue(h.stampItqanUnitPlan(e,plan));
+        Map<String,Object> before=new LinkedHashMap<>(d.disk);
+        assertTrue(h.ensureItqanBlockProofV7(geometry,blocks().get(0).lineIds,
+            start,end,plan,"2026-11-06"));
+        assertEquals("The invalid persisted rotation must not be repaired behind the user's back",
+            before.get("itqanRotationStart"),d.disk.get("itqanRotationStart"));
+        assertFalse(h.itqanBlockProofTokenV7().isEmpty());
+    }
     @Test public void foreignPhysicalLinesCannotEvenOpenAProof(){
         InMemoryPrefs d=disk();
         HifzPrefs h=new HifzPrefs(d);

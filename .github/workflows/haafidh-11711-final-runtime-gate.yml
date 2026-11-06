@@ -4,7 +4,7 @@ name: Haafidh 1.17.11 - catalogue 60 Android release runtime gate
 # Checks the already-integrated 60-entry production catalogue and existing Hifz protections.
 on:
   push:
-    branches: [work/haafidh-correspondances-context-qcf-20261104]
+    branches: [work/haafidh-correspondances-context-qcf-20261104, audit/haafidh-11711-phantom-validations-20261106]
     paths:
       - '.github/workflows/haafidh-11711-final-runtime-gate.yml'
       - 'hifz-app/src/androidTest/**'

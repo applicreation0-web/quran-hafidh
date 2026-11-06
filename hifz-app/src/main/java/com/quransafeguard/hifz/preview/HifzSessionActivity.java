@@ -1635,9 +1635,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(proofDate.isEmpty()){onError("Séance sans preuve physique datée.");return;}
         String label="Stabilisation · bloc "+(itqanBlockIndex+1)+"/"+itqanBlockCount
             +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
-        metricsStore.recordAnchoring("Stabilisation réussie · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)
-            +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
-        List<String> bonusLineIds = itqanBonusDecision != null
+         List<String> bonusLineIds = itqanBonusDecision != null
                 && itqanBonusDecision.decision == ItqanPlanSnapshot.Decision.EXTEND
             ? itqanBonusDecision.bonusLineIds : Collections.emptyList();
         // P4: once every physical line here is already ACQUIRED (a later Itqān lap over material
@@ -1654,6 +1652,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next,
                 proofDate, label, bonusLineIds);
         if(!ok){onError("Impossible d’enregistrer la validation de la Stabilisation.");return;}
+        // Metrics are earned only after the physical receipt is DURABLY committed.
+        metricsStore.recordAnchoring("Stabilisation réussie · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)
+            +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
     }
 

@@ -2,7 +2,7 @@ name: Haafidh 1.17.11 - release source and offline signing guards
 # No APK assembly or signing in this workflow. Private inputs stay outside GitHub.
 on:
   push:
-    branches: [work/haafidh-correspondances-context-qcf-20261104]
+    branches: [work/haafidh-correspondances-context-qcf-20261104, audit/haafidh-11711-phantom-validations-20261106]
     paths: ['.github/workflows/haafidh-11711-release-source-gate.yml']
   workflow_dispatch:
 permissions:
