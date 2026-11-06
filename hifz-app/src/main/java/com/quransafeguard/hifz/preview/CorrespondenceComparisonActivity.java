@@ -165,6 +165,8 @@ public final class CorrespondenceComparisonActivity extends Activity {
                 new LinearLayout.LayoutParams(dp(44),dp(40)));
         }
         root.addView(pairHeader,new LinearLayout.LayoutParams(-1,dp(40)));
+        // Atlas-style refrain rail is visible at once, not buried in the Sources notice.
+        RefrainTimeline.append(this,root,relation.id,origin.toString(),timelineState);
 
         ScrollView middle=new ScrollView(this);
         folioViewport=middle;
@@ -432,7 +434,6 @@ public final class CorrespondenceComparisonActivity extends Activity {
         String explanation=parts.length>1?parts[1]:relation.mechanism;
         sourceSection(column,"En bref",relation.brief);
         column.addView(caption("Note pédagogique éditoriale ; les attributions sont précisées ci-dessous.",12,false));
-        RefrainTimeline.append(this,column,relation.id,timelineState);
         sourceSection(column,"Sources",relation.source);
         for(String part:parts)if(part.startsWith("Limites : "))
             sourceSection(column,"Limites",part.substring("Limites : ".length()));
