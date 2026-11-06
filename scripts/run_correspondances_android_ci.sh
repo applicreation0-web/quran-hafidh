@@ -71,7 +71,36 @@ audit_status=0
 bash scripts/run_11711_hifz_parcours_isolated.sh "$classes" "$surface" || audit_status=$?
 death_status=0
 bash scripts/run_1175_process_death_audit.sh --active-replay || death_status=$?
+
+# Independent11710ScreensInstrumentedTest really captures the entire app
+# (home, Hifz, settings, revision, maps) to Android MediaStore. Earlier CI
+# silently omitted those images from the downloadable evidence bundle.
+# Pull exactly the actual emulator PNGs; never synthesize UI screenshots.
+visual_status=0
+visual_dir=hifz-app/build/android-proof/whole-app-visual
+mkdir -p "$visual_dir"
+if adb pull "/sdcard/Pictures/HaafidhAudit/." "$visual_dir/" >/dev/null 2>&1; then
+  total="$(find "$visual_dir" -type f -name 'independent-*.png' | wc -l | tr -d ' ')"
+  echo "WHOLE_APP_REAL_SCREENSHOTS: $surface count=$total"
+  for required in independent-home.png independent-parcours-top.png \
+    independent-settings-root.png independent-reader.png \
+    independent-free-memory.png independent-progress-map.png \
+    independent-atlas-private-corpus-state.png; do
+    if [[ ! -s "$visual_dir/$required" ]]; then
+      echo "MISSING_REAL_WHOLE_APP_SCREENSHOT: $surface/$required" >&2
+      visual_status=1
+    fi
+  done
+  if (( total < 30 )); then
+    echo "INCOMPLETE_WHOLE_APP_SCREENSHOT_SET: $surface $total/30 minimum" >&2
+    visual_status=1
+  fi
+else
+  echo "WHOLE_APP_REAL_SCREENSHOTS_UNAVAILABLE: $surface" >&2
+  visual_status=1
+fi
 if (( test_status != 0 )); then exit "$test_status"; fi
 if (( audit_status != 0 )); then exit "$audit_status"; fi
 if (( death_status != 0 )); then exit "$death_status"; fi
+if (( visual_status != 0 )); then exit "$visual_status"; fi
 exit "$capture_status"
