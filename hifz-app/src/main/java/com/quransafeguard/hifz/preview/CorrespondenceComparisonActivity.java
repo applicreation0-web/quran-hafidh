@@ -429,15 +429,37 @@ public final class CorrespondenceComparisonActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         LinearLayout column=Ui.column(this);column.setPadding(dp(20),dp(8),dp(20),dp(16));
         scroll.addView(column,new ScrollView.LayoutParams(-1,-2));
-        String[] parts=relation.mechanism.split("\\n\\n");
-        column.addView(caption(parts[0],14,true));
-        String explanation=parts.length>1?parts[1]:relation.mechanism;
-        sourceSection(column,"En bref",relation.brief);
-        column.addView(caption("Note pédagogique éditoriale ; les attributions sont précisées ci-dessous.",12,false));
-        sourceSection(column,"Sources",relation.source);
-        for(String part:parts)if(part.startsWith("Limites : "))
-            sourceSection(column,"Limites",part.substring("Limites : ".length()));
-        if(!relation.brief.equals(explanation))sourceSection(column,"Notice complète",explanation);
+        boolean refrain="R047".equals(relation.id)||"R048".equals(relation.id)
+            ||"R059".equals(relation.id);
+        if(refrain){
+            String shortRef="R047".equals(relation.id)
+                ?"4 refrains · 54:17, 22, 32, 40"
+                :"R048".equals(relation.id)?"31 refrains · 55:13–77"
+                :"10 refrains · 77:15–49";
+            String classics="R047".equals(relation.id)
+                ?"Al-Qurṭubī · 54:17"
+                :"R048".equals(relation.id)
+                    ?"Al-Jalālayn · 55:13\nAl-Baghawī · 55:13\nAl-Qurṭubī · 55:13"
+                    :"Al-Qurṭubī · 77:15";
+            sourceSection(column,"Relation",shortRef);
+            sourceSection(column,"Sources",classics);
+            LinearLayout complete=Ui.column(this);
+            complete.setVisibility(View.GONE);
+            sourceSection(complete,"Bibliographie complète",relation.source);
+            Button expand=Ui.smallButton(this,"Toutes les références",v->
+                complete.setVisibility(complete.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE));
+            column.addView(expand);
+            column.addView(complete);
+        }else{
+            String[] parts=relation.mechanism.split("\\n\\n");
+            column.addView(caption(parts[0],14,true));
+            String explanation=parts.length>1?parts[1]:relation.mechanism;
+            sourceSection(column,"En bref",relation.brief);
+            sourceSection(column,"Sources",relation.source);
+            for(String part:parts)if(part.startsWith("Limites : "))
+                sourceSection(column,"Limites",part.substring("Limites : ".length()));
+            if(!relation.brief.equals(explanation))sourceSection(column,"Notice complète",explanation);
+        }
         if(sourcesDialog!=null&&sourcesDialog.isShowing())return;
         sourcesOpen=true;
         sourcesDialog=new AlertDialog.Builder(this).setTitle(relation.title+" · "+relation.id)
