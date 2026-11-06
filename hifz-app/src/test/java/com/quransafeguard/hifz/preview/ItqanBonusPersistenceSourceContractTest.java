@@ -39,7 +39,9 @@ public final class ItqanBonusPersistenceSourceContractTest {
                 + "                    finalBlock ? \"[]\" : lineIdsJson(consumedBonus))"));
         assertTrue("a committed block's own pending decision snapshot must always be cleared, "
                 + "never left to be misread by a later block",
-            prefs.contains(".putString(\"itqanBonusSnapshotV1\", \"\");"));
+            prefs.contains(".putString(\"itqanBonusSnapshotV1\", \"\")"));
+        assertTrue("a successful block clears only the consumed physical witness inside the same commit",
+            prefs.contains(".remove(ItqanPhysicalProof11711.KEY)"));
         assertTrue("still exactly one editor built from the frozen pre-commit state",
             prefs.contains("SharedPreferences.Editor e = p.edit()"));
         assertTrue("bonus, V6 credits and rotation close atomically in the same editor",
@@ -70,14 +72,14 @@ public final class ItqanBonusPersistenceSourceContractTest {
         assertTrue("the call site must pass a real bonus-lines argument, computed from the "
                 + "settled decision (see ItqanBonusDialogSourceContractTest for the full offer/"
                 + "dialog wiring this now derives from)",
-            session.contains("sessionDate.toString(), label, bonusLineIds);"));
+            session.contains("proofDate, label, bonusLineIds);"));
         int call=session.indexOf("prefs.completeStabilizationBlockV6(");
         assertTrue("finalizing Itqan must call the one bonus-aware V6 method",call>=0);
         int close=session.indexOf(");",call);
         assertTrue("Stabilization call must have a closing delimiter",close>call);
         String stabilizationCall=session.substring(call,close+2);
         assertTrue("the bonus must be passed explicitly by that same call",
-            stabilizationCall.contains("sessionDate.toString(), label, bonusLineIds);"));
+            stabilizationCall.contains("proofDate, label, bonusLineIds);"));
         assertFalse("the old 8-argument stabilization call must be absent",
             stabilizationCall.contains("sessionDate.toString(), label);"));
     }

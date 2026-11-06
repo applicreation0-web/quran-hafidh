@@ -1375,7 +1375,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionCompleted=true;clock.pause();
             program.setText("Stabilisation · reprise nécessaire");
             progress.setText("Anciennes répétitions conservées, mais lot physique non authentifiable. Reprendre explicitement le bloc.");
-            addRoundAction("↻","Reprendre le bloc",v->restartItqanAfterAssistance());
+            addRoundAction("↻","Reprendre",v->restartItqanAfterAssistance());
             return;
         }
         itqanProofToken=prefs.itqanBlockProofTokenV7();

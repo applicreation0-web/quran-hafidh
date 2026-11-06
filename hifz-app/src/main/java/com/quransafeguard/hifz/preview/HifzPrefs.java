@@ -1656,38 +1656,15 @@ public final class HifzPrefs {
         return false;
     }
 
-    /** Atomically closes one fractionated sub-block and advances the persisted block cursor. */
+    /** Retired unproved legacy endpoint. Only physical-proof V7 can close a block. */
     public boolean advanceItqanBlock(int nextBlockIndex, String date, String label) {
-        return p.edit()
-            .putInt("itqanBlockIndex", Math.max(0, nextBlockIndex))
-            .putInt("itqanRep", 0)
-            .putInt("itqanAssisted", 0)
-            .putInt("itqanFinalReveals", 0)
-            .putLong("itqanElapsedMs", 0L)
-            .putString("lastItqanDate", date)
-            .putString("lastItqanLabel", label)
-            .commit();
+        return false;
     }
 
-    /** Atomically closes a fractionated sub-block while pinning the exact open unit. */
+    /** Retired legacy endpoint: verse bounds and a date are not evidence. */
     public boolean advanceItqanBlock(int nextBlockIndex, VerseRef unitStart, VerseRef unitEnd,
                                      String date, String label) {
-        if (unitStart == null || unitEnd == null) return false;
-        int completedBlockIndex = Math.max(0, nextBlockIndex - 1);
-        return p.edit()
-            .putInt("itqanBlockIndex", Math.max(0, nextBlockIndex))
-            .putInt("itqanRep", 0)
-            .putInt("itqanAssisted", 0)
-            .putInt("itqanFinalReveals", 0)
-            .putString("itqanUnitStart", unitStart.toString())
-            .putString("itqanUnitEnd", unitEnd.toString())
-            .putLong("itqanElapsedMs", 0L)
-            .putString("lastItqanDate", date)
-            .putString("lastItqanLabel", label)
-            .putString("lastItqanCreditStart", unitStart.toString())
-            .putString("lastItqanCreditEnd", unitEnd.toString())
-            .putInt("lastItqanCreditBlockIndex", completedBlockIndex)
-            .commit();
+        return false;
     }
 
     public boolean setItqanProgress(int rep, int assisted, VerseRef unitStart, VerseRef unitEnd) {
