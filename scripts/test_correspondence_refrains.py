@@ -35,7 +35,7 @@ class RefrainTest(unittest.TestCase):
   self.assertNotIn('HifzPrefs',s)
   self.assertNotIn('recordRepetition',s)
   for key,expected in [('RAHMAN_BEFORE',31),('RAHMAN_AFTER',31),('QAMAR_BEFORE',4),('QAMAR_AFTER',4)]:
-   block=re.search(r'private static final String\\[\\] '+key+r' = \\{(.*?)\\};',s,re.S)
+   block=re.search(r'private static final String\[\] '+key+r' = \{(.*?)\};',s,re.S)
    self.assertIsNotNone(block,key)
    self.assertEqual(expected,len(re.findall(r'"[^"]+"',block.group(1))),key)
 if __name__=='__main__':unittest.main()
