@@ -180,7 +180,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         // that unit in the work corpus before attempting authenticated proof.
         assertTrue(initialized.setV6StabilizationRanges(Collections.singletonList(
             new VerseRange(new VerseRef(2, 1), new VerseRef(2, 74))), geometry));
-        String promoted = "[{\\"start\\":\\"49:1\\",\\"end\\":\\"114:6\\"}]";
+        String promoted = "[{\"start\":\"49:1\",\"end\":\"114:6\"}]";
         assertTrue(raw.edit()
             .putString("promotedRanges", promoted)
             .putString("unconsolidatedPromotedRanges", promoted)
@@ -192,10 +192,10 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
             .commit());
         AnchoringQueue.Entry canonical = new HifzPrefs(context).currentAnchoringEntry(geometry);
         assertNotNull("The real perpetual rotation must provide an Itqan physical unit", canonical);
-        String queue = "[{\\"start\\":\\"" + canonical.start + "\\","
-            + "\\"end\\":\\"" + canonical.end + "\\","
-            + "\\"origin\\":\\"RECONSTRUCTION\\",\\"protocol\\":\\"" + protocol.name()
-            + "\\",\\"failures\\":0}]";
+        String queue = "[{\"start\":\"" + canonical.start + "\","
+            + "\"end\":\"" + canonical.end + "\","
+            + "\"origin\":\"RECONSTRUCTION\",\"protocol\":\"" + protocol.name()
+            + "\",\"failures\":0}]";
         assertTrue(raw.edit().putString("anchoringQueue",queue).commit());
         return new HifzPrefs(context);
     }
