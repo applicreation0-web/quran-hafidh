@@ -44,7 +44,7 @@ jobs:
             }
             public static void main(String[] a) throws Exception {
               final String expectedCert="66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14";
-              final String expectedData="fb5606d0738fc371fefb10797048123282921c52dc8c0710fe3272fb011a9480";
+              final String expectedData="a4d5da7dad55e956d17e5cf025a56b2e7cf1320ff763a0e46dfc7ca06f03c45b";
               byte[] signedData=Base64.getMimeDecoder().decode(Files.readString(Path.of("signing-input/signed_data_11712_final.b64")));
               if(signedData.length!=1449 || !sha(signedData).equals(expectedData))
                 throw new SecurityException("Refuse any SignedData other than the audited offline private 1.17.12 candidate digest");
