@@ -138,8 +138,8 @@ def build():
             assert extra['folioQcfAttendu'] in {p['folio'] for p in polygons[ref]},(id,ref)
             assert extra['comparaisons'][ref] and all(x in refs and ref in extra['comparaisons'][x] for x in extra['comparaisons'][ref])
         assert all(source['url'].startswith('https://') for source in extra['sources'])
-        source='\\n\\n'.join(src['titre']+'\\n'+src['url']+'\\n'+src['portee'] for src in extra['sources'])
-        mechanism='Passages : '+extra['passages']+'\\n\\n'+extra['explication']+'\\n\\nLimites : '+extra['limites']+'\\n\\nLes repères QCF désignent les versets cités, sans surlignage des seuls mots du motif.'
+        source='\n\n'.join(src['titre']+'\n'+src['url']+'\n'+src['portee'] for src in extra['sources'])
+        mechanism='Passages : '+extra['passages']+'\n\n'+extra['explication']+'\n\nLimites : '+extra['limites']+'\n\nLes repères QCF désignent les versets cités, sans surlignage des seuls mots du motif.'
         args=[id,extra['categorie'],extra['titre'],mechanism,source,extra['enBref']]
         partners='new int[][]{'+','.join('{'+','.join(str(refs.index(x)) for x in extra['comparaisons'][ref])+'}' for ref in refs)+'}'
         refs_code=','.join('new VerseRef('+ref.replace(':',',')+')' for ref in refs)
