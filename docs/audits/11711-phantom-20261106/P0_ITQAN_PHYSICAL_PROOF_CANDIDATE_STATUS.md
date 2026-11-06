@@ -22,7 +22,7 @@ A genuinely executed Android SDK compile exposed 43 checked-JSONException compil
 - `42255436883` (`6b0e3c89`): RED, 43 Java checked-JSON compile errors, no JUnit executed.
 - `42256238011` (`107c075`): actual Android compile **PASS**, targeted physical-proof and existing legacy RED-case checks **PASS**; full JVM **855 cases, 71 failed, 2 skipped**; source contracts **297 cases, 3 failed**. Produced test XML/reports as artifact `13522248367`.
 - `42257020033` (`048e6fb`): actual Android compile and focused checks **PASS**; full JVM **855 cases, 70 failed, 2 skipped**. The three source contracts no longer fail. Remaining failures prominently involve old fake scalar `MorningProtocolFixture` paths and noncanonical test setups; do not waive them or reinterpret them as accepted real lessons.
-- `42257457600` (`a635cd7`): CI launched for latest safety patch. Its final result must be checked before any claim on this HEAD.
+- `42257457600` (`a635cd7`): actual Android Java compile and focused P0 tests **PASS**, source-contract suite **PASS**; entire JVM suite **855 tests, 70 failures, 2 skipped**. No source GO. The failing classes are exactly: `PartialFinalEightWeekStressTest` (56 parameterized cases), `AtomicItqanRotationRegressionTest` (3), `EarnedEveningProtocolRegressionTest` (3), `ItqanPostNasMaintenanceTest` (3), `SnowballValidationIdempotenceTest` (2), and one case each in `CarryoverEightWeekStressTest`, `ItqanFourSessionStoreTest`, `SundayPromotionActiveCorpusIntegrationTest`. No currently red `HifzActionRoleCoverageTest`. This is a negative regression gate, not a release result.
 
 ## Conditions not met
 
