@@ -69,8 +69,11 @@ final class MorningProtocolFixture {
     static boolean completeItqan(HifzPrefs p,List<String> ids,int nextBlock,boolean finalBlock,
             VerseRef start,VerseRef end,VerseRef next,String date,String label,List<String> bonus) {
         if(!beginAndEarnItqan(p,ids,start,end,date))return false;
+        // Derive cursor from eligible physical corpus, not an obsolete synthetic caller value.
+        VerseRef physicalNext=p.itqanWorkCorpus().nextAnchored(
+            end,p.repairedItqanRotationStart());
         return p.completeStabilizationBlockV6(ids,nextBlock,finalBlock,start,end,
-            next,date,label,bonus);
+            physicalNext,date,label,bonus);
     }
 
     static void prepareItqan(HifzPrefs p,VerseRef start,VerseRef end) {

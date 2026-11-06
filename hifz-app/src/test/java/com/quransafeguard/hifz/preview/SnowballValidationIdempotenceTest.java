@@ -13,9 +13,18 @@ public final class SnowballValidationIdempotenceTest {
         List<String> ids=new ArrayList<>();for(int i=0;i<5;i++)ids.add(geo.line(start+i).id);
         if(f==ConsolidationCycleEngine.Family.LEARNING)assertTrue(MorningProtocolFixture.completeSabqi(p,start,start+4,start+5,ids,day.toString(),"fixture"));
         else {
-            List<GeometryRepository.LineMeta> m=geo.linesForExactIds(ids);
-            com.quransafeguard.hifz.core.VerseRef first=m.get(0).verses.get(0),last=m.get(4).verses.get(m.get(4).verses.size()-1);
-            assertTrue(MorningProtocolFixture.completeItqan(p,ids,p.itqanBlockIndex()+1,false,first,last,last,day.toString(),"fixture",Collections.emptyList()));
+            GeometryRepository.VerseUnit week=MorningProtocolFixture.canonicalWeeklyItqan(
+                new com.quransafeguard.hifz.core.VerseRef(2,75),
+                new com.quransafeguard.hifz.core.VerseRef(2,286));
+            List<StabilizationHalfPagePolicy.Unit> blocks=MorningProtocolFixture.canonicalItqanBlocks(
+                week.start,week.end);
+            int nextIndex=p.itqanBlockIndex()+1;
+            List<String> authentic=blocks.get(p.itqanBlockIndex()).lineIds;
+            com.quransafeguard.hifz.core.VerseRef next=p.itqanWorkCorpus().nextAnchored(
+                week.end,p.repairedItqanRotationStart());
+            assertTrue(MorningProtocolFixture.completeItqan(p,authentic,nextIndex,
+                nextIndex==blocks.size(),week.start,week.end,next,
+                day.toString(),"fixture",Collections.emptyList()));
         }
     }
     static ConsolidationCycleEngine.Session open(HifzPrefs p,ConsolidationCycleEngine.Family f,LocalDate day) {

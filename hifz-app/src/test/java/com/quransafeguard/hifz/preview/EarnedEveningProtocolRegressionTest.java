@@ -24,6 +24,8 @@ public final class EarnedEveningProtocolRegressionTest {
    for(String key:new String[]{"v6LearnedLineIds","v6StabilizedLineIds",
      "v6AcquiredCreditLineIds","v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})
      db.disk.put(key,"[]");
+   db.disk.put("itqanRanges","[{\"start\":\"1:1\",\"end\":\"114:6\"}]");
+   db.disk.put("itqanRotationStart","1:1");
    return db;
  }
  static List<String> five(){
