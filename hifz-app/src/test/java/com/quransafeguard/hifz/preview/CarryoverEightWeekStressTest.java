@@ -15,18 +15,25 @@ public final class CarryoverEightWeekStressTest {
                 ConsolidationCycleEngine.Family.values()) {
             boolean learning=family==ConsolidationCycleEngine.Family.LEARNING;
             String prefix=learning?"learning":"stabilization";
-            LocalDate date=LocalDate.of(2026,12,21).plusDays(learning?0:1);
+            LocalDate date=LocalDate.of(2026,7,6).plusDays(learning?0:1);
             InMemoryPrefs disk=PartialFinalEightWeekStressTest.empty();
             HifzPrefs prefs=new HifzPrefs(disk);
-            List<String> ids=EarnedEveningProtocolRegressionTest.five();
+            GeometryRepository.VerseUnit itqanWeek=MorningProtocolFixture.canonicalWeeklyItqan(
+                new com.quransafeguard.hifz.core.VerseRef(2,75),
+                new com.quransafeguard.hifz.core.VerseRef(2,286));
+            List<StabilizationHalfPagePolicy.Unit> planned=MorningProtocolFixture.canonicalItqanBlocks(
+                itqanWeek.start,itqanWeek.end);
+            List<String> ids=learning?EarnedEveningProtocolRegressionTest.five():planned.get(0).lineIds;
             List<GeometryRepository.LineMeta> meta=geometry.linesForExactIds(ids);
             int start=meta.get(0).globalIndex;
             if(learning)prefs.setSabqiLineCursor(start);
             if(learning)assertTrue(MorningProtocolFixture.completeSabqi(prefs,start,start+4,start+5,ids,date.toString(),"stress"));
             else {
-                List<com.quransafeguard.hifz.core.VerseRef> end=meta.get(4).verses;
-                assertTrue(MorningProtocolFixture.completeItqan(prefs,ids,1,false,meta.get(0).verses.get(0),
-                    end.get(end.size()-1),end.get(end.size()-1),date.toString(),"stress",Collections.emptyList()));
+                com.quransafeguard.hifz.core.VerseRef next=prefs.itqanWorkCorpus().nextAnchored(
+                    itqanWeek.end,prefs.repairedItqanRotationStart());
+                assertTrue(MorningProtocolFixture.completeItqan(prefs,ids,1,
+                    planned.size()==1,itqanWeek.start,itqanWeek.end,
+                    next,date.toString(),"stress",Collections.emptyList()));
             }
             List<ConsolidationCycleEngine.Unit> units=learning?prefs.learningConsolidationUnits(date):
                 prefs.stabilizedConsolidationUnits(date);

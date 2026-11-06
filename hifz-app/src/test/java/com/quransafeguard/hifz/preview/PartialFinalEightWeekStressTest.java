@@ -44,6 +44,8 @@ public final class PartialFinalEightWeekStressTest {
                 "v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})disk.disk.put(key,"[]");
         disk.disk.put("anchoringQueueInitialized",true);
         disk.disk.put("itqanCursor","50:1");disk.disk.put("sabqiLineCursor",100);
+        disk.disk.put("itqanRanges","[{\"start\":\"2:75\",\"end\":\"2:286\"}]");
+        disk.disk.put("itqanRotationStart","2:75");
         return disk;
     }
     /** Use the actual typed export/check/replace codec, including persisted OPEN cycles. */
@@ -77,7 +79,8 @@ public final class PartialFinalEightWeekStressTest {
     }
     @Test public void missedSlotsPartialFinalRestartAndTypedBackupPreserveOnlyEarnedLines() throws Exception {
         InMemoryPrefs disk=empty();HifzPrefs prefs=new HifzPrefs(disk);
-        LocalDate original=LocalDate.of(2026,12,21),monday=original.plusWeeks(weeks),sunday=monday.plusDays(6);
+        // Dates are historical relative to the CI clock: never forge a future lesson.
+        LocalDate original=LocalDate.of(2026,7,6),monday=original.plusWeeks(weeks),sunday=monday.plusDays(6);
         Map<String,Object> initial=new LinkedHashMap<>(disk.disk);
         for(int day=0;day<weeks*7;day++) {
             LocalDate date=original.plusDays(day);
@@ -88,23 +91,34 @@ public final class PartialFinalEightWeekStressTest {
         assertEquals("Absence alone changes no cursor or credit",initial,disk.disk);
         Set<String> completed=new LinkedHashSet<>();
         int cursor=geometry.firstLineIndex(new VerseRef(2,75));
+        GeometryRepository.VerseUnit itqanWeek=MorningProtocolFixture.canonicalWeeklyItqan(
+            new VerseRef(2,75),new VerseRef(2,286));
+        List<StabilizationHalfPagePolicy.Unit> planned=MorningProtocolFixture.canonicalItqanBlocks(
+            itqanWeek.start,itqanWeek.end);
+        assertEquals("Real QCF weekly Itqan must divide into three actual physical blocks",3,planned.size());
         if(learning())prefs.setSabqiLineCursor(cursor);
         for(int slot=0;slot<3;slot++) {
             if((mask&(1<<slot))==0)continue;
             LocalDate date=monday.plusDays(2*slot+(learning()?0:1));
-            int count=learning()?5:(slot==0?8:7);
+            int count=5;
             List<String> block=new ArrayList<>();
-            for(int i=0;i<count;i++)block.add(geometry.line(cursor+i).id);
+            if(learning()) {
+                for(int i=0;i<count;i++)block.add(geometry.line(cursor+i).id);
+            }else{
+                block.addAll(planned.get(prefs.itqanBlockIndex()).lineIds);
+            }
             String oppositeCursor=learning()?disk.getString("itqanCursor",""):
                 String.valueOf(disk.getInt("sabqiLineCursor",-1));
             if(learning())assertTrue(MorningProtocolFixture.completeSabqi(prefs,cursor,cursor+count-1,cursor+count,
                 block,date.toString(),"stress"));
             else {
-                List<GeometryRepository.LineMeta> meta=geometry.linesForExactIds(block);
-                VerseRef start=meta.get(0).verses.get(0);
-                List<VerseRef> last=meta.get(meta.size()-1).verses;
-                assertTrue(MorningProtocolFixture.completeItqan(prefs,block,prefs.itqanBlockIndex()+1,false,start,
-                    last.get(last.size()-1),start,date.toString(),"stress",Collections.emptyList()));
+                int nextIndex=prefs.itqanBlockIndex()+1;
+                VerseRef next=prefs.itqanWorkCorpus().nextAnchored(
+                    itqanWeek.end,prefs.repairedItqanRotationStart());
+                assertTrue("A genuine physical QCF morning block, with earned ×40 repetitions",
+                    MorningProtocolFixture.completeItqan(prefs,block,nextIndex,
+                        nextIndex==planned.size(),itqanWeek.start,itqanWeek.end,next,
+                        date.toString(),"stress",Collections.emptyList()));
             }
             assertEquals(oppositeCursor,learning()?disk.getString("itqanCursor",""):
                 String.valueOf(disk.getInt("sabqiLineCursor",-1)));
@@ -144,7 +158,7 @@ public final class PartialFinalEightWeekStressTest {
             assertTrue(prefs.completeSnowballEvening(family,date.toString(),restored));
             Map<String,Object> once=new LinkedHashMap<>(disk.disk);
             assertFalse(prefs.completeSnowballEvening(family,date.toString(),restored));assertEquals(once,disk.disk);
-            completed.addAll(block);cursor+=count;
+            completed.addAll(block);if(learning())cursor+=count;
             assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
         }
         disk=backupRoundTrip(disk);prefs=new HifzPrefs(disk);
