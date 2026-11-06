@@ -1,7 +1,7 @@
 name: Haafidh 1.17.12 - catalogue 61 Android release runtime gate
 # Builds and installs DISPOSABLE debug+instrumentation APKs only on ephemeral emulators.
 # Never assembles/signs/publishes the private release or transfers private assets.
-# Checks the already-integrated 61-entry production catalogue and existing Hifz protections.
+# Checks all 61 relations, English Atlas refrain captions and existing Hifz protections.
 on:
   push:
     branches: [release-candidate/haafidh-11712-integrity-20261106]
