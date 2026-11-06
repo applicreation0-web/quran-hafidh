@@ -115,6 +115,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean correctionMaskedPageReady;
     private Button correctionPageDoneButton;
     private LocalDate sessionDate;
+    /** Today's date is captured once on entry; never silently changes mid-session. */
+    private LocalDate dateAtSessionOpen;
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
     private PostFinalRecallStore postFinalStore;
@@ -141,6 +143,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ? recordedSessionDate
             : scheduledSessionDate;
         LocalDate capturedToday = HifzClock.today();
+        dateAtSessionOpen = capturedToday;
         try {
             sessionDate = requestedSessionDate == null || requestedSessionDate.isEmpty()
                 ? capturedToday : LocalDate.parse(requestedSessionDate);
@@ -819,7 +822,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      * resumed, even after midnight or before the current morning lesson. */
     private boolean awaitingNewEveningLesson(
             ConsolidationCycleEngine.Family family,String prefix,boolean learning) {
-        boolean sameDay=sessionDate.equals(HifzClock.today());
+        boolean sameDay=sessionDate.equals(dateAtSessionOpen);
         if(!sameDay)return false;
         String opened=prefs.unfinishedConsolidationSessionDate(family,prefix);
         boolean frozenOpen=sessionDate.toString().equals(opened);
