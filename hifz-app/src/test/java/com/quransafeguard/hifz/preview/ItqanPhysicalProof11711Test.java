@@ -59,6 +59,12 @@ public final class ItqanPhysicalProof11711Test {
             h.ensureItqanBlockProofV7(geometry,expected,start,end,plan,"2026-11-06"));
         String token=h.itqanBlockProofTokenV7();
         assertFalse(token.isEmpty());
+        Map<String,Object> frozen=new LinkedHashMap<>(d.disk);
+        assertFalse("stale window cannot reset a frozen Itqan session",
+            h.restartItqanBlockV7("stale-token",start,end));
+        assertFalse("legacy scalar reset cannot clear a verified physical proof",
+            h.setItqanProgress(0,0,start,end));
+        assertEquals("both rejected writes must leave persisted proof untouched",frozen,d.disk);
         int quota=ItqanMaintenancePolicy.totalReps(plan);
         assertFalse("scalar counter cannot enter a verified session",
             h.setItqanProgress(quota,0,start,end));

@@ -1676,7 +1676,9 @@ public final class HifzPrefs {
         synchronized(V6_STATE_LOCK){
             // Legacy scalar counters cannot authenticate or advance a frozen V7 block.
             // A deliberate zero restart preserves the old protocol but starts new proof.
-            if(rep!=0 && ItqanPhysicalProof11711.read(p)!=null)return false;
+            // An old scalar writer must never reset a token-bound OPEN from
+            // another Activity or after a process/session transition.
+            if(ItqanPhysicalProof11711.read(p)!=null)return false;
             SharedPreferences.Editor e=p.edit().putInt("itqanRep",rep)
                 .putInt("itqanAssisted",assisted)
                 .putInt("itqanFinalReveals",Math.max(0,finalReveals))
@@ -1855,6 +1857,30 @@ public final class HifzPrefs {
                 if(finishedWindow)e=appendFinalItqanRotation(e,true,lastVerse);
                 return e.commit();
             }
+        }
+    }
+
+    /** Explicit assistance/legacy restart. A stale window cannot reset the
+     * repetition proof belonging to another physical block or dated session. */
+    boolean restartItqanBlockV7(String expectedToken,VerseRef start,VerseRef end){
+        if(start==null||end==null)return false;
+        synchronized(V6_STATE_LOCK){
+            if(!start.equals(itqanUnitStart())||!end.equals(itqanUnitEnd()))return false;
+            JSONObject proof=ItqanPhysicalProof11711.read(p);
+            String token=expectedToken==null?"":expectedToken;
+            if(proof==null){
+                if(!token.isEmpty())return false;
+            }else{
+                if(token.isEmpty()||!token.equals(proof.optString("token",""))
+                        ||!start.toString().equals(proof.optString("start"))
+                        ||!end.toString().equals(proof.optString("end"))
+                        ||itqanBlockIndex()!=proof.optInt("block",-1))return false;
+            }
+            // The chosen restart intentionally discards unearned repetitions,
+            // never physical progress, dates, cursors or historical receipts.
+            return p.edit().putInt("itqanRep",0).putInt("itqanAssisted",0)
+                .putInt("itqanFinalReveals",0)
+                .remove(ItqanPhysicalProof11711.KEY).commit();
         }
     }
 

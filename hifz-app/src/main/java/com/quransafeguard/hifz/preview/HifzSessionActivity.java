@@ -1227,6 +1227,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void renderItqan() { renderItqan(0); }
 
     private void renderItqan(int autoChainDepth) {
+        itqanProofToken="";
         // Restore the exact saved plan BEFORE asking the legacy verse-unit picker.
         // Existing 1.17.1 OPEN units return null and finish unmodified.
         // Existing OPEN V1 four-date sessions remain exactly frozen. New
@@ -1672,7 +1673,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             renderMode();
             return;
         }
-        if (itqanUnit == null || !prefs.setItqanProgress(0, 0, 0, itqanUnit.start, itqanUnit.end)) {
+        if (itqanUnit == null || !prefs.restartItqanBlockV7(
+                itqanProofToken,itqanUnit.start,itqanUnit.end)) {
             onError("Impossible de relancer ce bloc de Stabilisation.");
             return;
         }
