@@ -165,12 +165,17 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         VerseRef end = new VerseRef(56, 16);
         assertTrue(AndroidItqanProofFixture11712.completeOneBlock(prefs,geometry,start,end,
             HifzClock.today().minusDays(2).toString(),"C23 bloc 1 validé"));
-        assertTrue(AndroidItqanProofFixture11712.completeOneBlock(prefs,geometry,start,end,
-            HifzClock.today().minusDays(1).toString(),"C23 bloc 2 validé"));
         HifzPrefs reopened = new HifzPrefs(context);
-        assertEquals(2, reopened.itqanBlockIndex());
+        assertEquals("First canonical cross-surah physical block must survive process death",
+            1, reopened.itqanBlockIndex());
         assertEquals(start, reopened.itqanUnitStart());
         assertEquals(end, reopened.itqanUnitEnd());
+        assertTrue(AndroidItqanProofFixture11712.completeOneBlock(reopened,geometry,start,end,
+            HifzClock.today().minusDays(1).toString(),"C23 bloc 2 validé"));
+        HifzPrefs afterFinal = new HifzPrefs(context);
+        assertEquals("The second of two canonical cross-surah blocks closes the unit",0,
+            afterFinal.itqanBlockIndex());
+        assertEquals(end, afterFinal.lastItqanCreditEnd());
     }
 
     private HifzPrefs fractionatedFixture(AnchoringQueue.ItqanProtocol protocol) {
