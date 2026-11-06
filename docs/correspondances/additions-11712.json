@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "release": "1.17.12",
+  "portee": "Addendum éditorial isolé : le registre historique R001–R110 et les 62 fiches du catalogue antérieur restent inchangés. Le folio n'est pas une preuve d'intention rhétorique.",
+  "dossiers": [
+    {
+      "id": "R111",
+      "titre": "Paroles semblables et ignorance",
+      "categorie": "Parallélisme",
+      "passages": "2:113 ; 2:118",
+      "reperes": [
+        "2:113",
+        "2:118"
+      ],
+      "comparaisons": {
+        "2:113": [
+          "2:118"
+        ],
+        "2:118": [
+          "2:113"
+        ]
+      },
+      "explication": "Les deux versets reprennent « الذين لا يعلمون », « كذلك قال » et « مثل قولهم » pour rapprocher deux discours distincts : les controverses entre communautés en 2:113 et la demande de parole divine ou de signe en 2:118. Ibn ʿĀshūr renvoie explicitement de la comparaison du verset 118 à celle du verset 113.",
+      "enBref": "2:113 et 2:118 reprennent les mêmes termes sur des propos semblables tenus dans des contextes différents. Ibn ʿĀshūr fait explicitement le rapprochement.",
+      "limites": "Parallélisme lexical et thématique entre deux versets. L'ordre haut/bas sur le folio 18 n'est pas une démonstration de symétrie graphique intentionnelle, ni un chiasme.",
+      "sources": [
+        {
+          "titre": "Ibn ʿĀshūr, al-Taḥrīr wa-l-Tanwīr, commentaire de 2:118",
+          "url": "https://quran-tafsir.net/ashour/sura2-aya118.html",
+          "portee": "L'auteur renvoie explicitement au verset 2:113 pour l'interprétation de la comparaison et de la similitude exprimées en 2:118."
+        },
+        {
+          "titre": "Texte coranique arabe, 2:113",
+          "url": "https://quran.com/2/113",
+          "portee": "Témoin primaire pour la répétition lexicale, non une attribution structurale."
+        },
+        {
+          "titre": "Texte coranique arabe, 2:118",
+          "url": "https://quran.com/2/118",
+          "portee": "Témoin primaire pour la répétition lexicale, non une attribution structurale."
+        }
+      ],
+      "folioQcfAttendu": 18,
+      "statut": "ADMIS"
+    }
+  ]
+}
