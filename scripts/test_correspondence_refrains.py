@@ -20,9 +20,22 @@ class RefrainTest(unittest.TestCase):
   self.assertIn('Pharaon',d['relations']['R047']['nodes'][-1]['after']['theme'])
   self.assertEqual('55:78',d['relations']['R048']['nodes'][-1]['after']['reference'])
   self.assertEqual('77:50',d['relations']['R059']['nodes'][-1]['after']['reference'])
- def test_view_is_collapsible_and_only_in_sources(self):
+ def test_atlas_style_rail_has_six_visible_rahman_points_and_four_qamar_points(self):
   p=ROOT/'hifz-app/src/main/java/com/quransafeguard/hifz/preview/RefrainTimeline.java'
-  self.assertTrue(p.exists())
-  s=p.read_text();self.assertIn('Frise des refrains',s);self.assertIn('View.GONE',s)
-  self.assertNotIn('HifzPrefs',s);self.assertNotIn('recordRepetition',s)
+  s=p.read_text()
+  comparison=(ROOT/'hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceComparisonActivity.java').read_text()
+  self.assertIn('HorizontalScrollView',s)
+  self.assertIn('Math.min(6, nodes.size())',s)
+  self.assertIn('scroll.setHorizontalScrollBarEnabled(false)',s)
+  self.assertIn('scroll.post(redraw[0])',s)
+  self.assertIn('RefrainTimeline.append(this,root,relation.id,origin.toString(),timelineState)',comparison)
+  self.assertNotIn('RefrainTimeline.append(this,column',comparison)
+  self.assertNotIn('Repères pédagogiques éditoriaux',s)
+  self.assertIn('StudyReaderActivity.EXTRA_JUMP_VERSE',s)
+  self.assertNotIn('HifzPrefs',s)
+  self.assertNotIn('recordRepetition',s)
+  for key,expected in [('RAHMAN_BEFORE',31),('RAHMAN_AFTER',31),('QAMAR_BEFORE',4),('QAMAR_AFTER',4)]:
+   block=re.search(r'private static final String\\[\\] '+key+r' = \\{(.*?)\\};',s,re.S)
+   self.assertIsNotNone(block,key)
+   self.assertEqual(expected,len(re.findall(r'"[^"]+"',block.group(1))),key)
 if __name__=='__main__':unittest.main()
