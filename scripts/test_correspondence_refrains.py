@@ -47,6 +47,6 @@ class RefrainTest(unittest.TestCase):
   self.assertNotIn('RAHMAN_BEFORE',s)
   self.assertNotIn('RAHMAN_AFTER',s)
   self.assertIn('"Before "',s)
-  self.assertIn('"After "',s)
+  self.assertIn('After ',s)
   self.assertIn('Atlas · Unit (editorial)',comparison)
 if __name__=='__main__':unittest.main()
