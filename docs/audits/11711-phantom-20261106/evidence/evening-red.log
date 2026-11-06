@@ -1,0 +1,38 @@
+JUnit version 4.13.2
+.E.E.E.E.E
+Time: 0.048
+There were 5 failures:
+1) T28UncheckpointedSessionCannotEarnNewPhysicalReceipt(com.quransafeguard.hifz.preview.EveningMutationGate11711Test)
+java.lang.AssertionError: first physical receipt also requires exact durable OPEN
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at com.quransafeguard.hifz.preview.EveningMutationGate11711Test.T28UncheckpointedSessionCannotEarnNewPhysicalReceipt(EveningMutationGate11711Test.java:53)
+2) T02CompletedEveningRepetitionsCannotReplaceFridayLesson(com.quransafeguard.hifz.preview.EveningMutationGate11711Test)
+java.lang.AssertionError: Wednesday source without Friday Sabqi must not earn Friday receipt
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at com.quransafeguard.hifz.preview.EveningMutationGate11711Test.T02CompletedEveningRepetitionsCannotReplaceFridayLesson(EveningMutationGate11711Test.java:41)
+3) T01FridayBeforeSabqiLegacyClosureMustNotWriteSuccess(com.quransafeguard.hifz.preview.EveningMutationGate11711Test)
+java.lang.AssertionError: date-only API must not manufacture Friday completion
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at com.quransafeguard.hifz.preview.EveningMutationGate11711Test.T01FridayBeforeSabqiLegacyClosureMustNotWriteSuccess(EveningMutationGate11711Test.java:34)
+4) T25ForeignPhysicalUnitCannotCloseCurrentSource(com.quransafeguard.hifz.preview.EveningMutationGate11711Test)
+java.lang.AssertionError: unrelated completed session must not consume the current fingerprint
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at com.quransafeguard.hifz.preview.EveningMutationGate11711Test.T25ForeignPhysicalUnitCannotCloseCurrentSource(EveningMutationGate11711Test.java:60)
+5) T18DateOnlyLessonMarkerDoesNotProvePhysicalLesson(com.quransafeguard.hifz.preview.EveningMutationGate11711Test)
+java.lang.AssertionError: legacy date marker alone is not a lesson certificate
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at com.quransafeguard.hifz.preview.EveningMutationGate11711Test.T18DateOnlyLessonMarkerDoesNotProvePhysicalLesson(EveningMutationGate11711Test.java:47)
+
+FAILURES!!!
+Tests run: 5,  Failures: 5
+

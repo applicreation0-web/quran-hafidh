@@ -1,0 +1,15 @@
+JUnit version 4.13.2
+.LEGACY_ITQAN_FOREIGN_FINAL accepted=true BEFORE={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=[], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], itqanRep=40, itqanAssisted=0, itqanFinalReveals=0, itqanUnitStart=52:1, itqanUnitEnd=52:10, itqanUnitPlanV1=52:1|52:10|DEEP_FIRST_PASS|FULL|BALANCED_20_5_5_5_5} AFTER={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=["604:0","604:1"], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], itqanRep=0, itqanAssisted=0, itqanFinalReveals=0, itqanUnitStart=, itqanUnitEnd=, itqanUnitPlanV1=52:1|52:10|DEEP_FIRST_PASS|FULL|BALANCED_20_5_5_5_5, itqanBlockIndex=0, itqanElapsedMs=0, lastItqanDate=2026-11-06, lastItqanLabel=foreign final payload, lastItqanCreditStart=52:1, lastItqanCreditEnd=52:10, itqanConsumedBonusLineIds=[], itqanTinyBlockDecisionValue=, itqanBonusSnapshotV1=, v6DailyLessonReceiptsV1=[{"date":"2026-11-06","family":"STABILIZATION","lines":["604:0","604:1"]}], stabilizationSnowballWeekAnchor=2026-11-02, stabilizationSnowballUnitIds=["L:NjA0OjAKNjA0OjE"], stabilizationSnowball8WeekHistory=[{"week":"2026-11-02","units":["L:NjA0OjAKNjA0OjE"]}], itqanCursor=114:6, p4ItqanRotationLeg=TAIL_HUJURAT_NAS, p4ItqanRotationCursor=52:11, p4ItqanRotationInitialTailCompleted=false}
+E
+Time: 0.071
+There was 1 failure:
+1) earnedItqanRepetitionsMustNotAuthenticateForeignLinesOrSkipToEnd(com.quransafeguard.hifz.preview.AuditLegacyItqanPayload11711Test)
+java.lang.AssertionError: earned repetitions for52:1..10 cannot credit page604 or jump to114:6
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at com.quransafeguard.hifz.preview.AuditLegacyItqanPayload11711Test.earnedItqanRepetitionsMustNotAuthenticateForeignLinesOrSkipToEnd(AuditLegacyItqanPayload11711Test.java:26)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+

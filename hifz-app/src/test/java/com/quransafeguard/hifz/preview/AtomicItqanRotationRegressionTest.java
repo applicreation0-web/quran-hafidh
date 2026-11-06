@@ -48,6 +48,7 @@ public final class AtomicItqanRotationRegressionTest {
    startAt(disk,start);
    HifzPrefs prefs=new HifzPrefs(disk);
    List<String> lines=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+   MorningProtocolFixture.prepareItqan(prefs,start,end);
    int before=disk.commits;
    disk.failCommit=before+1;
    assertFalse(prefs.completeStabilizationBlockV6(lines,1,true,start,end,new VerseRef(49,1),
@@ -68,6 +69,7 @@ public final class AtomicItqanRotationRegressionTest {
    HifzPrefs original=new HifzPrefs(disk);
    List<String> ids=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
    String date="2026-10-11";
+   MorningProtocolFixture.prepareItqan(original,start,end);
    assertTrue(original.completeStabilizationBlockV6(ids,1,true,start,end,end,
        date,"once",Collections.emptyList()));
    HifzPrefs restored=new HifzPrefs(disk);
@@ -87,6 +89,7 @@ public final class AtomicItqanRotationRegressionTest {
    startAt(disk,start);
    HifzPrefs prefs=new HifzPrefs(disk);
    List<String> lines=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+   MorningProtocolFixture.prepareItqan(prefs,start,end);
    int before=disk.commits;
    assertTrue(prefs.completeStabilizationBlockV6(lines,1,true,start,end,new VerseRef(49,1),
       "2026-10-11","audit-atomic",Collections.emptyList()));

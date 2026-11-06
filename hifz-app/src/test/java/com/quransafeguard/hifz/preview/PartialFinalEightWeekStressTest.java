@@ -37,6 +37,7 @@ public final class PartialFinalEightWeekStressTest {
     private String prefix(){return learning()?"learning":"stabilization";}
     static InMemoryPrefs empty() {
         InMemoryPrefs disk=new InMemoryPrefs();disk.disk.put("schema",6);
+        disk.disk.put("sabqiStart","1:1");disk.disk.put("sabqiEnd","114:6");
         for(String key:new String[]{"itqanRanges","legacyMurajaahPromotedRanges","promotedRanges",
                 "unconsolidatedPromotedRanges","forcedPromotedRanges","anchoringQueue",
                 "v6LearnedLineIds","v6StabilizedLineIds","v6AcquiredCreditLineIds",
@@ -87,6 +88,7 @@ public final class PartialFinalEightWeekStressTest {
         assertEquals("Absence alone changes no cursor or credit",initial,disk.disk);
         Set<String> completed=new LinkedHashSet<>();
         int cursor=geometry.firstLineIndex(new VerseRef(2,75));
+        if(learning())prefs.setSabqiLineCursor(cursor);
         for(int slot=0;slot<3;slot++) {
             if((mask&(1<<slot))==0)continue;
             LocalDate date=monday.plusDays(2*slot+(learning()?0:1));
@@ -95,13 +97,13 @@ public final class PartialFinalEightWeekStressTest {
             for(int i=0;i<count;i++)block.add(geometry.line(cursor+i).id);
             String oppositeCursor=learning()?disk.getString("itqanCursor",""):
                 String.valueOf(disk.getInt("sabqiLineCursor",-1));
-            if(learning())assertTrue(prefs.completeSabqiBlockV6(cursor,cursor+count-1,cursor+count,
+            if(learning())assertTrue(MorningProtocolFixture.completeSabqi(prefs,cursor,cursor+count-1,cursor+count,
                 block,date.toString(),"stress"));
             else {
                 List<GeometryRepository.LineMeta> meta=geometry.linesForExactIds(block);
                 VerseRef start=meta.get(0).verses.get(0);
                 List<VerseRef> last=meta.get(meta.size()-1).verses;
-                assertTrue(prefs.completeStabilizationBlockV6(block,slot+1,false,start,
+                assertTrue(MorningProtocolFixture.completeItqan(prefs,block,prefs.itqanBlockIndex()+1,false,start,
                     last.get(last.size()-1),start,date.toString(),"stress",Collections.emptyList()));
             }
             assertEquals(oppositeCursor,learning()?disk.getString("itqanCursor",""):

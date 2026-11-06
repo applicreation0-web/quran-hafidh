@@ -21,10 +21,11 @@ public final class CarryoverEightWeekStressTest {
             List<String> ids=EarnedEveningProtocolRegressionTest.five();
             List<GeometryRepository.LineMeta> meta=geometry.linesForExactIds(ids);
             int start=meta.get(0).globalIndex;
-            if(learning)assertTrue(prefs.completeSabqiBlockV6(start,start+4,start+5,ids,date.toString(),"stress"));
+            if(learning)prefs.setSabqiLineCursor(start);
+            if(learning)assertTrue(MorningProtocolFixture.completeSabqi(prefs,start,start+4,start+5,ids,date.toString(),"stress"));
             else {
                 List<com.quransafeguard.hifz.core.VerseRef> end=meta.get(4).verses;
-                assertTrue(prefs.completeStabilizationBlockV6(ids,1,false,meta.get(0).verses.get(0),
+                assertTrue(MorningProtocolFixture.completeItqan(prefs,ids,1,false,meta.get(0).verses.get(0),
                     end.get(end.size()-1),end.get(end.size()-1),date.toString(),"stress",Collections.emptyList()));
             }
             List<ConsolidationCycleEngine.Unit> units=learning?prefs.learningConsolidationUnits(date):

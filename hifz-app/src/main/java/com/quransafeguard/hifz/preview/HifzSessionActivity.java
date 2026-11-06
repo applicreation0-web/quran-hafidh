@@ -117,6 +117,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private LocalDate sessionDate;
     /** Today's date is captured once on entry; never silently changes mid-session. */
     private LocalDate dateAtSessionOpen;
+    private String sabqiLessonToken="";
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
     private PostFinalRecallStore postFinalStore;
@@ -533,11 +534,18 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText(QuranSurahNames.range(prefs.sabqiStart(), prefs.sabqiEnd()));
             return;
         }
-        if (cursor + PreviewConfig.SABQI_LINES - 1 > endLimit) {
-            creditTinySabqiRemnant(cursor, endLimit, today);
+        try {
+            sessionDate=prefs.openSabqiLesson(geometry,sessionDate);
+            sabqiLessonToken=prefs.sabqiLessonToken();
+        }catch(IllegalStateException unverified) {
+            sessionCompleted=false;clock.pause();
+            program.setText("Apprentissage · séance à reprendre");
+            progress.setText("La séance ancienne ne permet pas de vérifier sa date. Reprenez ce bloc.");
+            addRoundAction("↻","Reprendre",v->restartSabqiAfterAssistance());
             return;
         }
-        sabqiBlock = geometry.fiveLineBlock(cursor);
+        today=sessionDate.toString();
+        sabqiBlock = geometry.fiveLineBlock(cursor,endLimit);
         currentPage = geometry.line(sabqiBlock.startLineIndex).page;
         unitFirstPage = currentPage;
         unitLastPage = geometry.line(sabqiBlock.endLineIndex).page;
@@ -571,25 +579,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateRevealButton();
     }
 
-    /**
-     * Reported directly: a 1-4 line remnant before sabqiEnd() used to dead-end forever, since a
-     * fixed 5-line block (PreviewConfig.SABQI_LINES) has no smaller variant. Mirrors the Itqan tiny
-     * fragment fast path — credits the remnant straight to Acquis, skipping the full repetition
-     * drill, since there's no normal-sized lesson to fall back to on a remnant this short.
-     */
-    private void creditTinySabqiRemnant(int cursor, int endLimit, String date) {
-        List<String> lineIds = new ArrayList<>();
-        for (int i = cursor; i <= endLimit; i++) lineIds.add(geometry.line(i).id);
-        String label = "Apprentissage · " + lineIds.size() + " ligne(s) · Acquis";
-        if (!prefs.completeSabqiTinyBlockV6(lineIds, endLimit + 1, date, label)) {
-            onError("Impossible d’enregistrer l’Apprentissage.");
-            return;
-        }
-        sessionCompleted = true;
-        program.setText("Apprentissage · séance validée");
-        progress.setText(HifzDisplayVocabulary.canonicalize(label));
-    }
-
     private void updateSabqiProgress(int rep, int reveals) {
         progress.setText(Math.min(rep+1,PreviewConfig.SABQI_TOTAL_REPS) + "/37 · masque " + currentMask + "% · révélations " + reveals);
         eink.local(progress, prefs);
@@ -608,7 +597,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int rep=prefs.sabqiRep(); if(rep>=PreviewConfig.SABQI_TOTAL_REPS)return;
         int oldMask=currentMask;
         rep++; int reveals=prefs.sabqiAssisted()+(revealed?1:0);
-        if(!prefs.setSabqiProgress(rep,reveals)){onError("Impossible d’enregistrer la répétition de l’Apprentissage.");return;}
+        if(!prefs.recordSabqiRepetition(sabqiLessonToken,rep-1,revealed)){onError("Impossible d’enregistrer la répétition de l’Apprentissage.");return;}
         if(rep>=PreviewConfig.SABQI_TOTAL_REPS){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
@@ -645,7 +634,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void restartSabqiAfterAssistance() {
-        if (!prefs.setSabqiProgress(0, 0)) {
+        if (!prefs.restartSabqiLesson(sabqiLessonToken)) {
             onError("Impossible de relancer ce bloc d’Apprentissage.");
             return;
         }
@@ -1234,11 +1223,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
     }
 
-    /** P4 tiny-fragment fast path (see creditTinyItqanBlockAndChain): a bounded safety cap on how
-     *  many consecutive 1-2 line fragments can auto-chain into the next portion in one render pass
-     *  — real Mushaf data never runs this deep, but this guarantees no runaway recursion either way. */
-    private static final int MAX_ITQAN_AUTO_CHAIN = 5;
-
     private void renderItqan() { renderItqan(0); }
 
     private void renderItqan(int autoChainDepth) {
@@ -1350,33 +1334,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         itqanBlockPage = geometry.linesForExactIds(currentLineIds).get(0).page;
         currentPage = itqanBlockPage;
 
-        // P4 tiny-fragment fast path: a sub-block reduced to 1-2 physical lines (a leg-boundary or
-        // Sabqi-frontier remnant, never a byproduct of splitting a larger chunk — see
-        // StabilizationHalfPagePolicy.appendSegment) is too short for a real repeated session.
-        // Ask once whether to credit it straight to Acquis and chain immediately into the next real
-        // (7-8 line) portion the same day, or to do a normal session on it regardless — never
-        // decided silently. Reinforcement laps are excluded: that material is already Acquired, so
-        // "entering Acquis" is moot, and the existing full-protocol reinforcement pass already
-        // applies to it.
-        boolean tinyFastPathEligible = maintenance
-            // Maintenance never moves Appris (Sabqi) or already-credited lines: only a fragment
-            // made entirely of never-credited lines may take the direct-to-Acquis fast path.
-            ? prefs.itqanUncreditedLines(workingUnit.lineIds).size() == workingUnit.lineIds.size()
-            : !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);
-        if (rep == 0 && workingUnit.lineIds.size() <= 2 && autoChainDepth < MAX_ITQAN_AUTO_CHAIN
-                && tinyFastPathEligible) {
-            Boolean tinyBlockDecision = prefs.itqanTinyBlockDecisionFor(itqanUnit.start, itqanUnit.end, itqanBlockIndex);
-            if (tinyBlockDecision == null) {
-                showItqanTinyBlockDialog(itqanUnit.start, itqanUnit.end, itqanBlockIndex, workingUnit.lineIds.size());
-                return;
-            }
-            if (tinyBlockDecision) {
-                creditTinyItqanBlockAndChain(autoChainDepth);
-                return;
-            }
-            // false: the learner refused the fast path — fall through to the normal P3 bonus
-            // logic and repeated session below, exactly as if this block were never tiny.
-        }
+        // Tiny Itqan fragments follow the same persisted repetition protocol.
 
         // P3 "finish the page?" (Itqān only, never Sabqi): the decision is settled once, before
         // rep 1, and then reused verbatim for every later render of this exact sub-block —
@@ -1644,61 +1602,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             : geometry.lineCountForVerseRange(itqanUnit.start, itqanUnit.end);
         long elapsed = Math.max(clock.elapsedMs(), prefs.elapsedFor(mode));
         return Math.max(0, lines) + "L/" + Math.max(0L, elapsed / 1000L) + "s/" + prefs.itqanRep() + "r";
-    }
-
-    /** Suspends the clock and the repetition button until the user answers — never automatic, same
-     *  as showItqanBonusDialog. A process death before the answer simply re-shows this same dialog
-     *  next launch, since nothing is persisted until one of the two buttons is actually tapped. */
-    private void showItqanTinyBlockDialog(VerseRef unitStart, VerseRef unitEnd, int blockIndex, int lineCount) {
-        sessionCompleted = true;
-        clock.pause();
-        String plural = lineCount > 1 ? "lignes" : "ligne";
-        program.setText(itqanProgramLabel());
-        progress.setText("Fragment de "+lineCount+" "+plural+" : valider directement en Acquis ?");
-        new AlertDialog.Builder(this).setTitle("Stabilisation")
-            .setMessage("Ce fragment ne fait que "+lineCount+" "+plural+". Le valider directement en "
-                + "Acquis (sans répétitions), ou faire une séance normale dessus ?")
-            .setCancelable(false)
-            .setNegativeButton("Séance normale", (d, w) -> {
-                if (!prefs.saveItqanTinyBlockDecision(unitStart, unitEnd, blockIndex, false)) {
-                    onError("Impossible d’enregistrer la décision de Stabilisation.");
-                    return;
-                }
-                clock.resume();
-                renderMode();
-            })
-            .setPositiveButton("Valider en Acquis", (d, w) -> {
-                if (!prefs.saveItqanTinyBlockDecision(unitStart, unitEnd, blockIndex, true)) {
-                    onError("Impossible d’enregistrer la décision de Stabilisation.");
-                    return;
-                }
-                clock.resume();
-                renderMode();
-            })
-            .show();
-    }
-
-    /**
-     * P4 tiny-fragment fast path: credits a 1-2 line Itqān sub-block straight to Acquis (see
-     * HifzPrefs.completeItqanTinyBlockV6) and immediately re-renders — either the next sub-block of
-     * the same parent unit, or, if this fragment was the whole unit, the next physical unit from
-     * the advanced rotation. Mirrors validateItqan's own nextBlock/finalBlock bookkeeping exactly,
-     * minus the repetition protocol and the Consolidation snowball enrollment this fragment skips.
-     * Only reached once the learner has explicitly chosen this over a normal session (see
-     * showItqanTinyBlockDialog).
-     */
-    private void creditTinyItqanBlockAndChain(int autoChainDepth) {
-        int nextBlock = itqanBlockIndex + 1;
-        boolean finalBlock = nextBlock >= itqanBlockCount;
-        EligibleCorpus corpus = prefs.itqanWorkCorpus();
-        VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.repairedItqanRotationStart());
-        metricsStore.recordAnchoring("Stabilisation fragment auto-validé · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)
-            +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+anchoringInstrumentation());
-        if (!prefs.completeItqanTinyBlockV6(currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next)) {
-            onError("Impossible de créditer directement ce fragment de Stabilisation.");
-            return;
-        }
-        renderItqan(autoChainDepth + 1);
     }
 
     private void validateItqan(){

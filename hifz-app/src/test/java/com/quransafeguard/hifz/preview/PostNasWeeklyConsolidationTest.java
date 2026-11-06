@@ -46,6 +46,7 @@ public final class PostNasWeeklyConsolidationTest {
         resumed=engine.recordRepetition(resumed);
         resumed=engine.recordRepetition(resumed);
         assertTrue(resumed.readyToClose());
+        assertTrue(restarted.persistConsolidationSession(resumed));
         assertTrue(restarted.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION,
             "2026-10-31",resumed));
         assertFalse("Weekly pass cannot be credited twice",

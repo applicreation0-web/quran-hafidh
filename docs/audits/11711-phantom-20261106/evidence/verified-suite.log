@@ -1,0 +1,37 @@
+Al-Munīr amorces with exact boxes: 1243, fail-closed: 0
+Post-Nas hizb units (both legs): 61, fewest amorces in one unit: 5
+M8R_CHECKPOINT horizon=180 day=119 acquired=85 receipts=119 overdue=2027-02-01 postNas=false
+M8R_CHECKPOINT horizon=180 day=120 acquired=85 receipts=120 overdue=2027-02-02 postNas=false
+M8R_CHECKPOINT horizon=180 day=121 acquired=85 receipts=122 overdue=none postNas=false
+M8R_CHECKPOINT horizon=180 day=122 acquired=85 receipts=123 overdue=none postNas=false
+M8R_CHECKPOINT horizon=180 day=179 acquired=125 receipts=180 overdue=none postNas=true
+M8R_PASS horizon=180 days=180 receipts=180 acquired=125 missed=4 caught_up=4 sundays=25 checkpoints=5 programme_switches=2
+M8R_CHECKPOINT horizon=365 day=119 acquired=85 receipts=119 overdue=2027-02-01 postNas=false
+M8R_CHECKPOINT horizon=365 day=120 acquired=85 receipts=120 overdue=2027-02-02 postNas=false
+M8R_CHECKPOINT horizon=365 day=121 acquired=85 receipts=122 overdue=none postNas=false
+M8R_CHECKPOINT horizon=365 day=122 acquired=85 receipts=123 overdue=none postNas=false
+M8R_CHECKPOINT horizon=365 day=179 acquired=125 receipts=180 overdue=none postNas=true
+M8R_CHECKPOINT horizon=365 day=180 acquired=125 receipts=181 overdue=none postNas=true
+M8R_CHECKPOINT horizon=365 day=364 acquired=260 receipts=365 overdue=none postNas=true
+M8R_PASS horizon=365 days=365 receipts=365 acquired=260 missed=4 caught_up=4 sundays=52 checkpoints=7 programme_switches=2
+M8R_CHECKPOINT horizon=548 day=119 acquired=85 receipts=119 overdue=2027-02-01 postNas=false
+M8R_CHECKPOINT horizon=548 day=120 acquired=85 receipts=120 overdue=2027-02-02 postNas=false
+M8R_CHECKPOINT horizon=548 day=121 acquired=85 receipts=122 overdue=none postNas=false
+M8R_CHECKPOINT horizon=548 day=122 acquired=85 receipts=123 overdue=none postNas=false
+M8R_CHECKPOINT horizon=548 day=179 acquired=125 receipts=180 overdue=none postNas=true
+M8R_CHECKPOINT horizon=548 day=180 acquired=125 receipts=181 overdue=none postNas=true
+M8R_CHECKPOINT horizon=548 day=364 acquired=260 receipts=365 overdue=none postNas=true
+M8R_CHECKPOINT horizon=548 day=365 acquired=260 receipts=366 overdue=none postNas=true
+M8R_CHECKPOINT horizon=548 day=547 acquired=390 receipts=548 overdue=none postNas=true
+M8R_PASS horizon=548 days=548 receipts=548 acquired=390 missed=4 caught_up=4 sundays=78 checkpoints=9 programme_switches=2
+ITQAN COMPOSITE CAPACITY: max subblocks=9 at first page=600; pairs exceeding four daily snowball units=62
+Ibn Kathir QCF: groups=1903, physical one-word groups=1, page-spanning two-word cues=0
+ORACLE_STRESS seed=416886626065 traces=10000 actions=425179 failures=0 ms=8171
+CONCURRENT_STRESS transitions=1000 pairs=500 duplicates=0 ms=973
+ZERO_REP_TINY_ITQAN accepted=false BEFORE={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=[], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[]} AFTER={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=[], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[]}
+FOREIGN_SABQI_LINES accepted=false BEFORE={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=[], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], sabqiStart=1:1, sabqiEnd=114:6, sabqiLineCursor=100, sabqiPhysicalLessonSnapshotV1={"date":"2026-11-06","assisted":0,"reps":37,"start":100,"end":104,"sessionId":"43bb2924-4965-45a2-b9e6-320fcf662984","lines":["8:12","8:13","8:14","9:0","9:1"],"version":1}, sabqiRep=37, sabqiAssisted=0} AFTER={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=[], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], sabqiStart=1:1, sabqiEnd=114:6, sabqiLineCursor=100, sabqiPhysicalLessonSnapshotV1={"date":"2026-11-06","assisted":0,"reps":37,"start":100,"end":104,"sessionId":"43bb2924-4965-45a2-b9e6-320fcf662984","lines":["8:12","8:13","8:14","9:0","9:1"],"version":1}, sabqiRep=37, sabqiAssisted=0}
+ZERO_REP_LEGACY_SABQI accepted=false BEFORE={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=[], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], sabqiLineCursor=100} AFTER={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=[], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], sabqiLineCursor=100}
+DOWNGRADED_EVENING accepted=false BEFORE={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=["525:0","525:1","525:2","525:3"], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], stabilizationSnowballWeekAnchor=2026-11-02, stabilizationSnowballUnitIds=["L:NTI1OjAKNTI1OjE","L:NTI1OjIKNTI1OjM"], v6ConsolidationStabilizationState={"donePerStage":0,"stage":5,"cycleId":"stabilization-2026-11-06","sourceSnapshot":"2026-11-02|[\"L:NTI1OjAKNTI1OjE\",\"L:NTI1OjIKNTI1OjM\"]","sessionId":"independent-downgraded-protocol","nextUnitIndex":0,"units":[{"protocol":"SNOWBALL_CONTINUOUS","id":"L:NTI1OjAKNTI1OjE"},{"protocol":"SNOWBALL_STABILIZATION_SEVEN","id":"L:NTI1OjIKNTI1OjM"}],"family":"STABILIZATION","version":1,"sessionGroupSize":2,"open":true}} AFTER={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=["525:0","525:1","525:2","525:3"], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], stabilizationSnowballWeekAnchor=2026-11-02, stabilizationSnowballUnitIds=["L:NTI1OjAKNTI1OjE","L:NTI1OjIKNTI1OjM"], v6ConsolidationStabilizationState={"donePerStage":0,"stage":5,"cycleId":"stabilization-2026-11-06","sourceSnapshot":"2026-11-02|[\"L:NTI1OjAKNTI1OjE\",\"L:NTI1OjIKNTI1OjM\"]","sessionId":"independent-downgraded-protocol","nextUnitIndex":0,"units":[{"protocol":"SNOWBALL_CONTINUOUS","id":"L:NTI1OjAKNTI1OjE"},{"protocol":"SNOWBALL_STABILIZATION_SEVEN","id":"L:NTI1OjIKNTI1OjM"}],"family":"STABILIZATION","version":1,"sessionGroupSize":2,"open":true}}
+LEGACY_ITQAN_FOREIGN_FINAL accepted=true BEFORE={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=[], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], itqanRep=40, itqanAssisted=0, itqanFinalReveals=0, itqanUnitStart=52:1, itqanUnitEnd=52:10, itqanUnitPlanV1=52:1|52:10|DEEP_FIRST_PASS|FULL|BALANCED_20_5_5_5_5} AFTER={schema=6, v6LearnedLineIds=[], v6StabilizedLineIds=["604:0","604:1"], v6AcquiredCreditLineIds=[], v6QuarantineLineIds=[], v6LegacyPartialAcquiredLineIds=[], itqanRep=0, itqanAssisted=0, itqanFinalReveals=0, itqanUnitStart=, itqanUnitEnd=, itqanUnitPlanV1=52:1|52:10|DEEP_FIRST_PASS|FULL|BALANCED_20_5_5_5_5, itqanBlockIndex=0, itqanElapsedMs=0, lastItqanDate=2026-11-06, lastItqanLabel=foreign final payload, lastItqanCreditStart=52:1, lastItqanCreditEnd=52:10, itqanConsumedBonusLineIds=[], itqanTinyBlockDecisionValue=, itqanBonusSnapshotV1=, v6DailyLessonReceiptsV1=[{"date":"2026-11-06","family":"STABILIZATION","lines":["604:0","604:1"]}], stabilizationSnowballWeekAnchor=2026-11-02, stabilizationSnowballUnitIds=["L:NjA0OjAKNjA0OjE"], stabilizationSnowball8WeekHistory=[{"week":"2026-11-02","units":["L:NjA0OjAKNjA0OjE"]}], itqanCursor=114:6, p4ItqanRotationLeg=TAIL_HUJURAT_NAS, p4ItqanRotationCursor=52:11, p4ItqanRotationInitialTailCompleted=false}
+FAIL earnedItqanRepetitionsMustNotAuthenticateForeignLinesOrSkipToEnd(com.quransafeguard.hifz.preview.AuditLegacyItqanPayload11711Test): earned repetitions for52:1..10 cannot credit page604 or jump to114:6
+AUDIT_RESULT tests=1150 failures=1 ignored=0 duration_ms=29287

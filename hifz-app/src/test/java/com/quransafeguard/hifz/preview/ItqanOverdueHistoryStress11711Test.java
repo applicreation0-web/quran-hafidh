@@ -63,7 +63,7 @@ public final class ItqanOverdueHistoryStress11711Test {
         Set<String> actuallyEarned=new LinkedHashSet<>();
         for(int round=0;round<2;round++){
             HifzPrefs restart=new HifzPrefs(disk);
-            LocalDate now=day.plusDays(round);
+            LocalDate now=day.plusDays(round*2); // Wednesday/Friday: historical catch-up, no due Itqan bypass
             List<ConsolidationCycleEngine.Unit> due=restart.stabilizedConsolidationUnits(now);
             // Already receipted prior-day units do not re-enter a fresh
             // overdue-only source as a synthetic ×1 pass: 30 then 15 exact

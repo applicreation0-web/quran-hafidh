@@ -84,7 +84,7 @@ public final class ContradictoryAuditTwoPersistenceTest {
         assertEquals("2026-10-05|"+units(first),
             reboot.frozenConsolidationSnapshot(
                 ConsolidationCycleEngine.Family.LEARNING,"learning-"+monday));
-        assertTrue(reboot.completeSnowballEvening(
+        assertFalse("An incomplete legacy session cannot close via a date-only API",reboot.completeSnowballEvening(
             ConsolidationCycleEngine.Family.LEARNING,monday.toString()));
         assertTrue("The newly appended unit must still be due after closing the old session",
             reboot.snowballEveningPending(
@@ -121,7 +121,7 @@ public final class ContradictoryAuditTwoPersistenceTest {
         assertEquals("2026-10-05|"+units(first,second),
             reboot.frozenConsolidationSnapshot(
                 ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"+tuesday));
-        assertTrue(reboot.completeSnowballEvening(
+        assertFalse("An incomplete legacy session cannot close via a date-only API",reboot.completeSnowballEvening(
             ConsolidationCycleEngine.Family.STABILIZATION,tuesday.toString()));
         assertTrue("New post-restart Itqan block must still be due",
             reboot.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,
@@ -151,7 +151,7 @@ public final class ContradictoryAuditTwoPersistenceTest {
             ConsolidationCycleEngine.Family.LEARNING,"learning-"+tuesday);
         assertTrue("A mismatched upgrade must not silently consume currently stored lines",
             frozen.startsWith("LEGACY_OPEN|"));
-        assertTrue(prefs.completeSnowballEvening(
+        assertFalse("An unknown historical source must fail closed",prefs.completeSnowballEvening(
             ConsolidationCycleEngine.Family.LEARNING,tuesday.toString()));
         assertTrue(prefs.snowballEveningPending(
             ConsolidationCycleEngine.Family.LEARNING,tuesday.plusDays(1)));

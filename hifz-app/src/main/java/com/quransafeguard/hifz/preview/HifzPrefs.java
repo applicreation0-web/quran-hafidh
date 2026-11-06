@@ -1464,28 +1464,18 @@ public final class HifzPrefs {
     public int sabqiRep() { return p.getInt("sabqiRep", 0); }
     public int sabqiAssisted() { return p.getInt("sabqiAssisted", 0); }
     public boolean setSabqiProgress(int rep, int assisted) {
-        return p.edit().putInt("sabqiRep", rep).putInt("sabqiAssisted", assisted).commit();
+        synchronized(V6_STATE_LOCK) {
+            // Old callers may reset an unbound legacy counter, never overwrite
+            // repetitions owned by a different frozen physical lesson.
+            if(rep!=0 || assisted!=0 || !p.getString(SABQI_LESSON_SNAPSHOT,"").isEmpty())return false;
+            return p.edit().putInt("sabqiRep",0).putInt("sabqiAssisted",0).commit();
+        }
     }
 
     /** Sabqi completion queues the five-line block; promotion is deliberately deferred to calendar/attendance policy. */
     public boolean completeSabqiBlock(int startLine, int endLine, int nextLineCursor, String date, String label) {
-        List<RecentSabqi> queue = recentSabqi();
-        LocalDate blockDate = safeDate(date, null);
-        if (blockDate == null) blockDate = HifzClock.today();
-        queue.add(new RecentSabqi(startLine, endLine, blockDate, 0));
-        return p.edit()
-            .putString("recentSabqi", recentJson(queue))
-            .putInt("sabqiLineCursor", nextLineCursor)
-            .putInt("sabqiRep", 0)
-            .putInt("sabqiAssisted", 0)
-            .putLong("sabqiElapsedMs", 0L)
-            .putString("sabqiTodayReviewDate", date)
-            .putInt("sabqiTodayReviewStartLine", startLine)
-            .putInt("sabqiTodayReviewEndLine", endLine)
-            .putLong("sabqi_today_reviewElapsedMs", 0L)
-            .putString("lastSabqiDate", date)
-            .putString("lastSabqiLabel", label)
-            .commit();
+        // Retired unproved endpoint: the V6 physical lesson protocol owns completion.
+        return false;
     }
 
     /** Compatibility overload: promotion is handled by the calendar/attendance rebalance. */
@@ -1494,11 +1484,89 @@ public final class HifzPrefs {
         return completeSabqiBlock(startLine, endLine, nextLineCursor, date, label);
     }
 
+    private static final String SABQI_LESSON_SNAPSHOT="sabqiPhysicalLessonSnapshotV1";
+
+    String sabqiLessonToken() {
+        try{return new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT,"")).getString("sessionId");}
+        catch(RuntimeException invalid){return "";}
+    }
+
+    boolean recordSabqiRepetition(String expectedToken,int expectedRep,boolean revealed) {
+        synchronized(V6_STATE_LOCK) {
+            try {
+                JSONObject root=new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT,""));
+                if(expectedToken==null || expectedToken.isEmpty()
+                    || !expectedToken.equals(root.getString("sessionId"))
+                    || root.getInt("reps")!=expectedRep || sabqiRep()!=expectedRep
+                    || expectedRep<0 || expectedRep>=PreviewConfig.SABQI_TOTAL_REPS)return false;
+                int next=expectedRep+1,assisted=root.getInt("assisted")+(revealed?1:0);
+                root.put("reps",next).put("assisted",assisted);
+                return p.edit().putString(SABQI_LESSON_SNAPSHOT,root.toString())
+                    .putInt("sabqiRep",next).putInt("sabqiAssisted",assisted).commit();
+            }catch(RuntimeException invalid){return false;}
+        }
+    }
+
+    boolean restartSabqiLesson(String expectedToken) {
+        synchronized(V6_STATE_LOCK) {
+            String actual=sabqiLessonToken();
+            if(!actual.isEmpty() && !actual.equals(expectedToken))return false;
+            return p.edit().remove(SABQI_LESSON_SNAPSHOT)
+                .putInt("sabqiRep",0).putInt("sabqiAssisted",0).commit();
+        }
+    }
+
+    /** Freeze physical material and original date BEFORE the first repetition. */
+    LocalDate openSabqiLesson(GeometryRepository geometry,LocalDate day) {
+        synchronized(V6_STATE_LOCK) {
+            int cursor=sabqiLineCursor();
+            GeometryRepository.FiveLineBlock block=geometry.fiveLineBlock(cursor,
+                geometry.lastLineIndex(sabqiEnd()));
+            String raw=p.getString(SABQI_LESSON_SNAPSHOT,"");
+            if(!raw.isEmpty()) {
+                JSONObject saved=new JSONObject(raw);
+                if(saved.getInt("start")!=cursor || saved.getInt("end")!=block.endLineIndex
+                        || !saved.getJSONArray("lines").toString().equals(new JSONArray(block.lineIds).toString()))
+                    throw new IllegalStateException("Sabqi frozen physical lesson mismatch");
+                return LocalDate.parse(saved.getString("date"));
+            }
+            if(sabqiRep()!=0 || sabqiAssisted()!=0)
+                throw new IllegalStateException("Legacy Sabqi repetition date is unverified");
+            JSONObject snapshot=new JSONObject().put("version",1).put("date",day.toString())
+                .put("sessionId",UUID.randomUUID().toString()).put("reps",0).put("assisted",0)
+                .put("start",cursor).put("end",block.endLineIndex).put("lines",new JSONArray(block.lineIds));
+            if(!p.edit().putString(SABQI_LESSON_SNAPSHOT,snapshot.toString()).commit())
+                throw new IllegalStateException("Unable to persist Sabqi physical lesson");
+            return day;
+        }
+    }
+
+    private boolean matchesSabqiLesson(int start,int end,List<String> lines,String date) {
+        try {
+            JSONObject frozen=new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT,""));
+            return frozen.getInt("version")==1
+                && frozen.getInt("reps")==PreviewConfig.SABQI_TOTAL_REPS
+                && frozen.getInt("assisted")==sabqiAssisted()
+                && frozen.getInt("start")==start
+                && frozen.getInt("end")==end && frozen.getString("date").equals(date)
+                && frozen.getJSONArray("lines").toString().equals(new JSONArray(lines).toString());
+        }catch(RuntimeException invalid){return false;}
+    }
+
     /** Atomically closes Apprentissage and advances exactly these physical lines to Appris. */
     public boolean completeSabqiBlockV6(int startLine, int endLine, int nextLineCursor,
                                         List<String> lineIds, String date, String label) {
         if (lineIds == null || lineIds.isEmpty()) throw new IllegalArgumentException("Apprentissage line ids required");
         synchronized (V6_STATE_LOCK) {
+            if(!matchesSabqiLesson(startLine,endLine,lineIds,date)
+                    || sabqiRep()!=PreviewConfig.SABQI_TOTAL_REPS
+                    || !StructuredSessionPolicy.assistancePasses(sabqiAssisted())
+                    || startLine!=sabqiLineCursor() || startLine<0
+                    || endLine<startLine || nextLineCursor!=endLine+1
+                    || lineIds.size()!=endLine-startLine+1
+                    || lineIds.size()>PreviewConfig.SABQI_LINES
+                    || new LinkedHashSet<>(lineIds).size()!=lineIds.size()
+                    || safeDate(date,null)==null)return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -1526,51 +1594,21 @@ public final class HifzPrefs {
                 .putInt("sabqiRep", 0).putInt("sabqiAssisted", 0).putLong("sabqiElapsedMs", 0L)
                 .putString("sabqiTodayReviewDate", date).putInt("sabqiTodayReviewStartLine", startLine)
                 .putInt("sabqiTodayReviewEndLine", endLine).putLong("sabqi_today_reviewElapsedMs", 0L)
-                .putString("lastSabqiDate", date).putString("lastSabqiLabel", label);
+                .putString("lastSabqiDate", date).putString("lastSabqiLabel", label)
+                .putString(DAILY_LESSON_RECEIPTS,appendDailyLessonReceipt(
+                    ConsolidationCycleEngine.Family.LEARNING,date,lineIds))
+                .remove(SABQI_LESSON_SNAPSHOT);
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             return e.commit();
         }
     }
 
-    /**
-     * Reported directly: a fixed 5-line block (PreviewConfig.SABQI_LINES, frozen) has no smaller
-     * variant, so renderSabqi() used to dead-end the moment fewer than 5 lines remained before
-     * sabqiEnd() — "fin de plage · bloc requis : 5", permanently, since nothing ever offered a way
-     * past a 1-4 line remnant. Mirrors completeItqanTinyBlockV6's fast path: running the full
-     * SABQI_TOTAL_REPS drill for a remnant this short is pure overhead, so it is credited straight
-     * to Acquis instead, skipping both the repetition protocol and the weekly Renforcement snowball
-     * — there is no "do a normal session instead" alternative to offer here, unlike the Itqan case,
-     * since a normal 5-line lesson is structurally impossible on a remnant this size.
-     */
-    boolean completeSabqiTinyBlockV6(List<String> lineIds, int nextLineCursor, String date, String label) {
-        if (lineIds == null || lineIds.isEmpty() || lineIds.size() >= PreviewConfig.SABQI_LINES)
-            throw new IllegalArgumentException("tiny Sabqi fragment must be 1.." + (PreviewConfig.SABQI_LINES - 1) + " lines");
-        synchronized (V6_STATE_LOCK) {
-            requireSchema6ProgressionState();
-            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
-            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
-            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
-            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
-            for (String lineId : new LinkedHashSet<>(lineIds)) {
-                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
-                    throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
-                ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
-                if (state != ProgressState.ACQUIRED) {
-                    learned.remove(lineId);
-                    stabilized.remove(lineId);
-                    acquired.add(lineId);
-                }
-            }
-            return p.edit()
-                .putString("v6LearnedLineIds", lineIdsJson(learned))
-                .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
-                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
-                .putInt("sabqiLineCursor", nextLineCursor)
-                .putInt("sabqiRep", 0).putInt("sabqiAssisted", 0).putLong("sabqiElapsedMs", 0L)
-                .putString("lastSabqiDate", date).putString("lastSabqiLabel", label)
-                .commit();
-        }
+    /** Legacy remnant endpoint uses the SAME real protocol and snowball as any lesson. */
+    boolean completeSabqiTinyBlockV6(List<String> lineIds,int nextLineCursor,String date,String label) {
+        if(lineIds==null||lineIds.isEmpty()||lineIds.size()>=PreviewConfig.SABQI_LINES)
+            throw new IllegalArgumentException("Tiny Sabqi fragment must contain 1..4 lines");
+        int start=sabqiLineCursor();
+        return completeSabqiBlockV6(start,start+lineIds.size()-1,nextLineCursor,lineIds,date,label);
     }
 
     public int itqanRep() { return p.getInt("itqanRep", 0); }
@@ -1825,11 +1863,22 @@ public final class HifzPrefs {
                         e.putString("itqanFourNextPhysicalLineIdV1",geo.line(physicalNext).id);
                     else e.remove("itqanFourNextPhysicalLineIdV1");
                 } else e.putString(ItqanFourSessionStore.KEY,next.encode());
-                if(finishedDate)e.putString("lastItqanDate",date).putString("lastItqanLabel",label);
+                if(finishedDate)e.putString("lastItqanDate",date).putString("lastItqanLabel",label)
+                    .putString(DAILY_LESSON_RECEIPTS,appendDailyLessonReceipt(
+                        ConsolidationCycleEngine.Family.STABILIZATION,date,block.lineIds));
                 if(finishedWindow)e=appendFinalItqanRotation(e,true,lastVerse);
                 return e.commit();
             }
         }
+    }
+
+    private boolean legacyItqanRepetitionProof(VerseRef start,VerseRef end) {
+        if(!start.equals(itqanUnitStart()) || !end.equals(itqanUnitEnd()))return false;
+        AnchoringQueue.Entry entry=new AnchoringQueue.Entry(start.toString(),end.toString(),
+            AnchoringQueue.Origin.PROMOTED,AnchoringQueue.ItqanProtocol.FULL,0);
+        ItqanRegimeStore.UnitPlan plan=itqanUnitPlan(entry);
+        return itqanRep()==ItqanMaintenancePolicy.totalReps(plan)
+            && ItqanMaintenancePolicy.validationAllowed(plan.regime,itqanAssisted());
     }
 
     /**
@@ -1849,6 +1898,8 @@ public final class HifzPrefs {
             throw new IllegalArgumentException("Stabilisation unit required");
         List<String> bonus = bonusLineIds == null ? Collections.emptyList() : bonusLineIds;
         synchronized (V6_STATE_LOCK) {
+            if(!legacyItqanRepetitionProof(unitStart,unitEnd)
+                    || nextBlockIndex!=itqanBlockIndex()+1 || safeDate(date,null)==null)return false;
             if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
@@ -1889,7 +1940,9 @@ public final class HifzPrefs {
                 .putString("itqanConsumedBonusLineIds",
                     finalBlock ? "[]" : lineIdsJson(consumedBonus))
                 .putString("itqanTinyBlockDecisionValue", "")
-                .putString("itqanBonusSnapshotV1", "");
+                .putString("itqanBonusSnapshotV1", "")
+                .putString(DAILY_LESSON_RECEIPTS,appendDailyLessonReceipt(
+                    ConsolidationCycleEngine.Family.STABILIZATION,date,lineIds));
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return appendFinalItqanRotation(e,finalBlock,unitEnd).commit();
@@ -1973,44 +2026,8 @@ public final class HifzPrefs {
      */
     boolean completeItqanTinyBlockV6(List<String> lineIds, int nextBlockIndex, boolean finalBlock,
                                       VerseRef unitStart, VerseRef unitEnd, VerseRef nextCursor) {
-        if (lineIds == null || lineIds.isEmpty() || lineIds.size() > 2)
-            throw new IllegalArgumentException("tiny Itqan fragment must be exactly 1 or 2 lines");
-        if (unitStart == null || unitEnd == null) throw new IllegalArgumentException("Stabilisation unit required");
-        synchronized (V6_STATE_LOCK) {
-            if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
-            requireSchema6ProgressionState();
-            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
-            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
-            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
-            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
-            for (String lineId : new LinkedHashSet<>(lineIds)) {
-                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
-                    throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
-                ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
-                if (state != ProgressState.ACQUIRED) {
-                    learned.remove(lineId);
-                    stabilized.remove(lineId);
-                    acquired.add(lineId);
-                }
-            }
-            SharedPreferences.Editor e = p.edit()
-                .putString("v6LearnedLineIds", lineIdsJson(learned))
-                .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
-                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
-                .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
-                .putInt("itqanBlockIndex", finalBlock ? 0 : Math.max(0, nextBlockIndex))
-                .putString("itqanUnitStart", finalBlock ? "" : unitStart.toString())
-                .putString("itqanUnitEnd", finalBlock ? "" : unitEnd.toString())
-                .putLong("itqanElapsedMs", 0L)
-                .putString("lastItqanCreditStart", unitStart.toString())
-                .putString("lastItqanCreditEnd", unitEnd.toString())
-                .putString("itqanConsumedBonusLineIds", finalBlock ? "[]" : lineIdsJson(optionalLineIdSet("itqanConsumedBonusLineIds")))
-                .putString("itqanBonusSnapshotV1", "")
-                .putString("itqanTinyBlockDecisionValue", "");
-            if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
-            return appendFinalItqanRotation(e,finalBlock,unitEnd).commit();
-        }
+        // No fragment may bypass repetitions, evening proof, and Sunday promotion.
+        return false;
     }
 
     /** Tolerant counterpart to v6LineIdSet for P3's non-schema6 bookkeeping keys: missing (a
@@ -2146,38 +2163,8 @@ public final class HifzPrefs {
     public boolean completeItqanUnitAndConsolidate(VerseRef start, VerseRef endInclusive,
                                                    VerseRef nextCursor, String date, String label,
                                                    int creditBlockIndex) {
-        List<AnchoringQueue.Entry> queue = anchoringQueue();
-        int completedIndex = findAnchoringEntry(queue, start, endInclusive);
-        if (completedIndex < 0) return false;
-        List<VerseRange> pending = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
-        List<VerseRange> forced = subtractCoverage(forcedPromotedRanges(), start, endInclusive);
-        int currentIndex = anchoringQueueIndex(queue.size());
-        queue.remove(completedIndex);
-        if (!queue.isEmpty()) currentIndex = Math.min(completedIndex, queue.size() - 1);
-        else currentIndex = 0;
-        VerseRef storedNext = queue.isEmpty() ? nextCursor
-            : GeometryRepository.parseVerse(queue.get(currentIndex).start);
-        return p.edit()
-            .putString("unconsolidatedPromotedRanges", rangesJson(pending))
-            .putString("forcedPromotedRanges", rangesJson(forced))
-            .putString("anchoringQueue", anchoringQueueJson(queue))
-            .putBoolean("anchoringQueueInitialized", true)
-            .putInt("anchoringQueueIndex", currentIndex)
-            .putString("anchoringRetryAfterDate", "")
-            .putString("itqanCursor", storedNext.toString())
-            .putInt("itqanRep", 0)
-            .putInt("itqanBlockIndex", 0)
-            .putInt("itqanAssisted", 0)
-            .putInt("itqanFinalReveals", 0)
-            .putString("itqanUnitStart", "")
-            .putString("itqanUnitEnd", "")
-            .putLong("itqanElapsedMs", 0L)
-            .putString("lastItqanDate", date)
-            .putString("lastItqanLabel", label)
-            .putString("lastItqanCreditStart", start.toString())
-            .putString("lastItqanCreditEnd", endInclusive.toString())
-            .putInt("lastItqanCreditBlockIndex", creditBlockIndex)
-            .commit();
+        return false; // Retired completion without physical protocol proof.
+
     }
 
     public List<AnchoringQueue.Entry> anchoringQueue() {
@@ -2857,6 +2844,12 @@ public final class HifzPrefs {
                     throw new IllegalStateException("Missing ×10 physical Renforcement");
                 earned.add(unit.id());
             }
+            if(units.size()>1) {
+                ConsolidationCycleEngine.Unit continuous=units.get(units.size()-1);
+                if(earned.size()<2 || continuous.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL
+                        || !continuous.id().equals(ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(earned)))
+                    throw new IllegalStateException("Missing exact cumulative continuous pass");
+            }
         }
         return earned;
     }
@@ -3429,6 +3422,53 @@ public final class HifzPrefs {
         return !snapshot.isEmpty() && !snapshot.equals(completedSnapshot);
     }
 
+    private static final String DAILY_LESSON_RECEIPTS = "v6DailyLessonReceiptsV1";
+
+    /** Stored in the SAME edit as the physical morning credit, never from the dashboard. */
+    private String appendDailyLessonReceipt(ConsolidationCycleEngine.Family family,
+            String date,List<String> lines) {
+        LocalDate.parse(date);
+        JSONArray receipts=new JSONArray(p.getString(DAILY_LESSON_RECEIPTS,"[]"));
+        receipts.put(new JSONObject().put("family",family.name()).put("date",date)
+            .put("lines",new JSONArray(lines)));
+        return receipts.toString();
+    }
+
+    private boolean hasDailyLessonReceipt(ConsolidationCycleEngine.Family family,
+            LocalDate day,String snapshot) {
+        try {
+            JSONArray receipts=new JSONArray(p.getString(DAILY_LESSON_RECEIPTS,"[]"));
+            int split=snapshot.indexOf('|');
+            if(split<0)return false;
+            JSONArray units=new JSONArray(snapshot.substring(split+1));
+            LinkedHashSet<String> source=new LinkedHashSet<>();
+            for(int i=0;i<units.length();i++)
+                source.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(units.getString(i)));
+            for(int i=0;i<receipts.length();i++) {
+                JSONObject row=receipts.getJSONObject(i);
+                if(!family.name().equals(row.getString("family"))
+                        ||!day.toString().equals(row.getString("date")))continue;
+                JSONArray lines=row.getJSONArray("lines");
+                if(lines.length()==0)continue;
+                boolean exact=true;
+                for(int j=0;j<lines.length();j++)if(!source.contains(lines.getString(j)))exact=false;
+                if(exact)return true;
+            }
+        }catch(RuntimeException invalid){return false;}
+        return false;
+    }
+
+    /** Central gate: a new learning evening always needs its dated physical lesson.
+     * Historical stabilization catch-up on a non-Itqan day retains its original protocol. */
+    private boolean eveningLessonEligible(ConsolidationCycleEngine.Family family,
+            LocalDate day,String snapshot) {
+        CadenceAction action=WeeklyProgramPolicy.actionFor(day.getDayOfWeek(),
+            weeklyProgramFor(day),learningDaysPerWeek());
+        if(family==ConsolidationCycleEngine.Family.STABILIZATION
+                && action!=CadenceAction.STABILIZATION)return true;
+        return hasDailyLessonReceipt(family,day,snapshot);
+    }
+
     /** Verified production closure: the completed session, its date and all
      * earned physical-unit receipts are committed atomically. The legacy
      * date-only overload below deliberately earns no protocol receipts. */
@@ -3441,6 +3481,20 @@ public final class HifzPrefs {
             ?"learning-":"stabilization-")+date;
         if(completed==null||completed.cycle()==null||!id.equals(completed.cycle().cycleId()))
             throw new IllegalStateException("Evening receipt date mismatch");
+        synchronized(V6_STATE_LOCK) {
+        if(!completed.open()||!completed.readyToClose())
+            throw new IllegalStateException("Complete frozen evening proof required");
+            // Every receipt, including the FIRST one, requires the exact durable
+            // fully completed OPEN. An in-memory session is never a disk proof.
+            ConsolidationCycleEngine.Session persisted=restoreConsolidationSession(
+                new ConsolidationCycleEngine(),family,id);
+            if(persisted==null || !persisted.readyToClose()
+                    || !persisted.cycle().cycleId().equals(id)
+                    || !persisted.sessionId().equals(completed.sessionId())
+                    || !persisted.unitIds().equals(completed.unitIds()))return false;
+            for(int i=0;i<persisted.cycle().units().size();i++)
+                if(persisted.cycle().units().get(i).protocol()
+                    !=completed.cycle().units().get(i).protocol())return false;
         // The post-Nas consolidation earns NO Acquis and has no Sunday finale.
         // Its proof is one masked pass per completed hizb, with its exact frozen snapshot.
         if(family==ConsolidationCycleEngine.Family.STABILIZATION
@@ -3465,7 +3519,28 @@ public final class HifzPrefs {
         }
         List<String> justEarned=earnedFromClosedEvening(completed,family);
         synchronized(V6_STATE_LOCK) {
+            String provenSource=frozenConsolidationSnapshot(family,id);
+            if(provenSource.isEmpty() || !eveningLessonEligible(family,day,provenSource))return false;
+            // Snapshot and completed cycle must cover the SAME physical lines.
+            try {
+                boolean legacy=provenSource.startsWith("LEGACY_OPEN|");
+                JSONArray source=legacy?stabilizationEveningSource(day):
+                    new JSONArray(provenSource.substring(provenSource.indexOf('|')+1));
+                LinkedHashSet<String> expected=new LinkedHashSet<>(),actual=new LinkedHashSet<>();
+                for(int i=0;i<source.length();i++)expected.addAll(
+                    ConsolidationPhysicalUnitPolicy.decodeLineUnit(source.getString(i)));
+                for(ConsolidationCycleEngine.Unit unit:completed.cycle().units())
+                    actual.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id()));
+                if(expected.isEmpty() || (legacy?!expected.containsAll(actual):!expected.equals(actual)))return false;
+            }catch(RuntimeException invalid){return false;}
             LinkedHashSet<String> receipts=earnedEveningUnits(family);
+            if(family==ConsolidationCycleEngine.Family.STABILIZATION) {
+                LinkedHashSet<String> alreadyEarnedLines=new LinkedHashSet<>();
+                for(String unit:receipts)alreadyEarnedLines.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit));
+                for(ConsolidationCycleEngine.Unit unit:completed.cycle().units())
+                    if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS
+                        && !alreadyEarnedLines.containsAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id())))return false;
+            }
             // Sabqi's Wednesday/Friday snowball legitimately repeats previously
             // receipted blocks alongside NEW work. Accept that overlap only for
             // the exact, fully checkpointed OPEN session. An old Session object
@@ -3499,27 +3574,16 @@ public final class HifzPrefs {
                 .putString(earnedEveningKey(family),unitReceiptsJson(receipts))
                 .remove(consolidationStateKey(family)).commit();
         }
+        }
     }
 
     /** Legacy date-only closure: no verified x7/x10 receipt, never re-close on the
      * same calendar date even if new physical units arrived after the old closure.
      * Only the Session-verified overload may record a second same-day set. */
     boolean completeSnowballEvening(ConsolidationCycleEngine.Family family, String date) {
-        if(family==null||date==null)return false;
-        LocalDate day;
-        try {day=LocalDate.parse(date);}catch(RuntimeException badDate){return false;}
-        synchronized(V6_STATE_LOCK) {
-            String marker=family==ConsolidationCycleEngine.Family.LEARNING
-                ?lastLearningSnowballEveningDate():lastStabilizationSnowballEveningDate();
-            if (date.equals(marker))return false; // legacy caller cannot manufacture a new same-day receipt
-            if(!snowballEveningPending(family,day))return false;
-            String key=family==ConsolidationCycleEngine.Family.LEARNING
-                ?"lastLearningSnowballEveningDate":"lastStabilizationSnowballEveningDate";
-            String snapshot=exactSnowballSnapshotToValidate(family,day);
-            return p.edit().putString(key,date)
-                .putString(snowballCompletedSnapshotKey(family),snapshot)
-                .remove(consolidationStateKey(family)).commit();
-        }
+        // Compatibility entry point remains callable, but has no protocol proof.
+        // It must NEVER create a completed marker, delete an OPEN, or earn credit.
+        return false;
     }
 
     public String sabqiTodayReviewDate() { return p.getString("sabqiTodayReviewDate", ""); }

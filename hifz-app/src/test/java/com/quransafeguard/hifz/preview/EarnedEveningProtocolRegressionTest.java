@@ -20,6 +20,7 @@ public final class EarnedEveningProtocolRegressionTest {
  static InMemoryPrefs disk(){
    InMemoryPrefs db=new InMemoryPrefs();
    db.disk.put("schema",6);
+        db.disk.put("sabqiStart","1:1");db.disk.put("sabqiEnd","114:6");
    for(String key:new String[]{"v6LearnedLineIds","v6StabilizedLineIds",
      "v6AcquiredCreditLineIds","v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})
      db.disk.put(key,"[]");
@@ -64,6 +65,11 @@ public final class EarnedEveningProtocolRegressionTest {
        new org.json.JSONArray().put(earned).toString());
    HifzPrefs p=new HifzPrefs(db);
    LocalDate day=LocalDate.of(2026,10,13);
+   List<String> completedMorning=ConsolidationPhysicalUnitPolicy.decodeLineUnit(newB);
+   List<GeometryRepository.LineMeta> morningMeta=geometry.linesForExactIds(completedMorning);
+   com.quransafeguard.hifz.core.VerseRef morningVerse=morningMeta.get(0).verses.get(0);
+   assertTrue(MorningProtocolFixture.completeItqan(p,completedMorning,1,false,morningVerse,morningVerse,morningVerse,
+       day.toString(),"genuine same-day prerequisite",Collections.emptyList()));
    List<ConsolidationCycleEngine.Unit> cycle=p.stabilizedConsolidationUnits(day);
    assertEquals(3,cycle.size());
    assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,cycle.get(2).protocol());
@@ -89,7 +95,7 @@ public final class EarnedEveningProtocolRegressionTest {
    VerseRef first=lines.get(0).verses.get(0);
    List<VerseRef> lastVerses=lines.get(lines.size()-1).verses;
    VerseRef last=lastVerses.get(lastVerses.size()-1);
-   assertTrue(p.completeStabilizationBlockV6(ids,1,true,first,last,last,
+   assertTrue(MorningProtocolFixture.completeItqan(p,ids,1,true,first,last,last,
        tue.toString(),"missed x7",Collections.emptyList()));
    assertTrue(p.stabilizationSnowballFinalUnits(sun).isEmpty());
    String encoded=ConsolidationPhysicalUnitPolicy.encodeLineUnit(ids);
@@ -110,7 +116,7 @@ public final class EarnedEveningProtocolRegressionTest {
    List<String> ids=five();
    List<GeometryRepository.LineMeta> ls=geometry.linesForExactIds(ids);
    VerseRef first=ls.get(0).verses.get(0),last=ls.get(ls.size()-1).verses.get(ls.get(ls.size()-1).verses.size()-1);
-   assertTrue(p.completeStabilizationBlockV6(ids,1,true,first,last,last,tue.toString(),"x7",Collections.emptyList()));
+   assertTrue(MorningProtocolFixture.completeItqan(p,ids,1,true,first,last,last,tue.toString(),"x7",Collections.emptyList()));
    ConsolidationCycleEngine.Session evening=ready(
        ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"+tue,
        p.stabilizedConsolidationUnits(tue));
@@ -130,7 +136,7 @@ public final class EarnedEveningProtocolRegressionTest {
    LocalDate mon=LocalDate.of(2026,1,5),sun=mon.plusDays(6);
    List<String> ids=five();
    int firstIndex=geometry.linesForExactIds(ids).get(0).globalIndex;
-   assertTrue(p.completeSabqiBlockV6(firstIndex,firstIndex+4,firstIndex+5,
+   assertTrue(MorningProtocolFixture.completeSabqi(p,firstIndex,firstIndex+4,firstIndex+5,
         ids,mon.toString(),"missed x10"));
    assertTrue(p.learningSnowballFinalUnits(sun).isEmpty());
    ConsolidationCycleEngine.Session finalSession=ready(

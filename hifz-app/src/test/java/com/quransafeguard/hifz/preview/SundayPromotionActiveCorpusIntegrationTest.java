@@ -40,6 +40,7 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
     private static InMemoryPrefs emptySchema6Disk() {
         InMemoryPrefs disk = new InMemoryPrefs();
         disk.disk.put("schema", 6);
+        disk.disk.put("sabqiStart","1:1");disk.disk.put("sabqiEnd","114:6");
         disk.disk.put("itqanRanges", "[{\"start\":\"1:1\",\"end\":\"1:7\"}]");
         disk.disk.put("legacyMurajaahPromotedRanges", "[]");
         disk.disk.put("promotedRanges", "[]");
@@ -131,7 +132,7 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
         int startLine = geometry.linesForExactIds(ids).get(0).globalIndex;
 
         assertFalse(prefs.activeMurajaahCorpus().contains(target));
-        assertTrue(prefs.completeSabqiBlockV6(startLine, startLine + ids.size() - 1,
+        assertTrue(MorningProtocolFixture.completeSabqi(prefs,startLine, startLine + ids.size() - 1,
             startLine + ids.size(), ids, MONDAY.toString(), "Sabqi CP-02"));
         assertExactState(prefs, ids, HifzPrefs.ProgressState.LEARNED);
         assertTrue("Appris must enter passive immediately", prefs.murajaahCorpus(geometry).contains(target));
@@ -181,7 +182,7 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
         assertFalse("Pending Itqan material must be excluded from active review",
             prefs.activeMurajaahCorpus().contains(target));
 
-        assertTrue(prefs.completeStabilizationBlockV6(ids, 1, true, start, end, end,
+        assertTrue(MorningProtocolFixture.completeItqan(prefs,ids, 1, true, start, end, end,
             TUESDAY.toString(), "Itqan CP-02", Collections.emptyList()));
         assertExactState(prefs, ids, HifzPrefs.ProgressState.STABILIZED);
         assertFalse("Stabilized-but-not-finalized material must remain outside active review",

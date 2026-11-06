@@ -249,7 +249,7 @@ public final class ItqanFourSessionStoreTest {
      assertEquals(ids,new HifzPrefs(db).ordinaryItqanLineIds(GeometryRepository.parseVerse(entry.start),
          GeometryRepository.parseVerse(entry.end),geo));
      assertNull(prefs.frozenItqanSnapshot(geo));
-     assertTrue(prefs.completeStabilizationBlockV6(ids,1,true,
+     assertTrue(MorningProtocolFixture.completeItqan(prefs,ids,1,true,
          GeometryRepository.parseVerse(entry.start),GeometryRepository.parseVerse(entry.end),
          GeometryRepository.parseVerse(entry.end),day.plusDays(1).toString(),"ordinary boundary",Collections.emptyList()));
      LinkedHashSet<String> stable=new LinkedHashSet<>(before.stabilized);stable.addAll(ids);
