@@ -31,5 +31,9 @@ public final class EveningReviewDisplayWiring11711Test {
         assertTrue(main.contains("stabilizationEvening==EveningReviewDisplay.Status.COMPLETED,nextMode"));
         assertFalse(main.contains("today,!prefs.snowballEveningPending("));
         assertTrue(main.contains("session.label.contains(\"en attente\") && !session.done"));
+        String display=source("EveningReviewDisplay.java");
+        assertTrue("A new snapshot outranks an old same-day completion",
+            display.indexOf("if(newUnitsDue)")<display.indexOf("if(datedEveningReceipt)")
+            && display.contains("return lessonCompleted?Status.TO_DO:Status.WAITING_FOR_LESSON;"));
     }
 }

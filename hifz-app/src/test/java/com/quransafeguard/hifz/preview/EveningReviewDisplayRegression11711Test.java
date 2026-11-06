@@ -49,6 +49,21 @@ public final class EveningReviewDisplayRegression11711Test {
             EveningReviewDisplay.forDay(false,true,false));
     }
 
+    @Test public void sameDayNewUnitOverridesAnEarlierCompletedReceipt() {
+        // Example: a review was already performed on the old block, then a
+        // Friday Sabqi or Saturday Itqan added a new physical block.
+        EveningReviewDisplay.Status learning=EveningReviewDisplay.forDay(true,true,true);
+        assertEquals(EveningReviewDisplay.Status.TO_DO,learning);
+        assertEquals("Renforcement · révision cumulative",
+            EveningReviewDisplay.learningLabel(learning));
+        assertFalse(EveningReviewDisplay.resolved(learning));
+        EveningReviewDisplay.Status preLesson=EveningReviewDisplay.forDay(false,true,true);
+        assertEquals(EveningReviewDisplay.Status.WAITING_FOR_LESSON,preLesson);
+        assertFalse(EveningReviewDisplay.resolved(preLesson));
+        assertEquals("Consolidation · révision cumulative",
+            EveningReviewDisplay.stabilizationLabel(learning,false));
+    }
+
     @Test public void itqanUsesSameRealReceiptRuleWithoutChangingPostNasProtocol() {
         EveningReviewDisplay.Status before=EveningReviewDisplay.forDay(false,false,false);
         assertEquals("Consolidation · en attente de l’Itqān",

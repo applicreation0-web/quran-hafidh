@@ -9,9 +9,13 @@ final class EveningReviewDisplay {
     enum Status { WAITING_FOR_LESSON, TO_DO, COMPLETED, NO_NEW_UNITS }
 
     static Status forDay(boolean lessonCompleted,boolean datedEveningReceipt,boolean newUnitsDue) {
+        // A legitimate second physical block learned on the same calendar date
+        // changes the source snapshot. The older dated receipt must NOT close
+        // the newly due repetitions (the engine permits same-day new receipts).
+        if(newUnitsDue)
+            return lessonCompleted?Status.TO_DO:Status.WAITING_FOR_LESSON;
         if(datedEveningReceipt)return Status.COMPLETED;
-        if(!lessonCompleted)return Status.WAITING_FOR_LESSON;
-        return newUnitsDue?Status.TO_DO:Status.NO_NEW_UNITS;
+        return lessonCompleted?Status.NO_NEW_UNITS:Status.WAITING_FOR_LESSON;
     }
 
     static boolean resolved(Status status) {
