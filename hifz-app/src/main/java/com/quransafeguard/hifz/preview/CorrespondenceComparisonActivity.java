@@ -314,12 +314,20 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private void changePartner(int delta){
         int alternatives=relation.partnerCount(origin);
         partnerOffset=Math.floorMod(partnerOffset+delta,alternatives);
+        int previousPage=shownPages[1];
         selectedVerses[1]=relation.partner(origin,partnerOffset);
         navigationSurahs[1]=selectedVerses[1].getSurah();
         ++tafsirTokens[1];
         shownPages[1]=geometry.pageForVerse(selectedVerses[1]);
         updateRelationLabel();
-        showFolio(1);
+        // A different verse on the same authentic QCF folio needs only a
+        // polygon/label update, not another asynchronous WebView reload.
+        // Prevents BOOX ghosting and stale "loading" after fast refrain taps.
+        if(previousPage==shownPages[1]&&authenticQcfRendered[1]){
+            updateSelection(1);
+        }else{
+            showFolio(1);
+        }
         if(tafsirOpen)loadTafsir(1,selectedVerses[1]);
     }
     private java.util.List<VerseRef> navigationVerses(int side){
