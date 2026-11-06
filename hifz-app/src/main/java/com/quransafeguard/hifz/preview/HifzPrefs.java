@@ -1692,13 +1692,18 @@ public final class HifzPrefs {
 
     public boolean setItqanProgress(int rep, int assisted, int finalReveals,
                                      VerseRef unitStart, VerseRef unitEnd) {
-        return p.edit()
-            .putInt("itqanRep", rep)
-            .putInt("itqanAssisted", assisted)
-            .putInt("itqanFinalReveals", Math.max(0, finalReveals))
-            .putString("itqanUnitStart", unitStart == null ? "" : unitStart.toString())
-            .putString("itqanUnitEnd", unitEnd == null ? "" : unitEnd.toString())
-            .commit();
+        synchronized(V6_STATE_LOCK){
+            // Legacy scalar counters cannot authenticate or advance a frozen V7 block.
+            // A deliberate zero restart preserves the old protocol but starts new proof.
+            if(rep!=0 && ItqanPhysicalProof11711.read(p)!=null)return false;
+            SharedPreferences.Editor e=p.edit().putInt("itqanRep",rep)
+                .putInt("itqanAssisted",assisted)
+                .putInt("itqanFinalReveals",Math.max(0,finalReveals))
+                .putString("itqanUnitStart",unitStart==null?"":unitStart.toString())
+                .putString("itqanUnitEnd",unitEnd==null?"":unitEnd.toString());
+            if(rep==0)e.remove(ItqanPhysicalProof11711.KEY);
+            return e.commit();
+        }
     }
 
     /** Frozen Itqan is opt-in only at a clean pre-An-Nas boundary.
@@ -1872,6 +1877,21 @@ public final class HifzPrefs {
         }
     }
 
+    boolean ensureItqanBlockProofV7(GeometryRepository geometry,List<String> lines,
+            VerseRef start,VerseRef end,ItqanRegimeStore.UnitPlan plan,String date){
+        synchronized(V6_STATE_LOCK){
+            return ItqanPhysicalProof11711.begin(this,p,geometry,lines,start,end,plan,date);
+        }
+    }
+    String itqanBlockProofTokenV7(){return ItqanPhysicalProof11711.token(p);}
+    String itqanBlockProofDateV7(){return ItqanPhysicalProof11711.date(p);}
+    boolean recordItqanRepV7(String token,int expectedRep,boolean revealed,
+                             ItqanRegimeStore.UnitPlan plan){
+        synchronized(V6_STATE_LOCK){
+            return ItqanPhysicalProof11711.record(p,token,expectedRep,revealed,plan);
+        }
+    }
+
     private boolean legacyItqanRepetitionProof(VerseRef start,VerseRef end) {
         if(!start.equals(itqanUnitStart()) || !end.equals(itqanUnitEnd()))return false;
         AnchoringQueue.Entry entry=new AnchoringQueue.Entry(start.toString(),end.toString(),
@@ -1898,8 +1918,9 @@ public final class HifzPrefs {
             throw new IllegalArgumentException("Stabilisation unit required");
         List<String> bonus = bonusLineIds == null ? Collections.emptyList() : bonusLineIds;
         synchronized (V6_STATE_LOCK) {
-            if(!legacyItqanRepetitionProof(unitStart,unitEnd)
-                    || nextBlockIndex!=itqanBlockIndex()+1 || safeDate(date,null)==null)return false;
+            if(!ItqanPhysicalProof11711.complete(p,lineIds,bonus,nextBlockIndex,
+                    finalBlock,unitStart,unitEnd,nextCursor,date)
+                    ||!legacyItqanRepetitionProof(unitStart,unitEnd))return false;
             if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
@@ -1941,6 +1962,7 @@ public final class HifzPrefs {
                     finalBlock ? "[]" : lineIdsJson(consumedBonus))
                 .putString("itqanTinyBlockDecisionValue", "")
                 .putString("itqanBonusSnapshotV1", "")
+                 .remove(ItqanPhysicalProof11711.KEY)
                 .putString(DAILY_LESSON_RECEIPTS,appendDailyLessonReceipt(
                     ConsolidationCycleEngine.Family.STABILIZATION,date,lineIds));
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
@@ -1963,10 +1985,9 @@ public final class HifzPrefs {
         if (lineIds.size() > ItqanMaintenancePolicy.MAX_UNIT_LINES)
             throw new IllegalStateException("Post-An-Nās Itqān unit exceeds one hizb");
         synchronized (V6_STATE_LOCK) {
-            // An identical completed maintenance tap is a successful no-op:
-            // never advance the perpetual cursor a second time.
-            if(alreadyCompletedItqanUnit(unitStart,unitEnd)
-                && date.equals(p.getString("lastItqanDate","")))return true;
+            if(!ItqanPhysicalProof11711.complete(p,lineIds,Collections.emptyList(),
+                    1,true,unitStart,unitEnd,nextCursor,date)
+                    ||!legacyItqanRepetitionProof(unitStart,unitEnd))return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -1988,7 +2009,8 @@ public final class HifzPrefs {
                 .putString("lastItqanCreditEnd", unitEnd.toString())
                 .putString("itqanConsumedBonusLineIds", "[]")
                 .putString("itqanTinyBlockDecisionValue", "")
-                .putString("itqanBonusSnapshotV1", "");
+                .putString("itqanBonusSnapshotV1", "")
+                 .remove(ItqanPhysicalProof11711.KEY);
             if (!fresh.isEmpty()) {
                 stabilized.addAll(fresh);
                 List<List<String>> enrolled = ItqanMaintenancePolicy.consolidationEnrollment(
@@ -2539,9 +2561,12 @@ public final class HifzPrefs {
                                                     String date, String label) {
         if (unitStart == null || unitEnd == null) throw new IllegalArgumentException("Stabilisation unit required");
         synchronized(V6_STATE_LOCK) {
-            // A duplicate last-tap acknowledgement must not perform another write.
-            if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd)
-                && date.equals(p.getString("lastItqanDate","")))return true;
+            JSONObject proof=ItqanPhysicalProof11711.read(p);
+            if(proof==null||!ItqanPhysicalProof11711.complete(p,null,null,
+                    nextBlockIndex,finalBlock,unitStart,unitEnd,
+                    proof.optString("cursor","").isEmpty()?null:
+                        GeometryRepository.parseVerse(proof.optString("cursor")),date)
+                    ||!legacyItqanRepetitionProof(unitStart,unitEnd))return false;
             SharedPreferences.Editor editor=p.edit()
             .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
             .putInt("itqanBlockIndex", finalBlock ? 0 : Math.max(0, nextBlockIndex))
@@ -2552,6 +2577,7 @@ public final class HifzPrefs {
             .putString("lastItqanCreditStart", unitStart.toString())
             .putString("lastItqanCreditEnd", unitEnd.toString())
             .putString("itqanBonusSnapshotV1", "")
+             .remove(ItqanPhysicalProof11711.KEY)
             .putString("itqanTinyBlockDecisionValue", "")
             ;
             return appendFinalItqanRotation(editor,finalBlock,unitEnd).commit();

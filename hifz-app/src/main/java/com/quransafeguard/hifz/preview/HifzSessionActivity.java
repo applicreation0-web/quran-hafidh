@@ -71,6 +71,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private int itqanTargetReps = PreviewConfig.ITQAN_TOTAL_REPS;
     private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;
     private ItqanRegimeStore.UnitPlan itqanUnitPlan;
+    private String itqanProofToken="";
     private SemanticPassageRepository semanticPassages;
     private AyahThemesCueIndex ayahThemesTitles;
     private android.app.Dialog semanticTitleDialog;
@@ -1367,6 +1368,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             currentSelection = geometry.versesOnLines(currentLineIds, itqanUnit.verses);
         }
 
+        if(!prefs.ensureItqanBlockProofV7(geometry,currentLineIds,
+                itqanUnit.start,itqanUnit.end,itqanUnitPlan,sessionDate.toString())){
+            // No authenticated physical witness for a scalar-only historical OPEN.
+            // Do not erase its progress automatically or silently date it today.
+            sessionCompleted=true;clock.pause();
+            program.setText("Stabilisation · reprise nécessaire");
+            progress.setText("Anciennes répétitions conservées, mais lot physique non authentifiable. Reprendre explicitement le bloc.");
+            addRoundAction("↻","Reprendre le bloc",v->restartItqanAfterAssistance());
+            return;
+        }
+        itqanProofToken=prefs.itqanBlockProofTokenV7();
         if(rep>=itqanTargetReps){
             // Post-An-Nās maintenance: reveals are recorded, never a reason to restart the hizb.
             boolean assistancePassed = ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted());
@@ -1582,7 +1594,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
         int finalReveals = prefs.itqanFinalReveals()
             + (revealed && ItqanMaintenancePolicy.isValidationRep(itqanUnitPlan, rep - 1) ? 1 : 0);
-        if(!prefs.setItqanProgress(rep,reveals,finalReveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition de la Stabilisation.");return;}
+        if(!prefs.recordItqanRepV7(itqanProofToken,rep-1,revealed,itqanUnitPlan)){
+            onError("Séance modifiée ou périmée : aucune répétition créditée.");return;
+        }
         if(rep>=itqanTargetReps){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
@@ -1616,6 +1630,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean finalBlock = nextBlock >= itqanBlockCount;
         EligibleCorpus corpus = prefs.itqanWorkCorpus();
         VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.repairedItqanRotationStart());
+        String proofDate=prefs.itqanBlockProofDateV7();
+        if(proofDate.isEmpty()){onError("Séance sans preuve physique datée.");return;}
         String label="Stabilisation · bloc "+(itqanBlockIndex+1)+"/"+itqanBlockCount
             +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
         metricsStore.recordAnchoring("Stabilisation réussie · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)
@@ -1629,13 +1645,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean reinforcementLap = prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);
         boolean ok = itqanRegime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
             ? prefs.completeItqanMaintenanceUnitV6(currentLineIds, itqanUnit.start, itqanUnit.end, next,
-                sessionDate.toString(), label, geometry)
+                proofDate, label, geometry)
             : reinforcementLap
             ? prefs.completeItqanReinforcementBlock(
-                nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, sessionDate.toString(), label)
+                nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, proofDate, label)
             : prefs.completeStabilizationBlockV6(
                 currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next,
-                sessionDate.toString(), label, bonusLineIds);
+                proofDate, label, bonusLineIds);
         if(!ok){onError("Impossible d’enregistrer la validation de la Stabilisation.");return;}
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
     }
