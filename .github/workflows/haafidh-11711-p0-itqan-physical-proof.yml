@@ -1,0 +1,55 @@
+name: Haafidh 1.17.11 P0 Itqan physical-proof candidate (no APK)
+on:
+  push:
+    branches:
+      - fix/haafidh-11711-itqan-physical-proof-p0-20261106
+      - audit/haafidh-11711-phantom-validations-20261106
+    paths:
+      - 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/**'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/**'
+      - '.github/workflows/haafidh-11711-p0-itqan-physical-proof.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-jvm-and-android-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install public QCF and pinned Android SDK
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Real source compile and focused RED/GREEN regression
+        run: |
+          gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileDebugJavaWithJavac
+          gradle --no-daemon --continue :hifz-app:testDebugUnitTest --tests '*AuditLegacyItqanPayload11711Test' --tests '*ItqanPhysicalProof11711Test'
+      - name: Entire JVM/Core and source-contract regression
+        run: |
+          gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Assert no private APK assembled or signed
+        if: always()
+        run: |
+          if find hifz-app/build -name '*.apk' -type f -print -quit | grep -q .; then
+            echo "No APK allowed in public P0 audit"; exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11711-p0-source-junit-no-apk
+          path: |
+            hifz-core/build/test-results/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+          retention-days: 14
