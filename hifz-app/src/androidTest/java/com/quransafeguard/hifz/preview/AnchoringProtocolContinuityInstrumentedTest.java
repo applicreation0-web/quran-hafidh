@@ -175,24 +175,30 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
 
     private HifzPrefs fractionatedFixture(AnchoringQueue.ItqanProtocol protocol) {
         HifzPrefs initialized = new HifzPrefs(context);
+        // The P4 perpetual rotation, not the retired promotion queue, now owns
+        // the current physical Itqan unit. Seed the real TAIL leg, and include
+        // that unit in the work corpus before attempting authenticated proof.
         assertTrue(initialized.setV6StabilizationRanges(Collections.singletonList(
-            new VerseRange(new VerseRef(53, 1), new VerseRef(53, 26))), geometry));
-        String range = "[{\"start\":\"53:1\",\"end\":\"53:26\"}]";
-        String queue = "[{\"start\":\"53:1\",\"end\":\"53:26\","
-            + "\"origin\":\"RECONSTRUCTION\",\"protocol\":\"" + protocol.name()
-            + "\",\"failures\":0}]";
-        raw.edit()
-            .putString("promotedRanges", range)
-            .putString("unconsolidatedPromotedRanges", range)
-            .putString("anchoringQueue", queue)
+            new VerseRange(new VerseRef(2, 1), new VerseRef(2, 74))), geometry));
+        String promoted = "[{\\"start\\":\\"49:1\\",\\"end\\":\\"114:6\\"}]";
+        assertTrue(raw.edit()
+            .putString("promotedRanges", promoted)
+            .putString("unconsolidatedPromotedRanges", promoted)
+            .putString("p4ItqanRotationLeg", "TAIL_HUJURAT_NAS")
+            .putString("p4ItqanRotationCursor", "49:1")
             .putBoolean("anchoringQueueInitialized", true)
             .putInt("anchoringQueueIndex", 0)
-            .putString("hardAnchoringSurahs", "[53]")
             .putString("lastItqanDate", "")
-            .commit();
+            .commit());
+        AnchoringQueue.Entry canonical = new HifzPrefs(context).currentAnchoringEntry(geometry);
+        assertNotNull("The real perpetual rotation must provide an Itqan physical unit", canonical);
+        String queue = "[{\\"start\\":\\"" + canonical.start + "\\","
+            + "\\"end\\":\\"" + canonical.end + "\\","
+            + "\\"origin\\":\\"RECONSTRUCTION\\",\\"protocol\\":\\"" + protocol.name()
+            + "\\",\\"failures\\":0}]";
+        assertTrue(raw.edit().putString("anchoringQueue",queue).commit());
         return new HifzPrefs(context);
     }
-
 
     private HifzPrefs crossSurahFractionatedFixture(AnchoringQueue.ItqanProtocol protocol) {
         HifzPrefs initialized = new HifzPrefs(context);
