@@ -65,7 +65,7 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
         return new HifzPrefs(context);
     }
 
-    @Test public void page526UsesThreeBalancedBlocksAndEachIntermediateAdvanceIsAtomic() {
+    @Test public void page526UsesTwoCanonicalHalfPageBlocksAndEachIntermediateAdvanceIsAtomic() {
         HifzPrefs prefs=seededPage526();
         GeometryRepository geometry=GeometryRepository.get(context);
         VerseRef start=new VerseRef(53,1),end=new VerseRef(53,26);
@@ -74,7 +74,10 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
         GeometryRepository.VerseUnit unit=geometry.eligiblePageUnit(start,corpus);
         assertEquals(526,unit.page);
         assertEquals(13,unit.lineIds.size());
-        assertArrayEquals(new int[]{5,4,4},PreviewConfig.fractionatedBlockSizes(13));
+        java.util.List<StabilizationHalfPagePolicy.Unit> canonicalBlocks =
+            StabilizationHalfPagePolicy.planPage(geometry.linesForExactIds(unit.lineIds));
+        assertEquals("13 QCF physical lines form two canonical half-page blocks", 2, canonicalBlocks.size());
+        assertEquals(13, canonicalBlocks.get(0).lineIds.size() + canonicalBlocks.get(1).lineIds.size());
         assertTrue(prefs.setHardAnchoringSurahs(Collections.singletonList(53)));
         assertFalse("Retired date-only advancement must not grant a block",
             prefs.advanceItqanBlock(1,"2026-09-13","forged"));
@@ -88,7 +91,7 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
         assertEquals("2026-09-13",prefs.lastItqanDate());
         assertTrue(AndroidItqanProofFixture11712.completeOneBlock(
             prefs,geometry,start,end,"2026-09-14","bloc 2/3"));
-        assertEquals(2,prefs.itqanBlockIndex());
+        assertEquals("Second of two physical blocks closes the unit atomically",0,prefs.itqanBlockIndex());
         assertEquals("2026-09-14",prefs.lastItqanDate());
         assertEquals(0,prefs.itqanRep());
     }
@@ -99,8 +102,8 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
         VerseRef start=new VerseRef(53,1),end=new VerseRef(53,26);
         VerseRef maintenanceBefore=prefs.murajaahCursor();
         assertTrue(prefs.isUnconsolidatedPromoted(start));
-        for(int i=0;i<3;i++)
-            assertTrue("All three physical blocks must earn repetitions",
+        for(int i=0;i<2;i++)
+            assertTrue("Every canonical physical block must earn repetitions",
                 AndroidItqanProofFixture11712.completeOneBlock(prefs,geometry,start,end,
                     "2026-09-"+(13+i),"block "+(i+1)));
         assertEquals(0,prefs.itqanBlockIndex());
@@ -110,19 +113,19 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
             prefs.isUnconsolidatedPromoted(start));
     }
 
-    @Test public void threeBlockFractionatedProgressionRequiresEachEarnedProofAndLeavesNoPhantom() {
+    @Test public void canonicalHalfPageProgressionRequiresEachEarnedProofAndLeavesNoPhantom() {
         HifzPrefs prefs=seededPage526();
         GeometryRepository geometry=GeometryRepository.get(context);
         VerseRef start=new VerseRef(53,1),end=new VerseRef(53,26);
-        for(int i=0;i<3;i++) {
+        for(int i=0;i<2;i++) {
             assertFalse("Scalar close without proof must be rejected",
                 prefs.advanceItqanBlock(i+1,"2026-09-"+(13+i),"forged"));
             assertTrue(AndroidItqanProofFixture11712.completeOneBlock(
                 prefs,geometry,start,end,"2026-09-"+(13+i),"earned "+(i+1)));
-            assertEquals(i==2?0:i+1,prefs.itqanBlockIndex());
+            assertEquals(i==1?0:i+1,prefs.itqanBlockIndex());
             assertEquals(0,prefs.itqanRep());
         }
-        assertEquals("2026-09-15",prefs.lastItqanDate());
+        assertEquals("2026-09-14",prefs.lastItqanDate());
         assertTrue(prefs.murajaahCorpus().contains(start));
     }
 }
