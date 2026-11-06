@@ -236,6 +236,7 @@ public final class CorrespondenceNavigationInstrumentedTest {
             try(ActivityScenario<CorrespondenceComparisonActivity> scenario=
                     launch(Integer.parseInt(ref[0]),Integer.parseInt(ref[1]),id)){
                 ready(scenario);
+                screenshot("frise-"+id);
                 // A compact rail, not a Sources-dialog accordion. Every actual QCF anchor is present.
                 scenario.onActivity(a->{
                     View root=a.getWindow().getDecorView();
