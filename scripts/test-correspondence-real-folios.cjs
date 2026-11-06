@@ -7,6 +7,12 @@ const geometry=JSON.parse(fs.readFileSync('app/src/main/assets/reader109/geometr
 const corr=new Map(),sim=new Map();
 function add(map,page,ref){if(!map.has(page))map.set(page,new Set());map.get(page).add(ref);}
 for(const d of data.dossiers.filter(d=>d.statut==='ADMIS'))for(const a of d.ancresQcf)add(corr,a.folio,a.verset);
+const additions=JSON.parse(fs.readFileSync('docs/correspondances/additions-11712.json'));
+for(const d of additions.dossiers.filter(d=>d.statut==='ADMIS'))for(const ref of d.reperes){
+  const folios=geometry.verses[ref]||[];
+  assert.ok(folios.includes(d.folioQcfAttendu),'Unverified real QCF folio for '+d.id+' '+ref);
+  for(const page of folios)add(corr,page,ref);
+}
 for(const match of fs.readFileSync(base+'AtlasDiscriminantCases.java','utf8').matchAll(/new Entry\((\d+),(\d+),(\d+),(\d+),/g)){
   for(const ref of [match[1]+':'+match[2],match[3]+':'+match[4]])
     for(const p of geometry.verses[ref])add(sim,p,ref);
