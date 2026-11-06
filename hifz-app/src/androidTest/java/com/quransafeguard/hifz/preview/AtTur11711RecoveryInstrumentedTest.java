@@ -73,8 +73,8 @@ public final class AtTur11711RecoveryInstrumentedTest {
         assertTrue(disk.edit().clear().commit());
         try {
             assertTrue("Android debug flavors retain their historical -IbnKathir-DEBUG suffix",
-                BuildConfig.VERSION_NAME.startsWith("1.17.11"));
-            assertEquals(49,BuildConfig.VERSION_CODE);
+                BuildConfig.VERSION_NAME.startsWith("1.17.12"));
+            assertEquals(50,BuildConfig.VERSION_CODE);
             GeometryRepository geometry=GeometryRepository.get(c);
             assertEquals(7,geometry.linesForExactIds(MISSING).size());
             assertEquals(8,geometry.linesForExactIds(ALREADY_ACQUIRED).size());
