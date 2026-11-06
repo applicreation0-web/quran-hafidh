@@ -40,8 +40,8 @@ public final class ConsolidationPersistenceInstrumentedTest {
 
     @Test public void openMixedSessionSurvivesPrefsRecreationExactly() {
         HifzPrefs prefs = new HifzPrefs(context);
-        assertTrue(prefs.setSabqiProgress(11, 3));
-        assertTrue(prefs.setItqanProgress(17, 2, 4, new VerseRef(49, 1), new VerseRef(49, 5)));
+        assertFalse("Counter-only Sabqi proof must fail",prefs.setSabqiProgress(11, 3));
+        assertTrue(prefs.setItqanProgress(0, 0, 0, new VerseRef(49, 1), new VerseRef(49, 5)));
         int[] individualBefore = individualCounters(prefs);
 
         ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
@@ -149,8 +149,8 @@ public final class ConsolidationPersistenceInstrumentedTest {
 
     @Test public void persistingEveryGroupedRepetitionNeverMutatesIndividualCounters() {
         HifzPrefs prefs = new HifzPrefs(context);
-        assertTrue(prefs.setSabqiProgress(29, 6));
-        assertTrue(prefs.setItqanProgress(31, 7, 5, new VerseRef(49, 1), new VerseRef(49, 5)));
+        assertFalse("Counter-only Sabqi proof must fail",prefs.setSabqiProgress(29, 6));
+        assertTrue(prefs.setItqanProgress(0, 0, 0, new VerseRef(49, 1), new VerseRef(49, 5)));
         int[] individualBefore = individualCounters(prefs);
 
         ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
