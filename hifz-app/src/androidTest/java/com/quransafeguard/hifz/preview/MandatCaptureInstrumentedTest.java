@@ -21,7 +21,7 @@ public final class MandatCaptureInstrumentedTest {
         // reached the BOOX-emulated display surface. Capture actual SCREEN
         // frames until ink is rendered; a persistent white page MUST still fail.
         long deadline=android.os.SystemClock.uptimeMillis()+25000;
-        long light=0,ink=0,total=0;
+        long light=0,ink=0,total=0,folioInk=0,folioSamples=0;
         int frames=0;
         do{
             ins.waitForIdleSync();
@@ -34,26 +34,45 @@ public final class MandatCaptureInstrumentedTest {
                 android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeStream(in);
                 assertNotNull("Actual emulator screenshot missing: "+name,bitmap);
                 try{
-                    light=0;ink=0;total=0;
+                    light=0;ink=0;total=0;folioInk=0;folioSamples=0;
+                    // Sample the central folio/content region separately from
+                    // navigation, status bars and English Tafsir in the footer.
+                    // A "Chargement du Mushaf QCF..." placeholder must NEVER
+                    // count as proof that an authentic QCF page is painted.
+                    final int top=bitmap.getHeight()*16/100;
+                    final int bottom=bitmap.getHeight()*68/100;
+                    final int left=bitmap.getWidth()*8/100;
+                    final int right=bitmap.getWidth()*92/100;
                     for(int y=bitmap.getHeight()/10;y<bitmap.getHeight()*9/10;y+=4)
                         for(int x=4;x<bitmap.getWidth()-4;x+=4){
                             int c=bitmap.getPixel(x,y);
                             int gray=(android.graphics.Color.red(c)+android.graphics.Color.green(c)
                                 +android.graphics.Color.blue(c))/3;
                             total++;if(gray>210)light++;if(gray<100)ink++;
+                            if(y>=top&&y<bottom&&x>=left&&x<right){
+                                folioSamples++;if(gray<100)folioInk++;
+                            }
                         }
                 }finally{bitmap.recycle();}
             }
             frames++;
-            if(total>0&&light>total/4&&ink>total/500)return;
+            // For the Mushaf and comparison screenshots, require real ink
+            // in the folio viewport, not only in static headers or Tafsir.
+            boolean qcfScreenshot=name.contains("lecture-p")
+                ||name.contains("comparaison-p")||name.contains("navigation-p");
+            boolean actualFolio=!qcfScreenshot
+                ||(folioSamples>0&&folioInk>folioSamples/50);
+            if(total>0&&light>total/4&&ink>total/500&&actualFolio)return;
             if(android.os.SystemClock.uptimeMillis()>=deadline)break;
             Thread.sleep(350);
         }while(true);
         // Never manufacture image content or accept a blank capture.
         assertTrue("Capture lacks real light paper after "+frames+" frames: "+name
             +" light="+light+"/"+total,total>0&&light>total/4);
-        fail("Capture remains blank or lacks actual dark Quran text after "+frames
-            +" frames: "+name+" ink="+ink+"/"+total);
+        fail("Capture has no painted QCF folio (or is blank) after "+frames
+            +" frames: "+name+" allInk="+ink+"/"+total
+            +" folioInk="+folioInk+"/"+folioSamples
+            +" (required >2% central folio pixels)");
     }
     @Test public void beforeAfterOriginalReaderFoliosAndSources()throws Exception{
         Context c=ApplicationProvider.getApplicationContext();
