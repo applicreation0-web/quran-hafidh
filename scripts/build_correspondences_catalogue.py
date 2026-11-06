@@ -124,7 +124,27 @@ def build():
         refs=','.join('new VerseRef('+ref.replace(':',',')+')' for ref in d['reperes'])
         matrix='new int[][]{'+','.join('{'+','.join(str(d['reperes'].index(r)) for r in d['comparaisons'][ref])+'}' for ref in d['reperes'])+'}'
         entries.append('        new CorrespondenceCases.Entry('+','.join(map(quote,args))+','+matrix+','+refs+')')
+    # Explicitly reviewed 1.17.12 addenda are isolated from the frozen 110 registry.
+    addendum=json.loads((BASE/'additions-11712.json').read_text())
+    existing_ids={d['id'] for d in old['dossiers']}
+    for extra in addendum['dossiers']:
+        id=extra['id']
+        assert id not in existing_ids and id not in {x['id'] for x in dossiers},id
+        assert extra['statut']=='ADMIS',id
+        refs=extra['reperes']
+        assert len(refs)>=2 and len(refs)==len(set(refs)),id
+        for ref in refs:
+            assert ref in polygons and extra['folioQcfAttendu'] in geometry['verses'][ref],(id,ref)
+            assert extra['folioQcfAttendu'] in {p['folio'] for p in polygons[ref]},(id,ref)
+            assert extra['comparaisons'][ref] and all(x in refs and ref in extra['comparaisons'][x] for x in extra['comparaisons'][ref])
+        assert all(source['url'].startswith('https://') for source in extra['sources'])
+        source='\\n\\n'.join(src['titre']+'\\n'+src['url']+'\\n'+src['portee'] for src in extra['sources'])
+        mechanism='Passages : '+extra['passages']+'\\n\\n'+extra['explication']+'\\n\\nLimites : '+extra['limites']+'\\n\\nLes repères QCF désignent les versets cités, sans surlignage des seuls mots du motif.'
+        args=[id,extra['categorie'],extra['titre'],mechanism,source,extra['enBref']]
+        partners='new int[][]{'+','.join('{'+','.join(str(refs.index(x)) for x in extra['comparaisons'][ref])+'}' for ref in refs)+'}'
+        refs_code=','.join('new VerseRef('+ref.replace(':',',')+')' for ref in refs)
+        entries.append('        new CorrespondenceCases.Entry('+','.join(map(quote,args))+','+partners+','+refs_code+')')
     lines+= [',\n'.join(entries),'    ));','}','']
     JAVA.write_text('\n'.join(lines))
-    print('62 fiches, 60 admissions, 2 conditions, 48 exclusions préservées ;',sum(len(d['ancresQcf']) for d in dossiers),'polygones QCF')
+    print('62 historical fiches, 60 historical admissions, 2 conditions, 48 historical exclusions; '+str(len(addendum['dossiers']))+' independently sourced additions')
 if __name__=='__main__':build()
