@@ -36,6 +36,7 @@ final class MapQcfThumbnails extends WebView {
  private boolean markOnlyBoundaries;
  private boolean mosaicMode;
  private boolean atlasSinglePageCompact;
+ private boolean dynamicVerseSelection;
  private com.quransafeguard.hifz.core.VerseRef atlasDifferenceVerse;
  private int[] atlasDifferenceWords=new int[0];
  void setAtlasWordDifferences(com.quransafeguard.hifz.core.VerseRef verse,int[] words){
@@ -46,6 +47,14 @@ final class MapQcfThumbnails extends WebView {
  void cancelPendingAtlasRender(){
   if(!atlasSinglePageCompact||disposed)return;
   ++fullGeneration;pendingCompactSvg=null;renderKey="";stopLoading();
+ }
+ /** Change only the exact verse-polygon style; never reload the SVG or WebView. */
+ void setSelectedVerse(int surah,int ayah){
+  if(disposed||!atlasSinglePageCompact)return;
+  if(surah<1||surah>114||ayah<1)throw new IllegalArgumentException("QCF selection");
+  dynamicVerseSelection=true;
+  markSurah=surah;markFirst=ayah;markLast=ayah;markOnlyBoundaries=false;
+  evaluateJavascript("if(window.selectQcfVerse)selectQcfVerse("+surah+","+ayah+");",null);
  }
  private String highlightAtlasWords(String svg,int page)throws Exception{
   if(!atlasSinglePageCompact||atlasDifferenceVerse==null)return svg;
@@ -147,7 +156,7 @@ final class MapQcfThumbnails extends WebView {
   * line-based boxes that also cover neighboring verses. */
  private String highlightExactVersePolygons(String svg,int surah,int firstAyah,int lastAyah,boolean boundariesOnly){
   if(surah==0||firstAyah==0)return svg;
-  StringBuilder css=new StringBuilder("<style>");
+  StringBuilder css=new StringBuilder("<style id='haafidh-active-verse'>");
   if(boundariesOnly){
    appendSelector(css,surah,firstAyah);
    if(lastAyah!=firstAyah){css.append(',');appendSelector(css,surah,lastAyah);}
@@ -234,7 +243,12 @@ final class MapQcfThumbnails extends WebView {
    .append("button{flex:none;width:44px;height:44px;min-width:44px;min-height:44px;border:1px solid #b7b6b0;border-radius:50%;background:transparent;color:#121211;font:14px sans-serif;padding:0}")
    .append("button.passage{border-width:2px;font-weight:bold}button.even{background:#121211;color:#faf8f0;border-color:#121211}button.odd{background:#faf8f0;color:#121211;border-color:#98978f}button[aria-current=page]{width:50px;height:50px;border:2px solid #121211;font-weight:bold;outline:2px solid #121211;outline-offset:2px}")
    .append("button[hidden]{display:none}</style><script>")
-   .append("function fit(){var img=document.querySelector('.paper img'),box=document.querySelector('.paper');if(!img||!img.naturalWidth||!box||box.clientWidth<48||box.clientHeight<72)return;var ratio=img.naturalWidth/img.naturalHeight;var w=Math.max(1,Math.min(box.clientWidth-4,(box.clientHeight-4)*ratio));img.style.width=w+'px';img.style.height=(w/ratio)+'px';}")
+   .append("function fit(){var box=document.querySelector('.paper');if(!box||box.clientWidth<48||box.clientHeight<72)return;")
+    .append("var svg=box.querySelector('svg');if(svg){var sw=Math.max(1,Math.min(box.clientWidth-4,(box.clientHeight-4)*345/550));")
+    .append("svg.style.width=sw+'px';svg.style.height=(sw*550/345)+'px';return;}")
+    .append("var img=box.querySelector('img');if(!img||!img.naturalWidth)return;")
+    .append("var ratio=img.naturalWidth/img.naturalHeight,w=Math.max(1,Math.min(box.clientWidth-4,(box.clientHeight-4)*ratio));")
+    .append("img.style.width=w+'px';img.style.height=(w/ratio)+'px';}")
    .append("function pills(){var nav=document.querySelector('nav');if(!nav)return;var count=Math.max(1,Math.min(7,Math.floor((nav.clientWidth-12)/50)));if(count>1&&count%2===0)count--;var first=Math.max(")
    .append(start).append(",Math.min(").append(end).append("-count+1,").append(selected).append("-Math.floor(count/2)));nav.querySelectorAll('button').forEach(b=>b.hidden=Number(b.textContent)<first||Number(b.textContent)>=first+count);}")
    .append("var touch=null,ignoreClick=0;document.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});")
@@ -273,6 +287,12 @@ final class MapQcfThumbnails extends WebView {
   }
   html.append("<script>var fullGeneration=").append(generation).append(";var currentSvgPage=").append(selected)
       .append(";var inlineQcf=").append(atlasSinglePageCompact?"true":"false").append(";")
+      .append("var selectionSurah=").append(markSurah).append(";var selectionAyah=").append(markFirst).append(";")
+      .append("function selectQcfVerse(s,a){dynamicVerseSelection=true;selectionSurah=s;selectionAyah=a;applyVerseSelection();}")
+      .append("var dynamicVerseSelection=").append(dynamicVerseSelection?"true":"false").append(";")
+      .append("function applyVerseSelection(){if(!inlineQcf||!dynamicVerseSelection)return;var svg=document.querySelector('.paper svg');if(!svg)return;")
+      .append("var style=svg.querySelector('#haafidh-active-verse');if(!style){style=document.createElementNS('http://www.w3.org/2000/svg','style');style.id='haafidh-active-verse';svg.appendChild(style);}")
+      .append("style.textContent=\"path.ayahPolygon[surah='\"+selectionSurah+\"'][ayah='\"+selectionAyah+\"']{fill:#999!important;fill-opacity:0.23!important;stroke:#333!important;stroke-width:0.25!important;}\";}")
       .append("var fullParts=[],fullExpected=0;")
       .append("function qcfError(reason,gen){MapPages.describe(gen,String(reason).slice(0,220));MapPages.fullStatus(currentSvgPage,gen,false);}")
       .append("function receiveFullChunk(i,total,part,gen){if(gen!==fullGeneration)return;")
@@ -287,8 +307,11 @@ final class MapQcfThumbnails extends WebView {
       .append("var parsed=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'image/svg+xml');")
       .append("var svg=parsed.documentElement;if(!svg||svg.localName!=='svg'||parsed.getElementsByTagName('parsererror').length)throw Error('SVG XML invalid');")
       .append("if(!svg.querySelector('path.ayahPolygon'))throw Error('Missing original QCF ayah polygon');")
-      .append("var imported=document.importNode(svg,true);box.textContent='';box.appendChild(imported);")
-      .append("requestAnimationFrame(function(){requestAnimationFrame(function(){var rect=imported.getBoundingClientRect();if(rect.width<=40||rect.height<=60){qcfError('inline SVG viewport '+rect.width+'x'+rect.height,gen);}else MapPages.fullStatus(currentSvgPage,gen,true);});});")
+      .append("var imported=document.importNode(svg,true);box.textContent='';box.appendChild(imported);applyVerseSelection();fit();")
+      .append("requestAnimationFrame(function(){requestAnimationFrame(function(){fit();var rect=imported.getBoundingClientRect();")
+      .append("if(rect.width<=40||rect.height<=60||Math.abs(rect.width/rect.height-345/550)>0.015){")
+      .append("qcfError('inline SVG fitted viewport '+rect.width+'x'+rect.height,gen);")
+      .append("}else MapPages.fullStatus(currentSvgPage,gen,true);});});")
       .append("}catch(err){box.textContent='Page QCF indisponible';qcfError('SVG parse/import '+String(err),gen);}return;}")
       .append("var img=document.querySelector('.paper img');if(!img){MapPages.fullStatus(currentSvgPage,gen,false);return;}")
       .append("img.onload=function(){fit();requestAnimationFrame(function(){fit();requestAnimationFrame(function(){MapPages.fullStatus(currentSvgPage,gen,true);});});};")

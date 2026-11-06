@@ -9,8 +9,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Read-only, receipt-backed chronological backlog. No change to acquired lines,
- * per-mode cursors, calendar policy or repetition counters.
+ * Read-only ledger of calendar slots that were not attended. These historical
+ * absences are NOT a queue of mandatory make-up sessions: the next real Sabqi
+ * or Itqan lesson uses the next unconsumed physical cursor on the next eligible
+ * day of ITS OWN family. The actual attendance receipt belongs to that day.
+ * No synthetic lines, credits, date changes or repeated work are created.
  */
 final class HifzBacklog {
     interface ActionForDate { CadenceAction at(LocalDate day); }
@@ -68,5 +71,17 @@ final class HifzBacklog {
 
     static Due first(List<Due> pending) {
         return pending.isEmpty()?null:pending.get(0);
+    }
+
+    /**
+     * The only lesson permitted to open now. A missed Tuesday Itqan remains
+     * historically absent, but Thursday opens today's Itqan with the same next
+     * physical lines; it does NOT replay Tuesday's date or block Wednesday Sabqi.
+     * Identical symmetric rule for missed Monday/Wednesday/Friday Sabqi.
+     */
+    static Due onDate(List<Due> pending, LocalDate date) {
+        if(pending==null || date==null)return null;
+        for(Due entry:pending)if(date.equals(entry.date))return entry;
+        return null;
     }
 }

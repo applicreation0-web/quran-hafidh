@@ -43,15 +43,18 @@ public final class RoadmapCadenceWiringSourceContractTest {
             prefs.contains("return decision.phase == RoadmapPolicy.Phase.CURRENT ? decision : null;"));
     }
 
-    @Test public void mainActivityAllThreeCadenceReadersUseTheSharedEffectiveHelper() throws Exception {
+    @Test public void mainActivityCadenceReadersUseTheSharedEffectiveHelper() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue(main.contains("private int effectiveLearningDaysPerWeek() {"));
-        assertTrue("refreshQuickAccessCadenceGating must use the shared helper",
-            main.contains("WeeklyProgramPolicy.actionFor(HifzClock.today().getDayOfWeek(),prefs.weeklyProgramMode(),effectiveLearningDaysPerWeek());"));
+        assertTrue("the backlog must use the same effective cadence as quick access",
+            main.contains("HifzBacklog.pending(prefs,ledger,HifzClock.today(),effectiveLearningDaysPerWeek());"));
+        assertTrue("quick access must select only today's family slot",
+            main.contains("HifzBacklog.onDate(backlogPending,today)"));
         assertTrue("cadenceComplete must use the shared helper",
             main.contains("WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek());"));
         assertTrue("nextDueCadence must use the shared helper",
-            main.contains("WeeklyProgramPolicy.nextDue(prefs,prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek());"));
+            main.contains("WeeklyProgramPolicy.nextDue(prefs,todayDate,todayDate,")
+                && main.contains("java.util.Collections.emptySet(),effectiveLearningDaysPerWeek());"));
     }
 
     @Test public void settingsActivityShowsTheEffectiveRatioAndAnAutoManualToggle() throws Exception {

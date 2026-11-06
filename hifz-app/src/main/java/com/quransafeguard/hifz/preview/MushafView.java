@@ -36,6 +36,8 @@ public final class MushafView extends WebView {
         default void onSurfaceTap() {}
         /** Explicit outside-gutter Atlas marker; other Hifz modes ignore it. */
         default void onAtlasDiscriminantTap(VerseRef verse) {}
+        /** Exact read-only correspondence outside the QCF folio. */
+        default void onCorrespondenceTap(VerseRef verse) {}
         /** Tapping an Al-Munīr amorce never masquerades as a Quran verse tap. */
         default void onSemanticCueTap(String passageId) {}
         /** Arabic-book semantics: +1 means next canonical page and is triggered by a right swipe. */
@@ -77,6 +79,8 @@ public final class MushafView extends WebView {
     private boolean semanticAnchorMaskMode;
     private boolean semanticHighlightEnabled = true;
     private float touchDownX, touchDownY;
+    private volatile boolean markerDialogOpen;
+    private boolean touchStartedInMarkerDialog;
     private long loadStartedAtMs;
     private long observedRenderMs;
 
@@ -147,9 +151,11 @@ public final class MushafView extends WebView {
 
     @Override public boolean onTouchEvent(MotionEvent event) {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            touchStartedInMarkerDialog = markerDialogOpen;
             touchDownX = event.getX();
             touchDownY = event.getY();
-        } else if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+        } else if (event.getActionMasked() == MotionEvent.ACTION_UP
+                && !touchStartedInMarkerDialog && !markerDialogOpen) {
             float dx = event.getX() - touchDownX;
             float dy = event.getY() - touchDownY;
             float threshold = 60f * getResources().getDisplayMetrics().density;
@@ -291,6 +297,7 @@ public final class MushafView extends WebView {
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
             html = html.replace(SCRIPT_TAG, inline).replace(SVG_SLOT, svg);
+            markerDialogOpen = false;
             loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
             postDelayed(watchdog, timeoutAfterObservedRender(observedRenderMs));
         } catch (Throwable error) {
@@ -527,6 +534,7 @@ public final class MushafView extends WebView {
                 "body{display:flex;align-items:center;justify-content:center;text-align:center}.box{max-width:28em;padding:24px}" +
                 "h2{font-size:18px;margin:0 0 12px}p{font-size:15px;line-height:1.45;margin:0}</style></head>" +
                 "<body><div class=\"box\"><h2>Mushaf indisponible</h2><p>" + escapeHtml(message) + "</p></div></body></html>";
+            markerDialogOpen = false;
             loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
             if (listener != null) listener.onError(message);
         });
@@ -535,6 +543,10 @@ public final class MushafView extends WebView {
     private void report(String message) { post(() -> { if (listener != null) listener.onError(message); }); }
 
     private final class Bridge {
+        @JavascriptInterface public void setMarkerDialogOpen(boolean open) {
+            markerDialogOpen = open;
+        }
+
         @JavascriptInterface public void ready(long generation) {
             post(() -> {
                 // An earlier page load must never unlock commands for its successor.
@@ -559,6 +571,13 @@ public final class MushafView extends WebView {
                 if(listener==null)return;
                 try {listener.onAtlasDiscriminantTap(new VerseRef(surah,ayah));}
                 catch(IllegalArgumentException ignored) { /* Reject invalid marker request. */ }
+            });
+        }
+        @JavascriptInterface public void correspondenceTap(int surah,int ayah) {
+            post(() -> {
+                if(listener==null)return;
+                try {listener.onCorrespondenceTap(new VerseRef(surah,ayah));}
+                catch(IllegalArgumentException ignored) { /* Fail closed on invalid QCF input. */ }
             });
         }
         @JavascriptInterface public void semanticCueTap(String passageId) {

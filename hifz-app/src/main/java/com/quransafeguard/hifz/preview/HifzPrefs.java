@@ -3150,14 +3150,17 @@ public final class HifzPrefs {
         }
         if(newBlocks.isEmpty())return Collections.emptyList();
         ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
+        // Fresh cycles recover unreceipted physical work first (At-Tur ×7).
+        // restoreConsolidationSession reads the persisted unit/protocol vector
+        // directly: never reorder an already OPEN legacy snapshot.
+        for(String id:newBlocks)units.add(new ConsolidationCycleEngine.Unit(id,
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
         if(!alreadyRepeated.isEmpty()){
             String combined=alreadyRepeated.size()==1?alreadyRepeated.get(0)
                 :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(alreadyRepeated);
             units.add(new ConsolidationCycleEngine.Unit(combined,
                 ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
         }
-        for(String id:newBlocks)units.add(new ConsolidationCycleEngine.Unit(id,
-            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
         if(units.size()>ConsolidationCycleEngine.maxUnitsFor(
                 ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN))
             throw new IllegalStateException("Composite snowball exceeds safe frozen capacity");
@@ -3250,6 +3253,16 @@ public final class HifzPrefs {
      * New Sunday sessions use QCF page boundaries; existing OPEN finals retain the
      * pinned SNOWBALL_EXTENDED protocol on restore. Never synthesize a combined pass.
      * The source receipts continue to describe their original physical subblocks.
+     *
+     * A missed calendar lesson has NO physical line receipt; it remains at the
+     * same family cursor and is offered on the NEXT eligible lesson day.
+     * Consequently Sunday's current-week finale can legitimately contain
+     * FEWER than 15 Sabqi lines (5+5+5) or 22 Itqan lines (8+7+7).
+     * These are weekly targets, never minima for graduation. Even a single
+     * verified physical block may qualify; zero verified blocks yields no
+     * finale, never a fake completed one. Previous weeks' truly outstanding
+     * units can also appear through extendedSnowballUnits(). Every promoted
+     * line must still have its real evening receipt and page repetition.
      */
     private List<ConsolidationCycleEngine.Unit> sundayFinalPageUnits(
             ConsolidationCycleEngine.Family family, LocalDate today, GeometryRepository geometry) {
@@ -3453,15 +3466,28 @@ public final class HifzPrefs {
         List<String> justEarned=earnedFromClosedEvening(completed,family);
         synchronized(V6_STATE_LOCK) {
             LinkedHashSet<String> receipts=earnedEveningUnits(family);
-            // P0: after a capacity-limited evening closes, the read-only
-            // planner immediately exposes the NEXT outstanding batch. A stale
-            // completed Session object can otherwise be replayed against that
-            // changed snapshot and falsely mark the next batch as completed.
-            // A verified physical ×7/×10 receipt is earned exactly once.
-            // Reject the ENTIRE stale/partially conflicting validation; do
-            // not let it consume an unrelated source snapshot or create credit.
-            for(String physicalReceiptId:justEarned)
-                if(receipts.contains(physicalReceiptId))return false;
+            // Sabqi's Wednesday/Friday snowball legitimately repeats previously
+            // receipted blocks alongside NEW work. Accept that overlap only for
+            // the exact, fully checkpointed OPEN session. An old Session object
+            // must never close a different batch or consume its source snapshot.
+            boolean overlaps=false,hasNewReceipt=false;
+            for(String physicalReceiptId:justEarned) {
+                if(receipts.contains(physicalReceiptId))overlaps=true;
+                else hasNewReceipt=true;
+            }
+            if(!hasNewReceipt)return false;
+            if(overlaps) {
+                if(family!=ConsolidationCycleEngine.Family.LEARNING)return false;
+                ConsolidationCycleEngine.Session frozen=restoreConsolidationSession(
+                    new ConsolidationCycleEngine(),family,id);
+                if(frozen==null || !frozen.readyToClose()
+                        || !frozen.cycle().cycleId().equals(completed.cycle().cycleId())
+                        || !frozen.sessionId().equals(completed.sessionId())
+                        || !frozen.unitIds().equals(completed.unitIds()))return false;
+                for(int i=0;i<frozen.cycle().units().size();i++)
+                    if(frozen.cycle().units().get(i).protocol()
+                            !=completed.cycle().units().get(i).protocol())return false;
+            }
             if(!snowballEveningPending(family,day))return false;
             String snapshot=exactSnowballSnapshotToValidate(family,day);
             if(snapshot.isEmpty())throw new IllegalStateException("Missing frozen evening source");

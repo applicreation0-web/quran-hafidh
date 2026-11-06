@@ -39,6 +39,51 @@ public final class SundayFinalPagePolicyTest {
         assertTrue(SundayFinalPagePolicy.earnedEveryLine(page,
             Arrays.asList(u("p11-l1","p11-l2")),Collections.singleton("p11-l3")));
     }
+    /** Real Sunday pages have no mandatory 15/22-line minimum: skipped weekdays
+     * never create imaginary physical lines or receipts. */
+    private static void verifyPartialFinal(int actualLines, int firstBlockLines, int fullWeekTarget) {
+        assertTrue("This represents a genuinely missed weekly slot",actualLines<fullWeekTarget);
+        List<String> ids=new ArrayList<>();
+        Map<String,SundayFinalPagePolicy.LinePosition> positions=new LinkedHashMap<>();
+        for(int i=0;i<actualLines;i++){
+            String id="p11-l"+(i+1);
+            ids.add(id);
+            positions.put(id,new SundayFinalPagePolicy.LinePosition(11,151+i));
+        }
+        String first=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+            ids.subList(0,firstBlockLines));
+        String second=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+            ids.subList(firstBlockLines,ids.size()));
+        List<String> receipts=Arrays.asList(first,second);
+        List<String> pages=SundayFinalPagePolicy.physicalPageUnits(receipts,positions);
+        assertEquals(1,pages.size());
+        assertEquals("No missing slot may produce extra lines",ids,
+            ConsolidationPhysicalUnitPolicy.decodeLineUnit(pages.get(0)));
+        assertTrue("Every included line still has its own verified evening source",
+            SundayFinalPagePolicy.earnedEveryLine(ids,receipts,Collections.emptySet()));
+        assertFalse("An unverified evening block must not graduate",
+            SundayFinalPagePolicy.earnedEveryLine(ids,
+                Collections.singletonList(first),Collections.emptySet()));
+    }
+
+    @Test public void sabqiSundayAcceptsOnlyTwoOfThreeFiveLineLessons() {
+        verifyPartialFinal(10,5,15);
+    }
+
+    @Test public void itqanSundayAcceptsOnlyEightPlusSevenOfTwentyTwoLines() {
+        verifyPartialFinal(15,8,22);
+    }
+
+    @Test public void oneCompletedBlockCanBeAValidPartialFinal() {
+        verifyPartialFinal(8,4,22);
+        verifyPartialFinal(5,2,15);
+    }
+
+    @Test public void noRealSourceNeverCreatesAFakeSundayFinale() {
+        assertTrue(SundayFinalPagePolicy.physicalPageUnits(
+            Collections.emptyList(),Collections.emptyMap()).isEmpty());
+    }
+
     @Test public void absentQcfGeometryMustFailClosed() {
         try {
             SundayFinalPagePolicy.physicalPageUnits(

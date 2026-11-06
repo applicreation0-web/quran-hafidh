@@ -528,6 +528,7 @@ public final class AtlasDiscriminantActivity extends Activity {
     /** Only presentation vocabulary changes. The frozen 279-case audit and
      * protected 1.17.8 AtlasDiscriminantOmissions adapter stay byte exact. */
     static String displayRelation(AtlasDiscriminantCases.Entry entry){
+        if(entry.auditId==168)return "Conclusion commune";
         String raw=AtlasDiscriminantOmissions.relation(entry);
         if("Deux bifurcations".equals(raw))return "Deux différences successives";
         if("Ajout puis bifurcation".equals(raw))return "Ajout puis mot pivot";
@@ -767,13 +768,18 @@ public final class AtlasDiscriminantActivity extends Activity {
             .append(wordPositions(AtlasDiscriminantOmissions.actualDifference(c,true)))
             .append("\n").append(c.second).append(" · mot(s) ")
             .append(wordPositions(AtlasDiscriminantOmissions.actualDifference(c,false)));
+        if(c.auditId==168)description.append("\n\nLa conclusion sur la récompense et l’absence de crainte est commune. 2:274 commence cette conclusion par fa-lahum, 2:277 par lahum : le fā initial est ajouté, sans remplacement de la promesse. Le repère QCF porte le mot entier contenant cette particule.");
+        if(c.auditId==166)description.append("\n\nLes deux repères sont 2:232 et 65:2 : dhālika / dhālikum avant yūʿaẓu bihi. 2:233 n’est pas le verset comparé.");
+        if(c.auditId==161)description.append("\n\n3:77 ajoute wa-lā yanẓuru ilayhim avant yawma l-qiyāmah. Cette expression est absente de 2:174 ; le mot commun servant de repère n’est pas une substitution.");
         if(!TextUtils.isEmpty(c.explanation))
             description.append("\n\n").append(c.explanation);
-        description.append("\n\nLes différences sont soulignées dans le Muṣḥaf QCF original.")
+        description.append(c.auditId==168
+            ?"\n\nLa particule est repérée dans son mot QCF original ; le reste de la conclusion est commun."
+            :"\n\nLes différences sont soulignées dans le Muṣḥaf QCF original.")
             .append("\nSource : ").append(c.source);
         if(!TextUtils.isEmpty(c.sourceUrl))description.append("\n").append(c.sourceUrl);
         new AlertDialog.Builder(this)
-            .setTitle("Versets ressemblants · "+c.first+" / "+c.second)
+            .setTitle("Similitudes · "+c.first+" / "+c.second)
             .setMessage(description.toString())
             .setPositiveButton("Fermer",null)
             .show();

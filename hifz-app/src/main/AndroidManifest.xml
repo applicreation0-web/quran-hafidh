@@ -18,6 +18,9 @@
         <activity android:name=".AtlasMapActivity" android:exported="false" />
         <activity android:name=".AtlasDiscriminantActivity" android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <!-- Read-only Correspondances pilot; internal and never exported. -->
+        <!-- Normal Android recreation uses its saved-state checkpoint on rotation. -->
+        <activity android:name=".CorrespondenceComparisonActivity" android:exported="false" />
         <activity android:name=".AtlasSourcePdfActivity" android:exported="false" />
         <activity
             android:name=".HifzSessionActivity"

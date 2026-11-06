@@ -112,8 +112,12 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("Even one session must show the choice window",
             home.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));
         assertTrue(home.contains("showTodayWindow(sessions);"));
-        assertTrue(home.contains("setLineEnabled(sabqiQuickAccess, action == CadenceAction.LEARNING)"));
-        assertTrue(home.contains("setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION)"));
+        assertTrue("Quick access must use the actual, dated, unvalidated own-family slot",
+            home.contains("HifzBacklog.onDate(backlogPending,today)"));
+        assertTrue("Sabqi access is allowed only on an unvalidated Sabqi date",
+            home.contains("setLineEnabled(sabqiQuickAccess,slot!=null && HifzSessionActivity.SABQI.equals(slot.mode))"));
+        assertTrue("Itqan access is allowed only on an unvalidated Itqan date",
+            home.contains("setLineEnabled(itqanQuickAccess,slot!=null && HifzSessionActivity.ITQAN.equals(slot.mode))"));
         assertTrue(home.contains("new Intent(this, StudyReaderActivity.class)"));
         assertTrue(home.contains("new Intent(this, AtlasMapActivity.class)"));
         assertFalse("No FreeMem shortcut on the Home navigation",

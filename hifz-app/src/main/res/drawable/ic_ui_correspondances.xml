@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Exact Lucide git-compare topology: circles (6,6) and (18,18), two opposing paths.
+     The 24x24 silhouette must not be replaced by the Similitudes link-2 chain. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M9,6a3,3 0,1 0,-6 0a3,3 0,1 0,6 0"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#121211" android:strokeWidth="2"
+        android:strokeLineCap="round" android:strokeLineJoin="round"/>
+    <path android:pathData="M21,18a3,3 0,1 0,-6 0a3,3 0,1 0,6 0"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#121211" android:strokeWidth="2"
+        android:strokeLineCap="round" android:strokeLineJoin="round"/>
+    <path android:pathData="M13,6h3a2,2 0,0 1,2 2v7"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#121211" android:strokeWidth="2"
+        android:strokeLineCap="round" android:strokeLineJoin="round"/>
+    <path android:pathData="M11,18H8a2,2 0,0 1,-2 -2V9"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#121211" android:strokeWidth="2"
+        android:strokeLineCap="round" android:strokeLineJoin="round"/>
+</vector>

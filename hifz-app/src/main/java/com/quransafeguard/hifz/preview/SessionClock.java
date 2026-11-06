@@ -60,6 +60,8 @@ final class SessionClock {
         listener.onTick(0L);
     }
 
+    boolean isRunning() { return startedAt >= 0L; }
+
     long elapsedMs() {
         return accumulatedMs + (startedAt >= 0L ? Math.max(0L, SystemClock.elapsedRealtime() - startedAt) : 0L);
     }

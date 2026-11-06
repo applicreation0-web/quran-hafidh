@@ -1,0 +1,40 @@
+name: Haafidh mandat BOOX frises 20261105
+on:
+  push:
+    branches: [work/haafidh-correspondances-context-qcf-20261104]
+    paths:
+      - hifz-app/**
+      - hifz-core/**
+      - scripts/*correspondence*
+      - .github/workflows/haafidh-mandat-20261105.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mandat-20261105-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  jvm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+        with: {packages: ''}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '9.5.0'}
+      - run: sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Actual production JVM tests, including priority and frozen legacy OPEN
+        run: gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:testDebugUnitTest --tests '*ItqanOverdueEveningReceiptRecoveryTest'
+      - name: Export public JVM runtime for deterministic local replay
+        if: always()
+        run: gradle --no-daemon -I scripts/export_jvm_audit_runtime.init.gradle :hifz-app:exportJvmAuditRuntime
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mandat-priority-jvm
+          path: |
+            hifz-app/build/test-results/
+            hifz-app/build/jvm-audit-runtime/

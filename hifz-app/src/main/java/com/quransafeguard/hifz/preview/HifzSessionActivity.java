@@ -98,6 +98,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private VerseRef discriminantVerse;
     // UI-only authorization, populated only after the existing active validation succeeds.
     private VerseRef validatedDiscriminantVerse;
+    private VerseRef validatedCorrespondenceVerse;
+    private Button validatedCorrespondenceButton;
+    private AlertDialog correspondenceSelector;
+    /** One real partial-validation dialog at a time; safe across slow BOOX taps. */
+    private AlertDialog murajaahPartialValidationDialog;
+    private VerseRef correspondenceSelectorVerse;
+    private boolean correspondenceSelectorClockWasRunning;
+    private boolean sessionResumed;
+    private boolean correspondenceLaunching;
     /** Automatic page correction: visible reread, then 100% masked recall, no flags. */
     private ActiveReviewCorrectionStore correctionStore;
     private ActiveReviewCorrectionStore.State correctionState;
@@ -106,6 +115,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean correctionMaskedPageReady;
     private Button correctionPageDoneButton;
     private LocalDate sessionDate;
+    /** Today's date is captured once on entry; never silently changes mid-session. */
+    private LocalDate dateAtSessionOpen;
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
     private PostFinalRecallStore postFinalStore;
@@ -132,6 +143,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ? recordedSessionDate
             : scheduledSessionDate;
         LocalDate capturedToday = HifzClock.today();
+        dateAtSessionOpen = capturedToday;
         try {
             sessionDate = requestedSessionDate == null || requestedSessionDate.isEmpty()
                 ? capturedToday : LocalDate.parse(requestedSessionDate);
@@ -177,33 +189,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         if (SABQI.equals(mode) || ITQAN.equals(mode)) {
-            // The source of truth is the persistent dated receipt ledger, not the
-            // current weekday or a shortcut that could create a duplicate credit.
+            // Each family carries its own real physical cursor. An absent
+            // Tuesday Itqan or Monday Sabqi leaves its date unearned; the next
+            // eligible own-family weekday completes the same next lines with
+            // TODAY's dated receipt. Never replay an old date or create credit.
             DashboardLedger attendance=new DashboardLedger(this);
             attendance.capture(prefs);
             RoadmapPolicy.Decision roadmap=prefs.currentRoadmapDecision(geometry);
             int learningDays=roadmap==null?prefs.learningDaysPerWeek():roadmap.learningDays;
-            HifzBacklog.Due oldest=HifzBacklog.first(HifzBacklog.pending(
-                prefs,attendance,capturedToday,learningDays));
-            if(oldest==null || !oldest.mode.equals(mode) || !oldest.date.equals(sessionDate)) {
-                if(oldest==null) {
-                    new AlertDialog.Builder(this).setTitle("Séance non due")
-                        .setMessage("Aucune nouvelle séance Sabqi ou Itqān n’est due.")
-                        .setPositiveButton("Retour",(dialog,which)->finish())
-                        .setOnCancelListener(dialog->finish()).show();
-                } else {
-                    new AlertDialog.Builder(this).setTitle("Leçon en retard")
-                        .setMessage("La priorité est "+oldest.frenchName()+" du "+oldest.date+
-                            ". L’avancement actuel restera inchangé.")
-                        .setPositiveButton("Ouvrir le report",(dialog,which)->{
-                            Intent intent=new Intent(this,HifzSessionActivity.class);
-                            intent.putExtra(EXTRA_MODE,oldest.mode);
-                            intent.putExtra(EXTRA_SCHEDULED_DATE,oldest.date.toString());
-                            finish();
-                            startActivity(intent);
-                        }).setNegativeButton("Retour",(dialog,which)->finish())
-                        .setOnCancelListener(dialog->finish()).show();
-                }
+            HifzBacklog.Due slot=HifzBacklog.onDate(HifzBacklog.pending(
+                prefs,attendance,capturedToday,learningDays),capturedToday);
+            if(slot==null || !slot.mode.equals(mode) || !capturedToday.equals(sessionDate)) {
+                new AlertDialog.Builder(this).setTitle("Séance non prévue")
+                    .setMessage("Les lignes non travaillées restent au prochain jour "
+                        +"Sabqi ou Itqān de leur discipline. Rien n’est crédité "
+                        +"pour un ancien créneau manqué.")
+                    .setPositiveButton("Retour",(dialog,which)->finish())
+                    .setOnCancelListener(dialog->finish()).show();
                 return;
             }
         }
@@ -226,8 +228,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
         if(state!=null){
             discriminantVerse=readAtlasVerse(state,"atlasSelected");
-            if(MURAJAAH_ACTIVE.equals(mode)&&sessionDate.toString().equals(prefs.lastActiveMurajaahDate()))
+            correspondenceSelectorVerse=readAtlasVerse(state,"correspondenceSelectorVerse");
+            correspondenceSelectorClockWasRunning=state.getBoolean("correspondenceSelectorClockWasRunning");
+            if(MURAJAAH_ACTIVE.equals(mode)&&sessionDate.toString().equals(prefs.lastActiveMurajaahDate())){
                 validatedDiscriminantVerse=readAtlasVerse(state,"atlasValidated");
+                validatedCorrespondenceVerse=readAtlasVerse(state,"correspondenceValidated");
+            }
             updateDiscriminantAction();
         }
     }
@@ -286,9 +292,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
-        discriminantButton=Ui.iconButton(this,"","Versets ressemblants",v->openRevisionDiscriminant());
+        discriminantButton=Ui.iconButton(this,"","Similitudes",v->openRevisionDiscriminant());
         discriminantButton.setVisibility(View.GONE);
         controlBar.addView(discriminantButton);
+        if(MURAJAAH_ACTIVE.equals(mode)){
+            validatedCorrespondenceButton=Ui.iconButton(this,"","Correspondances",
+                v->openValidatedCorrespondence());
+            validatedCorrespondenceButton.setVisibility(View.GONE);
+            controlBar.addView(validatedCorrespondenceButton);
+        }
         if (!MURAJAAH_ACTIVE.equals(mode)) {
             annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
             annotationButton.setSelected(annotationEnabled);
@@ -372,7 +384,62 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             AtlasDiscriminantCases.versesOnPage(currentPage).contains(verse),covered);
     }
 
+    /** Passive: only acquired traversal; Active: never before validated receipt. */
+    private boolean canCompareCorrespondenceVerse(VerseRef verse){
+        if(!isMurajaahMode()||verse==null||geometry==null)return false;
+        boolean active=MURAJAAH_ACTIVE.equals(mode);
+        boolean covered=active ? verse.equals(validatedCorrespondenceVerse)
+            : murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse);
+        return !sessionRenderFailed&&correctionState==null&&RevisionAtlasAccess.allowed(active,sessionCompleted,
+            sessionDate.toString().equals(prefs.lastActiveMurajaahDate()),
+            !CorrespondenceCases.forVerse(verse).isEmpty(),
+            !active&&CorrespondenceCases.versesOnPage(currentPage,geometry).contains(verse),covered);
+    }
+
+    @Override public void onCorrespondenceTap(VerseRef verse){
+        if(!MURAJAAH.equals(mode)||!canCompareCorrespondenceVerse(verse))return;
+        selectRevisionCorrespondence(verse,CorrespondenceCases.forVerse(verse));
+    }
+
+    private void openValidatedCorrespondence(){
+        VerseRef verse=validatedCorrespondenceVerse;
+        if(!canCompareCorrespondenceVerse(verse))return;
+        selectRevisionCorrespondence(verse,CorrespondenceCases.forVerse(verse));
+    }
+
+    private void selectRevisionCorrespondence(VerseRef verse,List<CorrespondenceCases.Entry> entries){
+        if(!sessionResumed||correspondenceLaunching||correspondenceSelector!=null||!canCompareCorrespondenceVerse(verse))return;
+        boolean wasRunning=clock.isRunning()||correspondenceSelectorClockWasRunning;
+        correspondenceSelectorVerse=verse;
+        correspondenceSelectorClockWasRunning=wasRunning;
+        long elapsed=clock.pause();
+        if(MURAJAAH.equals(mode)){
+            prefs.setElapsedFor(mode,elapsed);
+            checkpointMurajaah(elapsed);
+        }
+        correspondenceSelector=CorrespondenceComparisonActivity.chooseCase(this,entries,entry->{
+            if(!sessionResumed||!canCompareCorrespondenceVerse(verse))return false;
+            correspondenceSelectorVerse=null;
+            correspondenceLaunching=true;
+            startActivity(new Intent(this,CorrespondenceComparisonActivity.class)
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_SURAH,verse.getSurah())
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_AYAH,verse.getAyah())
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_ID,entry.id)
+                .putExtra(CorrespondenceComparisonActivity.EXTRA_ORIGIN,
+                    MURAJAAH_ACTIVE.equals(mode)?"Révision active":"Révision passive"));
+            return true;
+        },opened->{
+            correspondenceSelector=null;
+            correspondenceSelectorVerse=null;
+            correspondenceSelectorClockWasRunning=false;
+            if(!opened&&wasRunning)resumeSessionClock();
+        });
+    }
+
     private void updateDiscriminantAction(){
+        if(validatedCorrespondenceButton!=null)
+            validatedCorrespondenceButton.setVisibility(
+                canCompareCorrespondenceVerse(validatedCorrespondenceVerse)?View.VISIBLE:View.GONE);
         if(discriminantButton==null)return;
         if(MURAJAAH_ACTIVE.equals(mode))discriminantVerse=validatedDiscriminantVerse;
         else if(!canCompareRevisionVerse(discriminantVerse)){
@@ -383,7 +450,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         boolean allowed=canCompareRevisionVerse(discriminantVerse);
         discriminantButton.setVisibility(allowed?View.VISIBLE:View.GONE);
-        if(allowed)Ui.setIconDescription(discriminantButton,"Versets ressemblants · "+discriminantVerse);
+        if(allowed)Ui.setIconDescription(discriminantButton,"Similitudes · "+discriminantVerse);
     }
 
     private void openRevisionDiscriminant(){
@@ -414,6 +481,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override protected void onSaveInstanceState(Bundle state){
         if(discriminantVerse!=null)state.putString("atlasSelected",discriminantVerse.toString());
         if(validatedDiscriminantVerse!=null)state.putString("atlasValidated",validatedDiscriminantVerse.toString());
+        if(validatedCorrespondenceVerse!=null)
+            state.putString("correspondenceValidated",validatedCorrespondenceVerse.toString());
+        if(correspondenceSelectorVerse!=null){
+            state.putString("correspondenceSelectorVerse",correspondenceSelectorVerse.toString());
+            state.putBoolean("correspondenceSelectorClockWasRunning",correspondenceSelectorClockWasRunning);
+        }
         super.onSaveInstanceState(state);
     }
 
@@ -745,20 +818,54 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
+    /** Only a new same-day evening is gated. A frozen OPEN cycle can always be
+     * resumed, even after midnight or before the current morning lesson. */
+    private boolean awaitingNewEveningLesson(
+            ConsolidationCycleEngine.Family family,String prefix,boolean learning) {
+        boolean sameDay=sessionDate.equals(dateAtSessionOpen);
+        if(!sameDay)return false;
+        String opened=prefs.unfinishedConsolidationSessionDate(family,prefix);
+        boolean frozenOpen=sessionDate.toString().equals(opened);
+        com.quransafeguard.hifz.core.CadenceAction action=WeeklyProgramPolicy.actionFor(
+            sessionDate.getDayOfWeek(),prefs.weeklyProgramFor(sessionDate),
+            prefs.learningDaysPerWeek());
+        boolean scheduled=learning
+            ?action==com.quransafeguard.hifz.core.CadenceAction.LEARNING
+            :action==com.quransafeguard.hifz.core.CadenceAction.STABILIZATION;
+        boolean lessonDone=sessionDate.toString().equals(
+            learning?prefs.lastSabqiDate():prefs.lastItqanDate());
+        return EveningReviewDisplay.waitForDailyLesson(
+            sameDay,scheduled,lessonDone,frozenOpen);
+    }
+
     /** Historic evening snowball or one continuous weekly post-Nas masked Maintien sequence. */
     private void renderConsolidationCycle() {
         String today = sessionDate.toString();
+        if(awaitingNewEveningLesson(
+                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-",false)) {
+            sessionCompleted=false;
+            clock.pause();
+            program.setText("Consolidation · en attente de l’Itqān");
+            progress.setText("Validez d’abord l’Itqān du jour avant la Consolidation.");
+            return;
+        }
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,sessionDate)) {
-            sessionCompleted = true;
+            boolean completed=today.equals(prefs.lastStabilizationSnowballEveningDate());
+            sessionCompleted=completed;
+            if(!completed)clock.pause();
             if(prefs.itqanPostNasMaintenance()) {
-                boolean completed=sessionDate.toString().equals(prefs.lastStabilizationSnowballEveningDate());
                 program.setText(completed?"Consolidation · séance validée":"Consolidation · à venir");
                 progress.setText(completed
                     ?"Maintiens de la semaine récités une fois avec texte masqué."
                     :"Disponible après le dernier Maintien de la semaine.");
             } else {
-                program.setText("Consolidation · séance validée");
-                progress.setText("Révision cumulative du soir terminée.");
+                EveningReviewDisplay.Status status=EveningReviewDisplay.forDay(
+                    today.equals(prefs.lastItqanDate()),completed,false);
+                program.setText(EveningReviewDisplay.stabilizationLabel(status,false));
+                progress.setText(completed?"Révision cumulative du soir terminée."
+                    :status==EveningReviewDisplay.Status.WAITING_FOR_LESSON
+                        ?"Terminez d’abord l’Itqān du jour."
+                        :"Aucune nouvelle unité à consolider.");
             }
             return;
         }
@@ -783,10 +890,25 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Lundi/Mercredi/Vendredi soir: ×10 par unité, cumulatif dans la semaine ; ne graduate rien. */
     private void renderLearningConsolidationCycle() {
         String today = sessionDate.toString();
+        if(awaitingNewEveningLesson(
+                ConsolidationCycleEngine.Family.LEARNING,"learning-",true)) {
+            sessionCompleted=false;
+            clock.pause();
+            program.setText("Renforcement · en attente du Sabqi");
+            progress.setText("Validez d’abord le Sabqi du jour avant le Renforcement.");
+            return;
+        }
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,sessionDate)) {
-            sessionCompleted = true;
-            program.setText("Renforcement · séance validée");
-            progress.setText("Révision cumulative du soir terminée.");
+            EveningReviewDisplay.Status status=EveningReviewDisplay.forDay(
+                today.equals(prefs.lastSabqiDate()),
+                today.equals(prefs.lastLearningSnowballEveningDate()),false);
+            sessionCompleted=status==EveningReviewDisplay.Status.COMPLETED;
+            if(!sessionCompleted)clock.pause();
+            program.setText(EveningReviewDisplay.learningLabel(status));
+            progress.setText(sessionCompleted?"Révision cumulative du soir terminée."
+                :status==EveningReviewDisplay.Status.WAITING_FOR_LESSON
+                    ?"Validez d’abord le Sabqi du jour."
+                    :"Aucune nouvelle unité à renforcer.");
             return;
         }
         renderGroupedCycle(prefs.learningConsolidationUnits(sessionDate), ConsolidationCycleEngine.Family.LEARNING,
@@ -1964,11 +2086,18 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         VerseRef unread = murajaahNextSegmentAfter(murajaahActualEnd);
         if (unread != null) {
-            new AlertDialog.Builder(this).setTitle("Passage restant")
+            // Single prompt instance: repeated E-Ink taps cannot stack confirmation windows.
+            if(murajaahPartialValidationDialog!=null&&murajaahPartialValidationDialog.isShowing())return;
+            AlertDialog prompt=new AlertDialog.Builder(this).setTitle("Passage restant")
                 .setMessage("L’objectif du jour continue plus loin (" + murajaahVerseLabel(unread) + "…). Valider maintenant clôturera la séance du jour sans le lire.")
                 .setNegativeButton("Continuer la lecture", null)
                 .setPositiveButton("Valider quand même", (d, w) -> completeMurajaahValidation())
-                .show();
+                .create();
+            murajaahPartialValidationDialog=prompt;
+            prompt.setOnDismissListener(ignored->{
+                if(murajaahPartialValidationDialog==prompt)murajaahPartialValidationDialog=null;
+            });
+            prompt.show();
             return;
         }
         completeMurajaahValidation();
@@ -2024,6 +2153,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if(!correctionStore.clear())
                 onError("Révision validée ; nettoyage de la relecture à vérifier.");
             correctionState=null;
+            validatedCorrespondenceVerse=CorrespondenceCases.lastValidatedAnchor(
+                murajaahPlan.traversalVerses,murajaahActualEnd);
             validatedDiscriminantVerse=null;
             if(AtlasDiscriminantCases.indexFor(murajaahActualEnd.getSurah(),murajaahActualEnd.getAyah())>=0)
                 validatedDiscriminantVerse=murajaahActualEnd;
@@ -2533,7 +2664,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             for(VerseRef verse:murajaahPlan.traversalVerses)
                 if(canCompareRevisionVerse(verse)&&atlasSeen.add(verse))
                     atlasRows.put(verse.toString());
-        AtlasDiscriminantMarkers.show(mushaf,atlasRows);
+        if(isMurajaahMode()){
+            org.json.JSONArray corrRows=new org.json.JSONArray();
+            java.util.Set<VerseRef> corrSeen=new java.util.HashSet<>();
+            if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&!sessionCompleted){
+                // Only current-page relation anchors, not every verse in the full revision corpus.
+                for(VerseRef verse:CorrespondenceCases.versesOnPage(currentPage,geometry))
+                    if(canCompareCorrespondenceVerse(verse)&&corrSeen.add(verse))
+                        corrRows.put(verse.toString());
+            }
+            CorrespondenceGutterMarkers.show(mushaf,atlasRows,corrRows);
+        }else AtlasDiscriminantMarkers.show(mushaf,atlasRows);
         updateDiscriminantAction();
         if ((isSundayFinalPageRepetition() && currentMask == 100)
                 || (POST_FINAL_RECALL.equals(mode) && currentPostFinalReview != null
@@ -2569,18 +2710,44 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
     @Override protected void onResume(){
         super.onResume();
+        sessionResumed=true;
+        boolean returningFromComparison=correspondenceLaunching;
+        correspondenceLaunching=false;
+        // BOOX may return before the choice dialog has finished dismissing. A
+        // completed selection must NEVER leave its stale dialog blocking the clock.
+        if(returningFromComparison&&correspondenceSelector!=null){
+            AlertDialog stale=correspondenceSelector;
+            correspondenceSelector=null;
+            correspondenceSelectorVerse=null;
+            correspondenceSelectorClockWasRunning=false;
+            if(stale.isShowing())stale.dismiss();
+        }
         if(clock==null)return;
         clock.syncPersistedElapsed(prefs.elapsedFor(mode));
-        if(!sessionCompleted&&!awaitingValidation&&correctionState==null
+        if(correspondenceSelector==null&&correspondenceSelectorVerse!=null){
+            VerseRef verse=correspondenceSelectorVerse;
+            List<CorrespondenceCases.Entry> entries=CorrespondenceCases.forVerse(verse);
+            if(entries.size()>1&&canCompareCorrespondenceVerse(verse)){
+                selectRevisionCorrespondence(verse,entries);
+                return;
+            }
+            correspondenceSelectorVerse=null;
+            correspondenceSelectorClockWasRunning=false;
+        }
+        resumeSessionClock();
+    }
+    private void resumeSessionClock(){
+        if(sessionResumed&&!isFinishing()&&correspondenceSelector==null&&!sessionCompleted&&!awaitingValidation&&correctionState==null
                 &&(!timedSessionLimitReached||isMurajaahMode()))clock.resume();
     }
     @Override protected void onPause(){
+        sessionResumed=false;
         if(clock==null){super.onPause();return;}
         long elapsed=clock.pause();
         if(sessionCompleted&&!awaitingValidation&&!sessionRenderFailed)prefs.setElapsedFor(mode,0L);
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(correctionState!=null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

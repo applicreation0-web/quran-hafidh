@@ -66,8 +66,8 @@ public final class EarnedEveningProtocolRegressionTest {
    LocalDate day=LocalDate.of(2026,10,13);
    List<ConsolidationCycleEngine.Unit> cycle=p.stabilizedConsolidationUnits(day);
    assertEquals(3,cycle.size());
-   assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,cycle.get(0).protocol());
-   for(int i=1;i<3;i++)assertEquals(
+   assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,cycle.get(2).protocol());
+   for(int i=0;i<2;i++)assertEquals(
        ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,cycle.get(i).protocol());
    ConsolidationCycleEngine.Session session=ready(ConsolidationCycleEngine.Family.STABILIZATION,
        "stabilization-"+day,cycle);
