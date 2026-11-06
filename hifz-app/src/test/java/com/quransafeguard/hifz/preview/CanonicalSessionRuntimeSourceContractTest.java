@@ -71,8 +71,12 @@ public final class CanonicalSessionRuntimeSourceContractTest {
     @Test public void groupedConsolidationCannotMutateIndividualRepetitionCounters() throws Exception {
         String persistenceTest = read("hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ConsolidationPersistenceInstrumentedTest.java");
         assertTrue(persistenceTest.contains("persistingEveryGroupedRepetitionNeverMutatesIndividualCounters"));
-        assertTrue(persistenceTest.contains("assertTrue(prefs.setSabqiProgress(29, 6))"));
-        assertTrue(persistenceTest.contains("assertTrue(prefs.setItqanProgress(31, 7, 5"));
+        assertTrue("A forged Sabqi scalar must be explicitly rejected",
+            persistenceTest.contains("assertFalse(\"Counter-only Sabqi proof must fail\",prefs.setSabqiProgress(29, 6))"));
+        assertTrue("The persistence scenario must establish a real, empty Itqan counter baseline",
+            persistenceTest.contains("assertTrue(prefs.setItqanProgress(0, 0, 0, new VerseRef(49, 1), new VerseRef(49, 5)))"));
+        assertTrue("Grouped persistence must test an authentic counter snapshot",
+            persistenceTest.contains("int[] individualBefore = individualCounters(prefs)"));
         assertTrue(persistenceTest.contains("assertArrayEquals(individualBefore, individualCounters(prefs))"));
     }
 
