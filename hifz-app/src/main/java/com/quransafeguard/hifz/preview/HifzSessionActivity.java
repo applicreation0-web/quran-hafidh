@@ -815,20 +815,54 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
+    /** Only a new same-day evening is gated. A frozen OPEN cycle can always be
+     * resumed, even after midnight or before the current morning lesson. */
+    private boolean awaitingNewEveningLesson(
+            ConsolidationCycleEngine.Family family,String prefix,boolean learning) {
+        boolean sameDay=sessionDate.equals(HifzClock.today());
+        if(!sameDay)return false;
+        String opened=prefs.unfinishedConsolidationSessionDate(family,prefix);
+        boolean frozenOpen=sessionDate.toString().equals(opened);
+        com.quransafeguard.hifz.core.CadenceAction action=WeeklyProgramPolicy.actionFor(
+            sessionDate.getDayOfWeek(),prefs.weeklyProgramFor(sessionDate),
+            prefs.learningDaysPerWeek());
+        boolean scheduled=learning
+            ?action==com.quransafeguard.hifz.core.CadenceAction.LEARNING
+            :action==com.quransafeguard.hifz.core.CadenceAction.STABILIZATION;
+        boolean lessonDone=sessionDate.toString().equals(
+            learning?prefs.lastSabqiDate():prefs.lastItqanDate());
+        return EveningReviewDisplay.waitForDailyLesson(
+            sameDay,scheduled,lessonDone,frozenOpen);
+    }
+
     /** Historic evening snowball or one continuous weekly post-Nas masked Maintien sequence. */
     private void renderConsolidationCycle() {
         String today = sessionDate.toString();
+        if(awaitingNewEveningLesson(
+                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-",false)) {
+            sessionCompleted=false;
+            clock.pause();
+            program.setText("Consolidation · en attente de l’Itqān");
+            progress.setText("Validez d’abord l’Itqān du jour avant la Consolidation.");
+            return;
+        }
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,sessionDate)) {
-            sessionCompleted = true;
+            boolean completed=today.equals(prefs.lastStabilizationSnowballEveningDate());
+            sessionCompleted=completed;
+            if(!completed)clock.pause();
             if(prefs.itqanPostNasMaintenance()) {
-                boolean completed=sessionDate.toString().equals(prefs.lastStabilizationSnowballEveningDate());
                 program.setText(completed?"Consolidation · séance validée":"Consolidation · à venir");
                 progress.setText(completed
                     ?"Maintiens de la semaine récités une fois avec texte masqué."
                     :"Disponible après le dernier Maintien de la semaine.");
             } else {
-                program.setText("Consolidation · séance validée");
-                progress.setText("Révision cumulative du soir terminée.");
+                EveningReviewDisplay.Status status=EveningReviewDisplay.forDay(
+                    today.equals(prefs.lastItqanDate()),completed,false);
+                program.setText(EveningReviewDisplay.stabilizationLabel(status,false));
+                progress.setText(completed?"Révision cumulative du soir terminée."
+                    :status==EveningReviewDisplay.Status.WAITING_FOR_LESSON
+                        ?"Terminez d’abord l’Itqān du jour."
+                        :"Aucune nouvelle unité à consolider.");
             }
             return;
         }
@@ -853,10 +887,25 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Lundi/Mercredi/Vendredi soir: ×10 par unité, cumulatif dans la semaine ; ne graduate rien. */
     private void renderLearningConsolidationCycle() {
         String today = sessionDate.toString();
+        if(awaitingNewEveningLesson(
+                ConsolidationCycleEngine.Family.LEARNING,"learning-",true)) {
+            sessionCompleted=false;
+            clock.pause();
+            program.setText("Renforcement · en attente du Sabqi");
+            progress.setText("Validez d’abord le Sabqi du jour avant le Renforcement.");
+            return;
+        }
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,sessionDate)) {
-            sessionCompleted = true;
-            program.setText("Renforcement · séance validée");
-            progress.setText("Révision cumulative du soir terminée.");
+            EveningReviewDisplay.Status status=EveningReviewDisplay.forDay(
+                today.equals(prefs.lastSabqiDate()),
+                today.equals(prefs.lastLearningSnowballEveningDate()),false);
+            sessionCompleted=status==EveningReviewDisplay.Status.COMPLETED;
+            if(!sessionCompleted)clock.pause();
+            program.setText(EveningReviewDisplay.learningLabel(status));
+            progress.setText(sessionCompleted?"Révision cumulative du soir terminée."
+                :status==EveningReviewDisplay.Status.WAITING_FOR_LESSON
+                    ?"Validez d’abord le Sabqi du jour."
+                    :"Aucune nouvelle unité à renforcer.");
             return;
         }
         renderGroupedCycle(prefs.learningConsolidationUnits(sessionDate), ConsolidationCycleEngine.Family.LEARNING,

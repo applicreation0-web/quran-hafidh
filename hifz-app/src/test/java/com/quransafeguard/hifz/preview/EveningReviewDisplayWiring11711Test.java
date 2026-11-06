@@ -23,6 +23,17 @@ public final class EveningReviewDisplayWiring11711Test {
         assertTrue(planner.contains("snowball.endsWith(\"aucune nouvelle unité\")"));
     }
 
+    @Test public void directHifzSessionNeverInventsCompletedWithoutReceipt() throws Exception {
+        String activity=source("HifzSessionActivity.java");
+        assertTrue(activity.contains("private boolean awaitingNewEveningLesson("));
+        assertTrue(activity.contains("EveningReviewDisplay.waitForDailyLesson("));
+        assertTrue(activity.contains("today.equals(prefs.lastLearningSnowballEveningDate()),false"));
+        assertTrue(activity.contains("sessionCompleted=status==EveningReviewDisplay.Status.COMPLETED;"));
+        assertTrue(activity.contains("boolean completed=today.equals(prefs.lastStabilizationSnowballEveningDate());"));
+        assertFalse("Direct access cannot say the session was earned solely because no unit is due",
+            activity.contains("sessionCompleted = true;\n            program.setText(\"Renforcement · séance validée\")"));
+    }
+
     @Test public void todayWindowNoLongerConvertsNotPendingIntoCompleted() throws Exception {
         String main=source("MainActivity.java");
         assertTrue(main.contains("modeComplete(today,HifzSessionActivity.LEARNING_CONSOLIDATION)"));

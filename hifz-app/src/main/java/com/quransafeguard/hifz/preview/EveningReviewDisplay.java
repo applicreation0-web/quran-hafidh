@@ -18,6 +18,13 @@ final class EveningReviewDisplay {
         return lessonCompleted?Status.NO_NEW_UNITS:Status.WAITING_FOR_LESSON;
     }
 
+    /** Direct shortcut may not bypass a today's uncompleted morning lesson.
+     * Historic OPEN reviews are always resumable on their original date. */
+    static boolean waitForDailyLesson(boolean sameDay,boolean scheduledLearningOrItqan,
+                                      boolean morningLessonDone,boolean frozenOpen) {
+        return sameDay && scheduledLearningOrItqan && !morningLessonDone && !frozenOpen;
+    }
+
     static boolean resolved(Status status) {
         return status==Status.COMPLETED||status==Status.NO_NEW_UNITS;
     }

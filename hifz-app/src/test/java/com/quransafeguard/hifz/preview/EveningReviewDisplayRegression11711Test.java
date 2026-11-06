@@ -75,6 +75,14 @@ public final class EveningReviewDisplayRegression11711Test {
             EveningReviewDisplay.forDay(true,true,false),false));
     }
 
+    @Test public void directShortcutMustWaitForDailyLearningUnlessResumingFrozenOpen() {
+        assertTrue(EveningReviewDisplay.waitForDailyLesson(true,true,false,false));
+        assertFalse(EveningReviewDisplay.waitForDailyLesson(true,true,false,true));
+        assertFalse(EveningReviewDisplay.waitForDailyLesson(false,true,false,false));
+        assertFalse(EveningReviewDisplay.waitForDailyLesson(true,false,false,false));
+        assertFalse(EveningReviewDisplay.waitForDailyLesson(true,true,true,false));
+    }
+
     @Test public void todayWindowLabelsCannotCallWaitingCompleted() {
         assertTrue(EveningReviewDisplay.learningTodayLabel(
             EveningReviewDisplay.Status.WAITING_FOR_LESSON).contains("en attente"));
