@@ -46,8 +46,8 @@ final class RefrainTimeline {
         "Permanence", "Dépendance", "Deux communautés", "Limites", "Flammes",
         "Ciel", "Fautes", "Criminels", "Géhenne", "Deux jardins", "Branches",
         "Sources", "Fruits", "Couches", "Regards", "Rubis", "Bienfaisance",
-        "Deux jardins", "Verdure", "Sources", "Fruits", "Compagnes", "Pavillons",
-        "Compagnes", "Tapis"
+        "Deux jardins", "Verdure", "Sources", "Fruits", "Belles", "Pavillons",
+        "Intactes", "Tapis"
     };
     private static final String[] RAHMAN_AFTER = {
         "Création humaine", "Orients", "Deux mers", "Perles", "Navires",
@@ -55,7 +55,7 @@ final class RefrainTimeline {
         "Ciel déchiré", "Fautes", "Criminels", "Géhenne", "Deux jardins",
         "Branches", "Sources", "Fruits", "Couches", "Regards", "Rubis",
         "Bienfaisance", "Deux jardins", "Verdure", "Sources", "Fruits",
-        "Compagnes", "Pavillons", "Compagnes", "Tapis", "Majesté"
+        "Belles", "Pavillons", "Intactes", "Tapis", "Majesté"
     };
     private static final String[] QAMAR_BEFORE = {"Nūḥ", "ʿĀd", "Thamūd", "Lūṭ"};
     private static final String[] QAMAR_AFTER = {"ʿĀd", "Thamūd", "Lūṭ", "Pharaon"};
