@@ -1,5 +1,6 @@
 name: Haafidh 1.17.11 PRIVATE OFFLINE INPUT — code-only unsigned (NEVER INSTALL)
 # Restage the current P0 source with all private content kept off GitHub.
+# Rebuild after the read-only rotation fallback fix; local private signer owns final APK.
 on:
   push:
     branches: [work/haafidh-correspondances-context-qcf-20261104, audit/haafidh-11711-phantom-validations-20261106]
