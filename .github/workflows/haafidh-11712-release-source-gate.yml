@@ -1,0 +1,60 @@
+name: Haafidh 1.17.12 - release source and offline signing guards
+# No APK assembly or signing in this workflow. Private inputs stay outside GitHub.
+on:
+  push:
+    branches: [work/haafidh-correspondances-context-qcf-20261104, audit/haafidh-11712-phantom-validations-20261106]
+    paths: ['.github/workflows/haafidh-11712-release-source-gate.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-source-and-offline-guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install QCF and Android SDK
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Compile the exact RELEASE Java variant, never package
+        run: gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac
+      - name: Test offline private candidate guard without private inputs
+        run: python3 scripts/test_build_11712_private_offline.py
+      - name: Assert official version and catalogue enabled for release
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          build=Path('hifz-app/build.gradle.kts').read_text()
+          assert 'versionCode = 50' in build
+          assert 'versionName = "1.17.12"' in build
+          release=build.split('getByName("release") {',1)[1].split('isMinifyEnabled',1)[0]
+          assert 'CORRESPONDENCES_CATALOGUE", "true"' in release
+          script=Path('scripts/build_11712_private_offline.py').read_text()
+          assert 'check_reference(' in script and 'check_candidate(' in script
+          print('RELEASE_SOURCE_CONTRACT_PASS')
+          PY
+      - name: Prove no APK assembled or signed by this workflow
+        if: always()
+        run: |
+          if find hifz-app/build hifz-app/build-private114 -type f -name '*.apk' -print -quit 2>/dev/null | grep -q .; then
+            echo 'Unexpected APK from source audit'; exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11712-release-source-contracts-no-apk
+          path: |
+            hifz-app/build/reports/
+            hifz-app/build/test-results/
+          retention-days: 14
