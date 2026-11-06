@@ -773,8 +773,8 @@ public final class CorrespondenceContextInstrumentedTest {
     @Test public void expandedCatalogueIndexAndSemanticPartnersStayExact(){
         assertTrue("The admitted catalogue must be enabled in debug and release",
             BuildConfig.CORRESPONDENCES_CATALOGUE);
-        assertEquals("Release candidate contains exactly sixty admitted relations",
-            60,CorrespondenceCatalogue.ADMITTED.size());
+        assertEquals("Release candidate contains 60 historical plus one explicitly sourced 1.17.12 relation",
+            61,CorrespondenceCatalogue.ADMITTED.size());
         Context context=ApplicationProvider.getApplicationContext();
         GeometryRepository geometry=GeometryRepository.get(context);
         for(CorrespondenceCases.Entry entry:CorrespondenceCatalogue.ADMITTED){
