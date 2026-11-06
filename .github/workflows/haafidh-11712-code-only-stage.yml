@@ -1,5 +1,5 @@
 name: Haafidh 1.17.12 PRIVATE OFFLINE INPUT — code-only unsigned (NEVER INSTALL)
-# Restage the current audited 1.17.12 runtime + 61 Atlas relations; no private input on GitHub.
+# Restage 1.17.12 English Atlas refrain correction for offline private signing; no private input on GitHub.
 # Rebuild after the read-only rotation fallback fix; local private signer owns final APK.
 on:
   push:
