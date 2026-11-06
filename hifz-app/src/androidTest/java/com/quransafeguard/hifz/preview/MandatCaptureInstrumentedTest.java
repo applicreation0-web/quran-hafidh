@@ -16,19 +16,44 @@ public final class MandatCaptureInstrumentedTest {
     static void capture(String name)throws Exception{
         android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
         EmulatorLauncherAnr.requireApplicationForeground(ins);
-        ins.waitForIdleSync();Thread.sleep(500);
         String path="/data/local/tmp/haafidh-"+name+".png";
-        try(InputStream out=new ParcelFileDescriptor.AutoCloseInputStream(ins.getUiAutomation().executeShellCommand("screencap -p "+path))){while(out.read()!=-1){}}
-        try(InputStream in=new ParcelFileDescriptor.AutoCloseInputStream(ins.getUiAutomation().executeShellCommand("cat "+path))){
-            android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeStream(in);assertNotNull(bitmap);
-            try{
-                long light=0,ink=0,total=0;
-                for(int y=bitmap.getHeight()/10;y<bitmap.getHeight()*9/10;y+=4)
-                    for(int x=4;x<bitmap.getWidth()-4;x+=4){int c=bitmap.getPixel(x,y);int gray=(android.graphics.Color.red(c)+android.graphics.Color.green(c)+android.graphics.Color.blue(c))/3;total++;if(gray>210)light++;if(gray<100)ink++;}
-                assertTrue("Capture must contain actual light paper",light>total/4);
-                assertTrue("Capture must contain actual dark text",ink>total/500);
-            }finally{bitmap.recycle();}
-        }
+        // The QCF SVG may be ready in the WebView DOM before its pixels have
+        // reached the BOOX-emulated display surface. Capture actual SCREEN
+        // frames until ink is rendered; a persistent white page MUST still fail.
+        long deadline=android.os.SystemClock.uptimeMillis()+25000;
+        long light=0,ink=0,total=0;
+        int frames=0;
+        do{
+            ins.waitForIdleSync();
+            try(InputStream out=new ParcelFileDescriptor.AutoCloseInputStream(
+                    ins.getUiAutomation().executeShellCommand("screencap -p "+path))){
+                while(out.read()!=-1){}
+            }
+            try(InputStream in=new ParcelFileDescriptor.AutoCloseInputStream(
+                    ins.getUiAutomation().executeShellCommand("cat "+path))){
+                android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeStream(in);
+                assertNotNull("Actual emulator screenshot missing: "+name,bitmap);
+                try{
+                    light=0;ink=0;total=0;
+                    for(int y=bitmap.getHeight()/10;y<bitmap.getHeight()*9/10;y+=4)
+                        for(int x=4;x<bitmap.getWidth()-4;x+=4){
+                            int c=bitmap.getPixel(x,y);
+                            int gray=(android.graphics.Color.red(c)+android.graphics.Color.green(c)
+                                +android.graphics.Color.blue(c))/3;
+                            total++;if(gray>210)light++;if(gray<100)ink++;
+                        }
+                }finally{bitmap.recycle();}
+            }
+            frames++;
+            if(total>0&&light>total/4&&ink>total/500)return;
+            if(android.os.SystemClock.uptimeMillis()>=deadline)break;
+            Thread.sleep(350);
+        }while(true);
+        // Never manufacture image content or accept a blank capture.
+        assertTrue("Capture lacks real light paper after "+frames+" frames: "+name
+            +" light="+light+"/"+total,total>0&&light>total/4);
+        fail("Capture remains blank or lacks actual dark Quran text after "+frames
+            +" frames: "+name+" ink="+ink+"/"+total);
     }
     @Test public void beforeAfterOriginalReaderFoliosAndSources()throws Exception{
         Context c=ApplicationProvider.getApplicationContext();
