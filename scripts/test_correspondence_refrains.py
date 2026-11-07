@@ -36,17 +36,36 @@ class RefrainTest(unittest.TestCase):
   self.assertIn('StudyReaderActivity.EXTRA_JUMP_VERSE',s)
   self.assertNotIn('HifzPrefs',s)
   self.assertNotIn('recordRepetition',s)
-  atlas=(ROOT/'hifz-app/src/main/java/com/quransafeguard/hifz/preview/RefrainAtlasThemes.java').read_text()
-  for token in ['MawdudiMapData.load(activity,passages)','AyahThemesCueIndex.load(activity)',
-                'atlas.displayUnitTitle(', 'atlas.displayPassageTitle(', 'atlas.keyword(id,node)']:
-   self.assertIn(token,atlas+s)
-  for key,expected in [('RAHMAN_EXCERPTS',31),('QAMAR_PEOPLES',4),('MURSALAT_EXCERPTS',10)]:
-   block=re.search(r'private static final String\[\] '+key+r' = \{(.*?)\};',atlas,re.S)
-   self.assertIsNotNone(block,key)
-   self.assertEqual(expected,len(re.findall(r'"[^"]+"',block.group(1))),key)
-  self.assertNotIn('RAHMAN_BEFORE',s)
-  self.assertNotIn('RAHMAN_AFTER',s)
-  self.assertIn('"Before "',s)
-  self.assertIn('After ',s)
-  self.assertIn('Atlas · Unit (editorial)',comparison)
+  builder=(ROOT/'scripts/build_correspondence_refrains.py').read_text()
+  self.assertIn('VISUAL_CUES=',builder)
+  for forbidden in ['RefrainAtlasThemes.load','MawdudiMapData.load','AyahThemesCueIndex.load',
+                    'Atlas · Unit (editorial)','atlas.displayUnitTitle']:
+   self.assertNotIn(forbidden,s+comparison)
+  self.assertIn('class Marks extends View',s)
+  self.assertIn('c.drawLine(',s)
+  self.assertIn('c.drawCircle(',s)
+  self.assertIn('scroll.post(redraw[0])',s)
+  self.assertIn('n[15]',s)
+  self.assertIn('n[16]',s)
+  self.assertIn('n[14]',s)
+  self.assertIn('Quran-context refrain station',s)
+  self.assertIn('Exégèses · fonction du refrain',comparison)
+  self.assertIn('qortobi/sura77-aya50.html',comparison)
+  document=json.loads((ROOT/'docs/correspondances/frises-refrains.json').read_text())
+  self.assertEqual(2,document['version'])
+  observed=[]
+  for relation,expected in [('R047',4),('R048',31),('R059',10)]:
+   items=document['relations'][relation]['nodes']
+   self.assertEqual(expected,len(items))
+   for n in items:
+    self.assertTrue(n['stage_en'])
+    for side in ('before','after'):
+     cue=n[side]['cue_en']
+     self.assertTrue(cue)
+     self.assertLessEqual(len(cue.split()),2)
+     self.assertEqual(n[side]['reference'].split(':')[0],n['reference'].split(':')[0])
+    observed.append(n['before']['cue_en'])
+  self.assertEqual(45,len(observed))
+  self.assertNotIn('RAHMAN_EXCERPTS',s)
+  self.assertNotIn('MURSALAT_EXCERPTS',s)
 if __name__=='__main__':unittest.main()

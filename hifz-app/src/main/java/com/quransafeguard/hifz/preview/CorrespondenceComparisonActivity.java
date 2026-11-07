@@ -459,27 +459,36 @@ public final class CorrespondenceComparisonActivity extends Activity {
                 ?"4 refrains · 54:17, 22, 32, 40"
                 :"R048".equals(relation.id)?"31 refrains · 55:13–77"
                 :"10 refrains · 77:15–49";
-            String classics="R047".equals(relation.id)
-                ?"Al-Qurṭubī · 54:17"
-                :"R048".equals(relation.id)
-                    ?"Al-Jalālayn · 55:13\nAl-Baghawī · 55:13\nAl-Qurṭubī · 55:13"
-                    :"Al-Qurṭubī · 77:15";
             sourceSection(column,"Relation",shortRef);
-            RefrainAtlasThemes atlas=RefrainAtlasThemes.load(this);
-            if(atlas!=null){
-                String ref=origin.toString();
-                for(String[] node:RefrainTimelineData.NODES)
-                    if(relation.id.equals(node[0])&&Integer.parseInt(node[3])==timelineState.selected+1)
-                        {ref=node[5];break;}
-                try{
-                    sourceSection(column,"Atlas · Unit (editorial)",atlas.unitTitle(ref));
-                    sourceSection(column,"Atlas · Passage",atlas.passageTitle(ref));
-                    sourceSection(column,"Atlas · Passage ID",atlas.passageId(ref));
-                }catch(RuntimeException invalid){
-                    sourceSection(column,"Atlas","Source unavailable");
+            String[] currentRefrain=null;
+            for(String[] node:RefrainTimelineData.NODES){
+                if(relation.id.equals(node[0])&&Integer.parseInt(node[3])==timelineState.selected+1){
+                    currentRefrain=node;break;
                 }
             }
-            sourceSection(column,"Sources",classics);
+            if(currentRefrain!=null){
+                sourceSection(column,"Contexte coranique",
+                    currentRefrain[8]+" · "+currentRefrain[15]+"\n"+
+                    currentRefrain[5]+" · Refrain\n"+
+                    currentRefrain[11]+" · "+currentRefrain[16]);
+                sourceSection(column,"Repère mnémotechnique",
+                    currentRefrain[14]+" · Mots-clés éditoriaux en anglais fondés sur les "+
+                    "versets voisins. La frise reprend UNIQUEMENT le graphisme d'Atlas, "+
+                    "et non ses titres.");
+            }
+            String bibliography="R047".equals(relation.id)
+                ?"al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 54:17\n"+
+                  "https://quran.ksu.edu.sa/tafseer/qortobi/sura54-aya17.html"
+                :"R048".equals(relation.id)
+                ?"al-Baghawī, Maʿālim al-tanzīl, 55:13\n"+
+                  "https://quran.ksu.edu.sa/tafseer/baghawy/sura55-aya13.html\n"+
+                  "al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 55:13\n"+
+                  "https://quran.ksu.edu.sa/tafseer/qortobi/sura55-aya13.html"
+                :"al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 77:50\n"+
+                  "https://quran.ksu.edu.sa/tafseer/qortobi/sura77-aya50.html\n"+
+                  "Ibn Kathīr, Tafsīr al-Qurʾān al-ʿAẓīm, 77:15\n"+
+                  "https://quran.ksu.edu.sa/tafseer/katheer/sura77-aya15.html";
+            sourceSection(column,"Exégèses · fonction du refrain",bibliography);
             LinearLayout complete=Ui.column(this);
             complete.setVisibility(View.GONE);
             sourceSection(complete,"Bibliographie complète",relation.source);
