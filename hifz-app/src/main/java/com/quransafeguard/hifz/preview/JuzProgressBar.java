@@ -78,7 +78,7 @@ final class JuzProgressBar extends View {
             canvas.save();
             canvas.clipRect(body.left,stabilizedTop,body.right,y);
             pen.setColor(Ui.LINE);
-            pen.setStrokeWidth(Math.max(stroke,Ui.dp(getContext(),1.4f)));
+            pen.setStrokeWidth(Math.max(stroke,Ui.dp(getContext(),1)));
             pen.setStyle(Paint.Style.STROKE);
             float step=Math.max(Ui.dp(getContext(),5),w*.09f);
             for(float x=body.left-body.height();x<body.right+body.height();x+=step)
@@ -93,7 +93,7 @@ final class JuzProgressBar extends View {
             pen.setStyle(Paint.Style.FILL);
             pen.setColor(Ui.INK);
             float step=Math.max(Ui.dp(getContext(),6),w*.12f);
-            float radius=Math.max(1f,Ui.dp(getContext(),1.2f));
+            float radius=Math.max(1f,Ui.dp(getContext(),1));
             for(float cy=learnedTop+step/2;cy<y;cy+=step)
                 for(float cx=body.left+step/2;cx<body.right;cx+=step)
                     canvas.drawCircle(cx,cy,radius,pen);
