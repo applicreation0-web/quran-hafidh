@@ -131,6 +131,8 @@ public final class EarnedEveningProtocolRegressionTest {
    ConsolidationCycleEngine.Session finalSession=ready(
        ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-"+sun,
        reboot.stabilizationSnowballFinalUnits(sun));
+   assertTrue("A completed Sunday must have an authentic persisted OPEN proof",
+       reboot.persistConsolidationSession(finalSession));
    assertTrue(reboot.completeConsolidationSessionV6(finalSession,geometry,sun.toString(),"earned"));
    assertTrue(new HifzPrefs(db).progressionSnapshotV6().acquired.containsAll(ids));
  }
