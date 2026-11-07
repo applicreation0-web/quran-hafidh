@@ -7,6 +7,7 @@ import android.graphics.RectF;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -42,8 +43,13 @@ public final class ProgressMapActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private GeometryRepository geometry;
     private ProgressGridView grid;
-    private TextView apprentissageEtaValue;
-    private TextView stabilisationEtaValue;
+    private ScrollView progressScroll;
+    private Button backButton;
+    private LinearLayout juzOverview, pageDetails;
+    private TextView juzHeading;
+    private final JuzProgressBar[] juzBars=new JuzProgressBar[30];
+    private final LinearLayout[] juzCards=new LinearLayout[30];
+    private int selectedJuz=0;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -57,13 +63,17 @@ public final class ProgressMapActivity extends android.app.Activity {
         }
 
         ScrollView scroll = new ScrollView(this);
+        progressScroll=scroll;
         scroll.setFillViewport(true);
         LinearLayout root = Ui.column(this);
         scroll.addView(root);
 
         LinearLayout top = Ui.row(this);
         top.setPadding(0, 0, 0, Ui.dp(this, 2));
-        top.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
+        backButton=Ui.iconButton(this,"‹","Retour",v->{
+            if(selectedJuz>0)showAllPages();else finish();
+        });
+        top.addView(backButton);
         TextView title = Ui.bookText(this, "Progression", 18, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER);
@@ -73,15 +83,20 @@ public final class ProgressMapActivity extends android.app.Activity {
         top.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
         root.addView(top);
 
-        // Always explain the 604 page cells before the grid fills the screen.
-        TextView gridHelp = Ui.text(this,
-            "604 pages · une case = une page · toucher pour ouvrir", 14f, false);
-        if (getResources().getConfiguration().smallestScreenWidthDp >= 600)
-            gridHelp.setTextSize(19f);
-        gridHelp.setTextColor(Ui.MUTED);
-        gridHelp.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 5));
-        root.addView(gridHelp);
-        root.addView(legend());
+        // 30 printed-page gauges, then the actual QCF pages of the selected Juz.
+        // No explanatory banner, redundant selection dialog, or extra grouping.
+        juzOverview=Ui.column(this);
+        juzOverview.setPadding(0,0,0,0);
+        root.addView(juzOverview);
+        buildJuzOverview();
+
+        pageDetails=Ui.column(this);
+        pageDetails.setPadding(0,0,0,0);
+        pageDetails.setVisibility(View.GONE);
+        juzHeading=Ui.bookText(this,"",18f,true);
+        juzHeading.setPadding(Ui.dp(this,8),Ui.dp(this,8),0,0);
+        pageDetails.addView(juzHeading);
+        pageDetails.addView(legend());
         grid = new ProgressGridView(this);
         grid.setOnPageTapped(page -> {
             Intent intent = new Intent(this, StudyReaderActivity.class);
@@ -91,17 +106,99 @@ public final class ProgressMapActivity extends android.app.Activity {
         LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         gridParams.topMargin = Ui.dp(this, 4);
-        root.addView(grid, gridParams);
-        grid.setContentDescription("604 pages du Mushaf · touchez une page pour l’ouvrir en Lecture");
-
-        // Estimates follow the grid. The decoding legend stays above, visible at entry.
-        root.addView(Ui.divider(this));
-        apprentissageEtaValue = etaBox(root, "Fin Apprentissage");
-        stabilisationEtaValue = etaBox(root, "Fin Stabilisation");
+        pageDetails.addView(grid, gridParams);
+        root.addView(pageDetails);
+        grid.setContentDescription("Pages du juz");
+        if(savedInstanceState!=null){
+            int restored=savedInstanceState.getInt("freeze2SelectedJuz",0);
+            if(restored>=1 && restored<=30)showJuz(restored);
+        }
 
         setContentView(scroll);
         Ui.respectSystemBars(this, scroll, 0, 0, 0, 0);
         loadStatuses();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle out) {
+        out.putInt("freeze2SelectedJuz",selectedJuz);
+        super.onSaveInstanceState(out);
+    }
+
+    private static int juzStartPage(int juz) {
+        if(juz<1||juz>30)throw new IllegalArgumentException("Juz must be in 1..30");
+        // Canonical indexed QCF 240 rub' boundary table; eight rub' per Juz.
+        return QuranRubBoundaries.rowForIndex((juz-1)*8+1)[3];
+    }
+    /** Miniature pages ARE the 30 gauges. Six across on BOOX, three on phones. */
+    private void buildJuzOverview() {
+        boolean boox=getResources().getConfiguration().smallestScreenWidthDp>=600;
+        int cols=boox?6:3;
+        LinearLayout row=null;
+        for(int j=1;j<=30;j++){
+            if((j-1)%cols==0){
+                row=Ui.row(this);
+                row.setPadding(0,0,0,0);
+                juzOverview.addView(row);
+            }
+            int index=j-1;
+            final int selected=j;
+            LinearLayout item=Ui.column(this);
+            item.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,7));
+            item.setGravity(Gravity.CENTER_HORIZONTAL);
+            item.setBackgroundColor(Ui.PAPER);
+            item.setClickable(true);
+            item.setFocusable(true);
+            item.setMinimumHeight(Ui.dp(this,96));
+            item.setOnClickListener(v->showJuz(selected));
+
+            JuzProgressBar page=new JuzProgressBar(this);
+            page.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+            item.addView(page);
+            TextView label=Ui.bookText(this,"Juz "+j,boox?16f:14f,true);
+            label.setGravity(Gravity.CENTER);
+            label.setPadding(0,Ui.dp(this,3),0,0);
+            item.addView(label);
+            juzCards[index]=item;
+            juzBars[index]=page;
+            item.setContentDescription("Juz "+j);
+
+            LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(
+                0,LinearLayout.LayoutParams.WRAP_CONTENT,1f);
+            cell.setMargins(Ui.dp(this,2),0,Ui.dp(this,2),Ui.dp(this,3));
+            row.addView(item,cell);
+        }
+    }
+
+    /** Replace the 30-entry overview with the exact QCF page range for this Juz. */
+    private void showJuz(int juz) {
+        int first=juzStartPage(juz),last=juz==30?604:juzStartPage(juz+1)-1;
+        selectedJuz=juz;
+        grid.setPageWindow(first,last);
+        juzOverview.setVisibility(View.GONE);
+        pageDetails.setVisibility(View.VISIBLE);
+
+        juzHeading.setText("Juz "+juz);
+        Ui.setIconDescription(backButton,"Retour aux 30 juz");
+        grid.setContentDescription("Juz "+juz+" · pages "+first+" à "+last);
+        if(progressScroll!=null)progressScroll.post(()->progressScroll.scrollTo(0,0));
+    }
+    /** A single back step to the 30 gauges, not to a redundant 604-page map. */
+    private void showAllPages() {
+        selectedJuz=0;
+        grid.setPageWindow(1,604); // restore the internal view before hiding it
+        pageDetails.setVisibility(View.GONE);
+        juzOverview.setVisibility(View.VISIBLE);
+
+        Ui.setIconDescription(backButton,"Retour");
+        grid.setContentDescription("Pages du juz");
+        if(progressScroll!=null)progressScroll.post(()->progressScroll.scrollTo(0,0));
+    }
+
+    @Override public void onBackPressed() {
+        if(selectedJuz>0)showAllPages();
+        else super.onBackPressed();
     }
 
     private LinearLayout legend() {
@@ -142,22 +239,6 @@ public final class ProgressMapActivity extends android.app.Activity {
         return box;
     }
 
-    /** "Fin Apprentissage ········ value": a plain line under a hairline, never a bordered panel. */
-    private TextView etaBox(LinearLayout root, String title) {
-        LinearLayout row = Ui.row(this);
-        row.setPadding(Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6));
-        TextView label = Ui.text(this, title, 12.5f, true);
-        Ui.weight(label, 1f);
-        row.addView(label);
-        TextView value = Ui.text(this, "Calcul en cours…", 12f, false);
-        value.setTextColor(Ui.MUTED);
-        value.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        row.addView(value);
-        root.addView(row);
-        root.addView(Ui.divider(this));
-        return value;
-    }
-
     /**
      * Touches every one of the ~8820 physical lines (a HashSet lookup each, against
      * progressionSnapshotV6's three sets) — cheap on a phone, but this app targets weak e-ink CPUs
@@ -166,14 +247,12 @@ public final class ProgressMapActivity extends android.app.Activity {
     private void loadStatuses() {
         io.execute(() -> {
             int[] statuses;
-            String apprentissageEta;
-            String stabilisationEta;
+            int[][] juzCounts;
             try {
                 statuses = computeStatuses();
-                apprentissageEta = weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),
-                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());
-                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),
-                    PreviewConfig.STABILIZATION_WEEKLY_LINES);
+                // Read-only line levels, each physical QCF line accounted for once.
+                juzCounts=JuzProgressSummary.summarize(
+                    geometry,prefs.progressionSnapshotV6());
             } catch (RuntimeException corruptOrUnconfiguredState) {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
@@ -185,20 +264,16 @@ public final class ProgressMapActivity extends android.app.Activity {
                 if (isFinishing() || isDestroyed()) return;
                 for (int page = 1; page <= 604; page++) grid.setStatus(page, statuses[page]);
                 grid.invalidate();
-                apprentissageEtaValue.setText(apprentissageEta);
-                stabilisationEtaValue.setText(stabilisationEta);
+                for(int i=0;i<30;i++){
+                    int[] c=juzCounts[i];
+                    int total=c[JuzProgressSummary.TOTAL];
+                    int learned=c[JuzProgressSummary.LEARNED];
+                    int stabilized=c[JuzProgressSummary.STABILIZED];
+                    int acquired=c[JuzProgressSummary.ACQUIRED];
+                    juzBars[i].setLevels(learned,stabilized,acquired,total);
+                }
             });
         });
-    }
-
-    /**
-     * Same shape as SettingsActivity's Diagnostic estimates: remaining lines divided by a weekly
-     * pace, ceiling-rounded, projected from today.
-     */
-    private static String weeksEtaSummary(int remaining, int weeklyPace) {
-        if (remaining == 0) return "à jour";
-        int weeks = (remaining + weeklyPace - 1) / weeklyPace;
-        return remaining + " ligne(s) restante(s) · ~" + weeks + " semaine(s) · ~" + HifzClock.today().plusWeeks(weeks);
     }
 
     private int[] computeStatuses() {

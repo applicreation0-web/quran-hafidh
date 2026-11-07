@@ -71,10 +71,12 @@ public final class ProgressMapSourceContractTest {
         assertTrue("À stabiliser must be a diagonal hatch, not a fill", drawCell.contains("canvas.drawLine(x, rect.bottom, x + rect.height(), rect.top, fill);"));
         assertTrue("En apprentissage must be dots, not a fill", drawCell.contains("canvas.drawCircle(x, y, dotRadius, fill);"));
         int totalSetColor = countOccurrences(grid, ".setColor(");
-        int inkOrLineSetColor = countOccurrences(grid, ".setColor(Ui.INK)") + countOccurrences(grid, ".setColor(Ui.LINE)");
-        assertTrue("every Paint.setColor call must use the shared ink/line tokens — anything else "
-                + "would smuggle a hue-based distinction back in, meaningless on e-ink anyway",
+        int inkOrLineSetColor = countOccurrences(grid, ".setColor(Ui.INK)") +
+            countOccurrences(grid, ".setColor(Ui.LINE)");
+        assertTrue("Only shared monochrome ink/line tokens are allowed",
             totalSetColor > 0 && totalSetColor == inkOrLineSetColor);
+        assertFalse("Page numbers are not shown inside the Juz page grid",
+            grid.contains("canvas.drawText(Integer.toString(page)"));
     }
 
     /**
@@ -126,31 +128,22 @@ public final class ProgressMapSourceContractTest {
             snapshot.contains("requireSchema6ProgressionState();"));
     }
 
-    @Test public void liveEtaEstimatesSitAboveTheGridUsingTheSameBucketsDiagnosticUses() throws Exception {
+    @Test public void progressionHasNoRedundantEtaLineCounts() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
-        assertTrue("the two estimates approved in the mockup must both be wired in, in that order",
-            activity.indexOf("apprentissageEtaValue = etaBox(root, \"Fin Apprentissage\");") <
-                activity.indexOf("stabilisationEtaValue = etaBox(root, \"Fin Stabilisation\");"));
-        assertTrue("Apprentissage's estimate must use its own real weekly pace (SABQI_LINES × "
-                + "learningDaysPerWeek), never Stabilisation's fixed one",
-            activity.contains("weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"
-                + "                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());"));
-        assertTrue("Stabilisation's estimate must reuse the exact same computation Diagnostic uses",
-            activity.contains("weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),\n"
-                + "                    PreviewConfig.STABILIZATION_WEEKLY_LINES);"));
+        assertFalse("No future-date ETA or lines-remaining text in minimalist Juz progress",
+            activity.contains("apprentissageEtaValue") || activity.contains("stabilisationEtaValue")
+            || activity.contains("weeksEtaSummary(")
+            || activity.contains("etaBox(root,"));
     }
 
     @Test public void backgroundComputationFailureIsVisibleNotSilent() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
-        assertTrue("progressionSnapshotV6()/requireSchema6ProgressionState() throws when state is "
-                + "not yet schema6 or corrupt (confirmed in HifzPrefs) — a background thread must not "
-                + "silently die on that, whether it's the status scan or either live ETA computation that throws",
+        assertTrue("Corrupt schema6 must fail closed and report an error, never fill a fictitious Juz",
             activity.contains("try {\n"
                 + "                statuses = computeStatuses();\n"
-                + "                apprentissageEta = weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"
-                + "                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());\n"
-                + "                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),\n"
-                + "                    PreviewConfig.STABILIZATION_WEEKLY_LINES);\n"
+                + "                // Read-only line levels, each physical QCF line accounted for once.\n"
+                + "                juzCounts=JuzProgressSummary.summarize(\n"
+                + "                    geometry,prefs.progressionSnapshotV6());\n"
                 + "            } catch (RuntimeException corruptOrUnconfiguredState) {"));
         assertTrue("a failed computation must tell the learner, not just leave the grid blank forever",
             activity.contains("Toast.makeText(this, \"Progression indisponible · ouvrez Diagnostic si le problème persiste.\", Toast.LENGTH_LONG).show();"));
@@ -158,6 +151,48 @@ public final class ProgressMapSourceContractTest {
                 + "is declared for this screen, so rotation recreates it while the background scan may "
                 + "still be in flight)",
             countOccurrences(activity, "if (isFinishing() || isDestroyed()) return;") == 2);
+    }
+
+    @Test public void thirtyCanonicalJuzGaugesArePrimaryWithNoRedundantPicker() throws Exception {
+        String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
+        String summary=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/JuzProgressSummary.java");
+        assertTrue("exactly thirty interactive Juz rows must replace the default 604-cell wall",
+            activity.contains("for(int j=1;j<=30;j++)")
+            && activity.contains("root.addView(juzOverview);")
+            && activity.contains("root.addView(pageDetails);")
+            && activity.contains("pageDetails.setVisibility(View.GONE);")
+            && activity.contains("item.setOnClickListener(v->showJuz(selected));"));
+        assertFalse("No extra Juz modal selector is permitted",activity.contains("chooseJuz()"));
+        String page=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/JuzProgressBar.java");
+        assertTrue("Each Juz must be a vertical QCF-shaped page gauge, not a horizontal bar",
+            page.contains("width*550f/345f")
+            && page.contains("canvas.clipPath(outline)")
+            && page.contains("learned*scale")
+            && page.contains("stabilized*scale")
+            && page.contains("acquired*scale"));
+        assertTrue("Every real physical QCF line counted exactly once by canonical Juz",
+            summary.contains("for(GeometryRepository.LineMeta line:lines)")
+            && summary.contains("rowForIndex(j*8+1)")
+            && summary.contains("counts[j][TOTAL]++")
+            && summary.contains("if(acquired.contains(line.id))")
+            && summary.contains("else if(stabilized.contains(line.id))")
+            && summary.contains("else if(learned.contains(line.id))"));
+        assertFalse("No redundant on-screen AI instructions",
+            activity.contains("toucher un juz pour afficher ses pages")
+            || activity.contains("toucher une page pour ouvrir le Mushaf")
+            || activity.contains("toucher pour ouvrir en Lecture"));
+        assertFalse("Juz miniature pages must not display percentage or line counts",
+            activity.contains("juzPercentLabels")
+            || activity.contains("juzCountLabels")
+            || activity.contains("percent+\" %\"")
+            || activity.contains("done+\"/\"+total+\" lignes\""));
+        assertTrue("One page silhouette per Juz and one short visible label",
+            activity.contains("JuzProgressBar page=new JuzProgressBar(this);")
+            && activity.contains("Ui.bookText(this,\"Juz \"+j")
+            && activity.contains("item.addView(page)")
+            && activity.contains("item.addView(label)"));
+        assertTrue("The Back button must return to the thirty juz, not close the app",
+            activity.contains("if(selectedJuz>0)showAllPages();"));
     }
 
     @Test public void tappingAPageOpensLectureThere() throws Exception {

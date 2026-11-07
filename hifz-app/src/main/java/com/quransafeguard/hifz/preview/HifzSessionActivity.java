@@ -244,7 +244,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);
         top.addView(Ui.iconButton(this,"","Retour",v->finish()));
-        program = Ui.text(this,"Chargement…",12.5f,true);
+        boolean wideBoox = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        program = Ui.text(this,"Chargement…",wideBoox ? 16f : 12.5f,true);
         Ui.weight(program,1f);
         program.setGravity(Gravity.CENTER_VERTICAL);
         program.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
@@ -253,14 +254,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         root.addView(top);
 
         LinearLayout meta = Ui.row(this);
-        meta.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,2));
-        progress = Ui.text(this,"",10.8f,false);
+        meta.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,1));
+        progress = Ui.text(this,"",wideBoox ? 14f : 10.8f,false);
         progress.setTextColor(Ui.MUTED);
         progress.setMaxLines(2);
         progress.setEllipsize(TextUtils.TruncateAt.END);
         Ui.weight(progress,1f);
         meta.addView(progress);
-        timerText = Ui.text(this,"",10.5f,false);
+        timerText = Ui.text(this,"",wideBoox ? 13f : 10.5f,false);
         timerText.setTextColor(Ui.MUTED);
         timerText.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         meta.addView(timerText);

@@ -31,6 +31,7 @@ final class ProgressGridView extends View {
     private OnPageTapped listener;
     private float cellSize;
     private float gap;
+    private int firstPage=1, lastPage=TOTAL_PAGES;
 
     ProgressGridView(Context context) {
         super(context);
@@ -47,22 +48,36 @@ final class ProgressGridView extends View {
 
     void setOnPageTapped(OnPageTapped listener) { this.listener = listener; }
 
+    /** Read-only Juz zoom; the 604-page status array and the page-to-QCF route never change. */
+    void setPageWindow(int first,int last) {
+        if(first<1 || last>604 || first>last)throw new IllegalArgumentException("Invalid Juz page window");
+        firstPage=first;lastPage=last;requestLayout();invalidate();
+    }
+    int firstVisiblePage(){return firstPage;}
+    int lastVisiblePage(){return lastPage;}
+    private boolean zoomed(){return firstPage!=1 || lastPage!=TOTAL_PAGES;}
+    private int columns(){return zoomed() ?
+        (getResources().getConfiguration().smallestScreenWidthDp>=600?7:5) : COLUMNS;}
+    private int visibleCount(){return lastPage-firstPage+1;}
+
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec);
-        cellSize = width / (float) COLUMNS;
-        int rows = (TOTAL_PAGES + COLUMNS - 1) / COLUMNS;
+        cellSize = width / (float) columns();
+        int rows = (visibleCount() + columns() - 1) / columns();
         setMeasuredDimension(width, Math.round(rows * cellSize));
     }
 
     @Override protected void onDraw(Canvas canvas) {
-        int rows = (TOTAL_PAGES + COLUMNS - 1) / COLUMNS;
+        int cols=columns();
+        int rows = (visibleCount() + cols - 1) / cols;
         for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < COLUMNS; col++) {
-                int page = row * COLUMNS + col + 1;
-                if (page > TOTAL_PAGES) break;
+            for (int col = 0; col < cols; col++) {
+                int page = firstPage + row * cols + col;
+                if (page > lastPage) break;
                 float left = col * cellSize, top = row * cellSize;
                 cellRect.set(left + gap, top + gap, left + cellSize - gap, top + cellSize - gap);
                 drawCell(canvas, cellRect, status[page], fill, stroke);
+
             }
         }
     }
@@ -74,11 +89,16 @@ final class ProgressGridView extends View {
         if (event.getAction() == MotionEvent.ACTION_DOWN) return true;
         if (event.getAction() != MotionEvent.ACTION_UP) return false;
         int col = (int) (event.getX() / cellSize), row = (int) (event.getY() / cellSize);
-        if (col < 0 || col >= COLUMNS || row < 0) return false;
-        int page = row * COLUMNS + col + 1;
-        if (page >= 1 && page <= TOTAL_PAGES) listener.tapped(page);
+        if (col < 0 || col >= columns() || row < 0) return false;
+        int page = firstPage + row * columns() + col;
+        if (page >= firstPage && page <= lastPage) {
+            performClick();
+            listener.tapped(page);
+        }
         return true;
     }
+
+    @Override public boolean performClick() {super.performClick();return true;}
 
     /** Shared by the grid cells and the legend swatches, so both always draw the exact same pattern. */
     static void drawCell(Canvas canvas, RectF rect, int status, Paint fill, Paint stroke) {
