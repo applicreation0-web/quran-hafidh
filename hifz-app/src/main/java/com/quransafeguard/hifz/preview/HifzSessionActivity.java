@@ -760,8 +760,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             : maskedMaintien
                 ? "Consolidation Itqān · hizb " + (position + 1) + "/"
                     + consolidationSession.sessionGroupSize() + " · un passage masqué"
-                : displayName + " · " + currentLineIds.size() + " lignes · unité "
-                    + (position + 1) + "/" + consolidationSession.sessionGroupSize());
+                : protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS
+                    ? displayName + " · toutes les parties · " + currentLineIds.size()
+                        + " lignes · passage final"
+                    : displayName + " · " + currentLineIds.size() + " lignes · unité "
+                        + (position + 1) + "/" + consolidationSession.sessionGroupSize());
         showCurrent();
         updateGroupedCycleRepAction();
     }

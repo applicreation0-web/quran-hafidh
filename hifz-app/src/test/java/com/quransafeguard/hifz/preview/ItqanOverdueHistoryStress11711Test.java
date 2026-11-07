@@ -68,7 +68,12 @@ public final class ItqanOverdueHistoryStress11711Test {
             // Already receipted prior-day units do not re-enter a fresh
             // overdue-only source as a synthetic ×1 pass: 30 then 15 exact
             // ×7 units, neither batch may be consumed by replaying the other.
+            // Synthetic overdue-* line ids have no QCF adjacency proof.
+            // The engine must NOT fabricate a combined continuous pass for them.
             assertEquals(round==0?30:15,due.size());
+            for(ConsolidationCycleEngine.Unit part:due)
+                assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,
+                    part.protocol());
             ConsolidationCycleEngine.Cycle cycle=null;
             for(ConsolidationCycleEngine.Unit unit:due){
                 cycle=cycle==null

@@ -71,6 +71,61 @@ final class ConsolidationPhysicalUnitPolicy {
      * lines, concatenated in accumulation order, as one combined unit — on top of (not instead
      * of) each block's own individual repetitions.
      */
+    /** Sort physical QCF blocks by their first 0-based printed line, not by the
+     * date or repetition status. Historical synthetic ids retain insertion order. */
+    static long firstPhysicalLineOrder(String encoded) {
+        String first = decodeLineUnit(encoded).get(0);
+        int colon = first.indexOf(':');
+        if (colon <= 0 || colon == first.length() - 1) return Long.MAX_VALUE;
+        try {
+            int page = Integer.parseInt(first.substring(0, colon));
+            int line = Integer.parseInt(first.substring(colon + 1));
+            if (page < 1 || page > 604 || line < 0 || line > 30) return Long.MAX_VALUE;
+            return page * 1000L + line;
+        } catch (NumberFormatException synthetic) {
+            return Long.MAX_VALUE;
+        }
+    }
+
+    /**
+     * A genuine uninterrupted pass must not skip an unlearned physical QCF line.
+     * On device, validate adjacency against the authentic shipped global line
+     * indices. The JVM-only fallback accepts same-page neighbours and the
+     * unequivocal full 15-line page boundary; uncertain boundaries fail closed.
+     */
+    static boolean physicallyContinuous(List<String> blocks, GeometryRepository geometry) {
+        if (blocks == null || blocks.isEmpty()) return false;
+        ArrayList<String> ordered=new ArrayList<>();
+        for(String block:blocks)ordered.addAll(decodeLineUnit(block));
+        if (ordered.isEmpty()) return false;
+        if (geometry != null) {
+            List<GeometryRepository.LineMeta> metas=geometry.linesForExactIds(ordered);
+            for(int i=1;i<metas.size();i++)
+                if(metas.get(i).globalIndex != metas.get(i-1).globalIndex+1) return false;
+            return true;
+        }
+        long previous=-1;
+        for(String id:ordered) {
+            int colon=id.indexOf(':');
+            if(colon<=0||colon==id.length()-1)return false;
+            int page, line;
+            try {
+                page=Integer.parseInt(id.substring(0,colon));
+                line=Integer.parseInt(id.substring(colon+1));
+            } catch(NumberFormatException synthetic) {return false;}
+            if(page<1||page>604||line<0||line>14)return false;
+            long next=page*1000L+line;
+            if(previous!=-1) {
+                long prevPage=previous/1000,prevLine=previous%1000;
+                if(!((page==prevPage && line==prevLine+1)
+                        || (page==prevPage+1 && prevLine==14 && line==0)))
+                    return false;
+            }
+            previous=next;
+        }
+        return true;
+    }
+
     static String encodeContinuousUnit(List<String> encodedUnits) {
         if (encodedUnits == null || encodedUnits.size() < 2) {
             throw new IllegalArgumentException("Continuous unit requires at least two physical units");

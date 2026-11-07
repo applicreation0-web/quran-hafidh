@@ -56,6 +56,8 @@ public final class HifzPrefs {
     private static final Object V6_STATE_LOCK = new Object();
     private static volatile String migrationFaultPointForTest;
     private final SharedPreferences p;
+    private final Context geometryContext;
+    private final GeometryRepository testGeometry;
 
     private static void maybeInterruptMigrationForTest(String point) {
         if (point != null && point.equals(migrationFaultPointForTest)) {
@@ -64,6 +66,8 @@ public final class HifzPrefs {
     }
 
     public HifzPrefs(Context context) {
+        geometryContext = context.getApplicationContext();
+        testGeometry = null;
         p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
         boolean firstInstall=p.getInt("schema",0)==0;
         ensureSchema(context);
@@ -74,8 +78,19 @@ public final class HifzPrefs {
     /** JVM tests only: wraps an already-populated store as-is (no schema bootstrap, no legacy
      *  gate migration), so a test can reopen the same store to simulate a process restart. */
     HifzPrefs(SharedPreferences store) {
+        this(store, null);
+    }
+
+    HifzPrefs(SharedPreferences store, GeometryRepository geometry) {
         if (store == null) throw new IllegalArgumentException("store required");
         p = store;
+        geometryContext = null;
+        testGeometry = geometry;
+    }
+
+    private GeometryRepository reviewGeometry() {
+        return testGeometry != null ? testGeometry
+            : geometryContext != null ? GeometryRepository.get(geometryContext) : null;
     }
 
     private void ensureSchema(Context context) {
@@ -2831,12 +2846,26 @@ public final class HifzPrefs {
         if(family==ConsolidationCycleEngine.Family.STABILIZATION){
             // Composite days can have several same-surah NEW ×7 subblocks.
             // A combined old ×1 pass NEVER earns a ×7 receipt.
-            for(ConsolidationCycleEngine.Unit unit:units){
-                if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN)
-                    earned.add(unit.id());
-                else if(unit.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS)
-                    throw new IllegalStateException("Invalid Stabilisation evening protocol");
+            ArrayList<String> exactPhysicalOrder = new ArrayList<>();
+            boolean hasFinalPass = false;
+            for(int i=0;i<units.size();i++){
+                ConsolidationCycleEngine.Unit unit=units.get(i);
+                if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS){
+                    // The whole must come AFTER its separately verified parts.
+                    if(hasFinalPass || i!=units.size()-1 || exactPhysicalOrder.isEmpty()
+                            || !exactPhysicalOrder.equals(
+                                ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id())))
+                        throw new IllegalStateException("Final all-parts pass is not the exact physical group");
+                    hasFinalPass=true;
+                } else if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN
+                        || unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS){
+                    exactPhysicalOrder.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id()));
+                    if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN)
+                        earned.add(unit.id());
+                } else throw new IllegalStateException("Invalid Stabilisation evening protocol");
             }
+            if(new LinkedHashSet<>(exactPhysicalOrder).size()!=exactPhysicalOrder.size())
+                throw new IllegalStateException("Overlapping physical lines in evening cycle");
             if(earned.isEmpty())throw new IllegalStateException("Missing NEW ×7 receipts");
         } else {
             int physical=units.size()>1?units.size()-1:1;
@@ -3086,7 +3115,7 @@ public final class HifzPrefs {
 
         JSONArray due = new JSONArray();
         int room = Math.max(0, ConsolidationCycleEngine.maxUnitsFor(
-            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN) - 1 - current.length());
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN) - 2 - current.length());
         // Legacy OPEN sessions and historical unit-only tests may have no V6 line
         // ledger at all. The old ordinary snowball must remain read-only and
         // operational when there is no prior-week work to recover.
@@ -3131,41 +3160,153 @@ public final class HifzPrefs {
      * once as one continuous pass. Renforcement retains its original SNOWBALL ×10.
      * Already persisted OPEN sessions keep their frozen protocol vectors in restore.
      */
-    List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
-        if(itqanPostNasMaintenance())return postNasConsolidationUnits(today);
-        JSONArray source=stabilizationEveningSource(today);
-        if(source.length()==0)return Collections.emptyList();
-        Set<String> earned=earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
-        ArrayList<String> alreadyRepeated=new ArrayList<>(),newBlocks=new ArrayList<>();
-        for(int i=0;i<source.length();i++){
-            String id=source.optString(i);
-            if(id.isEmpty())throw new IllegalStateException("Empty stabilized snowball unit");
-            if(earned.contains(id))alreadyRepeated.add(id);
-            else newBlocks.add(id);
+    /** Combine already-earned ×1 blocks ONLY when they are truly adjacent on the QCF page.
+     * A missed calendar lesson leaves the cursor still, while a physical gap must
+     * break the pass rather than quietly jump over unlearned Quran. */
+    private static void appendOldConsolidationRun(List<ConsolidationCycleEngine.Unit> out,
+            List<String> oldRun, GeometryRepository geometry) {
+        if (oldRun.isEmpty()) return;
+        ArrayList<String> run = new ArrayList<>();
+        for(String block:oldRun) {
+            if(!run.isEmpty()) {
+                ArrayList<String> pair = new ArrayList<>();
+                pair.add(run.get(run.size()-1));
+                pair.add(block);
+                if(!ConsolidationPhysicalUnitPolicy.physicallyContinuous(pair,geometry)) {
+                    String id=run.size()==1?run.get(0)
+                        :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(run);
+                    out.add(new ConsolidationCycleEngine.Unit(id,
+                        ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+                    run.clear();
+                }
+            }
+            run.add(block);
         }
-        if(newBlocks.isEmpty())return Collections.emptyList();
-        ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
-        // Fresh cycles recover unreceipted physical work first (At-Tur ×7).
-        // restoreConsolidationSession reads the persisted unit/protocol vector
-        // directly: never reorder an already OPEN legacy snapshot.
-        for(String id:newBlocks)units.add(new ConsolidationCycleEngine.Unit(id,
-            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
-        if(!alreadyRepeated.isEmpty()){
-            String combined=alreadyRepeated.size()==1?alreadyRepeated.get(0)
-                :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(alreadyRepeated);
-            units.add(new ConsolidationCycleEngine.Unit(combined,
+        if(!run.isEmpty()) {
+            String id=run.size()==1?run.get(0)
+                :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(run);
+            out.add(new ConsolidationCycleEngine.Unit(id,
                 ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
         }
-        if(units.size()>ConsolidationCycleEngine.maxUnitsFor(
+        oldRun.clear();
+    }
+
+    List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
+        if (itqanPostNasMaintenance()) return postNasConsolidationUnits(today);
+        JSONArray source = stabilizationEveningSource(today);
+        if (source.length() == 0) return Collections.emptyList();
+        Set<String> earned = earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
+        ArrayList<ConsolidationCycleEngine.Unit> physical = new ArrayList<>();
+        boolean hasNew = false;
+        for (int i = 0; i < source.length(); i++) {
+            String id = source.optString(i);
+            if (id.isEmpty()) throw new IllegalStateException("Empty stabilized snowball unit");
+            boolean repeated = earned.contains(id);
+            hasNew |= !repeated;
+            physical.add(new ConsolidationCycleEngine.Unit(id, repeated
+                ? ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS
+                : ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        }
+        if (!hasNew) return Collections.emptyList();
+        // Attendance dates are not reading order. Keep each line's authentic
+        // protocol while presenting the physical Mushaf from top to bottom.
+        physical.sort((left, right) -> Long.compare(
+            ConsolidationPhysicalUnitPolicy.firstPhysicalLineOrder(left.id()),
+            ConsolidationPhysicalUnitPolicy.firstPhysicalLineOrder(right.id())));
+        GeometryRepository geometry = reviewGeometry();
+        ArrayList<ConsolidationCycleEngine.Unit> units = new ArrayList<>();
+        ArrayList<String> oldRun = new ArrayList<>();
+        ArrayList<String> allBlocks = new ArrayList<>();
+        for (ConsolidationCycleEngine.Unit block : physical) {
+            allBlocks.add(block.id());
+            if (block.protocol() == ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS) {
+                oldRun.add(block.id());
+            } else {
+                appendOldConsolidationRun(units, oldRun, geometry);
+                units.add(block);
+            }
+        }
+        appendOldConsolidationRun(units, oldRun, geometry);
+        // The missing final step: AFTER all ×1 and ×7 subblocks, read every
+        // eligible line together in canonical order. This pass earns no ×7 receipt.
+        if (allBlocks.size() > 1
+                && ConsolidationPhysicalUnitPolicy.physicallyContinuous(allBlocks, geometry)) {
+            units.add(new ConsolidationCycleEngine.Unit(
+                ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(allBlocks),
+                ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS));
+        }
+        if (units.size() > ConsolidationCycleEngine.maxUnitsFor(
                 ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN))
             throw new IllegalStateException("Composite snowball exceeds safe frozen capacity");
         return Collections.unmodifiableList(units);
     }
 
+    /** Unreceipted Sabqi evening work is not a missed morning lesson. Recover
+     * actual learned blocks from earlier weeks without advancing the Sabqi cursor.
+     * Reserve the newest week's physical blocks first; older debt stays durable
+     * in the historical ledger if the grouped-cycle safety cap is reached. */
+    private JSONArray learningEveningSource(LocalDate today) {
+        JSONArray current = rolledSnowballUnits(ConsolidationCycleEngine.Family.LEARNING,today);
+        JSONArray history;
+        try {
+            history = new JSONArray(p.getString(snowballHistoryKey(
+                ConsolidationCycleEngine.Family.LEARNING),"[]"));
+        } catch(Exception invalid) {
+            throw new IllegalStateException("Invalid Sabqi history; preserve due repetitions",invalid);
+        }
+        LinkedHashSet<String> seen = new LinkedHashSet<>();
+        for(int i=0;i<current.length();i++) {
+            String id=current.optString(i,"");
+            if(id.isEmpty()||!seen.add(id))
+                throw new IllegalStateException("Invalid weekly Sabqi physical unit");
+        }
+        if(history.length()==0 || current.length()>=6) return current;
+        Set<String> receipts=earnedEveningUnits(ConsolidationCycleEngine.Family.LEARNING);
+        Set<String> learned=v6LineIdSet("v6LearnedLineIds");
+        Set<String> stabilized=v6LineIdSet("v6StabilizedLineIds");
+        Set<String> acquired=v6LineIdSet("v6AcquiredCreditLineIds");
+        JSONArray due=new JSONArray();
+        int remaining=6-current.length(); // 6 physical units + one combined pass
+        LocalDate monday=mondayOf(today);
+        for(int w=0;w<history.length() && due.length()<remaining;w++) {
+            JSONObject week=history.optJSONObject(w);
+            if(week==null)continue;
+            LocalDate anchor=safeDate(week.optString("week",""),null);
+            if(anchor==null || !anchor.isBefore(monday))continue;
+            JSONArray blocks=week.optJSONArray("units");
+            if(blocks==null)continue;
+            for(int i=0;i<blocks.length() && due.length()<remaining;i++) {
+                String id=blocks.optString(i,"");
+                if(id.isEmpty())throw new IllegalStateException("Empty historical Sabqi block");
+                if(!seen.add(id)||receipts.contains(id))continue;
+                List<String> lines=ConsolidationPhysicalUnitPolicy.decodeLineUnit(id);
+                boolean real=true, outstanding=false;
+                for(String line:lines){
+                    if(acquired.contains(line))continue;
+                    if(learned.contains(line)||stabilized.contains(line))outstanding=true;
+                    else {real=false;break;}
+                }
+                if(real && outstanding)due.put(id);
+            }
+        }
+        JSONArray source=new JSONArray();
+        for(int i=0;i<due.length();i++)source.put(due.optString(i));
+        for(int i=0;i<current.length();i++)source.put(current.optString(i));
+        return source;
+    }
+
     /** Tonight's Renforcement snowball: this week's accumulated Apprentissage units, ×10 each. */
     List<ConsolidationCycleEngine.Unit> learningConsolidationUnits(LocalDate today) {
-        return weeklySnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today,
-            ConsolidationCycleEngine.Protocol.SNOWBALL);
+        JSONArray source=learningEveningSource(today);
+        ArrayList<String> blocks=new ArrayList<>();
+        for(int i=0;i<source.length();i++)blocks.add(source.optString(i));
+        ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
+        for(String id:blocks)units.add(new ConsolidationCycleEngine.Unit(id,
+            ConsolidationCycleEngine.Protocol.SNOWBALL));
+        if(blocks.size()>1)units.add(new ConsolidationCycleEngine.Unit(
+            ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(blocks),
+            ConsolidationCycleEngine.Protocol.SNOWBALL));
+        return Collections.unmodifiableList(units);
     }
 
     /**
@@ -3400,8 +3541,29 @@ public final class HifzPrefs {
         JSONArray current = rolledSnowballUnits(family,date);
         if (family == ConsolidationCycleEngine.Family.STABILIZATION
                 && !itqanPostNasMaintenance()) current = stabilizationEveningSource(date);
+        if (family == ConsolidationCycleEngine.Family.LEARNING)
+            current = learningEveningSource(date);
         if(current.length()==0)return "";
         return mondayOf(date).toString()+"|"+current.toString();
+    }
+
+    /** A cross-week catch-up source can shrink after its authentic receipt was
+     * committed. Losing an already-paid historical unit is not NEW work and
+     * must not reopen that evening; a truly new physical unit still does. */
+    private static boolean snapshotAlreadyCovered(String completed,String source) {
+        try {
+            int older=completed.indexOf('|'), newer=source.indexOf('|');
+            if(older<1||newer<1 || !completed.substring(0,older)
+                    .equals(source.substring(0,newer)))return false;
+            JSONArray past=new JSONArray(completed.substring(older+1));
+            JSONArray now=new JSONArray(source.substring(newer+1));
+            Set<String> paid=new LinkedHashSet<>();
+            for(int i=0;i<past.length();i++)paid.add(past.getString(i));
+            for(int i=0;i<now.length();i++)if(!paid.contains(now.getString(i)))return false;
+            return true;
+        } catch(Exception malformed) {
+            return false; // Never dismiss new work on a damaged fingerprint.
+        }
     }
 
     boolean snowballEveningPending(ConsolidationCycleEngine.Family family,LocalDate date) {
@@ -3421,7 +3583,10 @@ public final class HifzPrefs {
         // receive its own real evening repetitions and receipt.
         if(date.toString().equals(marker) && completedSnapshot.isEmpty())return false;
         String snapshot=exactSnowballSnapshotToValidate(family,date);
-        return !snapshot.isEmpty() && !snapshot.equals(completedSnapshot);
+        if(snapshot.isEmpty() || snapshot.equals(completedSnapshot))return false;
+        if(snapshotAlreadyCovered(completedSnapshot,snapshot))
+            return false;
+        return true;
     }
 
     private static final String DAILY_LESSON_RECEIPTS = "v6DailyLessonReceiptsV1";
@@ -3530,8 +3695,10 @@ public final class HifzPrefs {
             // Snapshot and completed cycle must cover the SAME physical lines.
             try {
                 boolean legacy=provenSource.startsWith("LEGACY_OPEN|");
-                JSONArray source=legacy?stabilizationEveningSource(day):
-                    new JSONArray(provenSource.substring(provenSource.indexOf('|')+1));
+                JSONArray source=legacy
+                    ? (family==ConsolidationCycleEngine.Family.LEARNING
+                        ? learningEveningSource(day) : stabilizationEveningSource(day))
+                    : new JSONArray(provenSource.substring(provenSource.indexOf('|')+1));
                 LinkedHashSet<String> expected=new LinkedHashSet<>(),actual=new LinkedHashSet<>();
                 for(int i=0;i<source.length();i++)expected.addAll(
                     ConsolidationPhysicalUnitPolicy.decodeLineUnit(source.getString(i)));
@@ -3809,16 +3976,22 @@ public final class HifzPrefs {
                 // must still recover only its historical prefix, never absorb
                 // newly added lines after interruption or upgrade.
                 if (!isFinalCycleId(cycle.cycleId())
-                        && cycle.family()==ConsolidationCycleEngine.Family.STABILIZATION
-                        && !itqanPostNasMaintenance()) {
+                        && (cycle.family()==ConsolidationCycleEngine.Family.LEARNING
+                            || (cycle.family()==ConsolidationCycleEngine.Family.STABILIZATION
+                                && !itqanPostNasMaintenance()))) {
                     String existingSlot=p.getString(
                         consolidationStateKeyForCycle(cycle.family(),cycle.cycleId()),"");
                     if(existingSlot==null||existingSlot.isEmpty()) {
                         try {
-                            LocalDate day=LocalDate.parse(
-                                cycle.cycleId().substring("stabilization-".length()));
+                            String prefix=cycle.family()==ConsolidationCycleEngine.Family.LEARNING
+                                ? "learning-" : "stabilization-";
+                            if(!cycle.cycleId().startsWith(prefix))
+                                throw new IllegalStateException("Wrong evening cycle family");
+                            LocalDate day=LocalDate.parse(cycle.cycleId().substring(prefix.length()));
                             List<ConsolidationCycleEngine.Unit> planned=
-                                stabilizedConsolidationUnits(day);
+                                cycle.family()==ConsolidationCycleEngine.Family.LEARNING
+                                    ? learningConsolidationUnits(day)
+                                    : stabilizedConsolidationUnits(day);
                             boolean exact=planned.size()==cycle.units().size();
                             for(int i=0;exact&&i<planned.size();i++) {
                                 exact=planned.get(i).id().equals(cycle.units().get(i).id())
