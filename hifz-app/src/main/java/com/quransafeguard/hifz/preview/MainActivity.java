@@ -545,6 +545,13 @@ public final class MainActivity extends android.app.Activity {
         String summary=count+" séance"+(count>1?"s":"")+" non effectuée"+(count>1?"s":"")+" · contenu décalé  ›";
         for(TextView label:new TextView[]{backlogHomeRow,backlogParcoursRow}) {
             if(label==null)continue;
+            // The home has no missed-session counter: the next lesson simply shifts.
+            if(label==backlogHomeRow) {
+                label.setVisibility(View.GONE);
+                label.setText("");
+                label.setContentDescription("");
+                continue;
+            }
             label.setVisibility(count==0?View.GONE:View.VISIBLE);
             label.setText(count==0?"":summary);
             label.setContentDescription(count+" créneaux non effectués ; les leçons avancent au prochain jour de leur discipline");
