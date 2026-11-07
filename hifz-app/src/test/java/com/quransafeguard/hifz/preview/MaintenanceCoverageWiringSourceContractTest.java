@@ -53,10 +53,11 @@ public final class MaintenanceCoverageWiringSourceContractTest {
     @Test public void mainActivityTodayLabelAndPlannerCallSiteBothUseTheDynamicDuration() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertFalse(main.contains("HifzSchedule.MAINTENANCE_MINUTES"));
-        assertTrue("Home must show a simple label instead of a technical duration",
-            main.contains("setToday(prefix+todaySummary(mode)+learningFraction,true);")
-            && main.contains("WeeklyDashboardPlanner.learningSessionCue(scheduledForCue.getDayOfWeek()")
-            && main.contains("HifzSessionActivity.SABQI.equals(mode)"));
+        assertTrue("Home must show a short name, never a false Sabqi 1/3 ordinal",
+            main.contains("setToday(prefix+todaySummary(mode),true);")
+            && main.contains("if(HifzSessionActivity.SABQI.equals(mode))return \\"Apprentissage\\";"));
+        assertFalse("No misleading Sabqi fraction on Home",
+            main.contains("WeeklyDashboardPlanner.learningSessionCue("));
         assertTrue("The actual dynamic Révision duration is still implemented by the session",
             read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java")
                 .contains("MaintenanceCoveragePolicy.minutes("));
