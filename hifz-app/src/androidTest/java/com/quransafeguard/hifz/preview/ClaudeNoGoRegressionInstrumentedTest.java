@@ -145,7 +145,7 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
             ConsolidationPhysicalUnitPolicy.decodeLineUnit(ready.get(0).id()));
     }
 
-    @Test public void adjacentSurahRangesStayDistinctAndManualEditClearsFrozenConsolidation() {
+    @Test public void adjacentSurahRangesStayDistinctAndManualEditPreservesFrozenConsolidation() {
         HifzPrefs prefs = new HifzPrefs(context);
         assertTrue(main.edit().putString("itqanRanges",
             "[{\"start\":\"53:1\",\"end\":\"53:62\"},{\"start\":\"54:1\",\"end\":\"54:55\"}]").commit());
@@ -159,7 +159,7 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
 
         assertTrue(main.edit().putString("v6ConsolidationStabilizationState", "{\"sentinel\":true}").commit());
         assertTrue(prefs.setV6StabilizationRanges(Collections.emptyList(), geometry));
-        assertFalse(main.contains("v6ConsolidationStabilizationState"));
+        assertEquals("{\"sentinel\":true}", main.getString("v6ConsolidationStabilizationState", ""));
     }
 
     @Test public void realPage48SingleAyahUsesSevenPlusEightDistinctPhysicalLines() {

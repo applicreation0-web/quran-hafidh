@@ -239,10 +239,10 @@ public final class HifzV6PersistentStateInstrumentedTest {
 
         String acquiredLine = firstOwned(new VerseRef(2,1), new VerseRef(2,20));
         String pendingLine = firstOwned(new VerseRef(49,1), new VerseRef(49,18));
-        assertTrue(stringSet(ACQUIRED).contains(acquiredLine));
-        assertTrue(stringSet(UNKNOWN_DUE).contains(acquiredLine));
+        assertFalse(stringSet(ACQUIRED).contains(acquiredLine));
+        assertFalse(stringSet(UNKNOWN_DUE).contains(acquiredLine));
         assertFalse(longMap(ACTIVE_J10).containsKey(acquiredLine));
-        assertTrue(stringSet(LEARNED).contains(pendingLine));
+        assertFalse(stringSet(LEARNED).contains(pendingLine));
         assertFalse(stringSet(ACQUIRED).contains(pendingLine));
 
         Map<String, ?> beforeReopen = snapshot(main);

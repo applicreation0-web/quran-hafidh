@@ -65,10 +65,10 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(adapter.contains("owned.subList(at,owned.size())"));
     }
 
-    @Test public void manualRangeEditInvalidatesFrozenConsolidationSession() throws Exception {
+    @Test public void manualRangeEditPreservesFrozenConsolidationSession() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String manual = method(prefs, "private boolean setV6ManualRanges", "private void validateV6ManualRanges");
-        assertTrue(manual.contains(".remove(\"v6ConsolidationStabilizationState\")"));
+        assertFalse(manual.contains("v6ConsolidationStabilizationState"));
     }
 
     @Test public void legacyEveningLabelIsCanonicalizedAtDisplayOnly() throws Exception {
