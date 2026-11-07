@@ -5,7 +5,7 @@ out="hifz-app/build/freeze-boox-proof"
 mkdir -p "$out/home-parcours" "$out/frises"
 # Disposable Android-only regression; the Hifz package under test uses its separate DEBUG identity.
 bash scripts/run_11713_hifz_parcours_isolated.sh \
-  'com.quransafeguard.hifz.preview.Independent11710ScreensInstrumentedTest,com.quransafeguard.hifz.preview.MandatCaptureInstrumentedTest' "$surface"
+  'com.quransafeguard.hifz.preview.Independent11710ScreensInstrumentedTest,com.quransafeguard.hifz.preview.CorrespondenceNavigationInstrumentedTest,com.quransafeguard.hifz.preview.MandatCaptureInstrumentedTest' "$surface"
 # Actual screenshots taken by Android instrumentation, never synthetic mockups.
 adb pull "/sdcard/Pictures/HaafidhAudit/." "$out/home-parcours/" >/dev/null
 for suffix in frise-R047 frise-R047-fin frise-R048 frise-R048-fin frise-R059 frise-R059-fin \
