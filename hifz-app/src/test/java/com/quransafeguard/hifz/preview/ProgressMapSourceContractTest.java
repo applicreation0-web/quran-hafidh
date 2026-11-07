@@ -155,9 +155,9 @@ public final class ProgressMapSourceContractTest {
                 + "                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());\n"
                 + "                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),\n"
                 + "                    PreviewConfig.STABILIZATION_WEEKLY_LINES);\n"
-                + "                // Read-only acquisition: only entirely acquired verses increase a Juz gauge.\n"
+                + "                // Read-only line levels, each physical QCF line accounted for once.\n"
                 + "                juzCounts=JuzProgressSummary.summarize(\n"
-                + "                    geometry,prefs.progressionSnapshotV6().acquired);\n"
+                + "                    geometry,prefs.progressionSnapshotV6());\n"
                 + "            } catch (RuntimeException corruptOrUnconfiguredState) {"));
         assertTrue("a failed computation must tell the learner, not just leave the grid blank forever",
             activity.contains("Toast.makeText(this, \"Progression indisponible · ouvrez Diagnostic si le problème persiste.\", Toast.LENGTH_LONG).show();"));
@@ -177,10 +177,24 @@ public final class ProgressMapSourceContractTest {
             && activity.contains("pageDetails.setVisibility(View.GONE);")
             && activity.contains("item.setOnClickListener(v->showJuz(selected));"));
         assertFalse("No extra Juz modal selector is permitted",activity.contains("chooseJuz()"));
-        assertTrue("Only genuinely acquired entire verses may fill the gauge",
-            summary.contains("geometry.allVersesFullyCredited(realAcquiredLineIds)")
+        String page=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/JuzProgressBar.java");
+        assertTrue("Each Juz must be a vertical QCF-shaped page gauge, not a horizontal bar",
+            page.contains("width*550f/345f")
+            && page.contains("canvas.clipPath(outline)")
+            && page.contains("learned*scale")
+            && page.contains("stabilized*scale")
+            && page.contains("acquired*scale"));
+        assertTrue("Every real physical QCF line counted exactly once by canonical Juz",
+            summary.contains("for(GeometryRepository.LineMeta line:lines)")
             && summary.contains("rowForIndex(j*8+1)")
-            && summary.contains("if(fullyCredited.contains(verse))counts[j][1]++"));
+            && summary.contains("counts[j][TOTAL]++")
+            && summary.contains("if(acquired.contains(line.id))")
+            && summary.contains("else if(stabilized.contains(line.id))")
+            && summary.contains("else if(learned.contains(line.id))"));
+        assertFalse("No redundant on-screen AI instructions",
+            activity.contains("toucher un juz pour afficher ses pages")
+            || activity.contains("toucher une page pour ouvrir le Mushaf")
+            || activity.contains("toucher pour ouvrir en Lecture"));
         assertTrue("The Back button must return to the thirty juz, not close the app",
             activity.contains("if(selectedJuz>0)showAllPages();"));
     }
