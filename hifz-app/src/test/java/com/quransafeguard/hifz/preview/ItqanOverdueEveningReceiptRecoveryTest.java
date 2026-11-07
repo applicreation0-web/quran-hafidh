@@ -73,7 +73,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals(NEW, due.get(1).id()); // already receipted this week: only ×1
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN, due.get(0).protocol());
         assertEquals(OLD, due.get(0).id()); // older block really requires ×7
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,due.get(2).protocol());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,due.get(2).protocol());
         assertEquals(15,ConsolidationPhysicalUnitPolicy.decodeLineUnit(due.get(2).id()).size());
         assertEquals("Read-only catch-up planning must never grant any credit", before, disk.disk);
         assertEquals("53:1", disk.getString("itqanCursor", ""));
@@ -199,7 +199,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals(NEW,due.get(0).id());
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(1).protocol());
         assertEquals(laterId,due.get(1).id());
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,due.get(2).protocol());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,due.get(2).protocol());
         assertEquals("No automatic extra Acquis","[]",disk.getString("v6AcquiredCreditLineIds",""));
         ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
         ConsolidationCycleEngine.Cycle cycle=engine.startCycle(
@@ -245,7 +245,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,plan.get(0).protocol());
         assertEquals(second,plan.get(1).id());
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,plan.get(1).protocol());
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,plan.get(2).protocol());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,plan.get(2).protocol());
         ArrayList<String> full=new ArrayList<>(NEW_WEEK);full.addAll(later);
         assertEquals(full,ConsolidationPhysicalUnitPolicy.decodeLineUnit(plan.get(2).id()));
         assertEquals("Planning cannot grant a receipt",before,disk.disk);
