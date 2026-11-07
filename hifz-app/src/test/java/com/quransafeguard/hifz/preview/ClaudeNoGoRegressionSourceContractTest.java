@@ -336,7 +336,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     @Test public void snowballExtendedProtocolIsFullyWiredIntoTheConsolidationEngine() throws Exception {
         String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
         assertTrue("Protocol enum must declare SNOWBALL_EXTENDED",
-            engine.contains("SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SNOWBALL_ALL_PARTS, SUNDAY_PAGE, POST_NAS_WEEKLY_MASKED }"));
+            engine.contains("SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SNOWBALL_ALL_PARTS, SNOWBALL_ALL_PARTS_FIVE, SUNDAY_PAGE, POST_NAS_WEEKLY_MASKED }"));
         assertTrue("maxUnitsFor must give SNOWBALL_EXTENDED enough headroom for historic finals",
             engine.contains("if (protocol == Protocol.SNOWBALL_EXTENDED || protocol == Protocol.SUNDAY_PAGE) return 30;"));
         assertTrue("Post-Nas weekly Maintien cannot overflow six completed hizbs",
@@ -356,6 +356,9 @@ public final class ClaudeNoGoRegressionSourceContractTest {
                 || stageVector.contains("case SNOWBALL_ALL_PARTS:\n                return copy(1, 0, 0, 0, 0);"));
         assertTrue("Only stabilization cycles may use the combined all-parts pass",
             validate.contains("unit.protocol() == Protocol.SNOWBALL_ALL_PARTS"));
+        assertTrue("New Itqan cumulative additions must use ×5 while old OPEN keeps ×1",
+            stageVector.contains("case SNOWBALL_ALL_PARTS_FIVE:\n                return copy(5, 0, 0, 0, 0);")
+            && validate.contains("unit.protocol() == Protocol.SNOWBALL_ALL_PARTS_FIVE"));
     }
 
     /**
