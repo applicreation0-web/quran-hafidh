@@ -98,7 +98,7 @@ def build():
             title,url=BIB[id];sources.insert(0,{'titre':title,'url':url,'portee':BIB_SCOPE.get(id,'Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid.')})
         if 'Jalalayn' in explanation or id in ('R030','R037','R047','R048'):
             sources.append({'titre':'al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées','url':'https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf','portee':'Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche.'})
-        if id=='R070':sources.append({'titre':'Synthèse adaptée d’Ibn ʿĀshūr, contexte des bienfaits et de la gratitude','url':'https://quran.com/surah/93/info','portee':'Contexte général seulement ; ne démontre pas les trois appariements proposés.'})
+        if id=='R070':sources.append({'titre':'Abū al-Aʿlā al-Mawdūdī, Tafhīm al-Qurʾān / Towards Understanding the Qurʾān, s.93, notes 9–11','url':'https://www.islamicstudies.info/towards/towards.php?sura=93','portee':'La note 9 relie 93:6 à 93:9 ; la note 10 rapproche 93:8 de 93:10 dans le sens du demandeur indigent, mais propose aussi une lecture liée à 93:7 pour le demandeur de savoir. La note 11 applique la gratitude à tous les bienfaits, sans appariement exclusif de 93:7 et 93:11.'})
         if id in CONDITIONS:
             sources.append({'titre':'Attribution historique Farrin 2010 ; référence détaillée à compléter','url':'https://doi.org/10.1111/j.1478-1913.2009.01299.x','portee':'R032 : Farrin, Surat al-Baqara: A Structural Analysis, The Muslim World 100 (2010). Ne certifie pas les bornes locales ni l’attribution de R033.'})
         if id in REFRAIN_SOURCES:
