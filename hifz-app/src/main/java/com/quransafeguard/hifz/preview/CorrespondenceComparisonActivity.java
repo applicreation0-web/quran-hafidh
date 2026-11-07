@@ -51,6 +51,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
     private final ExecutorService tafsirIo=Executors.newSingleThreadExecutor();
     private final MapQcfThumbnails[] pages=new MapQcfThumbnails[2];
     private final TextView[] pageLabels=new TextView[2];
+    private final Button[] focusActions=new Button[2];
     private final TextView[] commentaries=new TextView[2];
     private final int[] shownPages=new int[2];
     private final int[] navigationSurahs=new int[2];
@@ -195,8 +196,11 @@ public final class CorrespondenceComparisonActivity extends Activity {
             loc.setSingleLine(true);
             column.addView(loc,new LinearLayout.LayoutParams(-1,dp(24)));
             pageLabels[side]=loc;
-            bar.addView(action("⛶","Agrandir le Mushaf "+(side==0?"A":"B"),()->toggleEnlarge(pane)),
-                new LinearLayout.LayoutParams(dp(44),dp(44)));
+            Button zoom=booxPortrait
+                ?Ui.smallButton(this,"Agrandir "+(side==0?"A":"B"),v->toggleEnlarge(pane))
+                :action("⛶","Agrandir le Mushaf "+(side==0?"A":"B"),()->toggleEnlarge(pane));
+            focusActions[side]=zoom;
+            bar.addView(zoom,new LinearLayout.LayoutParams(dp(booxPortrait?110:44),dp(44)));
             column.addView(bar,new LinearLayout.LayoutParams(-1,dp(44)));
             MapQcfThumbnails surface=new MapQcfThumbnails(this,new MapQcfThumbnails.Listener(){
                 @Override public void onPageChosen(int page){/* Fixed relation folio. */}
@@ -222,7 +226,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         root.addView(middle,new LinearLayout.LayoutParams(-1,0,1));
 
         tafsirHead=Ui.row(this);tafsirHead.setGravity(Gravity.CENTER_VERTICAL);
-        tafsirHeading=caption("Tafsīr al-Jalālayn",14,true);
+        tafsirHeading=caption(tafsirOpen?"Tafsīr al-Jalālayn · ouvert":"Tafsīr al-Jalālayn · replié",14,true);
         tafsirHeading.setPadding(dp(8),0,0,0);
         tafsirHead.addView(tafsirHeading,new LinearLayout.LayoutParams(0,dp(42),1));
         tafsirHead.addView(action("⌃","Afficher ou masquer le Tafsīr",()->setTafsirOpen(!tafsirOpen)),
@@ -251,7 +255,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
             part.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
             tafsirPanel.addView(part,new LinearLayout.LayoutParams(0,-1,1));
         }
-        root.addView(tafsirPanel,new LinearLayout.LayoutParams(-1,dp(booxPortrait?260:150)));
+        root.addView(tafsirPanel,new LinearLayout.LayoutParams(-1,dp(booxPortrait?220:150)));
         tafsirPanel.setVisibility(tafsirOpen?View.VISIBLE:View.GONE);
         setContentView(root);
         Ui.respectSystemBars(this,root,0,0,0,0);
@@ -259,6 +263,8 @@ public final class CorrespondenceComparisonActivity extends Activity {
     }
     private void setTafsirOpen(boolean value){
         tafsirOpen=value;
+        if(tafsirHeading!=null)tafsirHeading.setText(value?
+            "Tafsīr al-Jalālayn · ouvert":"Tafsīr al-Jalālayn · replié");
         if(enlarged<0)tafsirPanel.setVisibility(value?View.VISIBLE:View.GONE);
         if(value)for(int i=0;i<2;i++)loadTafsir(i,selectedVerses[i]);
     }
@@ -270,6 +276,14 @@ public final class CorrespondenceComparisonActivity extends Activity {
         // Focus is a real QCF enlargement, not merely hiding the second column:
         // reclaim the Tafsir's reserved height but restore its prior state on exit.
         boolean focus=enlarged>=0;
+        for(int i=0;i<2;i++)if(focusActions[i]!=null){
+            String pane=i==0?"A":"B";
+            boolean selected=enlarged==i;
+            focusActions[i].setContentDescription(selected?
+                "Réduire le Mushaf "+pane+" et revenir à la comparaison":
+                "Agrandir le Mushaf "+pane);
+            if(booxPortrait)focusActions[i].setText(selected?"Réduire "+pane:"Agrandir "+pane);
+        }
         if(tafsirHead!=null)tafsirHead.setVisibility(focus?View.GONE:View.VISIBLE);
         if(tafsirPanel!=null)tafsirPanel.setVisibility(focus?View.GONE:tafsirOpen?View.VISIBLE:View.GONE);
         for(int i=0;i<2;i++)if(folioColumns[i]!=null){
