@@ -68,11 +68,13 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         HifzPrefs prefs = new HifzPrefs(disk);
         assertTrue(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION, CURRENT));
         List<ConsolidationCycleEngine.Unit> due = prefs.stabilizedConsolidationUnits(CURRENT);
-        assertEquals(2, due.size());
+        assertEquals(3, due.size());
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS, due.get(1).protocol());
         assertEquals(NEW, due.get(1).id()); // already receipted this week: only ×1
         assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN, due.get(0).protocol());
         assertEquals(OLD, due.get(0).id()); // older block really requires ×7
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,due.get(2).protocol());
+        assertEquals(15,ConsolidationPhysicalUnitPolicy.decodeLineUnit(due.get(2).id()).size());
         assertEquals("Read-only catch-up planning must never grant any credit", before, disk.disk);
         assertEquals("53:1", disk.getString("itqanCursor", ""));
     }
@@ -118,7 +120,7 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         HifzPrefs prefs=new HifzPrefs(disk);
         for(LocalDate day:Arrays.asList(LocalDate.of(2026,11,5),LocalDate.of(2026,11,7))){
             List<ConsolidationCycleEngine.Unit> units=prefs.stabilizedConsolidationUnits(day);
-            assertEquals(2,units.size());assertEquals(OLD,units.get(0).id());
+            assertEquals(3,units.size());assertEquals(OLD,units.get(0).id());
             assertEquals(NEW,units.get(1).id());
             assertEquals(15,ConsolidationPhysicalUnitPolicy.decodeLineUnit(OLD).size()
                 +ConsolidationPhysicalUnitPolicy.decodeLineUnit(NEW).size());
@@ -192,16 +194,18 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertTrue("Same-day newly stabilized block must remain due, despite today's first receipt",
             prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,CURRENT));
         List<ConsolidationCycleEngine.Unit> due=prefs.stabilizedConsolidationUnits(CURRENT);
-        assertEquals(2,due.size());
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,due.get(1).protocol());
-        assertEquals(NEW,due.get(1).id());
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(0).protocol());
-        assertEquals(laterId,due.get(0).id());
+        assertEquals(3,due.size());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,due.get(0).protocol());
+        assertEquals(NEW,due.get(0).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,due.get(1).protocol());
+        assertEquals(laterId,due.get(1).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,due.get(2).protocol());
         assertEquals("No automatic extra Acquis","[]",disk.getString("v6AcquiredCreditLineIds",""));
         ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
         ConsolidationCycleEngine.Cycle cycle=engine.startCycle(
             "stabilization-"+CURRENT,ConsolidationCycleEngine.Family.STABILIZATION,due.get(0));
         cycle=engine.addUnit(cycle,due.get(1));
+        cycle=engine.addUnit(cycle,due.get(2));
         ConsolidationCycleEngine.Session verified=engine.openSession(cycle,"second-same-day");
         assertTrue(prefs.persistConsolidationSession(verified));
         while(!verified.readyToClose()){
@@ -219,6 +223,49 @@ public final class ItqanOverdueEveningReceiptRecoveryTest {
         assertTrue(new JSONArray(disk.getString("v6StabilizationEarnedEveningUnitsV1","[]"))
             .toString().contains(laterId));
         assertEquals("No premature Acquis","[]",disk.getString("v6AcquiredCreditLineIds",""));
+    }
+
+    @Test public void anNajmEightThenSixMustFinishWithFourteenTogether() throws Exception {
+        InMemoryPrefs disk=fixture(true,false);
+        List<String> later=Arrays.asList("526:8","526:9","526:10","526:11","526:12","526:13");
+        String second=ConsolidationPhysicalUnitPolicy.encodeLineUnit(later);
+        ArrayList<String> stable=new ArrayList<>(NEW_WEEK);
+        stable.addAll(later);
+        disk.disk.put("v6StabilizedLineIds",new JSONArray(stable).toString());
+        disk.disk.put("stabilizationSnowball8WeekHistory","[]");
+        // Even if the persisted accumulator was in reverse chronological order,
+        // read the QCF beginning before the continuation.
+        disk.disk.put("stabilizationSnowballUnitIds",new JSONArray().put(second).put(NEW).toString());
+        disk.disk.put("v6StabilizationEarnedEveningUnitsV1",new JSONArray().put(NEW).toString());
+        HifzPrefs prefs=new HifzPrefs(disk);
+        Map<String,Object> before=new HashMap<>(disk.disk);
+        List<ConsolidationCycleEngine.Unit> plan=prefs.stabilizedConsolidationUnits(CURRENT);
+        assertEquals(3,plan.size());
+        assertEquals(NEW,plan.get(0).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,plan.get(0).protocol());
+        assertEquals(second,plan.get(1).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,plan.get(1).protocol());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,plan.get(2).protocol());
+        ArrayList<String> full=new ArrayList<>(NEW_WEEK);full.addAll(later);
+        assertEquals(full,ConsolidationPhysicalUnitPolicy.decodeLineUnit(plan.get(2).id()));
+        assertEquals("Planning cannot grant a receipt",before,disk.disk);
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle=engine.startCycle("stabilization-"+CURRENT,
+            ConsolidationCycleEngine.Family.STABILIZATION,plan.get(0));
+        cycle=engine.addUnit(cycle,plan.get(1));cycle=engine.addUnit(cycle,plan.get(2));
+        ConsolidationCycleEngine.Session session=engine.openSession(cycle,"an-najm-8-plus-6");
+        assertTrue(prefs.persistConsolidationSession(session));
+        while(!session.readyToClose()){
+            session=engine.recordRepetition(session);
+            assertTrue(prefs.persistConsolidationSession(session));
+        }
+        assertTrue(prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION,
+            CURRENT.toString(),session));
+        JSONArray earned=new JSONArray(disk.getString("v6StabilizationEarnedEveningUnitsV1","[]"));
+        assertEquals(2,earned.length());
+        assertTrue(earned.toString().contains(second));
+        assertFalse("Combined pass cannot become a new ×7 receipt",earned.toString().contains(plan.get(2).id()));
+        assertEquals("No phantom Acquis","[]",disk.getString("v6AcquiredCreditLineIds",""));
     }
 
     @Test public void historicalUnitMustRemainStabilizedToBeRecoverable() throws Exception {
