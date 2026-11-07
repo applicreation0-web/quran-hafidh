@@ -41,6 +41,15 @@ jobs:
         run: |
           set -euo pipefail
           gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac
+      - name: Compile private release code path with real production flags but NO APK
+        env:
+          AYAH_THEMES_PRIVATE_114: '1'
+          HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+        run: |
+          set -euo pipefail
+          # Private content is NEVER fetched by public CI. This checks only the
+          # production BuildConfig/source variant; packaging has a separate fail-closed gate.
+          gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac
       - name: Check offline trusted-machine signing and installed-upgrade identity policy
         run: |
           set -euo pipefail
