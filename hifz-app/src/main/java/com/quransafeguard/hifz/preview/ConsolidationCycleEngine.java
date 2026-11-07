@@ -334,6 +334,11 @@ final class ConsolidationCycleEngine {
         if (cycle.units().size() > cap) {
             throw new IllegalStateException("cycle size must be 1.." + cap);
         }
+        // Keep the pre-existing 31-unit cap: only the new, non-crediting
+        // final all-parts pass may occupy a dedicated 32nd slot.
+        if (cycle.units().size() > 31
+                && cycle.units().get(cycle.units().size()-1).protocol() != Protocol.SNOWBALL_ALL_PARTS)
+            throw new IllegalStateException("32nd slot reserved for the final complete pass");
         LinkedHashSet<String> ids = new LinkedHashSet<>();
         for (Unit unit : cycle.units()) {
             validateUnitForFamily(cycle.family(), unit);
