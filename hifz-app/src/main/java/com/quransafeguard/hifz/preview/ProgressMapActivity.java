@@ -42,6 +42,8 @@ public final class ProgressMapActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private GeometryRepository geometry;
     private ProgressGridView grid;
+    private TextView juzHeading;
+    private int selectedJuz=0;
     private TextView apprentissageEtaValue;
     private TextView stabilisationEtaValue;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -82,6 +84,17 @@ public final class ProgressMapActivity extends android.app.Activity {
         gridHelp.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 5));
         root.addView(gridHelp);
         root.addView(legend());
+        // Real touch benefit: 604 tiny pages remain available; a 30-Juz selector
+        // temporarily shows readable, individually numbered physical QCF pages.
+        LinearLayout zoomRow=Ui.row(this);
+        zoomRow.setGravity(Gravity.CENTER_VERTICAL);
+        zoomRow.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),0);
+        zoomRow.addView(Ui.smallButton(this,"Choisir un juz",v->chooseJuz()));
+        juzHeading=Ui.bookText(this,"604 pages",15f,true);
+        juzHeading.setGravity(Gravity.CENTER);
+        zoomRow.addView(juzHeading,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
+        zoomRow.addView(Ui.smallButton(this,"Vue globale",v->showAllPages()));
+        root.addView(zoomRow);
         grid = new ProgressGridView(this);
         grid.setOnPageTapped(page -> {
             Intent intent = new Intent(this, StudyReaderActivity.class);
@@ -93,6 +106,10 @@ public final class ProgressMapActivity extends android.app.Activity {
         gridParams.topMargin = Ui.dp(this, 4);
         root.addView(grid, gridParams);
         grid.setContentDescription("604 pages du Mushaf · touchez une page pour l’ouvrir en Lecture");
+        if(savedInstanceState!=null){
+            int restored=savedInstanceState.getInt("freeze2SelectedJuz",0);
+            if(restored>=1 && restored<=30)showJuz(restored);
+        }
 
         // Estimates follow the grid. The decoding legend stays above, visible at entry.
         root.addView(Ui.divider(this));
@@ -102,6 +119,42 @@ public final class ProgressMapActivity extends android.app.Activity {
         setContentView(scroll);
         Ui.respectSystemBars(this, scroll, 0, 0, 0, 0);
         loadStatuses();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle out) {
+        out.putInt("freeze2SelectedJuz",selectedJuz);
+        super.onSaveInstanceState(out);
+    }
+
+    private static int juzStartPage(int juz) {
+        if(juz<1||juz>30)throw new IllegalArgumentException("Juz must be in 1..30");
+        // Canonical indexed QCF 240 rub' boundary table; eight rub' per Juz.
+        return QuranRubBoundaries.rowForIndex((juz-1)*8+1)[3];
+    }
+    private void chooseJuz(){
+        String[] choices=new String[30];
+        for(int j=1;j<=30;j++){
+            int first=juzStartPage(j);
+            int last=j==30?604:juzStartPage(j+1)-1;
+            choices[j-1]="Juz "+j+" · pages "+first+"–"+last;
+        }
+        new android.app.AlertDialog.Builder(this).setTitle("Afficher un juz")
+            .setItems(choices,(dialog,index)->showJuz(index+1))
+            .setNegativeButton("Fermer",null).show();
+    }
+    private void showJuz(int juz) {
+        int first=juzStartPage(juz),last=juz==30?604:juzStartPage(juz+1)-1;
+        selectedJuz=juz;
+        grid.setPageWindow(first,last);
+        juzHeading.setText("Juz "+juz+" · "+first+"–"+last);
+        grid.setContentDescription("Juz "+juz+" · pages physiques "+first+" à "+last+
+            " · toucher une page pour ouvrir le Mushaf");
+    }
+    private void showAllPages() {
+        selectedJuz=0;
+        grid.setPageWindow(1,604);
+        juzHeading.setText("604 pages");
+        grid.setContentDescription("604 pages du Mushaf · toucher une page pour ouvrir le Mushaf");
     }
 
     private LinearLayout legend() {
