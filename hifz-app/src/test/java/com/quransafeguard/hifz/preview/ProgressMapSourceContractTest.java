@@ -128,31 +128,19 @@ public final class ProgressMapSourceContractTest {
             snapshot.contains("requireSchema6ProgressionState();"));
     }
 
-    @Test public void liveEtaEstimatesSitAboveTheGridUsingTheSameBucketsDiagnosticUses() throws Exception {
+    @Test public void progressionHasNoRedundantEtaLineCounts() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
-        assertTrue("the two estimates approved in the mockup must both be wired in, in that order",
-            activity.indexOf("apprentissageEtaValue = etaBox(root, \"Fin Apprentissage\");") <
-                activity.indexOf("stabilisationEtaValue = etaBox(root, \"Fin Stabilisation\");"));
-        assertTrue("Apprentissage's estimate must use its own real weekly pace (SABQI_LINES × "
-                + "learningDaysPerWeek), never Stabilisation's fixed one",
-            activity.contains("weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"
-                + "                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());"));
-        assertTrue("Stabilisation's estimate must reuse the exact same computation Diagnostic uses",
-            activity.contains("weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),\n"
-                + "                    PreviewConfig.STABILIZATION_WEEKLY_LINES);"));
+        assertFalse("No future-date ETA or lines-remaining text in minimalist Juz progress",
+            activity.contains("apprentissageEtaValue") || activity.contains("stabilisationEtaValue")
+            || activity.contains("weeksEtaSummary(")
+            || activity.contains("etaBox(root,"));
     }
 
     @Test public void backgroundComputationFailureIsVisibleNotSilent() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
-        assertTrue("progressionSnapshotV6()/requireSchema6ProgressionState() throws when state is "
-                + "not yet schema6 or corrupt (confirmed in HifzPrefs) — a background thread must not "
-                + "silently die on that, whether it's the status scan or either live ETA computation that throws",
+        assertTrue("Corrupt schema6 must fail closed and report an error, never fill a fictitious Juz",
             activity.contains("try {\n"
                 + "                statuses = computeStatuses();\n"
-                + "                apprentissageEta = weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"
-                + "                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());\n"
-                + "                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),\n"
-                + "                    PreviewConfig.STABILIZATION_WEEKLY_LINES);\n"
                 + "                // Read-only line levels, each physical QCF line accounted for once.\n"
                 + "                juzCounts=JuzProgressSummary.summarize(\n"
                 + "                    geometry,prefs.progressionSnapshotV6());\n"
