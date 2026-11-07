@@ -311,7 +311,7 @@ public final class MainActivity extends android.app.Activity {
         if (wideBoox()) action.setTextSize(24f);
         action.setGravity(Gravity.END);
         line.addView(action);
-        line.setMinimumHeight(Ui.dp(this, wideBoox() ? 104 : 120));
+        line.setMinimumHeight(Ui.dp(this, 120));
         line.setContentDescription("Ouvrir la séance du jour");
         line.setClickable(true);
         line.setFocusable(true);
