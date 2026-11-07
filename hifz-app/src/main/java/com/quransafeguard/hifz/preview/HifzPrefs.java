@@ -3642,6 +3642,11 @@ public final class HifzPrefs {
         return false;
     }
 
+    /** A new evening requires today's physical morning receipt in its actual source. */
+    boolean hasDailyLessonForNewEvening(ConsolidationCycleEngine.Family family, LocalDate day) {
+        return hasDailyLessonReceipt(family, day, snowballSnapshot(family, day));
+    }
+
     /** Central gate: a new learning evening always needs its dated physical lesson.
      * Historical stabilization catch-up on a non-Itqan day retains its original protocol. */
     private boolean eveningLessonEligible(ConsolidationCycleEngine.Family family,

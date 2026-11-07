@@ -44,6 +44,20 @@ public final class SabqiMissedEveningCarryoverTest {
             disk.getString("v6LearningEarnedEveningUnitsV1","[]")).length());
     }
 
+    @Test public void dateMarkerAloneCannotOpenANewEveningForEitherFamily() {
+        for (ConsolidationCycleEngine.Family family : ConsolidationCycleEngine.Family.values()) {
+            InMemoryPrefs disk=EarnedEveningProtocolRegressionTest.disk();
+            HifzPrefs prefs=new HifzPrefs(disk);
+            boolean learning=family==SABQI;
+            LocalDate today=LocalDate.of(2026,10,learning?12:13);
+            SnowballValidationIdempotenceTest.morning(prefs,family,today.minusWeeks(1),0);
+            disk.disk.put(learning?"lastSabqiDate":"lastItqanDate",today.toString());
+            assertFalse(prefs.hasDailyLessonForNewEvening(family,today));
+            SnowballValidationIdempotenceTest.morning(prefs,family,today,5);
+            assertTrue(prefs.hasDailyLessonForNewEvening(family,today));
+        }
+    }
+
     @Test public void absenceOfNewMorningReceiptCannotValidateTheOverdueEvening() {
         InMemoryPrefs disk=EarnedEveningProtocolRegressionTest.disk();
         HifzPrefs prefs=new HifzPrefs(disk);
