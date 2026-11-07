@@ -71,6 +71,22 @@ final class ConsolidationPhysicalUnitPolicy {
      * lines, concatenated in accumulation order, as one combined unit — on top of (not instead
      * of) each block's own individual repetitions.
      */
+    /** Sort physical QCF blocks by their first 0-based printed line, not by the
+     * date or repetition status. Historical synthetic ids retain insertion order. */
+    static long firstPhysicalLineOrder(String encoded) {
+        String first = decodeLineUnit(encoded).get(0);
+        int colon = first.indexOf(':');
+        if (colon <= 0 || colon == first.length() - 1) return Long.MAX_VALUE;
+        try {
+            int page = Integer.parseInt(first.substring(0, colon));
+            int line = Integer.parseInt(first.substring(colon + 1));
+            if (page < 1 || page > 604 || line < 0 || line > 30) return Long.MAX_VALUE;
+            return page * 1000L + line;
+        } catch (NumberFormatException synthetic) {
+            return Long.MAX_VALUE;
+        }
+    }
+
     static String encodeContinuousUnit(List<String> encodedUnits) {
         if (encodedUnits == null || encodedUnits.size() < 2) {
             throw new IllegalArgumentException("Continuous unit requires at least two physical units");
