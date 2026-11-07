@@ -56,6 +56,8 @@ public final class HifzPrefs {
     private static final Object V6_STATE_LOCK = new Object();
     private static volatile String migrationFaultPointForTest;
     private final SharedPreferences p;
+    private final Context geometryContext;
+    private final GeometryRepository testGeometry;
 
     private static void maybeInterruptMigrationForTest(String point) {
         if (point != null && point.equals(migrationFaultPointForTest)) {
@@ -64,6 +66,8 @@ public final class HifzPrefs {
     }
 
     public HifzPrefs(Context context) {
+        geometryContext = context.getApplicationContext();
+        testGeometry = null;
         p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
         boolean firstInstall=p.getInt("schema",0)==0;
         ensureSchema(context);
@@ -74,8 +78,19 @@ public final class HifzPrefs {
     /** JVM tests only: wraps an already-populated store as-is (no schema bootstrap, no legacy
      *  gate migration), so a test can reopen the same store to simulate a process restart. */
     HifzPrefs(SharedPreferences store) {
+        this(store, null);
+    }
+
+    HifzPrefs(SharedPreferences store, GeometryRepository geometry) {
         if (store == null) throw new IllegalArgumentException("store required");
         p = store;
+        geometryContext = null;
+        testGeometry = geometry;
+    }
+
+    private GeometryRepository reviewGeometry() {
+        return testGeometry != null ? testGeometry
+            : geometryContext != null ? GeometryRepository.get(geometryContext) : null;
     }
 
     private void ensureSchema(Context context) {
@@ -3176,14 +3191,34 @@ public final class HifzPrefs {
      * once as one continuous pass. Renforcement retains its original SNOWBALL ×10.
      * Already persisted OPEN sessions keep their frozen protocol vectors in restore.
      */
-    /** One ×1 over each uninterrupted run of previously receipted blocks. */
+    /** Combine already-earned ×1 blocks ONLY when they are truly adjacent on the QCF page.
+     * A missed calendar lesson leaves the cursor still, while a physical gap must
+     * break the pass rather than quietly jump over unlearned Quran. */
     private static void appendOldConsolidationRun(List<ConsolidationCycleEngine.Unit> out,
-            List<String> oldRun) {
+            List<String> oldRun, GeometryRepository geometry) {
         if (oldRun.isEmpty()) return;
-        String id = oldRun.size() == 1 ? oldRun.get(0)
-            : ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(oldRun);
-        out.add(new ConsolidationCycleEngine.Unit(id,
-            ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+        ArrayList<String> run = new ArrayList<>();
+        for(String block:oldRun) {
+            if(!run.isEmpty()) {
+                ArrayList<String> pair = new ArrayList<>();
+                pair.add(run.get(run.size()-1));
+                pair.add(block);
+                if(!ConsolidationPhysicalUnitPolicy.physicallyContinuous(pair,geometry)) {
+                    String id=run.size()==1?run.get(0)
+                        :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(run);
+                    out.add(new ConsolidationCycleEngine.Unit(id,
+                        ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+                    run.clear();
+                }
+            }
+            run.add(block);
+        }
+        if(!run.isEmpty()) {
+            String id=run.size()==1?run.get(0)
+                :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(run);
+            out.add(new ConsolidationCycleEngine.Unit(id,
+                ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+        }
         oldRun.clear();
     }
 
@@ -3209,6 +3244,7 @@ public final class HifzPrefs {
         physical.sort((left, right) -> Long.compare(
             ConsolidationPhysicalUnitPolicy.firstPhysicalLineOrder(left.id()),
             ConsolidationPhysicalUnitPolicy.firstPhysicalLineOrder(right.id())));
+        GeometryRepository geometry = reviewGeometry();
         ArrayList<ConsolidationCycleEngine.Unit> units = new ArrayList<>();
         ArrayList<String> oldRun = new ArrayList<>();
         ArrayList<String> allBlocks = new ArrayList<>();
@@ -3217,14 +3253,15 @@ public final class HifzPrefs {
             if (block.protocol() == ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS) {
                 oldRun.add(block.id());
             } else {
-                appendOldConsolidationRun(units, oldRun);
+                appendOldConsolidationRun(units, oldRun, geometry);
                 units.add(block);
             }
         }
-        appendOldConsolidationRun(units, oldRun);
+        appendOldConsolidationRun(units, oldRun, geometry);
         // The missing final step: AFTER all ×1 and ×7 subblocks, read every
         // eligible line together in canonical order. This pass earns no ×7 receipt.
-        if (allBlocks.size() > 1) {
+        if (allBlocks.size() > 1
+                && ConsolidationPhysicalUnitPolicy.physicallyContinuous(allBlocks, geometry)) {
             units.add(new ConsolidationCycleEngine.Unit(
                 ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(allBlocks),
                 ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS));
