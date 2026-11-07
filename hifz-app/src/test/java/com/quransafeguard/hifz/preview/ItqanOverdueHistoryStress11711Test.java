@@ -56,7 +56,7 @@ public final class ItqanOverdueHistoryStress11711Test {
         HifzPrefs prefs=new HifzPrefs(disk);
         LocalDate day=LocalDate.of(2026,11,4);
         assertTrue(prefs.snowballEveningPending(STABILIZATION,day));
-        assertEquals(30,prefs.stabilizedConsolidationUnits(day).size());
+        assertEquals(31,prefs.stabilizedConsolidationUnits(day).size());
         assertEquals("Planning must be strictly read-only",original,disk.disk);
 
         ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
@@ -68,7 +68,9 @@ public final class ItqanOverdueHistoryStress11711Test {
             // Already receipted prior-day units do not re-enter a fresh
             // overdue-only source as a synthetic ×1 pass: 30 then 15 exact
             // ×7 units, neither batch may be consumed by replaying the other.
-            assertEquals(round==0?30:15,due.size());
+            assertEquals(round==0?31:16,due.size());
+            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,
+                due.get(due.size()-1).protocol());
             ConsolidationCycleEngine.Cycle cycle=null;
             for(ConsolidationCycleEngine.Unit unit:due){
                 cycle=cycle==null
