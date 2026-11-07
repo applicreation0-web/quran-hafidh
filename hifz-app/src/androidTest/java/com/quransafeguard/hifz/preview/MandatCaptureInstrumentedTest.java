@@ -23,7 +23,8 @@ public final class MandatCaptureInstrumentedTest {
         long deadline=android.os.SystemClock.uptimeMillis()+25000;
         long light=0,ink=0,total=0,folioInk=0,folioSamples=0;
         int frames=0;
-        boolean comparison=name.contains("comparaison-p")||name.contains("navigation-p");
+        boolean comparison=name.contains("comparaison-p")||name.contains("navigation-p")
+            ||name.startsWith("frise-");
         long leftInk=0,rightInk=0,leftSamples=0,rightSamples=0;
         do{
             ins.waitForIdleSync();
