@@ -36,6 +36,8 @@ public final class SabqiMissedEveningCarryoverTest {
         SnowballValidationIdempotenceTest.close(prefs,SABQI,next,
             SnowballValidationIdempotenceTest.open(prefs,SABQI,next));
         assertFalse(prefs.snowballEveningPending(SABQI,next));
+        assertFalse("Paid cross-week catch-up must not reopen on a non-Sabqi day",
+            prefs.snowballEveningPending(SABQI,next.plusDays(1)));
         assertEquals("No Sabqi lesson may become Acquis from an evening",
             "[]",disk.getString("v6AcquiredCreditLineIds",""));
         assertEquals(2,new org.json.JSONArray(
