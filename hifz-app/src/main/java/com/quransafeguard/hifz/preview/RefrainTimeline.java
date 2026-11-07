@@ -130,12 +130,12 @@ final class RefrainTimeline {
             number.setGravity(Gravity.CENTER);
             card.addView(number,new LinearLayout.LayoutParams(-1,Ui.dp(a,17)));
             View dotSpacer=new View(a);
-            card.addView(dotSpacer,new LinearLayout.LayoutParams(-1,Ui.dp(a,32)));
-            TextView title=Ui.text(a,n[15],screenDp<540?10:12,false);
+            card.addView(dotSpacer,new LinearLayout.LayoutParams(-1,Ui.dp(a,25)));
+            TextView title=Ui.text(a,n[15],screenDp<540?11:14,false);
             title.setTextColor(Ui.INK);
             title.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
             title.setMaxLines(2);
-            card.addView(title,new LinearLayout.LayoutParams(-1,Ui.dp(a,27)));
+            card.addView(title,new LinearLayout.LayoutParams(-1,Ui.dp(a,34)));
             labels.add(title);
             card.setContentDescription("Refrain "+n[3]+" sur "+n[4]+
                 ", "+n[5]+" : "+n[15]);
@@ -144,7 +144,7 @@ final class RefrainTimeline {
         rail.addView(stations,new FrameLayout.LayoutParams(totalWidth,Ui.dp(a,76)));
         scroll.addView(rail,new HorizontalScrollView.LayoutParams(totalWidth,Ui.dp(a,76)));
 
-        TextView detail=Ui.text(a,"",screenDp<540?11:12,false);
+        TextView detail=Ui.text(a,"",screenDp<540?12:14,false);
         detail.setTextColor(Ui.INK);
         detail.setGravity(Gravity.CENTER);
         detail.setMaxLines(2);
