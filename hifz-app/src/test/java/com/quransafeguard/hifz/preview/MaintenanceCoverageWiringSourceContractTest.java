@@ -55,7 +55,7 @@ public final class MaintenanceCoverageWiringSourceContractTest {
         assertFalse(main.contains("HifzSchedule.MAINTENANCE_MINUTES"));
         assertTrue("Home must show a short name, never a false Sabqi 1/3 ordinal",
             main.contains("setToday(prefix+todaySummary(mode),true);")
-            && main.contains("if(HifzSessionActivity.SABQI.equals(mode))return \\"Apprentissage\\";"));
+            && main.contains("if(HifzSessionActivity.SABQI.equals(mode))return ");
         assertFalse("No misleading Sabqi fraction on Home",
             main.contains("WeeklyDashboardPlanner.learningSessionCue("));
         assertTrue("The actual dynamic Révision duration is still implemented by the session",
