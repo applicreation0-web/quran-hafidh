@@ -28,6 +28,7 @@ public final class ProgressMapActivity extends android.app.Activity {
     private final JuzProgressBar[] juzBars=new JuzProgressBar[30];
     private final LinearLayout[] juzCards=new LinearLayout[30];
     private int selectedJuz=0;
+    private int[][] pageStatuses;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -102,11 +103,6 @@ public final class ProgressMapActivity extends android.app.Activity {
         super.onSaveInstanceState(out);
     }
 
-    private static int juzStartPage(int juz) {
-        if(juz<1||juz>30)throw new IllegalArgumentException("Juz must be in 1..30");
-        // Canonical indexed QCF 240 rub' boundary table; eight rub' per Juz.
-        return QuranRubBoundaries.rowForIndex((juz-1)*8+1)[3];
-    }
     /** Miniature pages ARE the 30 gauges. Six across on BOOX, three on phones. */
     private void buildJuzOverview() {
         boolean boox=getResources().getConfiguration().smallestScreenWidthDp>=600;
@@ -151,9 +147,11 @@ public final class ProgressMapActivity extends android.app.Activity {
 
     /** Replace the 30-entry overview with the exact QCF page range for this Juz. */
     private void showJuz(int juz) {
-        int first=juzStartPage(juz),last=juz==30?604:juzStartPage(juz+1)-1;
+        int[] window = JuzProgressSummary.pageWindow(geometry, juz);
+        int first = window[0], last = window[1];
         selectedJuz=juz;
         grid.setPageWindow(first,last);
+        applyPageStatuses();
         juzOverview.setVisibility(View.GONE);
         pageDetails.setVisibility(View.VISIBLE);
 
@@ -224,7 +222,7 @@ public final class ProgressMapActivity extends android.app.Activity {
      */
     private void loadStatuses() {
         io.execute(() -> {
-            int[] statuses;
+            int[][] statuses;
             int[][] juzCounts;
             try {
                 HifzPrefs.ProgressionSnapshot progression = prefs.progressionSnapshotV6();
@@ -239,8 +237,8 @@ public final class ProgressMapActivity extends android.app.Activity {
             }
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
-                for (int page = 1; page <= 604; page++) grid.setStatus(page, statuses[page]);
-                grid.invalidate();
+                pageStatuses = statuses;
+                applyPageStatuses();
                 for(int i=0;i<30;i++){
                     int[] c=juzCounts[i];
                     int total=c[JuzProgressSummary.TOTAL];
@@ -253,22 +251,30 @@ public final class ProgressMapActivity extends android.app.Activity {
         });
     }
 
-    static int[] computeStatuses(GeometryRepository geometry, HifzPrefs.ProgressionSnapshot progression) {
-        int[] statuses = new int[605];
-        for (int page = 1; page <= 604; page++) {
-            boolean acquired = false;
-            boolean learned = false;
-            for (String lineId : geometry.lineIdsOnPage(page)) {
-                if (progression.acquired.contains(lineId)) acquired = true;
-                else if (progression.stabilized.contains(lineId)) {
-                    statuses[page] = ProgressGridView.STABILISER;
-                    break;
-                } else if (progression.learned.contains(lineId)) learned = true;
-            }
+    private void applyPageStatuses() {
+        if (selectedJuz == 0 || pageStatuses == null) return;
+        int[] statuses = pageStatuses[selectedJuz - 1];
+        for (int page = grid.firstVisiblePage(); page <= grid.lastVisiblePage(); page++) {
+            grid.setStatus(page, statuses[page]);
+        }
+        grid.invalidate();
+    }
+
+    static int[][] computeStatuses(GeometryRepository geometry, HifzPrefs.ProgressionSnapshot progression) {
+        int[][] statuses = new int[JuzProgressSummary.JUZ_COUNT][605];
+        int[] starts = JuzProgressSummary.boundaries();
+        for (int i = 0; i < geometry.lineCount(); i++) {
+            GeometryRepository.LineMeta line = geometry.line(i);
+            int ordinal = GeometryRepository.ordinal(CorpusLinePolicy.ownerVerse(line));
+            int juz = JuzProgressSummary.ownerJuzIndex(ordinal, starts);
+            int previous = statuses[juz][line.page];
             // On mixed pages, show remaining work first: Stabilisé, then Appris, then Acquis.
-            if (statuses[page] == ProgressGridView.VIDE) {
-                statuses[page] = learned ? ProgressGridView.APPRENTISSAGE
-                    : acquired ? ProgressGridView.ACQUIS : ProgressGridView.VIDE;
+            if (progression.acquired.contains(line.id)) {
+                if (previous == ProgressGridView.VIDE) statuses[juz][line.page] = ProgressGridView.ACQUIS;
+            } else if (progression.stabilized.contains(line.id)) {
+                statuses[juz][line.page] = ProgressGridView.STABILISER;
+            } else if (progression.learned.contains(line.id) && previous != ProgressGridView.STABILISER) {
+                statuses[juz][line.page] = ProgressGridView.APPRENTISSAGE;
             }
         }
         return statuses;

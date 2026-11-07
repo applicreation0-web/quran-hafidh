@@ -27,6 +27,30 @@ final class JuzProgressSummary {
         return start;
     }
 
+    static int ownerJuzIndex(int verseOrdinal, int[] starts) {
+        int at = java.util.Arrays.binarySearch(starts, verseOrdinal);
+        return at >= 0 ? at : -at - 2;
+    }
+
+    /** The first QCF line owned by a juz, even when a folio is shared. */
+    static int firstOwnedLine(GeometryRepository geometry, int boundaryOrdinal) {
+        VerseRef boundary = com.quransafeguard.hifz.core.QuranCanon.INSTANCE.fromOrdinal(boundaryOrdinal);
+        int at = geometry.firstLineIndex(boundary);
+        while (at < geometry.lineCount()
+                && GeometryRepository.ordinal(CorpusLinePolicy.ownerVerse(geometry.line(at))) < boundaryOrdinal) {
+            at++;
+        }
+        return at;
+    }
+
+    static int[] pageWindow(GeometryRepository geometry, int juz) {
+        if (juz < 1 || juz > JUZ_COUNT) throw new IllegalArgumentException("Juz must be in 1..30");
+        int[] starts = boundaries();
+        int from = firstOwnedLine(geometry, starts[juz - 1]);
+        int until = juz == JUZ_COUNT ? geometry.lineCount() : firstOwnedLine(geometry, starts[juz]);
+        return new int[]{geometry.line(from).page, geometry.line(until - 1).page};
+    }
+
     /** counts[juz][TOTAL,LEARNED,STABILIZED,ACQUIRED] */
     static int[][] fromLines(List<GeometryRepository.LineMeta> lines,
                              Set<String> learned,Set<String> stabilized,Set<String> acquired){
@@ -42,9 +66,8 @@ final class JuzProgressSummary {
             if(ordinal<previous)
                 throw new IllegalStateException("QCF physical lines not in verse order");
             previous=ordinal;
-            int j=0;
-            while(j<JUZ_COUNT-1&&ordinal>=start[j+1])j++;
-            if(ordinal<start[j])throw new IllegalStateException("QCF line outside canonical Juz");
+            int j=ownerJuzIndex(ordinal,start);
+            if(j<0)throw new IllegalStateException("QCF line outside canonical Juz");
             counts[j][TOTAL]++;
             if(acquired.contains(line.id))counts[j][ACQUIRED]++;
             else if(stabilized.contains(line.id))counts[j][STABILIZED]++;

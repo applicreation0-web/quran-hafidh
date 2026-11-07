@@ -78,6 +78,53 @@ public final class FreezeVisualInstrumentedTest {
             });
         }
     }
+    @Test public void sharedJuzFolioOpensTheAuthenticPageAndReturnsToTheGrid() {
+        android.app.Instrumentation ins =
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation();
+        try (ActivityScenario<ProgressMapActivity> scenario = ActivityScenario.launch(ProgressMapActivity.class)) {
+            scenario.onActivity(activity -> {
+                LinearLayout[] cards = (LinearLayout[]) get(activity, "juzCards");
+                assertTrue(cards[2].performClick());
+                ProgressGridView grid = (ProgressGridView) get(activity, "grid");
+                assertEquals(62, grid.lastVisiblePage());
+                activity.onBackPressed();
+                assertTrue(cards[3].performAccessibilityAction(
+                    android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK, null));
+                assertEquals(62, grid.firstVisiblePage());
+            });
+            android.app.Instrumentation.ActivityMonitor monitor =
+                ins.addMonitor(StudyReaderActivity.class.getName(), null, false);
+            try {
+                scenario.onActivity(activity -> {
+                    ProgressGridView grid = (ProgressGridView) get(activity, "grid");
+                    long now = android.os.SystemClock.uptimeMillis();
+                    android.view.MotionEvent down = android.view.MotionEvent.obtain(
+                        now, now, android.view.MotionEvent.ACTION_DOWN, 10, 10, 0);
+                    android.view.MotionEvent up = android.view.MotionEvent.obtain(
+                        now, now + 20, android.view.MotionEvent.ACTION_UP, 10, 10, 0);
+                    try {
+                        assertTrue(grid.dispatchTouchEvent(down));
+                        assertTrue(grid.dispatchTouchEvent(up));
+                    } finally {
+                        down.recycle();
+                        up.recycle();
+                    }
+                });
+                android.app.Activity reader = ins.waitForMonitorWithTimeout(monitor, 20_000);
+                assertNotNull(reader);
+                assertEquals(62, reader.getIntent().getIntExtra(StudyReaderActivity.EXTRA_JUMP_PAGE, -1));
+                ins.runOnMainSync(reader::finish);
+                scenario.onActivity(activity -> {
+                    assertEquals(4, ((Integer)get(activity,"selectedJuz")).intValue());
+                    activity.onBackPressed();
+                    assertEquals(0, ((Integer)get(activity,"selectedJuz")).intValue());
+                });
+            } finally {
+                ins.removeMonitor(monitor);
+            }
+        }
+    }
+
     @Test public void physicalLineLevelsFillPagesWithoutFakeCredits(){
         Context context=ApplicationProvider.getApplicationContext();
         GeometryRepository geometry=GeometryRepository.get(context);

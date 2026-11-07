@@ -65,7 +65,7 @@ public final class JuzProgressSummaryTest {
         prefs.setV6StabilizationRanges(Collections.singletonList(
             new com.quransafeguard.hifz.core.VerseRange(new VerseRef(1,1), new VerseRef(1,7))), geometry);
         HifzPrefs.ProgressionSnapshot snapshot = prefs.progressionSnapshotV6();
-        assertEquals(ProgressGridView.VIDE, ProgressMapActivity.computeStatuses(geometry, snapshot)[1]);
+        assertEquals(ProgressGridView.VIDE, ProgressMapActivity.computeStatuses(geometry, snapshot)[0][1]);
         assertEquals(0, JuzProgressSummary.done(JuzProgressSummary.summarize(geometry, snapshot)[0]));
 
         String learned = geometry.lineIdsOnPage(1).get(0);
@@ -75,11 +75,35 @@ public final class JuzProgressSummaryTest {
         disk.disk.put("v6StabilizedLineIds", "[\"" + stabilized + "\"]");
         disk.disk.put("v6AcquiredCreditLineIds", "[\"" + acquired + "\"]");
         snapshot = prefs.progressionSnapshotV6();
-        assertEquals(ProgressGridView.STABILISER, ProgressMapActivity.computeStatuses(geometry, snapshot)[1]);
+        assertEquals(ProgressGridView.STABILISER, ProgressMapActivity.computeStatuses(geometry, snapshot)[0][1]);
         int[] juz1 = JuzProgressSummary.summarize(geometry, snapshot)[0];
         assertEquals(1, juz1[JuzProgressSummary.LEARNED]);
         assertEquals(1, juz1[JuzProgressSummary.STABILIZED]);
         assertEquals(1, juz1[JuzProgressSummary.ACQUIRED]);
         assertEquals(0, JuzProgressSummary.done(JuzProgressSummary.summarize(geometry, snapshot)[29]));
+    }
+
+    @Test public void aSharedFolioIsReachableInBothJuzWithOnlyItsOwnLineStatuses() throws Exception {
+        java.nio.file.Path source = java.nio.file.Path.of("app/src/main/assets/reader109/geometry.json");
+        if (!java.nio.file.Files.exists(source)) source = java.nio.file.Path.of("..").resolve(source);
+        GeometryRepository geometry = GeometryRepository.fromJson(java.nio.file.Files.readString(source));
+        assertEquals(62, JuzProgressSummary.pageWindow(geometry, 3)[1]);
+        assertEquals(62, JuzProgressSummary.pageWindow(geometry, 4)[0]);
+
+        String acquiredInJuz3 = geometry.lineIdsOnPage(62).get(0);
+        String stabilizedInJuz4 = geometry.lineIdsOnPage(62).get(2);
+        InMemoryPrefs disk = PartialFinalEightWeekStressTest.empty();
+        disk.disk.put("v6StabilizedLineIds", new org.json.JSONArray(Set.of(stabilizedInJuz4)).toString());
+        disk.disk.put("v6AcquiredCreditLineIds", new org.json.JSONArray(Set.of(acquiredInJuz3)).toString());
+        HifzPrefs.ProgressionSnapshot progress = new HifzPrefs(disk).progressionSnapshotV6();
+        int[][] pages = ProgressMapActivity.computeStatuses(geometry, progress);
+        assertEquals(ProgressGridView.ACQUIS, pages[2][62]);
+        assertEquals(ProgressGridView.STABILISER, pages[3][62]);
+
+        int[][] counts = JuzProgressSummary.summarize(geometry, progress);
+        assertEquals(1, JuzProgressSummary.done(counts[2]));
+        assertEquals(1, JuzProgressSummary.done(counts[3]));
+        assertEquals(1, counts[2][JuzProgressSummary.ACQUIRED]);
+        assertEquals(1, counts[3][JuzProgressSummary.STABILIZED]);
     }
 }
