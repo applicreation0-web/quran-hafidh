@@ -350,14 +350,11 @@ public final class MainActivity extends android.app.Activity {
         return heading;
     }
 
-    /** Keep phone icons unchanged; allow large BOOX portrait panels to use their full width. */
+    /** Keep the pictograms compact enough for the calendar and session controls on BOOX. */
     private int booxIconDp(int columns, int maxDp) {
         int widthDp = getResources().getConfiguration().screenWidthDp;
         if (widthDp <= 0) widthDp = 360;
-        // The historical 112/124dp caps made the 10-inch BOOX glyphs look tiny.
-        // Larger E-Ink layouts use 2x caps; column width still prevents clipping.
-        // On phone-width screens the existing dimensions are preserved exactly.
-        int responsiveCapDp = widthDp >= 600 ? maxDp * 2 : maxDp;
+        int responsiveCapDp = widthDp >= 600 ? maxDp + 36 : maxDp;
         return Math.max(62, Math.min(responsiveCapDp, (widthDp - 48) / columns - 14));
     }
 
@@ -545,6 +542,13 @@ public final class MainActivity extends android.app.Activity {
         String summary=count+" séance"+(count>1?"s":"")+" non effectuée"+(count>1?"s":"")+" · contenu décalé  ›";
         for(TextView label:new TextView[]{backlogHomeRow,backlogParcoursRow}) {
             if(label==null)continue;
+            // The home has no missed-session counter: the next lesson simply shifts.
+            if(label==backlogHomeRow) {
+                label.setVisibility(View.GONE);
+                label.setText("");
+                label.setContentDescription("");
+                continue;
+            }
             label.setVisibility(count==0?View.GONE:View.VISIBLE);
             label.setText(count==0?"":summary);
             label.setContentDescription(count+" créneaux non effectués ; les leçons avancent au prochain jour de leur discipline");
@@ -1162,14 +1166,9 @@ public final class MainActivity extends android.app.Activity {
         }
         if(mode==null){setToday("Programme à jour · voir les séances",true);return;}
         String prefix=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
-        // Never query a live Itqan block or mutate its cursor merely
-        // to render a home navigation summary.
-        LocalDate scheduledForCue = !isTodayAnchoredMode(mode) && due != null
-            ? due.getScheduledDate() : current;
-        String learningFraction = HifzSessionActivity.SABQI.equals(mode)
-            ? WeeklyDashboardPlanner.learningSessionCue(scheduledForCue.getDayOfWeek(),
-                prefs.weeklyProgramFor(scheduledForCue)) : "";
-        setToday(prefix+todaySummary(mode)+learningFraction,true);
+        // A delayed lesson keeps its physical cursor. No fictitious 1/3
+        // marker on Home: attendance dates are not learned-unit ordinals.
+        setToday(prefix+todaySummary(mode),true);
         if(todayObjective!=null){
             String description=homePreviewForMode(mode,todayRow,prefs.itqanEntretienActive());
             todayObjective.setText(description);
@@ -1313,7 +1312,6 @@ public final class MainActivity extends android.app.Activity {
                 prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
             (date,mode)->ledger.find(date,mode)!=null);
         String balancePreview = "BILAN · "+bilan.validated+"/"+bilan.planned+" contrôlées · "+bilan.dueToday+" à faire"
-            +"\nRetards : "+bilan.lateLessons+" leçon(s) · "+bilan.missedReviews+" révision(s)"
             +(bilan.unverifiedDays>0 ? "\n"+bilan.unverifiedDays+" jour(s) non vérifiable(s)" : "");
         TextView weeklyBalance=Ui.text(this,balancePreview,16f,false);
         weeklyBalance.setPadding(Ui.dp(this,6),Ui.dp(this,9),Ui.dp(this,6),Ui.dp(this,10));
@@ -1433,6 +1431,7 @@ public final class MainActivity extends android.app.Activity {
         timeline.addView(axis, lineParams);
         LinearLayout stations = Ui.row(this);
         stations.setGravity(Gravity.TOP);
+        int stationHeight=Ui.dp(this,wideBoox()?104:80);
         for (WeeklyDashboardPlanner.Row row : weekRows) {
             boolean active = row.date.equals(selectedWeekDate);
             if (active) chosen = row;
@@ -1473,18 +1472,18 @@ public final class MainActivity extends android.app.Activity {
             marker.addView(node,inner);
             station.addView(marker,new LinearLayout.LayoutParams(
                 Ui.dp(this,34),Ui.dp(this,34)));
-            TextView day = Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1],13f,active);
+            TextView day = Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1],wideBoox()?17f:13f,active);
             day.setGravity(Gravity.CENTER);
             station.addView(day);
-            TextView date = Ui.text(this, Integer.toString(row.date.getDayOfMonth()),12f,active);
+            TextView date = Ui.text(this, Integer.toString(row.date.getDayOfMonth()),wideBoox()?16f:12f,active);
             date.setGravity(Gravity.CENTER);
             station.addView(date);
             if (row.date.getDayOfWeek() == DayOfWeek.SUNDAY) {
-                TextView finale = Ui.text(this,"Finale",10f,false);
+                TextView finale = Ui.text(this,"Finale",wideBoox()?15f:10f,false);
                 finale.setGravity(Gravity.CENTER);
                 station.addView(finale);
             }
-            station.setMinimumHeight(Ui.dp(this,80));
+            station.setMinimumHeight(stationHeight);
             station.setClickable(true);
             station.setFocusable(true);
             station.setContentDescription(row.day+" "+row.date+" · "+status+
@@ -1494,10 +1493,10 @@ public final class MainActivity extends android.app.Activity {
                 renderSelectedWeekDay();
             });
             stations.addView(station,new LinearLayout.LayoutParams(
-                0,Ui.dp(this,80),1f));
+                0,stationHeight,1f));
         }
-        timeline.addView(stations,new FrameLayout.LayoutParams(-1,Ui.dp(this,80)));
-        weekStrip.addView(timeline,new LinearLayout.LayoutParams(-1,Ui.dp(this,80)));
+        timeline.addView(stations,new FrameLayout.LayoutParams(-1,stationHeight));
+        weekStrip.addView(timeline,new LinearLayout.LayoutParams(-1,stationHeight));
         TextView heading = Ui.bookText(this,
             chosen.day+" "+chosen.date.getDayOfMonth()+" · "+compactState(chosen.state), 20f, true);
         weekDayPanel.addView(heading);

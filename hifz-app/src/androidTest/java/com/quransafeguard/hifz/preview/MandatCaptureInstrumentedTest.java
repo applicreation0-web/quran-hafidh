@@ -23,6 +23,9 @@ public final class MandatCaptureInstrumentedTest {
         long deadline=android.os.SystemClock.uptimeMillis()+25000;
         long light=0,ink=0,total=0,folioInk=0,folioSamples=0;
         int frames=0;
+        boolean comparison=name.contains("comparaison-p")||name.contains("navigation-p")
+            ||name.startsWith("frise-");
+        long leftInk=0,rightInk=0,leftSamples=0,rightSamples=0;
         do{
             ins.waitForIdleSync();
             try(InputStream out=new ParcelFileDescriptor.AutoCloseInputStream(
@@ -35,6 +38,7 @@ public final class MandatCaptureInstrumentedTest {
                 assertNotNull("Actual emulator screenshot missing: "+name,bitmap);
                 try{
                     light=0;ink=0;total=0;folioInk=0;folioSamples=0;
+                    leftInk=0;rightInk=0;leftSamples=0;rightSamples=0;
                     // Sample the central folio/content region separately from
                     // navigation, status bars and English Tafsir in the footer.
                     // A "Chargement du Mushaf QCF..." placeholder must NEVER
@@ -51,6 +55,11 @@ public final class MandatCaptureInstrumentedTest {
                             total++;if(gray>210)light++;if(gray<100)ink++;
                             if(y>=top&&y<bottom&&x>=left&&x<right){
                                 folioSamples++;if(gray<100)folioInk++;
+                                if(x<bitmap.getWidth()/2){
+                                    leftSamples++;if(gray<100)leftInk++;
+                                }else{
+                                    rightSamples++;if(gray<100)rightInk++;
+                                }
                             }
                         }
                 }finally{bitmap.recycle();}
@@ -59,10 +68,12 @@ public final class MandatCaptureInstrumentedTest {
             // For the Mushaf and comparison screenshots, require real ink
             // in the folio viewport, not only in static headers or Tafsir.
             boolean qcfScreenshot=name.contains("lecture-p")
-                ||name.contains("comparaison-p")||name.contains("navigation-p");
+                ||comparison;
             boolean actualFolio=!qcfScreenshot
                 ||(folioSamples>0&&folioInk>folioSamples/50);
-            if(total>0&&light>total/4&&ink>total/500&&actualFolio)return;
+            boolean bothPanes=!comparison||(leftSamples>0&&rightSamples>0
+                &&leftInk>leftSamples/50&&rightInk>rightSamples/50);
+            if(total>0&&light>total/4&&ink>total/500&&actualFolio&&bothPanes)return;
             if(android.os.SystemClock.uptimeMillis()>=deadline)break;
             Thread.sleep(350);
         }while(true);

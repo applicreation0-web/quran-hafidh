@@ -7,43 +7,28 @@ import android.graphics.RectF;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Whole-Mushaf overview: one cell per page, patterned (never colored) by status, so it stays
- * legible on e-ink. Reported directly (twice): a page's status used to be read off historical
- * range-based promotion buckets that only the Sabqi/Renforcement track ever updates, so crediting
- * an Itqan/Stabilisation line never moved anything here. Switching straight to the per-line schema6
- * state (STABILIZED = à stabiliser) fixed that but broke something else: a declared Itqan/Ancrage
- * range (itqanRanges()/unconsolidatedPromotedRanges(), set once in Settings or at install) starts
- * every one of its lines in state NONE — completeStabilizationBlockV6's own comment confirms NONE
- * is "Ancrage material['s] normal starting state" — so a huge declared range not yet individually
- * touched by a real Stabilisation block showed as "pas commencé" instead of "à stabiliser",
- * indistinguishable from a page never declared for any track at all.
- *
- * A page's status now combines both signals correctly: ACQUIRED (progressionSnapshotV6) = Acquis;
- * declared Itqan-eligible (effectiveItqanRanges = itqanRanges + every Sabqi-fed promotion) but not
- * yet ACQUIRED = à stabiliser, whatever its NONE/LEARNED/STABILIZED sub-state; Sabqi's own LEARNED
- * = en apprentissage; neither = pas commencé. This is the only page status that still needs a
- * declared-range check — Sabqi's own front-to-back walk has no equivalent "declared but not yet
- * reached" backlog, since its LEARNED state is set the moment each day's lesson happens. Two live
- * estimates (Apprentissage, Stabilisation) sit above the grid, computed from the same buckets
- * Diagnostic uses for its own equivalent estimates.
- */
+/** Read-only progress over canonical QCF lines and pages. */
 public final class ProgressMapActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private GeometryRepository geometry;
     private ProgressGridView grid;
-    private TextView apprentissageEtaValue;
-    private TextView stabilisationEtaValue;
+    private ScrollView progressScroll;
+    private Button backButton;
+    private LinearLayout juzOverview, pageDetails;
+    private TextView juzHeading;
+    private final JuzProgressBar[] juzBars=new JuzProgressBar[30];
+    private final LinearLayout[] juzCards=new LinearLayout[30];
+    private int selectedJuz=0;
+    private int[][] pageStatuses;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -57,13 +42,17 @@ public final class ProgressMapActivity extends android.app.Activity {
         }
 
         ScrollView scroll = new ScrollView(this);
+        progressScroll=scroll;
         scroll.setFillViewport(true);
         LinearLayout root = Ui.column(this);
         scroll.addView(root);
 
         LinearLayout top = Ui.row(this);
         top.setPadding(0, 0, 0, Ui.dp(this, 2));
-        top.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
+        backButton=Ui.iconButton(this,"‹","Retour",v->{
+            if(selectedJuz>0)showAllPages();else finish();
+        });
+        top.addView(backButton);
         TextView title = Ui.bookText(this, "Progression", 18, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER);
@@ -73,15 +62,20 @@ public final class ProgressMapActivity extends android.app.Activity {
         top.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
         root.addView(top);
 
-        // Always explain the 604 page cells before the grid fills the screen.
-        TextView gridHelp = Ui.text(this,
-            "604 pages · une case = une page · toucher pour ouvrir", 14f, false);
-        if (getResources().getConfiguration().smallestScreenWidthDp >= 600)
-            gridHelp.setTextSize(19f);
-        gridHelp.setTextColor(Ui.MUTED);
-        gridHelp.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 5));
-        root.addView(gridHelp);
-        root.addView(legend());
+        // 30 printed-page gauges, then the actual QCF pages of the selected Juz.
+        // No explanatory banner, redundant selection dialog, or extra grouping.
+        juzOverview=Ui.column(this);
+        juzOverview.setPadding(0,0,0,0);
+        root.addView(juzOverview);
+        buildJuzOverview();
+
+        pageDetails=Ui.column(this);
+        pageDetails.setPadding(0,0,0,0);
+        pageDetails.setVisibility(View.GONE);
+        juzHeading=Ui.bookText(this,"",18f,true);
+        juzHeading.setPadding(Ui.dp(this,8),Ui.dp(this,8),0,0);
+        pageDetails.addView(juzHeading);
+        pageDetails.addView(legend());
         grid = new ProgressGridView(this);
         grid.setOnPageTapped(page -> {
             Intent intent = new Intent(this, StudyReaderActivity.class);
@@ -91,17 +85,103 @@ public final class ProgressMapActivity extends android.app.Activity {
         LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         gridParams.topMargin = Ui.dp(this, 4);
-        root.addView(grid, gridParams);
-        grid.setContentDescription("604 pages du Mushaf · touchez une page pour l’ouvrir en Lecture");
-
-        // Estimates follow the grid. The decoding legend stays above, visible at entry.
-        root.addView(Ui.divider(this));
-        apprentissageEtaValue = etaBox(root, "Fin Apprentissage");
-        stabilisationEtaValue = etaBox(root, "Fin Stabilisation");
+        pageDetails.addView(grid, gridParams);
+        root.addView(pageDetails);
+        grid.setContentDescription("Pages du juz");
+        if(savedInstanceState!=null){
+            int restored=savedInstanceState.getInt("freeze2SelectedJuz",0);
+            if(restored>=1 && restored<=30)showJuz(restored);
+        }
 
         setContentView(scroll);
         Ui.respectSystemBars(this, scroll, 0, 0, 0, 0);
         loadStatuses();
+    }
+
+    /** Returning from the Mushaf or a completed Hifz lesson must show newly
+     * persisted V6 lines; never leave the 30 gauges showing a stale snapshot. */
+    @Override protected void onResume() {
+        super.onResume();
+        if (pageStatuses != null && geometry != null) loadStatuses();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle out) {
+        out.putInt("freeze2SelectedJuz",selectedJuz);
+        super.onSaveInstanceState(out);
+    }
+
+    /** Miniature pages ARE the 30 gauges. Six across on BOOX, three on phones. */
+    private void buildJuzOverview() {
+        boolean boox=getResources().getConfiguration().smallestScreenWidthDp>=600;
+        int cols=boox?6:3;
+        LinearLayout row=null;
+        for(int j=1;j<=30;j++){
+            if((j-1)%cols==0){
+                row=Ui.row(this);
+                row.setPadding(0,0,0,0);
+                juzOverview.addView(row);
+            }
+            int index=j-1;
+            final int selected=j;
+            LinearLayout item=Ui.column(this);
+            item.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,7));
+            item.setGravity(Gravity.CENTER_HORIZONTAL);
+            item.setBackgroundColor(Ui.PAPER);
+            item.setClickable(true);
+            item.setFocusable(true);
+            item.setMinimumHeight(Ui.dp(this,96));
+            item.setOnClickListener(v->showJuz(selected));
+
+            JuzProgressBar page=new JuzProgressBar(this);
+            page.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+            item.addView(page);
+            TextView label=Ui.bookText(this,"Juz "+j,boox?16f:14f,true);
+            label.setGravity(Gravity.CENTER);
+            label.setPadding(0,Ui.dp(this,3),0,0);
+            item.addView(label);
+            juzCards[index]=item;
+            juzBars[index]=page;
+            item.setContentDescription("Juz "+j);
+
+            LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(
+                0,LinearLayout.LayoutParams.WRAP_CONTENT,1f);
+            cell.setMargins(Ui.dp(this,2),0,Ui.dp(this,2),Ui.dp(this,3));
+            row.addView(item,cell);
+        }
+    }
+
+    /** Replace the 30-entry overview with the exact QCF page range for this Juz. */
+    private void showJuz(int juz) {
+        int[] window = JuzProgressSummary.pageWindow(geometry, juz);
+        int first = window[0], last = window[1];
+        selectedJuz=juz;
+        grid.setPageWindow(first,last);
+        applyPageStatuses();
+        juzOverview.setVisibility(View.GONE);
+        pageDetails.setVisibility(View.VISIBLE);
+
+        juzHeading.setText("Juz "+juz);
+        Ui.setIconDescription(backButton,"Retour aux 30 juz");
+        grid.setContentDescription("Juz "+juz+" · pages "+first+" à "+last);
+        if(progressScroll!=null)progressScroll.post(()->progressScroll.scrollTo(0,0));
+    }
+    /** A single back step to the 30 gauges, not to a redundant 604-page map. */
+    private void showAllPages() {
+        selectedJuz=0;
+        grid.setPageWindow(1,604); // restore the internal view before hiding it
+        pageDetails.setVisibility(View.GONE);
+        juzOverview.setVisibility(View.VISIBLE);
+
+        Ui.setIconDescription(backButton,"Retour");
+        grid.setContentDescription("Pages du juz");
+        if(progressScroll!=null)progressScroll.post(()->progressScroll.scrollTo(0,0));
+    }
+
+    @Override public void onBackPressed() {
+        if(selectedJuz>0)showAllPages();
+        else super.onBackPressed();
     }
 
     private LinearLayout legend() {
@@ -109,7 +189,7 @@ public final class ProgressMapActivity extends android.app.Activity {
         box.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 4));
         LinearLayout line = null;
         int[] statuses = {ProgressGridView.ACQUIS, ProgressGridView.STABILISER, ProgressGridView.APPRENTISSAGE, ProgressGridView.VIDE};
-        String[] labels = {"Acquis", "À stabiliser", "En apprentissage", "Pas commencé"};
+        String[] labels = {"Acquis", "Stabilisé", "Appris", "Pas commencé"};
         for (int i = 0; i < statuses.length; i++) {
             LinearLayout row = Ui.row(this);
             row.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 8), 0);
@@ -142,22 +222,6 @@ public final class ProgressMapActivity extends android.app.Activity {
         return box;
     }
 
-    /** "Fin Apprentissage ········ value": a plain line under a hairline, never a bordered panel. */
-    private TextView etaBox(LinearLayout root, String title) {
-        LinearLayout row = Ui.row(this);
-        row.setPadding(Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6));
-        TextView label = Ui.text(this, title, 12.5f, true);
-        Ui.weight(label, 1f);
-        row.addView(label);
-        TextView value = Ui.text(this, "Calcul en cours…", 12f, false);
-        value.setTextColor(Ui.MUTED);
-        value.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        row.addView(value);
-        root.addView(row);
-        root.addView(Ui.divider(this));
-        return value;
-    }
-
     /**
      * Touches every one of the ~8820 physical lines (a HashSet lookup each, against
      * progressionSnapshotV6's three sets) — cheap on a phone, but this app targets weak e-ink CPUs
@@ -165,15 +229,12 @@ public final class ProgressMapActivity extends android.app.Activity {
      */
     private void loadStatuses() {
         io.execute(() -> {
-            int[] statuses;
-            String apprentissageEta;
-            String stabilisationEta;
+            int[][] statuses;
+            int[][] juzCounts;
             try {
-                statuses = computeStatuses();
-                apprentissageEta = weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),
-                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());
-                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),
-                    PreviewConfig.STABILIZATION_WEEKLY_LINES);
+                HifzPrefs.ProgressionSnapshot progression = prefs.progressionSnapshotV6();
+                statuses = computeStatuses(geometry, progression);
+                juzCounts = JuzProgressSummary.summarize(geometry, progression);
             } catch (RuntimeException corruptOrUnconfiguredState) {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
@@ -183,45 +244,45 @@ public final class ProgressMapActivity extends android.app.Activity {
             }
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
-                for (int page = 1; page <= 604; page++) grid.setStatus(page, statuses[page]);
-                grid.invalidate();
-                apprentissageEtaValue.setText(apprentissageEta);
-                stabilisationEtaValue.setText(stabilisationEta);
+                pageStatuses = statuses;
+                applyPageStatuses();
+                for(int i=0;i<30;i++){
+                    int[] c=juzCounts[i];
+                    int total=c[JuzProgressSummary.TOTAL];
+                    int learned=c[JuzProgressSummary.LEARNED];
+                    int stabilized=c[JuzProgressSummary.STABILIZED];
+                    int acquired=c[JuzProgressSummary.ACQUIRED];
+                    juzBars[i].setLevels(learned,stabilized,acquired,total);
+                }
             });
         });
     }
 
-    /**
-     * Same shape as SettingsActivity's Diagnostic estimates: remaining lines divided by a weekly
-     * pace, ceiling-rounded, projected from today.
-     */
-    private static String weeksEtaSummary(int remaining, int weeklyPace) {
-        if (remaining == 0) return "à jour";
-        int weeks = (remaining + weeklyPace - 1) / weeklyPace;
-        return remaining + " ligne(s) restante(s) · ~" + weeks + " semaine(s) · ~" + HifzClock.today().plusWeeks(weeks);
+    private void applyPageStatuses() {
+        if (selectedJuz == 0 || pageStatuses == null) return;
+        int[] statuses = pageStatuses[selectedJuz - 1];
+        for (int page = grid.firstVisiblePage(); page <= grid.lastVisiblePage(); page++) {
+            grid.setStatus(page, statuses[page]);
+        }
+        grid.invalidate();
     }
 
-    private int[] computeStatuses() {
-        HifzPrefs.ProgressionSnapshot progression = prefs.progressionSnapshotV6();
-        ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
-        for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
-        // Declared Itqan-eligible corpus (the base range plus every Sabqi-fed promotion) — a line
-        // in here starts in state NONE (see class doc) and stays "à stabiliser" through NONE,
-        // LEARNED and STABILIZED alike, until it actually reaches ACQUIRED.
-        Set<String> itqanEligible = CorpusLinePolicy.ownedLineIds(prefs.effectiveItqanRanges(), allLines);
-        int[] statuses = new int[605];
-
-        for (int page = 1; page <= 604; page++) {
-            boolean anyStabiliser = false, anyApprentissage = false, anyAcquis = false;
-            for (String lineId : geometry.lineIdsOnPage(page)) {
-                if (progression.acquired.contains(lineId)) anyAcquis = true;
-                else if (itqanEligible.contains(lineId)) anyStabiliser = true;
-                else if (progression.learned.contains(lineId)) anyApprentissage = true;
+    static int[][] computeStatuses(GeometryRepository geometry, HifzPrefs.ProgressionSnapshot progression) {
+        int[][] statuses = new int[JuzProgressSummary.JUZ_COUNT][605];
+        int[] starts = JuzProgressSummary.boundaries();
+        for (int i = 0; i < geometry.lineCount(); i++) {
+            GeometryRepository.LineMeta line = geometry.line(i);
+            int ordinal = GeometryRepository.ordinal(CorpusLinePolicy.ownerVerse(line));
+            int juz = JuzProgressSummary.ownerJuzIndex(ordinal, starts);
+            int previous = statuses[juz][line.page];
+            // On mixed pages, show remaining work first: Stabilisé, then Appris, then Acquis.
+            if (progression.acquired.contains(line.id)) {
+                if (previous == ProgressGridView.VIDE) statuses[juz][line.page] = ProgressGridView.ACQUIS;
+            } else if (progression.stabilized.contains(line.id)) {
+                statuses[juz][line.page] = ProgressGridView.STABILISER;
+            } else if (progression.learned.contains(line.id) && previous != ProgressGridView.STABILISER) {
+                statuses[juz][line.page] = ProgressGridView.APPRENTISSAGE;
             }
-            statuses[page] = anyStabiliser ? ProgressGridView.STABILISER
-                : anyApprentissage ? ProgressGridView.APPRENTISSAGE
-                : anyAcquis ? ProgressGridView.ACQUIS
-                : ProgressGridView.VIDE;
         }
         return statuses;
     }

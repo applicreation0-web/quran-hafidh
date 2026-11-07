@@ -26,7 +26,7 @@ public final class EveningReviewDisplayWiring11711Test {
     @Test public void directHifzSessionNeverInventsCompletedWithoutReceipt() throws Exception {
         String activity=source("HifzSessionActivity.java");
         assertTrue(activity.contains("private boolean awaitingNewEveningLesson("));
-        assertTrue(activity.contains("EveningReviewDisplay.waitForDailyLesson("));
+        assertTrue(activity.contains("prefs.hasDailyLessonForNewEvening(family, sessionDate)"));
         assertTrue(activity.contains("today.equals(prefs.lastLearningSnowballEveningDate()),false"));
         assertTrue(activity.contains("sessionCompleted=status==EveningReviewDisplay.Status.COMPLETED;"));
         assertTrue(activity.contains("boolean completed=today.equals(prefs.lastStabilizationSnowballEveningDate());"));

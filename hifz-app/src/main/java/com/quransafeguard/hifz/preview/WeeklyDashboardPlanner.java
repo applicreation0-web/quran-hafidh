@@ -61,18 +61,6 @@ final class WeeklyDashboardPlanner {
         return Collections.unmodifiableList(rows);
     }
 
-    /** Display-only: the three canonical recommended Apprentissage days of each week.
-     * Never advances a cursor or infers that a missed day was completed. */
-    static String learningSessionCue(java.time.DayOfWeek day,HifzPrefs.WeeklyProgram program){
-        if(program!=HifzPrefs.WeeklyProgram.RECOMMENDED || day==null)return "";
-        switch(day){
-            case MONDAY:return " · séance 1/3";
-            case WEDNESDAY:return " · séance 2/3";
-            case FRIDAY:return " · séance 3/3";
-            default:return "";
-        }
-    }
-
     List<Row> week(LocalDate today){
         ArrayList<Row> out=new ArrayList<>();
         // Treat each read-only forecast as independent. A damaged old Itqān
@@ -135,11 +123,10 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record morningActual=ledger.find(date,HifzSessionActivity.SABQI);
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.LEARNING_CONSOLIDATION);
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
-                    String learningCue=learningSessionCue(date.getDayOfWeek(),prefs.weeklyProgramFor(date));
-                    if(morningActual!=null)morning="✓ "+compact(morningActual.label)+learningCue;
-                    else if(block==null)morning="Apprentissage"+learningCue+" · plage à vérifier";
+                    if(morningActual!=null)morning="✓ "+compact(morningActual.label);
+                    else if(block==null)morning="Apprentissage · plage à vérifier";
                     else{
-                        morning="Apprentissage"+learningCue+" · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
+                        morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
                     boolean lessonDone=morningActual!=null;

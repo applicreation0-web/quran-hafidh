@@ -145,6 +145,8 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
             afterEveningRestart.learningSnowballFinalUnits(SUNDAY);
         ConsolidationCycleEngine.Session sunday = readySession(
             ConsolidationCycleEngine.Family.LEARNING, "learning-final-" + SUNDAY, finalUnits);
+        assertTrue("Sunday source and repetition proof must be persisted before credit",
+            afterEveningRestart.persistConsolidationSession(sunday));
         assertTrue(afterEveningRestart.completeLearningConsolidationSessionV6(
             sunday, geometry, SUNDAY.toString(), "Finale Renforcement CP-02"));
 
@@ -196,6 +198,8 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
         ConsolidationCycleEngine.Session sunday = readySession(
             ConsolidationCycleEngine.Family.STABILIZATION,
             "stabilization-final-" + SUNDAY, finalUnits);
+        assertTrue("Sunday source and repetition proof must be persisted before credit",
+            afterEveningRestart.persistConsolidationSession(sunday));
         assertTrue(afterEveningRestart.completeConsolidationSessionV6(
             sunday, geometry, SUNDAY.toString(), "Finale Consolidation CP-02"));
 

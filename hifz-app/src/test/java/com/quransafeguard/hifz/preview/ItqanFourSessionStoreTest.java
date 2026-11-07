@@ -127,6 +127,42 @@ public final class ItqanFourSessionStoreTest {
    assertEquals(successful,db.commits);
    assertTrue(new HifzPrefs(db).progressionSnapshotV6().stabilized.containsAll(due));
  }
+ @Test public void missedMorningsAcrossSundayAndMonthResumeTheSamePhysicalBlock() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();
+   seedV6(db);
+   ItqanFourSessionSnapshot original=sample(db,520);
+   assertTrue(ItqanFourSessionStore.open(db,original,geo));
+   db.disk.put("sabqiLineCursor",100);
+   LocalDate first=LocalDate.of(2026,10,27);
+   HifzPrefs prefs=new HifzPrefs(db,geo);
+   int expectedLines=0;
+   for(ItqanFourSessionPolicy.Block block:original.plan.sessions.get(0).blocks) {
+     ItqanFourSessionSnapshot ready=completeRepetitions(db);
+     assertEquals(block.lineIds,ready.plan.sessions.get(0).blocks.get(ready.blockIndex).lineIds);
+     assertTrue(prefs.completeFrozenItqanSubblockV6(ready,geo,first.toString(),"first morning"));
+     expectedLines+=block.lineIds.size();
+   }
+   ItqanFourSessionSnapshot next=ItqanFourSessionStore.read(db,geo);
+   assertEquals(1,next.sessionIndex);
+   List<String> nextIds=next.plan.sessions.get(1).blocks.get(0).lineIds;
+   assertEquals(expectedLines,prefs.progressionSnapshotV6().stabilized.size());
+   Map<String,?> beforeAbsence=new LinkedHashMap<>(db.getAll());
+   LocalDate resumedOn=LocalDate.of(2026,11,7);
+   for(LocalDate missed=first.plusDays(1);missed.isBefore(resumedOn);missed=missed.plusDays(1)) {
+     assertEquals(next.encode(),new HifzPrefs(db,geo).openOrResumeFrozenItqan(geo,missed).encode());
+   }
+   assertEquals(beforeAbsence,db.getAll());
+   ItqanFourSessionSnapshot ready=completeRepetitions(db);
+   assertTrue(new HifzPrefs(db,geo).completeFrozenItqanSubblockV6(
+       ready,geo,resumedOn.toString(),"resumed morning"));
+   HifzPrefs restarted=new HifzPrefs(db,geo);
+   assertEquals(expectedLines+nextIds.size(),restarted.progressionSnapshotV6().stabilized.size());
+   assertTrue(restarted.progressionSnapshotV6().stabilized.containsAll(nextIds));
+   assertTrue(restarted.progressionSnapshotV6().acquired.isEmpty());
+   assertEquals(100,restarted.sabqiLineCursor());
+   assertFalse(restarted.completeFrozenItqanSubblockV6(ready,geo,resumedOn.toString(),"replay"));
+ }
+
  @Test public void failedFourDateBlockCommitDoesNotCreditOrAdvanceAndCanRetry() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();
    seedV6(db);

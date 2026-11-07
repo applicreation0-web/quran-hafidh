@@ -244,7 +244,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);
         top.addView(Ui.iconButton(this,"","Retour",v->finish()));
-        program = Ui.text(this,"Chargement…",12.5f,true);
+        boolean wideBoox = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        program = Ui.text(this,"Chargement…",wideBoox ? 16f : 12.5f,true);
         Ui.weight(program,1f);
         program.setGravity(Gravity.CENTER_VERTICAL);
         program.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
@@ -253,14 +254,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         root.addView(top);
 
         LinearLayout meta = Ui.row(this);
-        meta.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,2));
-        progress = Ui.text(this,"",10.8f,false);
+        meta.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,1));
+        progress = Ui.text(this,"",wideBoox ? 14f : 10.8f,false);
         progress.setTextColor(Ui.MUTED);
         progress.setMaxLines(2);
         progress.setEllipsize(TextUtils.TruncateAt.END);
         Ui.weight(progress,1f);
         meta.addView(progress);
-        timerText = Ui.text(this,"",10.5f,false);
+        timerText = Ui.text(this,"",wideBoox ? 13f : 10.5f,false);
         timerText.setTextColor(Ui.MUTED);
         timerText.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         meta.addView(timerText);
@@ -759,8 +760,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             : maskedMaintien
                 ? "Consolidation Itqān · hizb " + (position + 1) + "/"
                     + consolidationSession.sessionGroupSize() + " · un passage masqué"
-                : displayName + " · " + currentLineIds.size() + " lignes · unité "
-                    + (position + 1) + "/" + consolidationSession.sessionGroupSize());
+                : (protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS
+                    || protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE)
+                    ? displayName + " · toutes les parties · " + currentLineIds.size()
+                        + " lignes · " + (protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE
+                            ? "passage final ×5" : "passage final")
+                    : displayName + " · " + currentLineIds.size() + " lignes · unité "
+                        + (position + 1) + "/" + consolidationSession.sessionGroupSize());
         showCurrent();
         updateGroupedCycleRepAction();
     }
@@ -808,35 +814,26 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Only a new same-day evening is gated. A frozen OPEN cycle can always be
-     * resumed, even after midnight or before the current morning lesson. */
-    private boolean awaitingNewEveningLesson(
-            ConsolidationCycleEngine.Family family,String prefix,boolean learning) {
-        boolean sameDay=sessionDate.equals(dateAtSessionOpen);
-        if(!sameDay)return false;
-        String opened=prefs.unfinishedConsolidationSessionDate(family,prefix);
-        boolean frozenOpen=sessionDate.toString().equals(opened);
-        com.quransafeguard.hifz.core.CadenceAction action=WeeklyProgramPolicy.actionFor(
-            sessionDate.getDayOfWeek(),prefs.weeklyProgramFor(sessionDate),
-            prefs.learningDaysPerWeek());
-        boolean scheduled=learning
-            ?action==com.quransafeguard.hifz.core.CadenceAction.LEARNING
-            :action==com.quransafeguard.hifz.core.CadenceAction.STABILIZATION;
-        boolean lessonDone=sessionDate.toString().equals(
-            learning?prefs.lastSabqiDate():prefs.lastItqanDate());
-        return EveningReviewDisplay.waitForDailyLesson(
-            sameDay,scheduled,lessonDone,frozenOpen);
+    /** Resume an OPEN snapshot before checking eligibility for new evening work. */
+    private boolean awaitingNewEveningLesson(ConsolidationCycleEngine.Family family, String prefix) {
+        String opened = prefs.unfinishedConsolidationSessionDate(family, prefix);
+        if (sessionDate.toString().equals(opened)) return false;
+        if (family == ConsolidationCycleEngine.Family.STABILIZATION && prefs.itqanPostNasMaintenance()) {
+            return false;
+        }
+        return !prefs.hasDailyLessonForNewEvening(family, sessionDate);
     }
 
     /** Historic evening snowball or one continuous weekly post-Nas masked Maintien sequence. */
     private void renderConsolidationCycle() {
         String today = sessionDate.toString();
         if(awaitingNewEveningLesson(
-                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-",false)) {
-            sessionCompleted=false;
+                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-")) {
+            sessionCompleted=today.equals(prefs.lastStabilizationSnowballEveningDate());
             clock.pause();
-            program.setText("Consolidation · en attente de l’Itqān");
-            progress.setText("Validez d’abord l’Itqān du jour avant la Consolidation.");
+            program.setText(sessionCompleted ? "Consolidation · séance validée" : "Consolidation · en attente de l’Itqān");
+            progress.setText(sessionCompleted ? "Révision cumulative du soir terminée."
+                : "Validez d’abord l’Itqān du jour avant la Consolidation.");
             return;
         }
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,sessionDate)) {
@@ -881,11 +878,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void renderLearningConsolidationCycle() {
         String today = sessionDate.toString();
         if(awaitingNewEveningLesson(
-                ConsolidationCycleEngine.Family.LEARNING,"learning-",true)) {
-            sessionCompleted=false;
+                ConsolidationCycleEngine.Family.LEARNING,"learning-")) {
+            sessionCompleted=today.equals(prefs.lastLearningSnowballEveningDate());
             clock.pause();
-            program.setText("Renforcement · en attente du Sabqi");
-            progress.setText("Validez d’abord le Sabqi du jour avant le Renforcement.");
+            program.setText(sessionCompleted ? "Renforcement · séance validée" : "Renforcement · en attente du Sabqi");
+            progress.setText(sessionCompleted ? "Révision cumulative du soir terminée."
+                : "Validez d’abord le Sabqi du jour avant le Renforcement.");
             return;
         }
         if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,sessionDate)) {

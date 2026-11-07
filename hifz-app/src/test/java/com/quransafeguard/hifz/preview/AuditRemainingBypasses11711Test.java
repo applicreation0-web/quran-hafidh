@@ -29,9 +29,13 @@ public final class AuditRemainingBypasses11711Test {
         d.disk.put("stabilizationSnowballWeekAnchor","2026-11-02");
         d.disk.put("stabilizationSnowballUnitIds",new JSONArray().put(a).put(b).toString());
         d.disk.put("v6StabilizedLineIds",new JSONArray(Arrays.asList("525:0","525:1","525:2","525:3")).toString());
-        assertEquals("both blocks require first earned seven-pass protocol",2,p.stabilizedConsolidationUnits(day).size());
-        for(ConsolidationCycleEngine.Unit u:p.stabilizedConsolidationUnits(day))
-            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,u.protocol());
+        List<ConsolidationCycleEngine.Unit> planned=p.stabilizedConsolidationUnits(day);
+        assertEquals("two ×7 blocks plus one ×5 non-crediting cumulative pass",3,planned.size());
+        for(int i=0;i<2;i++)
+            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,
+                planned.get(i).protocol());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,
+            planned.get(2).protocol());
         ConsolidationCycleEngine e=new ConsolidationCycleEngine();
         ConsolidationCycleEngine.Cycle c=e.startCycle("stabilization-"+day,f,
             new ConsolidationCycleEngine.Unit(a,ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
