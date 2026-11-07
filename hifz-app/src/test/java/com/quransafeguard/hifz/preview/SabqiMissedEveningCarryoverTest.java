@@ -15,7 +15,7 @@ public final class SabqiMissedEveningCarryoverTest {
         SnowballValidationIdempotenceTest.setup();
     }
 
-    @Test public void missedEveningReturnsAfterNextRealLessonAndFinishesAllParts() {
+    @Test public void missedEveningReturnsAfterNextRealLessonAndFinishesAllParts() throws Exception {
         InMemoryPrefs disk=EarnedEveningProtocolRegressionTest.disk();
         HifzPrefs prefs=new HifzPrefs(disk);
         LocalDate first=LocalDate.of(2026,10,5);
