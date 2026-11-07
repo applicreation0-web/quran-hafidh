@@ -2,6 +2,7 @@ name: Haafidh F1/F2 — REAL BOOX screenshots (NO APK RELEASE)
 on:
   push:
     branches:
+      - integrate/haafidh-11714-p0-hifz-progression-20261107
       - 'freeze/haafidh-11713-f1-20261107'
       - 'freeze/haafidh-11714-f2-20261107'
     paths:

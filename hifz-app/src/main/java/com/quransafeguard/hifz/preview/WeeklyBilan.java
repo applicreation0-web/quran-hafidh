@@ -28,8 +28,6 @@ final class WeeklyBilan {
             String result="BILAN · LUNDI À AUJOURD’HUI\n"
                 +validated+"/"+planned+" validations contrôlées"
                 +" (Apprentissage, Stabilisation, Révisions)"
-                +" · "+lateLessons+" leçon(s) à rattraper"
-                +" · "+missedReviews+" révision(s) non effectuée(s)"
                 +" · "+dueToday+" séance(s) à faire aujourd’hui";
             if(unverifiedDays>0)
                 result+="\n"+unverifiedDays+" jour(s) hors historique vérifiable";

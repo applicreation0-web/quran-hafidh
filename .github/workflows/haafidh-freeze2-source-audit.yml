@@ -1,7 +1,7 @@
 name: Haafidh Freeze 2 1.17.14 — source+QCF+offline guard (NO RELEASE)
 on:
   push:
-    branches: ['freeze/haafidh-11714-f2-20261107']
+    branches: ['freeze/haafidh-11714-f2-20261107', 'integrate/haafidh-11714-p0-hifz-progression-20261107']
     paths:
       - 'hifz-app/**'
       - 'scripts/test_freeze2_gutter_context.cjs'

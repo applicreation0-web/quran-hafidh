@@ -67,6 +67,15 @@ public final class FreezeVisualInstrumentedTest {
                 assertEquals(21,grid.lastVisiblePage());
             });
             Independent11710ScreensInstrumentedTest.capture("freeze2-progress-juz01");
+            s.recreate();
+            s.onActivity(a->{
+                assertEquals(1,((Integer)get(a,"selectedJuz")).intValue());
+                ProgressGridView grid=(ProgressGridView)get(a,"grid");
+                assertEquals(1,grid.firstVisiblePage());
+                assertEquals(21,grid.lastVisiblePage());
+                a.onBackPressed();
+                assertEquals(View.VISIBLE,((LinearLayout)get(a,"juzOverview")).getVisibility());
+            });
         }
     }
     @Test public void physicalLineLevelsFillPagesWithoutFakeCredits(){
