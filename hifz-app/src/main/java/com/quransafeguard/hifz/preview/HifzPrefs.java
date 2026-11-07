@@ -3667,8 +3667,10 @@ public final class HifzPrefs {
             // Snapshot and completed cycle must cover the SAME physical lines.
             try {
                 boolean legacy=provenSource.startsWith("LEGACY_OPEN|");
-                JSONArray source=legacy?stabilizationEveningSource(day):
-                    new JSONArray(provenSource.substring(provenSource.indexOf('|')+1));
+                JSONArray source=legacy
+                    ? (family==ConsolidationCycleEngine.Family.LEARNING
+                        ? learningEveningSource(day) : stabilizationEveningSource(day))
+                    : new JSONArray(provenSource.substring(provenSource.indexOf('|')+1));
                 LinkedHashSet<String> expected=new LinkedHashSet<>(),actual=new LinkedHashSet<>();
                 for(int i=0;i<source.length();i++)expected.addAll(
                     ConsolidationPhysicalUnitPolicy.decodeLineUnit(source.getString(i)));
@@ -3946,16 +3948,22 @@ public final class HifzPrefs {
                 // must still recover only its historical prefix, never absorb
                 // newly added lines after interruption or upgrade.
                 if (!isFinalCycleId(cycle.cycleId())
-                        && cycle.family()==ConsolidationCycleEngine.Family.STABILIZATION
-                        && !itqanPostNasMaintenance()) {
+                        && (cycle.family()==ConsolidationCycleEngine.Family.LEARNING
+                            || (cycle.family()==ConsolidationCycleEngine.Family.STABILIZATION
+                                && !itqanPostNasMaintenance()))) {
                     String existingSlot=p.getString(
                         consolidationStateKeyForCycle(cycle.family(),cycle.cycleId()),"");
                     if(existingSlot==null||existingSlot.isEmpty()) {
                         try {
-                            LocalDate day=LocalDate.parse(
-                                cycle.cycleId().substring("stabilization-".length()));
+                            String prefix=cycle.family()==ConsolidationCycleEngine.Family.LEARNING
+                                ? "learning-" : "stabilization-";
+                            if(!cycle.cycleId().startsWith(prefix))
+                                throw new IllegalStateException("Wrong evening cycle family");
+                            LocalDate day=LocalDate.parse(cycle.cycleId().substring(prefix.length()));
                             List<ConsolidationCycleEngine.Unit> planned=
-                                stabilizedConsolidationUnits(day);
+                                cycle.family()==ConsolidationCycleEngine.Family.LEARNING
+                                    ? learningConsolidationUnits(day)
+                                    : stabilizedConsolidationUnits(day);
                             boolean exact=planned.size()==cycle.units().size();
                             for(int i=0;exact&&i<planned.size();i++) {
                                 exact=planned.get(i).id().equals(cycle.units().get(i).id())
