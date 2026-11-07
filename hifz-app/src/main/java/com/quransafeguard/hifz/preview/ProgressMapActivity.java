@@ -46,7 +46,7 @@ public final class ProgressMapActivity extends android.app.Activity {
     private ScrollView progressScroll;
     private Button backButton;
     private LinearLayout juzOverview, pageDetails;
-    private TextView gridHelp, juzHeading;
+    private TextView juzHeading;
     private final JuzProgressBar[] juzBars=new JuzProgressBar[30];
     private final TextView[] juzPercentLabels=new TextView[30];
     private final TextView[] juzCountLabels=new TextView[30];
@@ -87,17 +87,8 @@ public final class ProgressMapActivity extends android.app.Activity {
         top.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
         root.addView(top);
 
-        // Single useful hierarchy: 30 canonical Juz with real V6 acquisition gauges,
-        // then the authentic numbered physical pages of ONE selected Juz.
-        // No additional classification, dialog picker, or default 604-cell wall.
-        gridHelp = Ui.text(this,
-            "30 juz · toucher un juz pour afficher ses pages", 14f, false);
-        if (getResources().getConfiguration().smallestScreenWidthDp >= 600)
-            gridHelp.setTextSize(19f);
-        gridHelp.setTextColor(Ui.MUTED);
-        gridHelp.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 5));
-        root.addView(gridHelp);
-
+        // 30 printed-page gauges, then the actual QCF pages of the selected Juz.
+        // No explanatory banner, redundant selection dialog, or extra grouping.
         juzOverview=Ui.column(this);
         juzOverview.setPadding(0,0,0,0);
         root.addView(juzOverview);
@@ -121,7 +112,7 @@ public final class ProgressMapActivity extends android.app.Activity {
         gridParams.topMargin = Ui.dp(this, 4);
         pageDetails.addView(grid, gridParams);
         root.addView(pageDetails);
-        grid.setContentDescription("Pages du juz · toucher pour ouvrir en Lecture");
+        grid.setContentDescription("Pages du juz");
         if(savedInstanceState!=null){
             int restored=savedInstanceState.getInt("freeze2SelectedJuz",0);
             if(restored>=1 && restored<=30)showJuz(restored);
@@ -147,63 +138,55 @@ public final class ProgressMapActivity extends android.app.Activity {
         // Canonical indexed QCF 240 rub' boundary table; eight rub' per Juz.
         return QuranRubBoundaries.rowForIndex((juz-1)*8+1)[3];
     }
-    /** Exactly 30 tappable Juz entries, two columns on BOOX, one on phones.
-     * No invented groups and no computed completion until V6 snapshot is loaded. */
+    /** Miniature pages ARE the 30 gauges. Six across on BOOX, three on phones. */
     private void buildJuzOverview() {
-        boolean tablet=getResources().getConfiguration().smallestScreenWidthDp>=600;
-        LinearLayout currentRow=null;
+        boolean boox=getResources().getConfiguration().smallestScreenWidthDp>=600;
+        int cols=boox?6:3;
+        LinearLayout row=null;
         for(int j=1;j<=30;j++){
-            if(tablet && (j-1)%2==0){
-                currentRow=Ui.row(this);
-                currentRow.setPadding(0,0,0,0);
-                juzOverview.addView(currentRow);
+            if((j-1)%cols==0){
+                row=Ui.row(this);
+                row.setPadding(0,0,0,0);
+                juzOverview.addView(row);
             }
             int index=j-1;
-            int first=juzStartPage(j);
-            int last=j==30?604:juzStartPage(j+1)-1;
+            final int selected=j;
             LinearLayout item=Ui.column(this);
-            item.setPadding(Ui.dp(this,tablet?12:8),Ui.dp(this,10),
-                Ui.dp(this,tablet?12:8),Ui.dp(this,10));
+            item.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,7));
+            item.setGravity(Gravity.CENTER_HORIZONTAL);
             item.setBackgroundColor(Ui.PAPER);
-            item.setMinimumHeight(Ui.dp(this,tablet?102:92));
             item.setClickable(true);
             item.setFocusable(true);
-            item.setContentDescription("Juz "+j+" · pages "+first+" à "+last+
-                " · progression en cours de calcul · toucher pour afficher les pages");
-            int selected=j;
+            item.setMinimumHeight(Ui.dp(this,96));
             item.setOnClickListener(v->showJuz(selected));
-            LinearLayout heading=Ui.row(this);
-            heading.setGravity(Gravity.CENTER_VERTICAL);
-            TextView name=Ui.bookText(this,"Juz "+j,tablet?20f:18f,true);
-            heading.addView(name,new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,1f));
-            TextView percent=Ui.text(this,"—",tablet?19f:17f,true);
-            heading.addView(percent);
-            item.addView(heading);
-            JuzProgressBar bar=new JuzProgressBar(this);
-            LinearLayout.LayoutParams barParams=new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,Ui.dp(this,10));
-            barParams.topMargin=Ui.dp(this,7);
-            barParams.bottomMargin=Ui.dp(this,5);
-            item.addView(bar,barParams);
-            TextView info=Ui.text(this,
-                "Pages "+first+"–"+last+" · calcul en cours",
-                tablet?15f:13f,false);
-            info.setTextColor(Ui.MUTED);
-            item.addView(info);
+
+            JuzProgressBar page=new JuzProgressBar(this);
+            page.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+            item.addView(page);
+            TextView label=Ui.bookText(this,"Juz "+j,boox?16f:14f,true);
+            label.setGravity(Gravity.CENTER);
+            label.setPadding(0,Ui.dp(this,3),0,0);
+            item.addView(label);
+            TextView percent=Ui.text(this,"—",boox?15f:13f,true);
+            percent.setGravity(Gravity.CENTER);
+            item.addView(percent);
+            TextView count=Ui.text(this,"",boox?12f:11f,false);
+            count.setGravity(Gravity.CENTER);
+            count.setTextColor(Ui.MUTED);
+            item.addView(count);
+
             juzCards[index]=item;
-            juzBars[index]=bar;
+            juzBars[index]=page;
             juzPercentLabels[index]=percent;
-            juzCountLabels[index]=info;
-            if(tablet){
-                LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(
-                    0,LinearLayout.LayoutParams.WRAP_CONTENT,1f);
-                params.setMargins(Ui.dp(this,3),0,Ui.dp(this,3),Ui.dp(this,3));
-                currentRow.addView(item,params);
-            }else{
-                juzOverview.addView(item);
-                juzOverview.addView(Ui.divider(this));
-            }
+            juzCountLabels[index]=count;
+            item.setContentDescription("Juz "+j+" · calcul en cours");
+
+            LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(
+                0,LinearLayout.LayoutParams.WRAP_CONTENT,1f);
+            cell.setMargins(Ui.dp(this,2),0,Ui.dp(this,2),Ui.dp(this,3));
+            row.addView(item,cell);
         }
     }
 
@@ -214,11 +197,10 @@ public final class ProgressMapActivity extends android.app.Activity {
         grid.setPageWindow(first,last);
         juzOverview.setVisibility(View.GONE);
         pageDetails.setVisibility(View.VISIBLE);
-        gridHelp.setText("Juz "+juz+" · toucher une page pour ouvrir le Mushaf");
-        juzHeading.setText("Juz "+juz+" · pages "+first+"–"+last);
+
+        juzHeading.setText("Juz "+juz);
         Ui.setIconDescription(backButton,"Retour aux 30 juz");
-        grid.setContentDescription("Juz "+juz+" · pages physiques "+first+" à "+last+
-            " · toucher une page pour ouvrir le Mushaf");
+        grid.setContentDescription("Juz "+juz+" · pages "+first+" à "+last);
         if(progressScroll!=null)progressScroll.post(()->progressScroll.scrollTo(0,0));
     }
     /** A single back step to the 30 gauges, not to a redundant 604-page map. */
@@ -227,9 +209,9 @@ public final class ProgressMapActivity extends android.app.Activity {
         grid.setPageWindow(1,604); // restore the internal view before hiding it
         pageDetails.setVisibility(View.GONE);
         juzOverview.setVisibility(View.VISIBLE);
-        gridHelp.setText("30 juz · toucher un juz pour afficher ses pages");
+
         Ui.setIconDescription(backButton,"Retour");
-        grid.setContentDescription("Pages masquées · choisir un juz");
+        grid.setContentDescription("Pages du juz");
         if(progressScroll!=null)progressScroll.post(()->progressScroll.scrollTo(0,0));
     }
 
@@ -311,7 +293,7 @@ public final class ProgressMapActivity extends android.app.Activity {
                     PreviewConfig.STABILIZATION_WEEKLY_LINES);
                 // Read-only acquisition: only entirely acquired verses increase a Juz gauge.
                 juzCounts=JuzProgressSummary.summarize(
-                    geometry,prefs.progressionSnapshotV6().acquired);
+                    geometry,prefs.progressionSnapshotV6());
             } catch (RuntimeException corruptOrUnconfiguredState) {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
@@ -324,17 +306,19 @@ public final class ProgressMapActivity extends android.app.Activity {
                 for (int page = 1; page <= 604; page++) grid.setStatus(page, statuses[page]);
                 grid.invalidate();
                 for(int i=0;i<30;i++){
-                    int total=juzCounts[i][0],acquired=juzCounts[i][1];
-                    int percent=JuzProgressSummary.percent(acquired,total);
-                    int juz=i+1,first=juzStartPage(juz);
-                    int last=juz==30?604:juzStartPage(juz+1)-1;
-                    juzBars[i].setPercent(percent);
-                    juzPercentLabels[i].setText(percent+" %");
-                    juzCountLabels[i].setText("Pages "+first+"–"+last+" · "
-                        +acquired+"/"+total+" versets acquis");
-                    juzCards[i].setContentDescription("Juz "+juz+
-                        " · "+percent+" pour cent · "+acquired+" sur "+total+
-                        " versets entièrement acquis · toucher pour afficher ses pages");
+                    int[] c=juzCounts[i];
+                    int total=c[JuzProgressSummary.TOTAL];
+                    int learned=c[JuzProgressSummary.LEARNED];
+                    int stabilized=c[JuzProgressSummary.STABILIZED];
+                    int acquired=c[JuzProgressSummary.ACQUIRED];
+                    int done=JuzProgressSummary.done(c);
+                    int percent=JuzProgressSummary.percent(done,total);
+                    int juz=i+1;
+                    juzBars[i].setLevels(learned,stabilized,acquired,total);
+                    juzPercentLabels[i].setText(done>0&&percent==0?"<1 %":percent+" %");
+                    juzCountLabels[i].setText(done+"/"+total+" lignes");
+                    juzCards[i].setContentDescription("Juz "+juz+" · "+done+
+                        " sur "+total+" lignes · "+percent+" pour cent");
                 }
                 apprentissageEtaValue.setText(apprentissageEta);
                 stabilisationEtaValue.setText(stabilisationEta);
