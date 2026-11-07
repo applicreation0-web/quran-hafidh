@@ -44,7 +44,7 @@ final class EveningReviewDisplay {
             case COMPLETED:return "✓ Consolidation";
             case WAITING_FOR_LESSON:return "Consolidation · en attente de l’Itqān";
             case TO_DO:return postNasMaintenance
-                ?"Consolidation · maintiens de la semaine · ×1 masqué"
+                ?"Consolidation · maintien de la semaine · ×1 masqué"
                 :"Consolidation · révision cumulative";
             case NO_NEW_UNITS:return "Consolidation · aucune nouvelle unité";
             default:throw new IllegalArgumentException("Unknown Consolidation state");

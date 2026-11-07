@@ -80,5 +80,39 @@ class CatalogueTest(unittest.TestCase):
         self.assertEqual(['85:10', '85:11'], r065['reperes'])
         self.assertEqual(hashlib.sha256((ROOT / 'docs/correspondances/registre-documentaire-110.json').read_bytes()).hexdigest(), data['registreHistoriqueSha256'])
 
+    def test_semantic_suyuti_links_are_individually_attested(self):
+        doc = json.loads((ROOT / 'docs/correspondances/catalogue-62.json').read_text())
+        for case_id, section, suras in [
+            ('R027', 'Al-Sharḥ', ('93:6', '94:1')),
+            ('R091', 'Al-Muʾminūn', ('22:77', '23:1')),
+        ]:
+            with self.subTest(case=case_id):
+                dossier = next(x for x in doc['dossiers'] if x['id'] == case_id)
+                self.assertEqual('ADMIS', dossier['statut'])
+                self.assertEqual('Parallélisme', dossier['categorie'])
+                self.assertTrue(set(suras).issubset(set(dossier['reperes'])))
+                scholarship = [s for s in dossier['sources']
+                               if 'Asrār tartīb al-Qurʾān' in s['titre']]
+                self.assertEqual(1, len(scholarship))
+                self.assertIn(section, scholarship[0]['titre'])
+                self.assertIn('/ar/library/content/223/', scholarship[0]['url'])
+                self.assertIn('Ne ', scholarship[0]['portee'])
+                self.assertTrue(all(x['url'].startswith('https://')
+                                    for x in dossier['sources']))
+
+    def test_r070_does_not_attribute_unsourced_pairings_to_ibn_ashur(self):
+        doc = json.loads((ROOT / 'docs/correspondances/catalogue-62.json').read_text())
+        item = next(x for x in doc['dossiers'] if x['id'] == 'R070')
+        self.assertEqual('ADMIS', item['statut'])
+        sources = item['sources']
+        commentary = [s for s in sources if 'al-Mawdūdī' in s['titre']]
+        self.assertEqual(1, len(commentary))
+        self.assertIn('sura=93', commentary[0]['url'])
+        self.assertIn('sans appariement exclusif', commentary[0]['portee'])
+        self.assertFalse(any('Ibn ʿĀshūr' in s['titre'] for s in sources))
+        self.assertEqual({'93:6': ['93:9'], '93:7': ['93:11'],
+                          '93:8': ['93:10'], '93:9': ['93:6'],
+                          '93:11': ['93:7'], '93:10': ['93:8']}, item['comparaisons'])
+
 if __name__ == '__main__':
     unittest.main()

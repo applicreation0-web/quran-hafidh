@@ -1,0 +1,81 @@
+name: Haafidh 1.17.13 PRIVATE OFFLINE INPUT — code-only unsigned (NEVER INSTALL)
+# Stage final 45 Quran-context refrain cues, verified bibliography, Atlas-inspired dots only; no private content on GitHub.
+# Rebuild after the read-only rotation fallback fix; local private signer owns final APK.
+on:
+  push:
+    branches: [release-candidate/haafidh-11713-semantic-hifz-20261107]
+    paths:
+      - '.github/workflows/haafidh-11713-code-only-stage.yml'
+      - 'hifz-app/src/main/**'
+      - 'hifz-app/build.gradle.kts'
+      - 'docs/correspondances/catalogue-62.json'
+      - 'docs/correspondances/additions-11712.json'
+      - 'scripts/build_correspondences_catalogue.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-code-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Fetch original 604 public QCF pages and Android SDK
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Assemble unsigned 1.17.13 CODE ONLY; forbid all private Atlas inputs
+        run: |
+          set -euo pipefail
+          test -z "${HIFZ_KEYSTORE_PATH:-}${HIFZ_KEYSTORE_PASSWORD:-}${HIFZ_KEY_PASSWORD:-}"
+          test ! -e hifz-app/src/private114/assets/atlas_private/atlas_366_comments_offline_reference_v1.json
+          test ! -e hifz-app/src/private114/assets/atlas/atlas_display_catalog_v1.json
+          gradle --no-daemon --max-workers=2 :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs
+          apk=hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk
+          test -s "$apk"
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          "$sdk/aapt" dump badging "$apk" | grep -q "package: name='com.quransafeguard.hifz' versionCode='51' versionName='1.17.13'"
+          if "$sdk/apksigner" verify "$apk" >/dev/null 2>&1; then echo 'REFUSE unexpectedly signed APK'; exit 1; fi
+          python3 - "$apk" <<'PY'
+          import sys,zipfile,re
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              names=set(z.namelist())
+              assert z.testzip() is None
+              assert len([n for n in names if re.fullmatch(r'assets/mushaf/hafs/kfqc/svg-br/\d{3}\.svg\.br',n)])==604
+              for prefix in ('assets/atlas_private/','assets/ayah_themes_private/'):
+                  assert not any(n.startswith(prefix) for n in names)
+              assert 'assets/atlas/atlas_display_catalog_v1.json' not in names
+          print('PASS code-only original QCF unsigned Android candidate, NO private assets')
+          PY
+          mkdir -p artifacts
+          cp "$apk" artifacts/HAAFIDH_11713_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk
+          cp "$sdk/zipalign" artifacts/zipalign
+          cp "$sdk/lib/apksigner.jar" artifacts/apksigner.jar
+          cp "$sdk/lib64/libc++.so" artifacts/libc++.so
+          cp "$sdk/aapt" artifacts/aapt
+          git rev-parse HEAD > artifacts/SOURCE_SHA.txt
+          printf '%s\n' "CODE ONLY; NOT SIGNED; SEVEN PRIVATE ASSETS MISSING; DO NOT INSTALL." > artifacts/NO_INSTALL.txt
+          (cd artifacts && sha256sum HAAFIDH_11713_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: haafidh-11713-CODE-ONLY-UNSIGNED-OFFLINE-INPUT-NEVER-INSTALL
+          path: artifacts/
+          retention-days: 5
+          if-no-files-found: error
