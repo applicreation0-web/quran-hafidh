@@ -3235,10 +3235,72 @@ public final class HifzPrefs {
         return Collections.unmodifiableList(units);
     }
 
+    /** Unreceipted Sabqi evening work is not a missed morning lesson. Recover
+     * actual learned blocks from earlier weeks without advancing the Sabqi cursor.
+     * Reserve the newest week's physical blocks first; older debt stays durable
+     * in the historical ledger if the grouped-cycle safety cap is reached. */
+    private JSONArray learningEveningSource(LocalDate today) {
+        JSONArray current = rolledSnowballUnits(ConsolidationCycleEngine.Family.LEARNING,today);
+        JSONArray history;
+        try {
+            history = new JSONArray(p.getString(snowballHistoryKey(
+                ConsolidationCycleEngine.Family.LEARNING),"[]"));
+        } catch(Exception invalid) {
+            throw new IllegalStateException("Invalid Sabqi history; preserve due repetitions",invalid);
+        }
+        LinkedHashSet<String> seen = new LinkedHashSet<>();
+        for(int i=0;i<current.length();i++) {
+            String id=current.optString(i,"");
+            if(id.isEmpty()||!seen.add(id))
+                throw new IllegalStateException("Invalid weekly Sabqi physical unit");
+        }
+        if(history.length()==0 || current.length()>=6) return current;
+        Set<String> receipts=earnedEveningUnits(ConsolidationCycleEngine.Family.LEARNING);
+        Set<String> learned=v6LineIdSet("v6LearnedLineIds");
+        Set<String> stabilized=v6LineIdSet("v6StabilizedLineIds");
+        Set<String> acquired=v6LineIdSet("v6AcquiredCreditLineIds");
+        JSONArray due=new JSONArray();
+        int remaining=6-current.length(); // 6 physical units + one combined pass
+        LocalDate monday=mondayOf(today);
+        for(int w=0;w<history.length() && due.length()<remaining;w++) {
+            JSONObject week=history.optJSONObject(w);
+            if(week==null)continue;
+            LocalDate anchor=safeDate(week.optString("week",""),null);
+            if(anchor==null || !anchor.isBefore(monday))continue;
+            JSONArray blocks=week.optJSONArray("units");
+            if(blocks==null)continue;
+            for(int i=0;i<blocks.length() && due.length()<remaining;i++) {
+                String id=blocks.optString(i,"");
+                if(id.isEmpty())throw new IllegalStateException("Empty historical Sabqi block");
+                if(!seen.add(id)||receipts.contains(id))continue;
+                List<String> lines=ConsolidationPhysicalUnitPolicy.decodeLineUnit(id);
+                boolean real=true, outstanding=false;
+                for(String line:lines){
+                    if(acquired.contains(line))continue;
+                    if(learned.contains(line)||stabilized.contains(line))outstanding=true;
+                    else {real=false;break;}
+                }
+                if(real && outstanding)due.put(id);
+            }
+        }
+        JSONArray source=new JSONArray();
+        for(int i=0;i<due.length();i++)source.put(due.optString(i));
+        for(int i=0;i<current.length();i++)source.put(current.optString(i));
+        return source;
+    }
+
     /** Tonight's Renforcement snowball: this week's accumulated Apprentissage units, ×10 each. */
     List<ConsolidationCycleEngine.Unit> learningConsolidationUnits(LocalDate today) {
-        return weeklySnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today,
-            ConsolidationCycleEngine.Protocol.SNOWBALL);
+        JSONArray source=learningEveningSource(today);
+        ArrayList<String> blocks=new ArrayList<>();
+        for(int i=0;i<source.length();i++)blocks.add(source.optString(i));
+        ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
+        for(String id:blocks)units.add(new ConsolidationCycleEngine.Unit(id,
+            ConsolidationCycleEngine.Protocol.SNOWBALL));
+        if(blocks.size()>1)units.add(new ConsolidationCycleEngine.Unit(
+            ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(blocks),
+            ConsolidationCycleEngine.Protocol.SNOWBALL));
+        return Collections.unmodifiableList(units);
     }
 
     /**
@@ -3473,6 +3535,8 @@ public final class HifzPrefs {
         JSONArray current = rolledSnowballUnits(family,date);
         if (family == ConsolidationCycleEngine.Family.STABILIZATION
                 && !itqanPostNasMaintenance()) current = stabilizationEveningSource(date);
+        if (family == ConsolidationCycleEngine.Family.LEARNING)
+            current = learningEveningSource(date);
         if(current.length()==0)return "";
         return mondayOf(date).toString()+"|"+current.toString();
     }
