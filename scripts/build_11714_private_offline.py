@@ -141,7 +141,7 @@ def check_reference(aapt: Path, apksigner: Path, reference: Path) -> dict:
 
 def check_candidate(aapt: Path, apksigner: Path, apk: Path) -> None:
     if package_identity(aapt, apk) != (PACKAGE, VERSION_CODE, VERSION):
-        nogo("l'APK construit n'est pas 1.17.14/code51, package officiel")
+        nogo("l'APK construit n'est pas 1.17.14/code52, package officiel")
     if package_certificate(apksigner, apk) != HISTORICAL_CERT:
         nogo("l'APK construit utilise un autre certificat")
     if not zipfile.is_zipfile(apk):
