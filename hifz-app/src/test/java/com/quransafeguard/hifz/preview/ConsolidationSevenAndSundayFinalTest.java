@@ -140,6 +140,17 @@ public final class ConsolidationSevenAndSundayFinalTest {
         } catch(IllegalArgumentException expected) {}
     }
 
+    @Test public void booxItqanAdditionLabelsAndCountsTheActualFiveRepetitions() throws Exception {
+        String session=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE)"));
+        assertTrue(session.contains("passage final ×5"));
+        assertTrue("The visible repetition counter must read the frozen physical cycle quota",
+            session.contains("consolidationSession.stageVectorAt(position)")
+                && session.contains("consolidationSession.donePerStage() + \"/\" + target"));
+        assertTrue("Older OPEN cycles still display their historical final pass",
+            session.contains("protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS"));
+    }
+
     @Test public void sundayRecommendedIsFinalsOnlyNeverOrdinaryItqanOrReview() throws Exception {
         assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY,
