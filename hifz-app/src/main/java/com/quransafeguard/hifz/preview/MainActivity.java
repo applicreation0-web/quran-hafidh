@@ -1429,7 +1429,7 @@ public final class MainActivity extends android.app.Activity {
         View axis = new View(this);
         axis.setBackgroundColor(Ui.INK);
         FrameLayout.LayoutParams lineParams = new FrameLayout.LayoutParams(-1, Ui.dp(this, 1));
-        lineParams.setMargins(Ui.dp(this, 25), Ui.dp(this, 15), Ui.dp(this, 25), 0);
+        lineParams.setMargins(Ui.dp(this, 25), Ui.dp(this, 17), Ui.dp(this, 25), 0);
         timeline.addView(axis, lineParams);
         LinearLayout stations = Ui.row(this);
         stations.setGravity(Gravity.TOP);
@@ -1452,11 +1452,27 @@ public final class MainActivity extends android.app.Activity {
                 new android.graphics.drawable.GradientDrawable();
             circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             circle.setColor(done ? Ui.INK : Ui.PAPER);
-            circle.setStroke(Ui.dp(this,active ? 3 : 1),Ui.INK);
+            circle.setStroke(Ui.dp(this,1),Ui.INK);
             node.setBackground(circle);
             LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(
                 Ui.dp(this,26), Ui.dp(this,26));
-            station.addView(node,dotParams);
+            // Atlas selected station: two concentric rings. Inner fill/check
+            // belongs only to a real Hifz completion; outer ring means
+            // "consulted date", NEVER "validated". No E-Ink animation.
+            FrameLayout marker = new FrameLayout(this);
+            if (active) {
+                android.graphics.drawable.GradientDrawable selection =
+                    new android.graphics.drawable.GradientDrawable();
+                selection.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                selection.setColor(Ui.PAPER);
+                selection.setStroke(Ui.dp(this,2),Ui.INK);
+                marker.setBackground(selection);
+            }
+            FrameLayout.LayoutParams inner = new FrameLayout.LayoutParams(
+                Ui.dp(this,26),Ui.dp(this,26),Gravity.CENTER);
+            marker.addView(node,inner);
+            station.addView(marker,new LinearLayout.LayoutParams(
+                Ui.dp(this,34),Ui.dp(this,34)));
             TextView day = Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1],13f,active);
             day.setGravity(Gravity.CENTER);
             station.addView(day);
@@ -1468,7 +1484,7 @@ public final class MainActivity extends android.app.Activity {
                 finale.setGravity(Gravity.CENTER);
                 station.addView(finale);
             }
-            station.setMinimumHeight(Ui.dp(this,72));
+            station.setMinimumHeight(Ui.dp(this,80));
             station.setClickable(true);
             station.setFocusable(true);
             station.setContentDescription(row.day+" "+row.date+" · "+status+
@@ -1478,10 +1494,10 @@ public final class MainActivity extends android.app.Activity {
                 renderSelectedWeekDay();
             });
             stations.addView(station,new LinearLayout.LayoutParams(
-                0,Ui.dp(this,72),1f));
+                0,Ui.dp(this,80),1f));
         }
-        timeline.addView(stations,new FrameLayout.LayoutParams(-1,Ui.dp(this,72)));
-        weekStrip.addView(timeline,new LinearLayout.LayoutParams(-1,Ui.dp(this,72)));
+        timeline.addView(stations,new FrameLayout.LayoutParams(-1,Ui.dp(this,80)));
+        weekStrip.addView(timeline,new LinearLayout.LayoutParams(-1,Ui.dp(this,80)));
         TextView heading = Ui.bookText(this,
             chosen.day+" "+chosen.date.getDayOfMonth()+" · "+compactState(chosen.state), 20f, true);
         weekDayPanel.addView(heading);
