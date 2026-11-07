@@ -98,6 +98,13 @@ public final class ProgressMapActivity extends android.app.Activity {
         loadStatuses();
     }
 
+    /** Returning from the Mushaf or a completed Hifz lesson must show newly
+     * persisted V6 lines; never leave the 30 gauges showing a stale snapshot. */
+    @Override protected void onResume() {
+        super.onResume();
+        if (pageStatuses != null && geometry != null) loadStatuses();
+    }
+
     @Override protected void onSaveInstanceState(Bundle out) {
         out.putInt("freeze2SelectedJuz",selectedJuz);
         super.onSaveInstanceState(out);
