@@ -24,8 +24,13 @@ final class CorrespondenceGutterMarkers {
           "function append(rows,kind){rows.forEach(function(ref){if(!/^\\d+:\\d+$/.test(ref))return;"+
           "var key=kind+ref;if(seen[key])return;seen[key]=1;items.push({ref:ref,kind:kind});});}"+
           "append(links,'similarity');append(parallels,'correspondence');"+
-          // Preserve the original QCF 345:550 ratio, reserving two 46px gutter lanes.
-          "m.style.width=items.length?'min(calc(100vw - 96px),calc((100vh - 4px) * 345 / 550))':'';"+
+          // The original QCF 345:550 ratio is unchanged. One family needs one 46px
+          // outside lane; two families still reserve both. A one-sided flex margin
+          // shifts the centered folio into the opposite free space on narrow phones.
+          "var leftOnly=links.length>0&&parallels.length===0,rightOnly=parallels.length>0&&links.length===0;"+
+          "var reserve=leftOnly||rightOnly?52:96;"+
+          "m.style.marginLeft=leftOnly?'46px':'0px';m.style.marginRight=rightOnly?'46px':'0px';"+
+          "m.style.width=items.length?('min(calc(100vw - '+reserve+'px),calc((100vh - 4px) * 345 / 550))'):'';"+
           "window.dispatchEvent(new Event('resize'));if(!items.length)return;"+
           "var root=document.createElement('div');root.id='atlas-discriminant-marks';"+
           "root.style.cssText='position:absolute;inset:0;z-index:9;pointer-events:none';host.appendChild(root);"+
