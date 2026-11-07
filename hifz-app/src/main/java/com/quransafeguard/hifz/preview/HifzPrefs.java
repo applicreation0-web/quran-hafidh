@@ -3117,7 +3117,7 @@ public final class HifzPrefs {
 
         JSONArray due = new JSONArray();
         int room = Math.max(0, ConsolidationCycleEngine.maxUnitsFor(
-            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN) - 1 - current.length());
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN) - 2 - current.length());
         // Legacy OPEN sessions and historical unit-only tests may have no V6 line
         // ledger at all. The old ordinary snowball must remain read-only and
         // operational when there is no prior-week work to recover.
@@ -3162,32 +3162,60 @@ public final class HifzPrefs {
      * once as one continuous pass. Renforcement retains its original SNOWBALL ×10.
      * Already persisted OPEN sessions keep their frozen protocol vectors in restore.
      */
+    /** One ×1 over each uninterrupted run of previously receipted blocks. */
+    private static void appendOldConsolidationRun(List<ConsolidationCycleEngine.Unit> out,
+            List<String> oldRun) {
+        if (oldRun.isEmpty()) return;
+        String id = oldRun.size() == 1 ? oldRun.get(0)
+            : ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(oldRun);
+        out.add(new ConsolidationCycleEngine.Unit(id,
+            ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+        oldRun.clear();
+    }
+
     List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
-        if(itqanPostNasMaintenance())return postNasConsolidationUnits(today);
-        JSONArray source=stabilizationEveningSource(today);
-        if(source.length()==0)return Collections.emptyList();
-        Set<String> earned=earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
-        ArrayList<String> alreadyRepeated=new ArrayList<>(),newBlocks=new ArrayList<>();
-        for(int i=0;i<source.length();i++){
-            String id=source.optString(i);
-            if(id.isEmpty())throw new IllegalStateException("Empty stabilized snowball unit");
-            if(earned.contains(id))alreadyRepeated.add(id);
-            else newBlocks.add(id);
+        if (itqanPostNasMaintenance()) return postNasConsolidationUnits(today);
+        JSONArray source = stabilizationEveningSource(today);
+        if (source.length() == 0) return Collections.emptyList();
+        Set<String> earned = earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
+        ArrayList<ConsolidationCycleEngine.Unit> physical = new ArrayList<>();
+        boolean hasNew = false;
+        for (int i = 0; i < source.length(); i++) {
+            String id = source.optString(i);
+            if (id.isEmpty()) throw new IllegalStateException("Empty stabilized snowball unit");
+            boolean repeated = earned.contains(id);
+            hasNew |= !repeated;
+            physical.add(new ConsolidationCycleEngine.Unit(id, repeated
+                ? ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS
+                : ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
         }
-        if(newBlocks.isEmpty())return Collections.emptyList();
-        ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
-        // Fresh cycles recover unreceipted physical work first (At-Tur ×7).
-        // restoreConsolidationSession reads the persisted unit/protocol vector
-        // directly: never reorder an already OPEN legacy snapshot.
-        for(String id:newBlocks)units.add(new ConsolidationCycleEngine.Unit(id,
-            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
-        if(!alreadyRepeated.isEmpty()){
-            String combined=alreadyRepeated.size()==1?alreadyRepeated.get(0)
-                :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(alreadyRepeated);
-            units.add(new ConsolidationCycleEngine.Unit(combined,
-                ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+        if (!hasNew) return Collections.emptyList();
+        // Attendance dates are not reading order. Keep each line's authentic
+        // protocol while presenting the physical Mushaf from top to bottom.
+        physical.sort((left, right) -> Long.compare(
+            ConsolidationPhysicalUnitPolicy.firstPhysicalLineOrder(left.id()),
+            ConsolidationPhysicalUnitPolicy.firstPhysicalLineOrder(right.id())));
+        ArrayList<ConsolidationCycleEngine.Unit> units = new ArrayList<>();
+        ArrayList<String> oldRun = new ArrayList<>();
+        ArrayList<String> allBlocks = new ArrayList<>();
+        for (ConsolidationCycleEngine.Unit block : physical) {
+            allBlocks.add(block.id());
+            if (block.protocol() == ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS) {
+                oldRun.add(block.id());
+            } else {
+                appendOldConsolidationRun(units, oldRun);
+                units.add(block);
+            }
         }
-        if(units.size()>ConsolidationCycleEngine.maxUnitsFor(
+        appendOldConsolidationRun(units, oldRun);
+        // The missing final step: AFTER all ×1 and ×7 subblocks, read every
+        // eligible line together in canonical order. This pass earns no ×7 receipt.
+        if (allBlocks.size() > 1) {
+            units.add(new ConsolidationCycleEngine.Unit(
+                ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(allBlocks),
+                ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS));
+        }
+        if (units.size() > ConsolidationCycleEngine.maxUnitsFor(
                 ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN))
             throw new IllegalStateException("Composite snowball exceeds safe frozen capacity");
         return Collections.unmodifiableList(units);
