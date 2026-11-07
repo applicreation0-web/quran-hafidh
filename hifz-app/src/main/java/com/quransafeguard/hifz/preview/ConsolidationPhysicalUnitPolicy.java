@@ -87,6 +87,45 @@ final class ConsolidationPhysicalUnitPolicy {
         }
     }
 
+    /**
+     * A genuine uninterrupted pass must not skip an unlearned physical QCF line.
+     * On device, validate adjacency against the authentic shipped global line
+     * indices. The JVM-only fallback accepts same-page neighbours and the
+     * unequivocal full 15-line page boundary; uncertain boundaries fail closed.
+     */
+    static boolean physicallyContinuous(List<String> blocks, GeometryRepository geometry) {
+        if (blocks == null || blocks.isEmpty()) return false;
+        ArrayList<String> ordered=new ArrayList<>();
+        for(String block:blocks)ordered.addAll(decodeLineUnit(block));
+        if (ordered.isEmpty()) return false;
+        if (geometry != null) {
+            List<GeometryRepository.LineMeta> metas=geometry.linesForExactIds(ordered);
+            for(int i=1;i<metas.size();i++)
+                if(metas.get(i).globalIndex != metas.get(i-1).globalIndex+1) return false;
+            return true;
+        }
+        long previous=-1;
+        for(String id:ordered) {
+            int colon=id.indexOf(':');
+            if(colon<=0||colon==id.length()-1)return false;
+            int page, line;
+            try {
+                page=Integer.parseInt(id.substring(0,colon));
+                line=Integer.parseInt(id.substring(colon+1));
+            } catch(NumberFormatException synthetic) {return false;}
+            if(page<1||page>604||line<0||line>14)return false;
+            long next=page*1000L+line;
+            if(previous!=-1) {
+                long prevPage=previous/1000,prevLine=previous%1000;
+                if(!((page==prevPage && line==prevLine+1)
+                        || (page==prevPage+1 && prevLine==14 && line==0)))
+                    return false;
+            }
+            previous=next;
+        }
+        return true;
+    }
+
     static String encodeContinuousUnit(List<String> encodedUnits) {
         if (encodedUnits == null || encodedUnits.size() < 2) {
             throw new IllegalArgumentException("Continuous unit requires at least two physical units");
