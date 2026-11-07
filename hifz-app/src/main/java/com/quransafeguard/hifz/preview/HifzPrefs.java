@@ -2863,7 +2863,8 @@ public final class HifzPrefs {
             boolean hasFinalPass = false;
             for(int i=0;i<units.size();i++){
                 ConsolidationCycleEngine.Unit unit=units.get(i);
-                if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS){
+                if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS
+                        || unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE){
                     // The whole must come AFTER its separately verified parts.
                     if(hasFinalPass || i!=units.size()-1 || exactPhysicalOrder.isEmpty()
                             || !exactPhysicalOrder.equals(
@@ -3182,11 +3183,9 @@ public final class HifzPrefs {
         return source;
     }
 
-    /**
-     * J4 Consolidation: today’s new physical Stabilisé block ×7, older blocks read
-     * once as one continuous pass. Renforcement retains its original SNOWBALL ×10.
-     * Already persisted OPEN sessions keep their frozen protocol vectors in restore.
-     */
+    /** A new Itqan physical block earns ×7. Already receipted lines read ×1.
+     * On each addition of adjacent physical blocks, the full A+B or A+B+C
+     * is repeated ×5 (NOT a second ×7 receipt); old OPEN ×1 plans are frozen. */
     /** Combine already-earned ×1 blocks ONLY when they are truly adjacent on the QCF page.
      * A missed calendar lesson leaves the cursor still, while a physical gap must
      * break the pass rather than quietly jump over unlearned Quran. */
@@ -3260,7 +3259,7 @@ public final class HifzPrefs {
                 && ConsolidationPhysicalUnitPolicy.physicallyContinuous(allBlocks, geometry)) {
             units.add(new ConsolidationCycleEngine.Unit(
                 ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(allBlocks),
-                ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS));
+                ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE));
         }
         if (units.size() > ConsolidationCycleEngine.maxUnitsFor(
                 ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN))
