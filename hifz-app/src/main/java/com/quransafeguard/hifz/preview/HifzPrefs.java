@@ -2862,12 +2862,26 @@ public final class HifzPrefs {
         if(family==ConsolidationCycleEngine.Family.STABILIZATION){
             // Composite days can have several same-surah NEW ×7 subblocks.
             // A combined old ×1 pass NEVER earns a ×7 receipt.
-            for(ConsolidationCycleEngine.Unit unit:units){
-                if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN)
-                    earned.add(unit.id());
-                else if(unit.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS)
-                    throw new IllegalStateException("Invalid Stabilisation evening protocol");
+            ArrayList<String> exactPhysicalOrder = new ArrayList<>();
+            boolean hasFinalPass = false;
+            for(int i=0;i<units.size();i++){
+                ConsolidationCycleEngine.Unit unit=units.get(i);
+                if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS){
+                    // The whole must come AFTER its separately verified parts.
+                    if(hasFinalPass || i!=units.size()-1 || exactPhysicalOrder.isEmpty()
+                            || !exactPhysicalOrder.equals(
+                                ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id())))
+                        throw new IllegalStateException("Final all-parts pass is not the exact physical group");
+                    hasFinalPass=true;
+                } else if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN
+                        || unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS){
+                    exactPhysicalOrder.addAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id()));
+                    if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN)
+                        earned.add(unit.id());
+                } else throw new IllegalStateException("Invalid Stabilisation evening protocol");
             }
+            if(new LinkedHashSet<>(exactPhysicalOrder).size()!=exactPhysicalOrder.size())
+                throw new IllegalStateException("Overlapping physical lines in evening cycle");
             if(earned.isEmpty())throw new IllegalStateException("Missing NEW ×7 receipts");
         } else {
             int physical=units.size()>1?units.size()-1:1;
