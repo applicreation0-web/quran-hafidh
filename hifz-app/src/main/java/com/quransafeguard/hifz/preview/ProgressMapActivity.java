@@ -291,7 +291,7 @@ public final class ProgressMapActivity extends android.app.Activity {
                     PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());
                 stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),
                     PreviewConfig.STABILIZATION_WEEKLY_LINES);
-                // Read-only acquisition: only entirely acquired verses increase a Juz gauge.
+                // Read-only line levels, each physical QCF line accounted for once.
                 juzCounts=JuzProgressSummary.summarize(
                     geometry,prefs.progressionSnapshotV6());
             } catch (RuntimeException corruptOrUnconfiguredState) {
