@@ -155,6 +155,9 @@ public final class ProgressMapSourceContractTest {
                 + "                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());\n"
                 + "                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),\n"
                 + "                    PreviewConfig.STABILIZATION_WEEKLY_LINES);\n"
+                + "                // Read-only acquisition: only entirely acquired verses increase a Juz gauge.\n"
+                + "                juzCounts=JuzProgressSummary.summarize(\n"
+                + "                    geometry,prefs.progressionSnapshotV6().acquired);\n"
                 + "            } catch (RuntimeException corruptOrUnconfiguredState) {"));
         assertTrue("a failed computation must tell the learner, not just leave the grid blank forever",
             activity.contains("Toast.makeText(this, \"Progression indisponible · ouvrez Diagnostic si le problème persiste.\", Toast.LENGTH_LONG).show();"));
@@ -162,6 +165,24 @@ public final class ProgressMapSourceContractTest {
                 + "is declared for this screen, so rotation recreates it while the background scan may "
                 + "still be in flight)",
             countOccurrences(activity, "if (isFinishing() || isDestroyed()) return;") == 2);
+    }
+
+    @Test public void thirtyCanonicalJuzGaugesArePrimaryWithNoRedundantPicker() throws Exception {
+        String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
+        String summary=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/JuzProgressSummary.java");
+        assertTrue("exactly thirty interactive Juz rows must replace the default 604-cell wall",
+            activity.contains("for(int j=1;j<=30;j++)")
+            && activity.contains("root.addView(juzOverview);")
+            && activity.contains("root.addView(pageDetails);")
+            && activity.contains("pageDetails.setVisibility(View.GONE);")
+            && activity.contains("item.setOnClickListener(v->showJuz(selected));"));
+        assertFalse("No extra Juz modal selector is permitted",activity.contains("chooseJuz()"));
+        assertTrue("Only genuinely acquired entire verses may fill the gauge",
+            summary.contains("geometry.allVersesFullyCredited(realAcquiredLineIds)")
+            && summary.contains("rowForIndex(j*8+1)")
+            && summary.contains("if(fullyCredited.contains(verse))counts[j][1]++"));
+        assertTrue("The Back button must return to the thirty juz, not close the app",
+            activity.contains("if(selectedJuz>0)showAllPages();"));
     }
 
     @Test public void tappingAPageOpensLectureThere() throws Exception {
