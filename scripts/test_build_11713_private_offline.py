@@ -94,7 +94,7 @@ class PrivateCandidateDeliveryGuardTest(unittest.TestCase):
 
     def test_exact_upgraded_identity(self):
         self.assertEqual((builder.PACKAGE,builder.VERSION_CODE,builder.VERSION),
-                         ("com.quransafeguard.hifz",50,"1.17.13"))
+                         ("com.quransafeguard.hifz",51,"1.17.13"))
         self.assertEqual(len(builder.RESOURCES),7)
         self.assertEqual(len(builder.HISTORICAL_CERT),64)
 
