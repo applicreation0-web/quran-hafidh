@@ -3578,7 +3578,7 @@ public final class HifzPrefs {
         if(date.toString().equals(marker) && completedSnapshot.isEmpty())return false;
         String snapshot=exactSnowballSnapshotToValidate(family,date);
         if(snapshot.isEmpty() || snapshot.equals(completedSnapshot))return false;
-        if(date.toString().equals(marker) && snapshotAlreadyCovered(completedSnapshot,snapshot))
+        if(snapshotAlreadyCovered(completedSnapshot,snapshot))
             return false;
         return true;
     }
