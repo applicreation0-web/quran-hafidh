@@ -304,6 +304,25 @@ public final class HifzSnowballEightWeekStressTest {
         }
     }
 
+    @Test public void aGapBetweenPhysicalBlocksMustNeverMasqueradeAsOneContinuousPass()
+            throws Exception {
+        InMemoryPrefs d=disk();
+        String upper=encoded(physical(526,0,2));
+        String lower=encoded(physical(526,5,7));
+        d.disk.put("stabilizationSnowballUnitIds",new JSONArray().put(lower).put(upper).toString());
+        d.disk.put("v6StabilizationEarnedEveningUnitsV1",new JSONArray().put(upper).toString());
+        ArrayList<String> legitimate=new ArrayList<>(physical(526,0,2));
+        legitimate.addAll(physical(526,5,7));
+        d.disk.put("v6StabilizedLineIds",new JSONArray(legitimate).toString());
+        HifzPrefs p=new HifzPrefs(d);
+        Map<String,Object> before=new LinkedHashMap<>(d.disk);
+        List<ConsolidationCycleEngine.Unit> planned=p.stabilizedConsolidationUnits(THIS_WEDNESDAY);
+        assertEquals("Never silently bridge absent 526:3–4",2,planned.size());
+        assertEquals(upper,planned.get(0).id());
+        assertEquals(lower,planned.get(1).id());
+        assertEquals("Physical gap is not an all-parts continuous pass",before,d.disk);
+    }
+
     @Test public void aForgedContinuousPassMustNotGrantAnyNewItqanReceipt()
             throws Exception {
         InMemoryPrefs d=disk();
