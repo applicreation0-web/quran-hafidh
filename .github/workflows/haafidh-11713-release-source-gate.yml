@@ -3,7 +3,12 @@ name: Haafidh 1.17.13 - release source and offline signing guards
 on:
   push:
     branches: [release-candidate/haafidh-11713-semantic-hifz-20261107]
-    paths: ['.github/workflows/haafidh-11713-release-source-gate.yml']
+    paths:
+      - '.github/workflows/haafidh-11713-release-source-gate.yml'
+      - 'scripts/build_11713_private_offline.py'
+      - 'scripts/test_build_11713_private_offline.py'
+      - 'hifz-app/build.gradle.kts'
+      - 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/OfficialReleaseContractTest.java'
   workflow_dispatch:
 permissions:
   contents: read
