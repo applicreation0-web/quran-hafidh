@@ -2881,18 +2881,32 @@ public final class HifzPrefs {
                 throw new IllegalStateException("Overlapping physical lines in evening cycle");
             if(earned.isEmpty())throw new IllegalStateException("Missing NEW ×7 receipts");
         } else {
-            int physical=units.size()>1?units.size()-1:1;
+            // An extra continuous pass exists ONLY when at least two physical
+            // blocks really follow one another on the Mushaf. Older OPEN
+            // sessions retain their exact frozen units; disjoint physical
+            // blocks legitimately close without an invented combined pass.
+            int physical=units.size();
+            if(units.size()>=3) {
+                ArrayList<String> candidateParts=new ArrayList<>();
+                for(int i=0;i<units.size()-1;i++)candidateParts.add(units.get(i).id());
+                String candidate=ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(candidateParts);
+                if(candidate.equals(units.get(units.size()-1).id()))physical--;
+            }
+            LinkedHashSet<String> seenLines=new LinkedHashSet<>();
             for(int i=0;i<physical;i++){
                 ConsolidationCycleEngine.Unit unit=units.get(i);
                 if(unit.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL)
                     throw new IllegalStateException("Missing ×10 physical Renforcement");
+                for(String line:ConsolidationPhysicalUnitPolicy.decodeLineUnit(unit.id()))
+                    if(!seenLines.add(line))
+                        throw new IllegalStateException("Overlapping Sabqi physical lines in one evening");
                 earned.add(unit.id());
             }
-            if(units.size()>1) {
+            if(physical<units.size()) {
                 ConsolidationCycleEngine.Unit continuous=units.get(units.size()-1);
                 if(earned.size()<2 || continuous.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL
                         || !continuous.id().equals(ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(earned)))
-                    throw new IllegalStateException("Missing exact cumulative continuous pass");
+                    throw new IllegalStateException("Invalid frozen Sabqi continuous pass");
             }
         }
         return earned;
@@ -3308,17 +3322,41 @@ public final class HifzPrefs {
         return source;
     }
 
-    /** Tonight's Renforcement snowball: this week's accumulated Apprentissage units, ×10 each. */
+    /** Sabqi evening: physical Mushaf order, never attendance order.
+     * An extra complete pass is earned only for genuinely adjacent QCF lines.
+     * Disconnected blocks remain valid independent ×10 reading units.
+     * Previously OPEN sessions retain the original frozen order on restore. */
     List<ConsolidationCycleEngine.Unit> learningConsolidationUnits(LocalDate today) {
         JSONArray source=learningEveningSource(today);
         ArrayList<String> blocks=new ArrayList<>();
         for(int i=0;i<source.length();i++)blocks.add(source.optString(i));
+        GeometryRepository geometry=reviewGeometry();
+        blocks.sort((left,right)->{
+            if(geometry==null) return Long.compare(
+                ConsolidationPhysicalUnitPolicy.firstPhysicalLineOrder(left),
+                ConsolidationPhysicalUnitPolicy.firstPhysicalLineOrder(right));
+            int a=geometry.linesForExactIds(
+                ConsolidationPhysicalUnitPolicy.decodeLineUnit(left)).get(0).globalIndex;
+            int b=geometry.linesForExactIds(
+                ConsolidationPhysicalUnitPolicy.decodeLineUnit(right)).get(0).globalIndex;
+            return Integer.compare(a,b);
+        });
+        LinkedHashSet<String> seenLines=new LinkedHashSet<>();
         ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
-        for(String id:blocks)units.add(new ConsolidationCycleEngine.Unit(id,
-            ConsolidationCycleEngine.Protocol.SNOWBALL));
-        if(blocks.size()>1)units.add(new ConsolidationCycleEngine.Unit(
-            ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(blocks),
-            ConsolidationCycleEngine.Protocol.SNOWBALL));
+        for(String id:blocks) {
+            List<String> lines=ConsolidationPhysicalUnitPolicy.decodeLineUnit(id);
+            if(geometry!=null)geometry.linesForExactIds(lines); // exact canonical QCF order
+            for(String line:lines)
+                if(!seenLines.add(line))
+                    throw new IllegalStateException("Overlapping Sabqi lines in cumulative review");
+            units.add(new ConsolidationCycleEngine.Unit(id,
+                ConsolidationCycleEngine.Protocol.SNOWBALL));
+        }
+        if(blocks.size()>1
+                && ConsolidationPhysicalUnitPolicy.physicallyContinuous(blocks,geometry))
+            units.add(new ConsolidationCycleEngine.Unit(
+                ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(blocks),
+                ConsolidationCycleEngine.Protocol.SNOWBALL));
         return Collections.unmodifiableList(units);
     }
 
@@ -4164,8 +4202,11 @@ public final class HifzPrefs {
                 || (isFinalCycleId(session.cycle().cycleId())
                     && !(prefix + date).equals(session.cycle().cycleId())))
             throw new IllegalStateException("Finale family/date does not match its frozen session");
+        // Historical OPEN finals can still occupy the weekday slot; migrate first.
+        migrateLegacyFinalSlot(family);
         String raw = p.getString(consolidationFinalStateKey(family), "");
-        if (raw == null || raw.isEmpty()) return; // historical callers without a dedicated slot
+        if (raw == null || raw.isEmpty())
+            throw new IllegalStateException("Missing persisted OPEN Sunday finale proof");
         try {
             JSONObject frozen = new JSONObject(raw);
             if (!frozen.getBoolean("open") || !session.cycle().cycleId().equals(frozen.getString("cycleId"))
