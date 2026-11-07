@@ -69,7 +69,7 @@ public final class EveningReviewDisplayRegression11711Test {
         assertEquals("Consolidation · en attente de l’Itqān",
             EveningReviewDisplay.stabilizationLabel(before,false));
         EveningReviewDisplay.Status pending=EveningReviewDisplay.forDay(true,false,true);
-        assertEquals("Consolidation · maintiens de la semaine · ×1 masqué",
+        assertEquals("Consolidation · maintien de la semaine · ×1 masqué",
             EveningReviewDisplay.stabilizationLabel(pending,true));
         assertEquals("✓ Consolidation",EveningReviewDisplay.stabilizationLabel(
             EveningReviewDisplay.forDay(true,true,false),false));
