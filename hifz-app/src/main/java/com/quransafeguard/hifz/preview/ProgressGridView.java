@@ -32,7 +32,6 @@ final class ProgressGridView extends View {
     private float cellSize;
     private float gap;
     private int firstPage=1, lastPage=TOTAL_PAGES;
-    private final Paint pageNumber = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     ProgressGridView(Context context) {
         super(context);
@@ -41,8 +40,6 @@ final class ProgressGridView extends View {
         stroke.setStyle(Paint.Style.STROKE);
         stroke.setColor(Ui.LINE);
         gap = Ui.dp(context, 1);
-        pageNumber.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        pageNumber.setTextAlign(Paint.Align.CENTER);
     }
 
     void setStatus(int page, int value) {
@@ -80,12 +77,7 @@ final class ProgressGridView extends View {
                 float left = col * cellSize, top = row * cellSize;
                 cellRect.set(left + gap, top + gap, left + cellSize - gap, top + cellSize - gap);
                 drawCell(canvas, cellRect, status[page], fill, stroke);
-                if(zoomed()){
-                    pageNumber.setColor(status[page]==ACQUIS?Ui.PAPER:Ui.INK);
-                    pageNumber.setTextSize(Math.max(Ui.dp(getContext(),12),cellSize*.21f));
-                    canvas.drawText(Integer.toString(page),cellRect.centerX(),
-                        cellRect.centerY()-(pageNumber.ascent()+pageNumber.descent())/2,pageNumber);
-                }
+
             }
         }
     }
