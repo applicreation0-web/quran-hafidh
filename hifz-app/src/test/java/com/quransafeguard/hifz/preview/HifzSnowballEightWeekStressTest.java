@@ -314,13 +314,45 @@ public final class HifzSnowballEightWeekStressTest {
         ArrayList<String> legitimate=new ArrayList<>(physical(526,0,2));
         legitimate.addAll(physical(526,5,7));
         d.disk.put("v6StabilizedLineIds",new JSONArray(legitimate).toString());
-        HifzPrefs p=new HifzPrefs(d);
+        HifzPrefs p=new HifzPrefs(d,geometry);
         Map<String,Object> before=new LinkedHashMap<>(d.disk);
         List<ConsolidationCycleEngine.Unit> planned=p.stabilizedConsolidationUnits(THIS_WEDNESDAY);
         assertEquals("Never silently bridge absent 526:3–4",2,planned.size());
         assertEquals(upper,planned.get(0).id());
         assertEquals(lower,planned.get(1).id());
         assertEquals("Physical gap is not an all-parts continuous pass",before,d.disk);
+    }
+
+    @Test public void realQcfShortPageBoundaryStillGetsOneGenuineContinuousPass()
+            throws Exception {
+        int shortPage=-1;
+        for(int page=3;page<604;page++){
+            int size=geometry.lineIdsOnPage(page).size();
+            if(size>=2 && size<15 && geometry.lineIdsOnPage(page+1).size()>=2){
+                shortPage=page;break;
+            }
+        }
+        assertTrue("Need an authentic QCF title/basmala short page",shortPage>=3);
+        List<String> leftPage=geometry.lineIdsOnPage(shortPage);
+        List<String> rightPage=geometry.lineIdsOnPage(shortPage+1);
+        List<String> tail=leftPage.subList(leftPage.size()-2,leftPage.size());
+        List<String> head=rightPage.subList(0,2);
+        String previous=encoded(tail),fresh=encoded(head);
+        InMemoryPrefs d=disk();
+        ArrayList<String> lines=new ArrayList<>(tail);lines.addAll(head);
+        d.disk.put("v6StabilizedLineIds",new JSONArray(lines).toString());
+        d.disk.put("stabilizationSnowballUnitIds",
+            new JSONArray().put(fresh).put(previous).toString());
+        d.disk.put("v6StabilizationEarnedEveningUnitsV1",
+            new JSONArray().put(previous).toString());
+        HifzPrefs prefs=new HifzPrefs(d,geometry);
+        List<ConsolidationCycleEngine.Unit> plan=prefs.stabilizedConsolidationUnits(THIS_WEDNESDAY);
+        assertEquals("Exact global QCF indices prove page continuity",3,plan.size());
+        assertEquals(previous,plan.get(0).id());
+        assertEquals(fresh,plan.get(1).id());
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,
+            plan.get(2).protocol());
+        assertEquals(lines,ConsolidationPhysicalUnitPolicy.decodeLineUnit(plan.get(2).id()));
     }
 
     @Test public void aForgedContinuousPassMustNotGrantAnyNewItqanReceipt()
