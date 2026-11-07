@@ -21,7 +21,7 @@ for expected in independent-home.png independent-parcours-top.png \
     echo "NO_REAL_BOOX_EVIDENCE: $expected" >&2; exit 3;
   }
 done
-for zoom in independent-freeze2-progress-juz01.png independent-freeze2-progress-juz30.png; do
+for zoom in independent-freeze2-juz-overview.png independent-freeze2-progress-juz01.png independent-freeze2-progress-juz30.png; do
   test -s "$out/home-parcours/$zoom" || { echo "NO_REAL_F2_ZOOM: $zoom" >&2; exit 3; }
 done
 test -s "$out/frises/haafidh-frise-R048.png" || {
