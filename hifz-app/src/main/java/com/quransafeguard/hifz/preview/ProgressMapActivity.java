@@ -7,6 +7,7 @@ import android.graphics.RectF;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -43,6 +44,7 @@ public final class ProgressMapActivity extends android.app.Activity {
     private GeometryRepository geometry;
     private ProgressGridView grid;
     private ScrollView progressScroll;
+    private Button backButton;
     private LinearLayout juzOverview, pageDetails;
     private TextView gridHelp, juzHeading;
     private final JuzProgressBar[] juzBars=new JuzProgressBar[30];
@@ -72,7 +74,10 @@ public final class ProgressMapActivity extends android.app.Activity {
 
         LinearLayout top = Ui.row(this);
         top.setPadding(0, 0, 0, Ui.dp(this, 2));
-        top.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
+        backButton=Ui.iconButton(this,"‹","Retour",v->{
+            if(selectedJuz>0)showAllPages();else finish();
+        });
+        top.addView(backButton);
         TextView title = Ui.bookText(this, "Progression", 18, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER);
@@ -101,13 +106,9 @@ public final class ProgressMapActivity extends android.app.Activity {
         pageDetails=Ui.column(this);
         pageDetails.setPadding(0,0,0,0);
         pageDetails.setVisibility(View.GONE);
-        LinearLayout pageHeader=Ui.row(this);
-        pageHeader.addView(Ui.smallButton(this,"Tous les juz",v->showAllPages()));
         juzHeading=Ui.bookText(this,"",18f,true);
-        juzHeading.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        pageHeader.addView(juzHeading,new LinearLayout.LayoutParams(
-            0,Ui.dp(this,48),1f));
-        pageDetails.addView(pageHeader);
+        juzHeading.setPadding(Ui.dp(this,8),Ui.dp(this,8),0,0);
+        pageDetails.addView(juzHeading);
         pageDetails.addView(legend());
         grid = new ProgressGridView(this);
         grid.setOnPageTapped(page -> {
@@ -214,7 +215,8 @@ public final class ProgressMapActivity extends android.app.Activity {
         juzOverview.setVisibility(View.GONE);
         pageDetails.setVisibility(View.VISIBLE);
         gridHelp.setText("Juz "+juz+" · toucher une page pour ouvrir le Mushaf");
-        juzHeading.setText("Pages "+first+"–"+last);
+        juzHeading.setText("Juz "+juz+" · pages "+first+"–"+last);
+        Ui.setIconDescription(backButton,"Retour aux 30 juz");
         grid.setContentDescription("Juz "+juz+" · pages physiques "+first+" à "+last+
             " · toucher une page pour ouvrir le Mushaf");
         if(progressScroll!=null)progressScroll.post(()->progressScroll.scrollTo(0,0));
@@ -226,8 +228,14 @@ public final class ProgressMapActivity extends android.app.Activity {
         pageDetails.setVisibility(View.GONE);
         juzOverview.setVisibility(View.VISIBLE);
         gridHelp.setText("30 juz · toucher un juz pour afficher ses pages");
+        Ui.setIconDescription(backButton,"Retour");
         grid.setContentDescription("Pages masquées · choisir un juz");
         if(progressScroll!=null)progressScroll.post(()->progressScroll.scrollTo(0,0));
+    }
+
+    @Override public void onBackPressed() {
+        if(selectedJuz>0)showAllPages();
+        else super.onBackPressed();
     }
 
     private LinearLayout legend() {
