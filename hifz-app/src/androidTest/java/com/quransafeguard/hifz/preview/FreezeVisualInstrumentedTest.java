@@ -57,32 +57,50 @@ public final class FreezeVisualInstrumentedTest {
             Independent11710ScreensInstrumentedTest.capture("freeze2-progress-juz01");
         }
     }
-    @Test public void genuineHifzCreditsAloneFillCanonicalJuzGauges(){
+    @Test public void physicalLineLevelsFillPagesWithoutFakeCredits(){
         Context context=ApplicationProvider.getApplicationContext();
         GeometryRepository geometry=GeometryRepository.get(context);
-        int[][] empty=JuzProgressSummary.summarize(geometry,java.util.Collections.emptySet());
+        java.util.ArrayList<GeometryRepository.LineMeta> lines=new java.util.ArrayList<>();
+        for(int i=0;i<geometry.lineCount();i++)lines.add(geometry.line(i));
+        Set<String> none=java.util.Collections.emptySet();
+        int[][] empty=JuzProgressSummary.fromLines(lines,none,none,none);
         assertEquals(30,empty.length);
-        for(int[] count:empty){
-            assertTrue("Every canonical Juz has Qur'an verses",count[0]>0);
-            assertEquals(0,count[1]);
+        int counted=0;
+        for(int[] c:empty){
+            assertTrue("Each canonical Juz contains real lines",c[JuzProgressSummary.TOTAL]>0);
+            assertEquals(0,JuzProgressSummary.done(c));
+            counted+=c[JuzProgressSummary.TOTAL];
         }
+        assertEquals("No line may be lost at the Juz boundary",geometry.lineCount(),counted);
         Set<String> all=new HashSet<>();
-        for(int i=0;i<geometry.lineCount();i++)all.add(geometry.line(i).id);
-        int[][] fullyAcquired=JuzProgressSummary.summarize(geometry,all);
-        for(int i=0;i<30;i++){
-            assertEquals(empty[i][0],fullyAcquired[i][0]);
-            assertEquals(empty[i][0],fullyAcquired[i][1]);
+        for(GeometryRepository.LineMeta line:lines)all.add(line.id);
+        int[][] full=JuzProgressSummary.fromLines(lines,none,none,all);
+        for(int j=0;j<30;j++){
+            assertEquals(empty[j][JuzProgressSummary.TOTAL],full[j][JuzProgressSummary.TOTAL]);
+            assertEquals(full[j][JuzProgressSummary.TOTAL],full[j][JuzProgressSummary.ACQUIRED]);
             assertEquals(100,JuzProgressSummary.percent(
-                fullyAcquired[i][1],fullyAcquired[i][0]));
+                JuzProgressSummary.done(full[j]),full[j][JuzProgressSummary.TOTAL]));
         }
-        Set<String> partial=new HashSet<>();
-        for(int i=0;i<Math.min(60,geometry.lineCount());i++)
-            partial.add(geometry.line(i).id);
-        int[][] partialCount=JuzProgressSummary.summarize(geometry,partial);
-        assertTrue("Real credited QCF verses should increase Juz 1",partialCount[0][1]>0);
-        assertTrue("Juz 1 cannot be marked 100% after merely 60 QCF lines",
-            JuzProgressSummary.percent(partialCount[0][1],partialCount[0][0])<100);
-        for(int i=1;i<30;i++)
-            assertEquals("No credit may cross into untouched Juz "+(i+1),0,partialCount[i][1]);
+
+        Set<String> acquired=new HashSet<>();
+        Set<String> learned=new HashSet<>();
+        Set<String> stabilized=new HashSet<>();
+        for(int i=0;i<Math.min(60,lines.size());i++){
+            String id=lines.get(i).id;
+            if(i<20)acquired.add(id);
+            else if(i<40)stabilized.add(id);
+            else learned.add(id);
+        }
+        // A real line is counted only once even when stale sets overlap.
+        learned.addAll(acquired);
+        stabilized.addAll(acquired);
+        int[][] partial=JuzProgressSummary.fromLines(lines,learned,stabilized,acquired);
+        assertTrue(partial[0][JuzProgressSummary.ACQUIRED]>0);
+        assertTrue(partial[0][JuzProgressSummary.STABILIZED]>0);
+        assertTrue(partial[0][JuzProgressSummary.LEARNED]>0);
+        assertEquals(60,JuzProgressSummary.done(partial[0]));
+        assertTrue(JuzProgressSummary.percent(JuzProgressSummary.done(partial[0]),
+            partial[0][JuzProgressSummary.TOTAL])<100);
+        for(int j=1;j<30;j++)assertEquals(0,JuzProgressSummary.done(partial[j]));
     }
 }
