@@ -148,7 +148,7 @@ public final class MainActivity extends android.app.Activity {
         // text link makes it reachable in one tap without shrinking those icons.
         TextView jumpToWeek = Ui.bookText(this, "PLANNING DE LA SEMAINE ↓", 16f, true);
         if (wideBoox()) jumpToWeek.setTextSize(20f);
-        jumpToWeek.setPadding(Ui.dp(this, 5), Ui.dp(this, 12), Ui.dp(this, 5), Ui.dp(this, 12));
+        jumpToWeek.setPadding(Ui.dp(this, 5), Ui.dp(this, wideBoox() ? 6 : 12), Ui.dp(this, 5), Ui.dp(this, wideBoox() ? 6 : 12));
         jumpToWeek.setContentDescription("Aller au planning de la semaine");
         jumpToWeek.setClickable(true);
         jumpToWeek.setFocusable(true);
@@ -195,7 +195,7 @@ public final class MainActivity extends android.app.Activity {
         geometryActions.add(consolidation);
         setGeometryActionsEnabled(false);
 
-        dashboardTitle = Ui.bookText(this, "Cette semaine", 20, true);
+        dashboardTitle = Ui.bookText(this, "7 prochains jours", 20, true);
         if (wideBoox()) dashboardTitle.setTextSize(24f);
         dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
         dashboardTitle.setOnClickListener(v -> {
@@ -303,7 +303,7 @@ public final class MainActivity extends android.app.Activity {
         if (wideBoox()) todayObjective.setTextSize(21f);
         todayObjective.setTextColor(Ui.MUTED);
         // Never truncate the authentic page/verse range on the BOOX screen.
-        todayObjective.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 6));
+        todayObjective.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, wideBoox() ? 3 : 6));
         todayObjective.setMaxLines(3);
         todayObjective.setEllipsize(android.text.TextUtils.TruncateAt.END);
         line.addView(todayObjective);
@@ -346,7 +346,7 @@ public final class MainActivity extends android.app.Activity {
     private TextView pathSectionTitle(String caption) {
         TextView heading = Ui.bookText(this, caption, 16f, true);
         if (wideBoox()) heading.setTextSize(22f);
-        heading.setPadding(Ui.dp(this, 4), Ui.dp(this, 9), 0, Ui.dp(this, 2));
+        heading.setPadding(Ui.dp(this, 4), Ui.dp(this, wideBoox() ? 4 : 9), 0, Ui.dp(this, 2));
         return heading;
     }
 
@@ -397,10 +397,10 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout pathTile(LinearLayout parent, String label, String state,
                                  View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
-        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8));
+        tile.setPadding(Ui.dp(this, 2), Ui.dp(this, wideBoox() ? 4 : 8), Ui.dp(this, 2), Ui.dp(this, wideBoox() ? 4 : 8));
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(2, 124);
-        tile.setMinimumHeight(Ui.dp(this, sideDp + 52));
+        tile.setMinimumHeight(Ui.dp(this, sideDp + (wideBoox() ? 40 : 52)));
         String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
             : "Stabilisation".equals(label) ? "Stabiliser"
             : "Révision".equals(label) ? "Réviser" : label;
@@ -420,7 +420,7 @@ public final class MainActivity extends android.app.Activity {
         iconView.setScaleType(ImageView.ScaleType.FIT_CENTER);
         iconView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         LinearLayout.LayoutParams iconLayout = new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp));
-        iconLayout.topMargin = Ui.dp(this, 6);
+        iconLayout.topMargin = Ui.dp(this, wideBoox() ? 3 : 6);
         tile.addView(iconView, iconLayout);
         // The real target/verse range is on the selected day, not crammed into a 1/3-width cell.
         TextView cue = Ui.text(this, state, 15f, false);
@@ -467,7 +467,8 @@ public final class MainActivity extends android.app.Activity {
                 && todayAction.getChildAt(3) instanceof TextView) {
             TextView action = (TextView) todayAction.getChildAt(3);
             action.setText(text.startsWith("Consolidation · état") ? "VÉRIFIER  ›"
-                : text.contains("à reprendre") ? "VOIR LES SÉANCES  ›" : "CONTINUER  ›");
+                : text.contains("à reprendre") ? "REPRENDRE  ›"
+                : text.contains("Programme à jour") ? "VOIR LES SÉANCES  ›" : "CONTINUER  ›");
         }
         setTodayEnabled(enabled);
     }
@@ -1269,7 +1270,7 @@ public final class MainActivity extends android.app.Activity {
     private void refreshDashboard() {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
-        if (dashboardTitle != null) dashboardTitle.setText("Cette semaine  ⌄");
+        if (dashboardTitle != null) dashboardTitle.setText("7 prochains jours  ⌄");
         List<WeeklyDashboardPlanner.Row> rows;
         try {
             rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today());
@@ -1419,26 +1420,84 @@ public final class MainActivity extends android.app.Activity {
         weekStrip.removeAllViews();
         weekDayPanel.removeAllViews();
         if (weekRows.isEmpty()) return;
+        // Atlas is the GRAPHIC vocabulary only: one rail, seven real day targets, circular
+        // nodes and an outlined selection. No Atlas editorial titles are borrowed.
+        // This read-only view never changes Hifz receipts, dates, or the weekly programme.
         String[] initials = {"L", "M", "M", "J", "V", "S", "D"};
         WeeklyDashboardPlanner.Row chosen = weekRows.get(0);
+        FrameLayout timeline = new FrameLayout(this);
+        View axis = new View(this);
+        axis.setBackgroundColor(Ui.INK);
+        FrameLayout.LayoutParams lineParams = new FrameLayout.LayoutParams(-1, Ui.dp(this, 1));
+        lineParams.setMargins(Ui.dp(this, 25), Ui.dp(this, 17), Ui.dp(this, 25), 0);
+        timeline.addView(axis, lineParams);
+        LinearLayout stations = Ui.row(this);
+        stations.setGravity(Gravity.TOP);
         for (WeeklyDashboardPlanner.Row row : weekRows) {
             boolean active = row.date.equals(selectedWeekDate);
             if (active) chosen = row;
-            TextView day = Ui.bookText(this,
-                (active ? "● " : "")+initials[row.date.getDayOfWeek().getValue()-1]
-                    +"\n"+row.date.getDayOfMonth(), 18f, active);
+            boolean future = row.date.isAfter(HifzClock.today());
+            // Validation is a real signed-off ledger state, never a forecast for future days.
+            boolean done = !future && "Validé".equals(row.state);
+            String status = future ? "Prévu" : done ? "Validé"
+                : row.state == null ? "À vérifier" : compactState(row.state);
+            LinearLayout station = Ui.column(this);
+            station.setPadding(0,0,0,0);
+            station.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            station.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+            TextView node = Ui.text(this, done ? "✓" : "", 15f, true);
+            node.setGravity(Gravity.CENTER);
+            node.setTextColor(done ? Ui.PAPER : Ui.INK);
+            android.graphics.drawable.GradientDrawable circle =
+                new android.graphics.drawable.GradientDrawable();
+            circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            circle.setColor(done ? Ui.INK : Ui.PAPER);
+            circle.setStroke(Ui.dp(this,1),Ui.INK);
+            node.setBackground(circle);
+            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(
+                Ui.dp(this,26), Ui.dp(this,26));
+            // Atlas selected station: two concentric rings. Inner fill/check
+            // belongs only to a real Hifz completion; outer ring means
+            // "consulted date", NEVER "validated". No E-Ink animation.
+            FrameLayout marker = new FrameLayout(this);
+            if (active) {
+                android.graphics.drawable.GradientDrawable selection =
+                    new android.graphics.drawable.GradientDrawable();
+                selection.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                selection.setColor(Ui.PAPER);
+                selection.setStroke(Ui.dp(this,2),Ui.INK);
+                marker.setBackground(selection);
+            }
+            FrameLayout.LayoutParams inner = new FrameLayout.LayoutParams(
+                Ui.dp(this,26),Ui.dp(this,26),Gravity.CENTER);
+            marker.addView(node,inner);
+            station.addView(marker,new LinearLayout.LayoutParams(
+                Ui.dp(this,34),Ui.dp(this,34)));
+            TextView day = Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1],13f,active);
             day.setGravity(Gravity.CENTER);
-            day.setMinimumHeight(Ui.dp(this, 56));
-            day.setContentDescription(row.day+" · "+row.date);
-            day.setClickable(true);
-            day.setFocusable(true);
-            day.setBackgroundColor(Ui.PAPER);
-            day.setOnClickListener(v -> {
+            station.addView(day);
+            TextView date = Ui.text(this, Integer.toString(row.date.getDayOfMonth()),12f,active);
+            date.setGravity(Gravity.CENTER);
+            station.addView(date);
+            if (row.date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                TextView finale = Ui.text(this,"Finale",10f,false);
+                finale.setGravity(Gravity.CENTER);
+                station.addView(finale);
+            }
+            station.setMinimumHeight(Ui.dp(this,80));
+            station.setClickable(true);
+            station.setFocusable(true);
+            station.setContentDescription(row.day+" "+row.date+" · "+status+
+                (active?" · sélectionné":"")+" · ouvrir le détail matin et soir");
+            station.setOnClickListener(v -> {
                 selectedWeekDate = row.date;
                 renderSelectedWeekDay();
             });
-            weekStrip.addView(day,new LinearLayout.LayoutParams(0,Ui.dp(this, 56),1f));
+            stations.addView(station,new LinearLayout.LayoutParams(
+                0,Ui.dp(this,80),1f));
         }
+        timeline.addView(stations,new FrameLayout.LayoutParams(-1,Ui.dp(this,80)));
+        weekStrip.addView(timeline,new LinearLayout.LayoutParams(-1,Ui.dp(this,80)));
         TextView heading = Ui.bookText(this,
             chosen.day+" "+chosen.date.getDayOfMonth()+" · "+compactState(chosen.state), 20f, true);
         weekDayPanel.addView(heading);

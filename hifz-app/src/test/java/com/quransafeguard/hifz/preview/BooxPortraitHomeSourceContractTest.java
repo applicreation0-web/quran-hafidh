@@ -78,7 +78,12 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today())"));
         assertTrue(home.contains("selectedWeekDate = row.date"));
         assertTrue(home.contains("renderSelectedWeekDay()"));
-        assertTrue(home.contains("weekStrip.addView(day,new LinearLayout.LayoutParams(0,Ui.dp(this, 56),1f))"));
+        assertTrue("Atlas-inspired 7-day rail must retain seven real clickable day stations",
+            home.contains("weekStrip.addView(timeline")
+            && home.contains("stations.addView(station")
+            && home.contains("station.setOnClickListener")
+            && home.contains("selectedWeekDate = row.date")
+            && home.contains("boolean done = !future && \"Validé\".equals(row.state)"));
         assertTrue(home.contains("scheduleDetail(chosen.morning)"));
         assertTrue(home.contains("scheduleDetail(chosen.evening)"));
         assertTrue(home.contains("showRevisionSelector()"));
