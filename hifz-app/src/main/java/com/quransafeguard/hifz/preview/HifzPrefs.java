@@ -3541,6 +3541,25 @@ public final class HifzPrefs {
         return mondayOf(date).toString()+"|"+current.toString();
     }
 
+    /** A cross-week catch-up source can shrink after its authentic receipt was
+     * committed. Losing an already-paid historical unit is not NEW work and
+     * must not reopen that evening; a truly new physical unit still does. */
+    private static boolean snapshotAlreadyCovered(String completed,String source) {
+        try {
+            int older=completed.indexOf('|'), newer=source.indexOf('|');
+            if(older<1||newer<1 || !completed.substring(0,older)
+                    .equals(source.substring(0,newer)))return false;
+            JSONArray past=new JSONArray(completed.substring(older+1));
+            JSONArray now=new JSONArray(source.substring(newer+1));
+            Set<String> paid=new LinkedHashSet<>();
+            for(int i=0;i<past.length();i++)paid.add(past.getString(i));
+            for(int i=0;i<now.length();i++)if(!paid.contains(now.getString(i)))return false;
+            return true;
+        } catch(Exception malformed) {
+            return false; // Never dismiss new work on a damaged fingerprint.
+        }
+    }
+
     boolean snowballEveningPending(ConsolidationCycleEngine.Family family,LocalDate date) {
         if(family==null||date==null)throw new IllegalArgumentException("evening review required");
         if(family==ConsolidationCycleEngine.Family.STABILIZATION && itqanPostNasMaintenance()) {
@@ -3558,7 +3577,10 @@ public final class HifzPrefs {
         // receive its own real evening repetitions and receipt.
         if(date.toString().equals(marker) && completedSnapshot.isEmpty())return false;
         String snapshot=exactSnowballSnapshotToValidate(family,date);
-        return !snapshot.isEmpty() && !snapshot.equals(completedSnapshot);
+        if(snapshot.isEmpty() || snapshot.equals(completedSnapshot))return false;
+        if(date.toString().equals(marker) && snapshotAlreadyCovered(completedSnapshot,snapshot))
+            return false;
+        return true;
     }
 
     private static final String DAILY_LESSON_RECEIPTS = "v6DailyLessonReceiptsV1";
