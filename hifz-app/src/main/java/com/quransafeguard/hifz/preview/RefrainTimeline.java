@@ -122,6 +122,9 @@ final class RefrainTimeline {
         for(int i=0;i<nodes.size();i++){
             String[] n=nodes.get(i);
             LinearLayout card=Ui.column(a);
+            // Ui.column is padded/opaque by default: keep the Atlas circles and line visible.
+            card.setPadding(0,0,0,0);
+            card.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             card.setGravity(Gravity.CENTER_HORIZONTAL);
             TextView number=Ui.text(a,n[3],11,false);
             number.setGravity(Gravity.CENTER);
