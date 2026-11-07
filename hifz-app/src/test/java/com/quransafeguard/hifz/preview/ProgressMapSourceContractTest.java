@@ -71,10 +71,14 @@ public final class ProgressMapSourceContractTest {
         assertTrue("À stabiliser must be a diagonal hatch, not a fill", drawCell.contains("canvas.drawLine(x, rect.bottom, x + rect.height(), rect.top, fill);"));
         assertTrue("En apprentissage must be dots, not a fill", drawCell.contains("canvas.drawCircle(x, y, dotRadius, fill);"));
         int totalSetColor = countOccurrences(grid, ".setColor(");
-        int inkOrLineSetColor = countOccurrences(grid, ".setColor(Ui.INK)") + countOccurrences(grid, ".setColor(Ui.LINE)");
-        assertTrue("every Paint.setColor call must use the shared ink/line tokens — anything else "
-                + "would smuggle a hue-based distinction back in, meaningless on e-ink anyway",
-            totalSetColor > 0 && totalSetColor == inkOrLineSetColor);
+        int inkOrLineSetColor = countOccurrences(grid, ".setColor(Ui.INK)") +
+            countOccurrences(grid, ".setColor(Ui.LINE)");
+        int acquiredPageNumberContrast=countOccurrences(grid,
+            "pageNumber.setColor(status[page]==ACQUIS?Ui.PAPER:Ui.INK)");
+        assertTrue("Only shared monochrome ink/line tokens or white-on-black Acquis page "
+                + "numbers are allowed; never introduce a status-specific color",
+            totalSetColor > 0 && totalSetColor == inkOrLineSetColor+acquiredPageNumberContrast
+            && acquiredPageNumberContrast==1);
     }
 
     /**
