@@ -73,10 +73,11 @@ public final class EarnedEveningProtocolRegressionTest {
    assertTrue(MorningProtocolFixture.completeItqan(p,completedMorning,1,true,morningVerse,morningVerse,morningVerse,
        day.toString(),"genuine same-day prerequisite",Collections.emptyList()));
    List<ConsolidationCycleEngine.Unit> cycle=p.stabilizedConsolidationUnits(day);
-   assertEquals(3,cycle.size());
-   assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,cycle.get(2).protocol());
-   for(int i=0;i<2;i++)assertEquals(
+   assertEquals(4,cycle.size());
+   assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,cycle.get(0).protocol());
+   for(int i=1;i<3;i++)assertEquals(
        ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,cycle.get(i).protocol());
+   assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,cycle.get(3).protocol());
    ConsolidationCycleEngine.Session session=ready(ConsolidationCycleEngine.Family.STABILIZATION,
        "stabilization-"+day,cycle);
    assertTrue(p.persistConsolidationSession(session));
