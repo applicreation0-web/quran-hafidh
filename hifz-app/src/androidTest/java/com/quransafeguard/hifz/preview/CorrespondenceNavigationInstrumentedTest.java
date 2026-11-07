@@ -211,37 +211,91 @@ public final class CorrespondenceNavigationInstrumentedTest {
             assertSelection(scenario,0,new VerseRef(12,2));assertSelection(scenario,1,new VerseRef(11,121));
         }
     }
-    @Test public void allFortyFiveRefrainsAreReachableInsideSourcesOnly()throws Exception{
+    private static View startsWith(View v,String description) {
+        CharSequence label=v.getContentDescription();
+        if(label!=null&&label.toString().startsWith(description))return v;
+        if(v instanceof ViewGroup){
+            ViewGroup g=(ViewGroup)v;
+            for(int i=0;i<g.getChildCount();i++){
+                View found=startsWith(g.getChildAt(i),description);
+                if(found!=null)return found;
+            }
+        }
+        return null;
+    }
+    private static void waitForSelectedRefrainQcf(
+        ActivityScenario<CorrespondenceComparisonActivity> scenario,String ref)throws Exception{
+        String[] pair=ref.split(":");
+        final int surah=Integer.parseInt(pair[0]),ayah=Integer.parseInt(pair[1]);
+        AtomicBoolean matched=new AtomicBoolean(false);
+        long deadline=android.os.SystemClock.uptimeMillis()+45000;
+        while(android.os.SystemClock.uptimeMillis()<deadline){
+            CountDownLatch completion=new CountDownLatch(1);
+            scenario.onActivity(a->a.qcfPagesForTest()[1].evaluateJavascript(
+                "(function(){var s=document.querySelector('#haafidh-active-verse');"
+                +"return !!s && s.textContent.indexOf(\"surah='"+surah+"'\")>=0"
+                +" && s.textContent.indexOf(\"ayah='"+ayah+"'\")>=0"
+                +" && document.body.innerText.indexOf('Chargement du Mushaf QCF')<0;})()",
+                value->{matched.set("true".equals(value));completion.countDown();}));
+            assertTrue("QCF callback timed out",completion.await(5,TimeUnit.SECONDS));
+            if(matched.get())break;
+            Thread.sleep(150);
+        }
+        assertTrue("The actual second QCF must finish displaying "+ref+
+            " before a release screenshot",matched.get());
+    }
+    @Test public void allFortyFiveRefrainsAreReachableInCompactAtlasRail()throws Exception{
         for(String id:new String[]{"R047","R048","R059"}){
-            String[] first=null;int count=0;
-            for(String[] n:RefrainTimelineData.NODES)if(id.equals(n[0])){count++;if(first==null)first=n;}
-            final String[] anchor=first;final int total=count;
-            String[] ref=anchor[5].split(":");
-            try(ActivityScenario<CorrespondenceComparisonActivity> scenario=launch(Integer.parseInt(ref[0]),Integer.parseInt(ref[1]),id)){
+            String[] first=null,last=null;int count=0;
+            for(String[] n:RefrainTimelineData.NODES)if(id.equals(n[0])){
+                count++;if(first==null)first=n;last=n;
+            }
+            final String[] initial=first,finalNode=last;
+            final int total=count;
+            assertEquals("R047".equals(id)?4:"R048".equals(id)?31:10,total);
+            String[] ref=initial[5].split(":");
+            try(ActivityScenario<CorrespondenceComparisonActivity> scenario=
+                    launch(Integer.parseInt(ref[0]),Integer.parseInt(ref[1]),id)){
                 ready(scenario);
-                scenario.onActivity(a->call(a,"showSources",new Class<?>[]{}));
-                tap(scenario,"Frise des refrains",true);
-                java.util.Set<String> openStations=new java.util.HashSet<>();
-                for(String[] node:RefrainTimelineData.NODES)if(id.equals(node[0])){
-                    if(openStations.add(node[7]))tap(scenario,"Station "+node[7],true);
-                    String action="Occurrence "+node[3]+" sur "+node[4]+" · "+node[5];
-                    tap(scenario,action,true);
-                    scenario.onActivity(a->{
-                        View before=named(sourcesDecor(a),"Avant · "+node[8]+"\n"+node[9]);
-                        View after=named(sourcesDecor(a),"Après · "+node[11]+"\n"+node[12]);
-                        assertNotNull(before);assertTrue(before.isShown());assertNotNull(after);assertTrue(after.isShown());
-                    });
-                    // Follow every actual Lire action into the existing reader, then return.
-                    followReading(scenario,"Lire "+node[5],node[5],Integer.parseInt(node[6]),true);
-                    if(node[3].equals("1")||node[3].equals(node[4])){
-                        // The screenshot contains real expanded before/refrain/after detail.
-                        scenario.onActivity(a->{View after=named(sourcesDecor(a),"Après · "+node[11]+"\n"+node[12]);((View)after.getParent()).requestRectangleOnScreen(new android.graphics.Rect(0,0,((View)after.getParent()).getWidth(),after.getBottom()),true);});
-                        screenshot("frise-"+id+(node[3].equals("1")?"":"-fin"));
+                screenshot("frise-"+id);
+                // A compact rail, not a Sources-dialog accordion. Every actual QCF anchor is present.
+                scenario.onActivity(a->{
+                    View root=a.getWindow().getDecorView();
+                    assertNotNull(startsWith(root,"Refrain 1 sur "+total+", "+initial[5]+" : "));
+                    for(String[] n:RefrainTimelineData.NODES){
+                        if(!id.equals(n[0]))continue;
+                        String prefix="Refrain "+n[3]+" sur "+n[4]+", "+n[5]+" : ";
+                        View chip=startsWith(root,prefix);
+                        assertNotNull("Missing compact occurrence "+prefix,chip);
+                        assertTrue(chip.performClick());
+                        RefrainTimeline.State state=(RefrainTimeline.State)field(a,"timelineState");
+                        assertEquals(Integer.parseInt(n[3])-1,state.selected);
+                        View detail=startsWith(root,"Lire "+n[5]+" dans le Mushaf.");
+                        assertNotNull("Selected refrain must expose an exact reading route",detail);
+                        assertTrue(((TextView)detail).getText().toString().contains(n[5]));
                     }
-                    tap(scenario,action,true);
-                }
+                });
+                final String[] readingAction=new String[1];
+                scenario.onActivity(a->{
+                    View detail=startsWith(a.getWindow().getDecorView(),
+                        "Lire "+finalNode[5]+" dans le Mushaf.");
+                    assertNotNull(detail);
+                    readingAction[0]=detail.getContentDescription().toString();
+                });
+                followReading(scenario,readingAction[0],finalNode[5],
+                    Integer.parseInt(finalNode[6]),false);
+                ready(scenario);
+                waitForSelectedRefrainQcf(scenario,finalNode[5]);
+                screenshot("frise-"+id+"-fin");
                 scenario.recreate();ready(scenario);
-                scenario.onActivity(a->{assertTrue(((RefrainTimeline.State)field(a,"timelineState")).open);assertTrue((Boolean)field(a,"sourcesOpen"));});
+                scenario.onActivity(a->{
+                    assertEquals(total-1,((RefrainTimeline.State)field(a,"timelineState")).selected);
+                    assertNotNull(startsWith(a.getWindow().getDecorView(),
+                        "Lire "+finalNode[5]+" dans le Mushaf."));
+                    call(a,"showSources",new Class<?>[]{});
+                    assertNull("Source sheet must not repeat the old accordion",
+                        named(sourcesDecor(a),"Frise des refrains"));
+                });
             }
         }
     }

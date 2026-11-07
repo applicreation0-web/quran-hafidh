@@ -50,95 +50,82 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
         assertEquals(Arrays.asList(53, 55), prefs.hardAnchoringSurahs());
     }
 
-    @Test public void page526UsesThreeBalancedBlocksAndEachIntermediateAdvanceIsAtomic() {
-        HifzPrefs prefs = new HifzPrefs(context);
-        GeometryRepository geometry = GeometryRepository.get(context);
-        VerseRef start = new VerseRef(53, 1);
-        VerseRef end = new VerseRef(53, 26);
-        EligibleCorpus pageCorpus = EligibleCorpus.Companion.of(Collections.singletonList(new VerseRange(start, end)));
-        GeometryRepository.VerseUnit unit = geometry.eligiblePageUnit(start, pageCorpus);
+    private HifzPrefs seededPage526() {
+        String range = "[{\"start\":\"53:1\",\"end\":\"53:26\"}]";
+        String queue = "[{\"start\":\"53:1\",\"end\":\"53:26\","
+            + "\"origin\":\"RECONSTRUCTION\",\"protocol\":\"FULL\",\"failures\":0}]";
+        assertTrue(raw.edit().putString("itqanRanges",range)
+            .putString("promotedRanges",range)
+            .putString("unconsolidatedPromotedRanges",range)
+            .putString("anchoringQueue",queue)
+            .putBoolean("anchoringQueueInitialized",true)
+            .putInt("anchoringQueueIndex",0)
+            .putString("itqanRotationStart","53:1")
+            .putString("itqanCursor","53:1").commit());
+        return new HifzPrefs(context);
+    }
 
-        assertEquals(526, unit.page);
-        assertEquals(13, unit.lineIds.size());
-        assertArrayEquals(new int[]{5, 4, 4}, PreviewConfig.fractionatedBlockSizes(unit.lineIds.size()));
+    @Test public void page526UsesTwoCanonicalHalfPageBlocksAndEachIntermediateAdvanceIsAtomic() {
+        HifzPrefs prefs=seededPage526();
+        GeometryRepository geometry=GeometryRepository.get(context);
+        VerseRef start=new VerseRef(53,1),end=new VerseRef(53,26);
+        EligibleCorpus corpus=EligibleCorpus.Companion.of(
+            Collections.singletonList(new VerseRange(start,end)));
+        GeometryRepository.VerseUnit unit=geometry.eligiblePageUnit(start,corpus);
+        assertEquals(526,unit.page);
+        assertEquals(13,unit.lineIds.size());
+        java.util.List<StabilizationHalfPagePolicy.Unit> canonicalBlocks =
+            StabilizationHalfPagePolicy.planPage(geometry.linesForExactIds(unit.lineIds));
+        assertEquals("13 QCF physical lines form two canonical half-page blocks", 2, canonicalBlocks.size());
+        assertEquals(13, canonicalBlocks.get(0).lineIds.size() + canonicalBlocks.get(1).lineIds.size());
         assertTrue(prefs.setHardAnchoringSurahs(Collections.singletonList(53)));
-        assertTrue(HifzPrefs.containsHardAnchoringSurah(prefs.hardAnchoringSurahs(), unit.verses));
-
-        assertTrue(prefs.setItqanProgress(35, 7, 2, unit.start, unit.end));
-        assertTrue(prefs.advanceItqanBlock(1, "2026-09-13", "bloc 1/3"));
-        assertEquals(1, prefs.itqanBlockIndex());
-        assertEquals(0, prefs.itqanRep());
-        assertEquals(0, prefs.itqanAssisted());
-        assertEquals(0, prefs.itqanFinalReveals());
-        assertEquals(0L, prefs.elapsedFor(HifzSessionActivity.ITQAN));
-        assertEquals("2026-09-13", prefs.lastItqanDate());
-
-        assertTrue(prefs.advanceItqanBlock(2, "2026-09-14", "bloc 2/3"));
-        assertEquals(2, prefs.itqanBlockIndex());
-        assertEquals("2026-09-14", prefs.lastItqanDate());
+        assertFalse("Retired date-only advancement must not grant a block",
+            prefs.advanceItqanBlock(1,"2026-09-13","forged"));
+        assertEquals(0,prefs.itqanBlockIndex());
+        assertTrue(AndroidItqanProofFixture11712.completeOneBlock(
+            prefs,geometry,start,end,"2026-09-13","bloc 1/3"));
+        assertEquals(1,prefs.itqanBlockIndex());
+        assertEquals(0,prefs.itqanRep());
+        assertEquals(0,prefs.itqanAssisted());
+        assertEquals(0,prefs.itqanFinalReveals());
+        assertEquals("2026-09-13",prefs.lastItqanDate());
+        assertTrue(AndroidItqanProofFixture11712.completeOneBlock(
+            prefs,geometry,start,end,"2026-09-14","bloc 2/3"));
+        assertEquals("Second of two physical blocks closes the unit atomically",0,prefs.itqanBlockIndex());
+        assertEquals("2026-09-14",prefs.lastItqanDate());
+        assertEquals(0,prefs.itqanRep());
     }
 
     @Test public void finalFractionatedBlockCompletesWholePageAndNeverTeleportsMaintenanceCursor() {
-        HifzPrefs prefs = new HifzPrefs(context);
-        GeometryRepository geometry = GeometryRepository.get(context);
-        VerseRef start = new VerseRef(53, 1);
-        VerseRef end = new VerseRef(53, 26);
-        String range = "[{\"start\":\"53:1\",\"end\":\"53:26\"}]";
-        String queue = "[{\"start\":\"53:1\",\"end\":\"53:26\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]";
-        raw.edit()
-            .putString("promotedRanges", range)
-            .putString("unconsolidatedPromotedRanges", range)
-            .putString("anchoringQueue", queue)
-            .putBoolean("anchoringQueueInitialized", true)
-            .putInt("anchoringQueueIndex", 0)
-            .putString("itqanCursor", "53:1")
-            .putInt("itqanBlockIndex", 2)
-            .commit();
-        VerseRef maintenanceBefore = prefs.murajaahCursor();
-
+        HifzPrefs prefs=seededPage526();
+        GeometryRepository geometry=GeometryRepository.get(context);
+        VerseRef start=new VerseRef(53,1),end=new VerseRef(53,26);
+        VerseRef maintenanceBefore=prefs.murajaahCursor();
         assertTrue(prefs.isUnconsolidatedPromoted(start));
-        assertTrue(prefs.completeItqanUnitAndConsolidate(start, end, new VerseRef(2, 1),
-            "2026-09-15", "fractionated complete"));
-
-        assertEquals(0, prefs.itqanBlockIndex());
-        assertTrue(prefs.anchoringQueue().isEmpty());
-        assertFalse(prefs.isUnconsolidatedPromoted(start));
-        assertEquals(maintenanceBefore, prefs.murajaahCursor());
+        for(int i=0;i<2;i++)
+            assertTrue("Every canonical physical block must earn repetitions",
+                AndroidItqanProofFixture11712.completeOneBlock(prefs,geometry,start,end,
+                    "2026-09-"+(13+i),"block "+(i+1)));
+        assertEquals(0,prefs.itqanBlockIndex());
+        assertEquals(end,prefs.lastItqanCreditEnd());
+        assertEquals(maintenanceBefore,prefs.murajaahCursor());
+        assertTrue("Ancrage alone cannot invent the evening Consolidation finale",
+            prefs.isUnconsolidatedPromoted(start));
     }
-    @Test public void threeBlockFractionatedProgressionResetsEachBlockAndLeavesQueueOnlyAtTheEnd() {
-        HifzPrefs prefs = new HifzPrefs(context);
-        VerseRef start = new VerseRef(53, 1);
-        VerseRef end = new VerseRef(53, 26);
-        String range = "[{\"start\":\"53:1\",\"end\":\"53:26\"}]";
-        String queue = "[{\"start\":\"53:1\",\"end\":\"53:26\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]";
-        raw.edit()
-            .putString("promotedRanges", range)
-            .putString("unconsolidatedPromotedRanges", range)
-            .putString("anchoringQueue", queue)
-            .putBoolean("anchoringQueueInitialized", true)
-            .putInt("anchoringQueueIndex", 0)
-            .putString("itqanCursor", "53:1")
-            .commit();
 
-        assertTrue(prefs.setItqanProgress(35, 3, 1, start, end));
-        assertTrue(prefs.advanceItqanBlock(1, "2026-09-13", "bloc 1/3"));
-        assertEquals(1, prefs.itqanBlockIndex());
-        assertEquals(0, prefs.itqanRep());
-        assertEquals(1, prefs.anchoringQueue().size());
-
-        assertTrue(prefs.setItqanProgress(35, 2, 0, start, end));
-        assertTrue(prefs.advanceItqanBlock(2, "2026-09-14", "bloc 2/3"));
-        assertEquals(2, prefs.itqanBlockIndex());
-        assertEquals(0, prefs.itqanRep());
-        assertEquals(1, prefs.anchoringQueue().size());
-
-        assertTrue(prefs.setItqanProgress(35, 1, 0, start, end));
-        assertTrue(prefs.completeItqanUnitAndConsolidate(start, end, new VerseRef(2, 1),
-            "2026-09-15", "bloc 3/3"));
-        assertEquals(0, prefs.itqanBlockIndex());
-        assertEquals(0, prefs.itqanRep());
-        assertTrue(prefs.anchoringQueue().isEmpty());
+    @Test public void canonicalHalfPageProgressionRequiresEachEarnedProofAndLeavesNoPhantom() {
+        HifzPrefs prefs=seededPage526();
+        GeometryRepository geometry=GeometryRepository.get(context);
+        VerseRef start=new VerseRef(53,1),end=new VerseRef(53,26);
+        for(int i=0;i<2;i++) {
+            assertFalse("Scalar close without proof must be rejected",
+                prefs.advanceItqanBlock(i+1,"2026-09-"+(13+i),"forged"));
+            assertTrue(AndroidItqanProofFixture11712.completeOneBlock(
+                prefs,geometry,start,end,"2026-09-"+(13+i),"earned "+(i+1)));
+            assertEquals(i==1?0:i+1,prefs.itqanBlockIndex());
+            assertEquals(0,prefs.itqanRep());
+        }
+        assertEquals("2026-09-14",prefs.lastItqanDate());
         assertTrue(prefs.murajaahCorpus().contains(start));
     }
-
 }

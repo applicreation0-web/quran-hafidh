@@ -26,7 +26,7 @@ public final class CorrespondenceContextContractTest {
             .contains(new com.quransafeguard.hifz.core.VerseRef(55,76)));
     }
     @Test public void admittedRelationsAreReachableAndNeverIncludeConditionalOrExcludedIds(){
-        assertEquals(60,CorrespondenceCatalogue.ADMITTED.size());
+        assertEquals(61,CorrespondenceCatalogue.ADMITTED.size());
         java.util.Set<String> ids=new java.util.HashSet<>();
         for(CorrespondenceCases.Entry entry:CorrespondenceCatalogue.ADMITTED){
             assertTrue(ids.add(entry.id));
@@ -50,6 +50,21 @@ public final class CorrespondenceContextContractTest {
             CorrespondenceCases.forIdAndVerse("R065",new com.quransafeguard.hifz.core.VerseRef(85,10)).verses);
         assertNull(CorrespondenceCases.forIdAndVerse("R065",new com.quransafeguard.hifz.core.VerseRef(85,4)));
     }
+    @Test public void ibnAshurParallelismIsBidirectionalAndNotPageChiasm() {
+        com.quransafeguard.hifz.core.VerseRef a=new com.quransafeguard.hifz.core.VerseRef(2,113);
+        com.quransafeguard.hifz.core.VerseRef b=new com.quransafeguard.hifz.core.VerseRef(2,118);
+        CorrespondenceCases.Entry relation=CorrespondenceCases.forIdAndVerse("R111",a);
+        assertNotNull(relation);
+        assertEquals("Parallélisme",relation.type);
+        assertEquals(1,relation.partnerCount(a));
+        assertEquals(b,relation.partner(a,0));
+        assertSame(relation,CorrespondenceCases.forIdAndVerse("R111",b));
+        assertEquals(a,relation.partner(b,0));
+        assertTrue(relation.source.contains("quran-tafsir.net/ashour/sura2-aya118.html"));
+        assertTrue(relation.mechanism.contains("pagination") || relation.mechanism.contains("folio 18"));
+        assertTrue(CorrespondenceCases.forVerse(a).contains(relation));
+        assertTrue(CorrespondenceCases.forVerse(b).contains(relation));
+    }
     @Test public void oppositionAndProposedReadingUseOnlyTheDocumentedPartners(){
         com.quransafeguard.hifz.core.VerseRef faith=new com.quransafeguard.hifz.core.VerseRef(66,11);
         CorrespondenceCases.Entry opposite=CorrespondenceCases.forIdAndVerse("R054",faith);
@@ -65,7 +80,7 @@ public final class CorrespondenceContextContractTest {
         assertTrue(gradle.contains("CORRESPONDENCES_EDITORIAL_PREVIEW"));
         assertTrue(gradle.contains("HAAFIDH_CORRESPONDENCES_PILOT"));
         assertTrue(gradle.contains("buildConfigField(\"boolean\", \"CORRESPONDENCES_CATALOGUE\", \"true\")"));
-        assertEquals(60,CorrespondenceCatalogue.ADMITTED.size());
+        assertEquals(61,CorrespondenceCatalogue.ADMITTED.size());
         assertTrue(gradle.contains("buildConfigField(\"boolean\", \"CORRESPONDENCES_EDITORIAL_PREVIEW\", \"false\")"));
         assertTrue(source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceCases.java")
             .contains("if(!enabled()"));

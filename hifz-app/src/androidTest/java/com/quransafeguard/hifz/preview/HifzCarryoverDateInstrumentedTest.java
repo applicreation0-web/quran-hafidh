@@ -69,7 +69,7 @@ public final class HifzCarryoverDateInstrumentedTest {
 
         // Even fully recorded repetitions cannot be retroactively validated by
         // a stale direct intent; no phantom missed-Monday receipt is created.
-        assertTrue(prefs.setSabqiProgress(PreviewConfig.SABQI_TOTAL_REPS,0));
+        assertTrue("Scalar-only Sabqi must be refused",!prefs.setSabqiProgress(PreviewConfig.SABQI_TOTAL_REPS,0));
         Intent old=new Intent(context,HifzSessionActivity.class)
             .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.SABQI)
             .putExtra(SCHEDULED_DATE_EXTRA,missed.toString());
@@ -91,7 +91,10 @@ public final class HifzCarryoverDateInstrumentedTest {
             .edit().putString("coverage_start_date_v1",missed.toString())
             .putString("started",missed.toString()).commit());
         assertTrue(prefs.setWeeklyProgramMode(HifzPrefs.WeeklyProgram.RECOMMENDED));
-        assertTrue(prefs.setSabqiProgress(PreviewConfig.SABQI_TOTAL_REPS,0));
+        assertTrue("Scalar-only Sabqi must be refused",!prefs.setSabqiProgress(PreviewConfig.SABQI_TOTAL_REPS,0));
+        // A next eligible day is valid only after actually earning its QCF ×37,
+        // not after the removed scalar setter attempts above.
+        AndroidSabqiProofFixture11712.earn(prefs,GeometryRepository.get(context),today);
         Intent intent=new Intent(context,HifzSessionActivity.class)
             .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.SABQI)
             .putExtra(SCHEDULED_DATE_EXTRA,today.toString());

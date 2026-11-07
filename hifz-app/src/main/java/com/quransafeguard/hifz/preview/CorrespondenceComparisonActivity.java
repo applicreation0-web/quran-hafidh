@@ -158,13 +158,15 @@ public final class CorrespondenceComparisonActivity extends Activity {
         relationLine=caption("",13,true);relationLine.setGravity(Gravity.CENTER_VERTICAL);
         relationLine.setSingleLine(false);relationLine.setMaxLines(2);relationLine.setPadding(dp(8),0,0,0);
         pairHeader.addView(relationLine,new LinearLayout.LayoutParams(0,dp(40),1));
-        if(relation.partnerCount(origin)>1){
+        if(relation.partnerCount(origin)>1&&!isRefrain()){ 
             pairHeader.addView(action("‹","Occurrence précédente",()->changePartner(-1)),
                 new LinearLayout.LayoutParams(dp(44),dp(40)));
             pairHeader.addView(action("›","Occurrence suivante",()->changePartner(1)),
                 new LinearLayout.LayoutParams(dp(44),dp(40)));
         }
         root.addView(pairHeader,new LinearLayout.LayoutParams(-1,dp(40)));
+        // Atlas-style refrain rail is visible at once, not buried in the Sources notice.
+        RefrainTimeline.append(this,root,relation.id,origin.toString(),timelineState,this::selectRefrain);
 
         ScrollView middle=new ScrollView(this);
         folioViewport=middle;
@@ -298,15 +300,34 @@ public final class CorrespondenceComparisonActivity extends Activity {
             if(lp.height!=desired){lp.height=desired;pages[i].setLayoutParams(lp);}
         }
     }
+    private boolean isRefrain(){
+        return "R047".equals(relation.id)||"R048".equals(relation.id)||"R059".equals(relation.id);
+    }
+    private void selectRefrain(String ref){
+        // A is the fixed anchor; B follows the rail, without changing Hifz state.
+        if(origin.toString().equals(ref))return;
+        for(int i=0;i<relation.partnerCount(origin);i++)if(relation.partner(origin,i).toString().equals(ref)){
+            if(partnerOffset!=i){partnerOffset=i;changePartner(0);}
+            return;
+        }
+    }
     private void changePartner(int delta){
         int alternatives=relation.partnerCount(origin);
         partnerOffset=Math.floorMod(partnerOffset+delta,alternatives);
+        int previousPage=shownPages[1];
         selectedVerses[1]=relation.partner(origin,partnerOffset);
         navigationSurahs[1]=selectedVerses[1].getSurah();
         ++tafsirTokens[1];
         shownPages[1]=geometry.pageForVerse(selectedVerses[1]);
         updateRelationLabel();
-        showFolio(1);
+        // A different verse on the same authentic QCF folio needs only a
+        // polygon/label update, not another asynchronous WebView reload.
+        // Prevents BOOX ghosting and stale "loading" after fast refrain taps.
+        if(previousPage==shownPages[1]){
+            updateSelection(1);
+        }else{
+            showFolio(1);
+        }
         if(tafsirOpen)loadTafsir(1,selectedVerses[1]);
     }
     private java.util.List<VerseRef> navigationVerses(int side){
@@ -389,6 +410,10 @@ public final class CorrespondenceComparisonActivity extends Activity {
 
     private void updateRelationLabel(){
         relationIcon.setImageResource(relationIconFor(relation.type));
+        if(isRefrain()){
+            relationLine.setText(relation.title);
+            return;
+        }
         relationLine.setText(relation.type+("R070".equals(relation.id)?" · lecture proposée\n":" · ")+pattern()+" · "+relation.id+" · "+
             (partnerOffset+1)+"/"+(relation.partnerCount(origin)));
     }
@@ -427,16 +452,60 @@ public final class CorrespondenceComparisonActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         LinearLayout column=Ui.column(this);column.setPadding(dp(20),dp(8),dp(20),dp(16));
         scroll.addView(column,new ScrollView.LayoutParams(-1,-2));
-        String[] parts=relation.mechanism.split("\\n\\n");
-        column.addView(caption(parts[0],14,true));
-        String explanation=parts.length>1?parts[1]:relation.mechanism;
-        sourceSection(column,"En bref",relation.brief);
-        column.addView(caption("Note pédagogique éditoriale ; les attributions sont précisées ci-dessous.",12,false));
-        RefrainTimeline.append(this,column,relation.id,timelineState);
-        sourceSection(column,"Sources",relation.source);
-        for(String part:parts)if(part.startsWith("Limites : "))
-            sourceSection(column,"Limites",part.substring("Limites : ".length()));
-        if(!relation.brief.equals(explanation))sourceSection(column,"Notice complète",explanation);
+        boolean refrain="R047".equals(relation.id)||"R048".equals(relation.id)
+            ||"R059".equals(relation.id);
+        if(refrain){
+            String shortRef="R047".equals(relation.id)
+                ?"4 refrains · 54:17, 22, 32, 40"
+                :"R048".equals(relation.id)?"31 refrains · 55:13–77"
+                :"10 refrains · 77:15–49";
+            sourceSection(column,"Relation",shortRef);
+            String[] currentRefrain=null;
+            for(String[] node:RefrainTimelineData.NODES){
+                if(relation.id.equals(node[0])&&Integer.parseInt(node[3])==timelineState.selected+1){
+                    currentRefrain=node;break;
+                }
+            }
+            if(currentRefrain!=null){
+                sourceSection(column,"Contexte coranique",
+                    currentRefrain[8]+" · "+currentRefrain[15]+"\n"+
+                    currentRefrain[5]+" · Refrain\n"+
+                    currentRefrain[11]+" · "+currentRefrain[16]);
+                sourceSection(column,"Repère mnémotechnique",
+                    currentRefrain[14]+" · Mots-clés éditoriaux en anglais fondés sur les "+
+                    "versets voisins. La frise reprend UNIQUEMENT le graphisme d'Atlas, "+
+                    "et non ses titres.");
+            }
+            String bibliography="R047".equals(relation.id)
+                ?"al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 54:17\n"+
+                  "https://quran.ksu.edu.sa/tafseer/qortobi/sura54-aya17.html"
+                :"R048".equals(relation.id)
+                ?"al-Baghawī, Maʿālim al-tanzīl, 55:13\n"+
+                  "https://quran.ksu.edu.sa/tafseer/baghawy/sura55-aya13.html\n"+
+                  "al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 55:13\n"+
+                  "https://quran.ksu.edu.sa/tafseer/qortobi/sura55-aya13.html"
+                :"al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 77:50\n"+
+                  "https://quran.ksu.edu.sa/tafseer/qortobi/sura77-aya50.html\n"+
+                  "Ibn Kathīr, Tafsīr al-Qurʾān al-ʿAẓīm, 77:15\n"+
+                  "https://quran.ksu.edu.sa/tafseer/katheer/sura77-aya15.html";
+            sourceSection(column,"Exégèses · fonction du refrain",bibliography);
+            LinearLayout complete=Ui.column(this);
+            complete.setVisibility(View.GONE);
+            sourceSection(complete,"Bibliographie complète",relation.source);
+            Button expand=Ui.smallButton(this,"Toutes les références",v->
+                complete.setVisibility(complete.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE));
+            column.addView(expand);
+            column.addView(complete);
+        }else{
+            String[] parts=relation.mechanism.split("\\n\\n");
+            column.addView(caption(parts[0],14,true));
+            String explanation=parts.length>1?parts[1]:relation.mechanism;
+            sourceSection(column,"En bref",relation.brief);
+            sourceSection(column,"Sources",relation.source);
+            for(String part:parts)if(part.startsWith("Limites : "))
+                sourceSection(column,"Limites",part.substring("Limites : ".length()));
+            if(!relation.brief.equals(explanation))sourceSection(column,"Notice complète",explanation);
+        }
         if(sourcesDialog!=null&&sourcesDialog.isShowing())return;
         sourcesOpen=true;
         sourcesDialog=new AlertDialog.Builder(this).setTitle(relation.title+" · "+relation.id)

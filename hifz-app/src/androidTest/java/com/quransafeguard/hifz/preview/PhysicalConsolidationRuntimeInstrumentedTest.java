@@ -125,8 +125,8 @@ public final class PhysicalConsolidationRuntimeInstrumentedTest {
 
     @Test public void processRecreationRestoresExactPhysicalLineIdsAndFrozenGroupsOneToThree() throws Exception {
         HifzPrefs prefs = new HifzPrefs(context);
-        assertTrue(prefs.setSabqiProgress(23, 2));
-        assertTrue(prefs.setItqanProgress(19, 4, 3, new VerseRef(49, 1), new VerseRef(49, 5)));
+        assertFalse("No fake Sabqi reps in frozen session fixture",prefs.setSabqiProgress(23, 2));
+        assertTrue(prefs.setItqanProgress(0, 0, 0, new VerseRef(49, 1), new VerseRef(49, 5)));
         int[] countersBefore = counters(prefs);
 
         for (int size = 1; size <= 3; size++) {

@@ -49,7 +49,8 @@ public final class HifzSessionDateInstrumentedTest {
         assertEquals(LocalDate.of(2026, 9, 15), restartDay);
 
         HifzPrefs prefs = new HifzPrefs(context);
-        assertTrue(prefs.completeSabqiBlock(0, 4, 5, sessionDay.toString(), "morning block"));
+        assertTrue(AndroidSabqiProofFixture11712.complete(prefs,GeometryRepository.get(context),
+            sessionDay,"morning block"));
         prefs.setElapsedFor(HifzSessionActivity.SABQI_TODAY_REVIEW, 30L * 60_000L);
 
         Intent intent = new Intent(context, HifzSessionActivity.class)

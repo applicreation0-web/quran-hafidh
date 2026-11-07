@@ -63,10 +63,12 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
         assertEquals(2, units.size());
         List<String> stabilized = units.get(0).lineIds;
 
-        assertTrue(prefs.completeStabilizationBlockV6(
-            stabilized, 1, true,
-            new VerseRef(2, 282), new VerseRef(2, 282), new VerseRef(2, 283),
-            HifzClock.today().toString(), "device consolidation fixture", Collections.emptyList()));
+        VerseRef start=new VerseRef(2,282),end=new VerseRef(2,282);
+        assertTrue(prefs.setV6StabilizationRanges(
+            Collections.singletonList(new VerseRange(start,end)),geometry));
+        assertTrue("Only earned QCF repetitions may create a new evening unit",
+            AndroidItqanProofFixture11712.completeOneBlock(prefs,geometry,start,end,
+                HifzClock.today().toString(),"device consolidation fixture"));
 
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             boolean enabled = false;
@@ -110,10 +112,10 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
         }
         assertEquals("new 7+8 plan must resume on its first incomplete unit", 1, prefs.itqanBlockIndex());
 
-        assertTrue(prefs.completeStabilizationBlockV6(
-            units.get(1).lineIds, 2, true,
-            new VerseRef(54, 7), new VerseRef(54, 27), null,
-            "2026-09-16", "migration regression", Collections.emptyList()));
+        assertTrue("Migrated unfinished material must earn its next physical block",
+            AndroidItqanProofFixture11712.completeOneBlock(prefs,geometry,
+                new VerseRef(54,7),new VerseRef(54,27),
+                HifzClock.today().toString(),"migration regression"));
         for (GeometryRepository.LineMeta line : page) {
             assertEquals(HifzPrefs.ProgressState.STABILIZED, progressState(prefs, line.id));
         }
@@ -130,9 +132,10 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
         VerseRef first = owned.get(0).verses.get(0);
         List<VerseRef> lastOwners = owned.get(owned.size() - 1).verses;
         VerseRef last = lastOwners.get(lastOwners.size() - 1);
-        assertTrue(prefs.completeStabilizationBlockV6(
-            stabilized, 1, true, first, last, last,
-            HifzClock.today().toString(), "device boundary fixture", Collections.emptyList()));
+        assertTrue(prefs.setV6StabilizationRanges(
+            Collections.singletonList(new VerseRange(first,last)),geometry));
+        assertTrue(AndroidItqanProofFixture11712.completeOneBlock(prefs,geometry,
+            first,last,HifzClock.today().toString(),"device boundary fixture"));
         assertTrue(main.edit().putString("v6AcquiredCreditLineIds",
             json(Collections.singletonList(previousOwnerSharedLine))).commit());
 

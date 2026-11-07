@@ -1,0 +1,149 @@
+name: Haafidh 1.17.12 - catalogue 61 Android release runtime gate
+# Builds and installs DISPOSABLE debug+instrumentation APKs only on ephemeral emulators.
+# Never assembles/signs/publishes the private release or transfers private assets.
+# Checks all 61 relations, English Atlas refrain captions and existing Hifz protections.
+on:
+  push:
+    branches: [release-candidate/haafidh-11712-integrity-20261106]
+    paths:
+      - '.github/workflows/haafidh-11712-final-runtime-gate.yml'
+      - 'hifz-app/src/androidTest/**'
+      - 'hifz-app/src/test/**'
+      - 'hifz-app/src/main/**'
+      - 'scripts/run_correspondances_android_ci.sh'
+      - 'scripts/build_correspondences_catalogue.py'
+      - 'scripts/test_correspondences_catalogue.py'
+      - 'scripts/test-correspondence-real-folios.cjs'
+      - 'docs/correspondances/additions-11712.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-correspondances-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  jvm-and-source-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      HAAFIDH_CORRESPONDENCES_PILOT: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Fetch original 604 QCF folios and platform
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Compile actual Android sources and check icon/revision invariants
+        run: |
+          gradle --no-daemon :hifz-app:compileDebugJavaWithJavac :hifz-core:test :hifz-app:testDebugUnitTest
+          gradle --no-daemon :hifz-app:sourceContractTest
+          python3 scripts/correspondence_icon_vectors.py --check
+          python3 scripts/test_correspondence_icon_contract.py
+          python3 scripts/test_correspondences_catalogue.py
+          python3 scripts/test_correspondence_refrains.py
+          python3 scripts/test_correspondence_notices.py
+          python3 scripts/test_correspondence_tafsir_navigation.py
+          node scripts/test-correspondence-real-folios.cjs
+          python3 scripts/build_correspondences_catalogue.py
+          git diff --exit-code -- docs/correspondances/catalogue-62.json hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceCatalogue.java
+          node scripts/test-correspondence-gutter-density.cjs hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorrespondenceGutterMarkers.java
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11712-runtime-jvm-no-release-apk
+          path: |
+            hifz-core/build/test-results/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+          retention-days: 14
+  actual-qcf-on-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - surface: phone
+            size: 1080x1920
+            density: 420
+          - surface: boox-portrait-emulation
+            size: 1404x1872
+            density: 226
+    env:
+      HAAFIDH_CORRESPONDENCES_PILOT: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install QCF corpus and SDK
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      # sdkmanager occasionally returns a truncated Google APIs image archive
+      # on GitHub-hosted runners. A boot failure is infrastructure, not Hifz.
+      - name: Verify Android 35 emulator image with bounded clean retries
+        run: |
+          set -euo pipefail
+          image_dir="$ANDROID_HOME/system-images/android-35/google_apis/x86_64"
+          for attempt in 1 2 3; do
+            if sdkmanager --install "system-images;android-35;google_apis;x86_64" --channel=0 \
+                && test -s "$image_dir/system.img" \
+                && test -s "$image_dir/source.properties"; then
+              echo "ANDROID_AVD_IMAGE_VERIFIED on attempt $attempt"
+              exit 0
+            fi
+            echo "Transient AVD image fetch failure (attempt $attempt/3), purging incomplete download" >&2
+            rm -rf "$image_dir"
+            sleep "$((attempt * 5))"
+          done
+          echo "ANDROID_AVD_IMAGE_UNAVAILABLE: fail closed, not an application regression" >&2
+          exit 1
+      - name: Enable disposable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Exercise actual 61-case QCF and Hifz on ${{ matrix.surface }}
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          # The runner executes each script line in a fresh sh -c; keep the
+          # compound shell logic in a real bash file, not inline YAML.
+          script: bash scripts/run_correspondances_android_ci.sh '${{ matrix.size }}' '${{ matrix.density }}' '${{ matrix.surface }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11712-runtime-${{ matrix.surface }}-no-release-apk
+          path: |
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            hifz-app/build/android-proof/
+            hifz-app/build/parcours-android-logs/
+            hifz-app/build/boox-audit/*.log
+          retention-days: 14

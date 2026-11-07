@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "methodologie": "Stations et intitulés = aides pédagogiques éditoriales. Les tafsirs cités expliquent la fonction du refrain, pas cette frise. Chaque ancre avant/après est le verset adjacent exact ; elle ne résume pas à elle seule tout le passage. Les stations affinent les passages Atlas : leur segmentation est distincte et ne modifie pas Atlas.",
+  "version": 2,
+  "methodologie": "Reprise VISUELLE de la frise Atlas (axe, jalons circulaires et halo de sélection), sans reprendre ses titres. Les 45 repères anglais sont des mots-clés mnémotechniques éditoriaux issus des versets coraniques immédiatement avant/après chaque refrain, avec références, texte arabe et preuve. Les sources classiques documentent la fonction des répétitions, sans être présentées comme auteurs des mots-clés. Atlas, QCF et Hifz restent inchangés.",
   "relations": {
     "R047": {
       "titre": "Al-Qamar",
@@ -24,16 +24,19 @@
             "page": 529,
             "theme": "Nūḥ : issue du récit",
             "arabic": "فَكَیۡفَ كَانَ عَذَابِی وَنُذُرِ",
-            "preuve": "https://quran.com/54/16"
+            "preuve": "https://quran.com/54/16",
+            "cue_en": "Nūḥ's warning"
           },
           "after": {
             "reference": "54:18",
             "page": 529,
             "theme": "ʿĀd : début du récit",
             "arabic": "كَذَّبَتۡ عَادࣱ فَكَیۡفَ كَانَ عَذَابِی وَنُذُرِ",
-            "preuve": "https://quran.com/54/18"
+            "preuve": "https://quran.com/54/18",
+            "cue_en": "ʿĀd begins"
           },
-          "refrainSha256": "2cb27b67203e6c57e4b1a4c73d6706f3e324c557ca821999d1e1e5d816e6608f"
+          "refrainSha256": "2cb27b67203e6c57e4b1a4c73d6706f3e324c557ca821999d1e1e5d816e6608f",
+          "stage_en": "Prophetic accounts"
         },
         {
           "id": "R047-02",
@@ -47,16 +50,19 @@
             "page": 529,
             "theme": "ʿĀd : issue du récit",
             "arabic": "فَكَیۡفَ كَانَ عَذَابِی وَنُذُرِ",
-            "preuve": "https://quran.com/54/21"
+            "preuve": "https://quran.com/54/21",
+            "cue_en": "ʿĀd's warning"
           },
           "after": {
             "reference": "54:23",
             "page": 529,
             "theme": "Thamūd : début du récit",
             "arabic": "كَذَّبَتۡ ثَمُودُ بِٱلنُّذُرِ",
-            "preuve": "https://quran.com/54/23"
+            "preuve": "https://quran.com/54/23",
+            "cue_en": "Thamūd begins"
           },
-          "refrainSha256": "2cb27b67203e6c57e4b1a4c73d6706f3e324c557ca821999d1e1e5d816e6608f"
+          "refrainSha256": "2cb27b67203e6c57e4b1a4c73d6706f3e324c557ca821999d1e1e5d816e6608f",
+          "stage_en": "Prophetic accounts"
         },
         {
           "id": "R047-03",
@@ -70,16 +76,19 @@
             "page": 530,
             "theme": "Thamūd : issue du récit",
             "arabic": "إِنَّاۤ أَرۡسَلۡنَا عَلَیۡهِمۡ صَیۡحَةࣰ وَ ٰ⁠حِدَةࣰ فَكَانُوا۟ كَهَشِیمِ ٱلۡمُحۡتَظِرِ",
-            "preuve": "https://quran.com/54/31"
+            "preuve": "https://quran.com/54/31",
+            "cue_en": "Thamūd's fate"
           },
           "after": {
             "reference": "54:33",
             "page": 530,
             "theme": "Lūṭ : début du récit",
             "arabic": "كَذَّبَتۡ قَوۡمُ لُوطِۭ بِٱلنُّذُرِ",
-            "preuve": "https://quran.com/54/33"
+            "preuve": "https://quran.com/54/33",
+            "cue_en": "Lūṭ begins"
           },
-          "refrainSha256": "2cb27b67203e6c57e4b1a4c73d6706f3e324c557ca821999d1e1e5d816e6608f"
+          "refrainSha256": "2cb27b67203e6c57e4b1a4c73d6706f3e324c557ca821999d1e1e5d816e6608f",
+          "stage_en": "Prophetic accounts"
         },
         {
           "id": "R047-04",
@@ -93,16 +102,19 @@
             "page": 530,
             "theme": "Lūṭ : issue du récit",
             "arabic": "فَذُوقُوا۟ عَذَابِی وَنُذُرِ",
-            "preuve": "https://quran.com/54/39"
+            "preuve": "https://quran.com/54/39",
+            "cue_en": "Lūṭ's warning"
           },
           "after": {
             "reference": "54:41",
             "page": 530,
             "theme": "La famille de Pharaon",
             "arabic": "وَلَقَدۡ جَاۤءَ ءَالَ فِرۡعَوۡنَ ٱلنُّذُرُ",
-            "preuve": "https://quran.com/54/41"
+            "preuve": "https://quran.com/54/41",
+            "cue_en": "Pharaoh's kin"
           },
-          "refrainSha256": "2cb27b67203e6c57e4b1a4c73d6706f3e324c557ca821999d1e1e5d816e6608f"
+          "refrainSha256": "2cb27b67203e6c57e4b1a4c73d6706f3e324c557ca821999d1e1e5d816e6608f",
+          "stage_en": "Prophetic accounts"
         }
       ]
     },
@@ -133,16 +145,19 @@
             "page": 531,
             "theme": "Grains et plantes aromatiques",
             "arabic": "وَٱلۡحَبُّ ذُو ٱلۡعَصۡفِ وَٱلرَّیۡحَانُ",
-            "preuve": "https://quran.com/55/12"
+            "preuve": "https://quran.com/55/12",
+            "cue_en": "Grain, herbs"
           },
           "after": {
             "reference": "55:14",
             "page": 531,
             "theme": "Création de l’être humain",
             "arabic": "خَلَقَ ٱلۡإِنسَـٰنَ مِن صَلۡصَـٰلࣲ كَٱلۡفَخَّارِ",
-            "preuve": "https://quran.com/55/14"
+            "preuve": "https://quran.com/55/14",
+            "cue_en": "Clay-born man"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Creation"
         },
         {
           "id": "R048-02",
@@ -156,16 +171,19 @@
             "page": 531,
             "theme": "Création des djinns",
             "arabic": "وَخَلَقَ ٱلۡجَاۤنَّ مِن مَّارِجࣲ مِّن نَّارࣲ",
-            "preuve": "https://quran.com/55/15"
+            "preuve": "https://quran.com/55/15",
+            "cue_en": "Jinn's fire"
           },
           "after": {
             "reference": "55:17",
             "page": 531,
             "theme": "Deux Orients et deux Occidents",
             "arabic": "رَبُّ ٱلۡمَشۡرِقَیۡنِ وَرَبُّ ٱلۡمَغۡرِبَیۡنِ",
-            "preuve": "https://quran.com/55/17"
+            "preuve": "https://quran.com/55/17",
+            "cue_en": "Two Easts"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Creation"
         },
         {
           "id": "R048-03",
@@ -179,16 +197,19 @@
             "page": 531,
             "theme": "Deux Orients et deux Occidents",
             "arabic": "رَبُّ ٱلۡمَشۡرِقَیۡنِ وَرَبُّ ٱلۡمَغۡرِبَیۡنِ",
-            "preuve": "https://quran.com/55/17"
+            "preuve": "https://quran.com/55/17",
+            "cue_en": "Two Easts"
           },
           "after": {
             "reference": "55:19",
             "page": 532,
             "theme": "Deux mers qui se rencontrent",
             "arabic": "مَرَجَ ٱلۡبَحۡرَیۡنِ یَلۡتَقِیَانِ",
-            "preuve": "https://quran.com/55/19"
+            "preuve": "https://quran.com/55/19",
+            "cue_en": "Two seas"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Creation"
         },
         {
           "id": "R048-04",
@@ -202,16 +223,19 @@
             "page": 532,
             "theme": "Barrière entre les deux mers",
             "arabic": "بَیۡنَهُمَا بَرۡزَخࣱ لَّا یَبۡغِیَانِ",
-            "preuve": "https://quran.com/55/20"
+            "preuve": "https://quran.com/55/20",
+            "cue_en": "Sea barrier"
           },
           "after": {
             "reference": "55:22",
             "page": 532,
             "theme": "Perles et corail",
             "arabic": "یَخۡرُجُ مِنۡهُمَا ٱللُّؤۡلُؤُ وَٱلۡمَرۡجَانُ",
-            "preuve": "https://quran.com/55/22"
+            "preuve": "https://quran.com/55/22",
+            "cue_en": "Pearls, coral"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Sea gifts"
         },
         {
           "id": "R048-05",
@@ -225,16 +249,19 @@
             "page": 532,
             "theme": "Perles et corail",
             "arabic": "یَخۡرُجُ مِنۡهُمَا ٱللُّؤۡلُؤُ وَٱلۡمَرۡجَانُ",
-            "preuve": "https://quran.com/55/22"
+            "preuve": "https://quran.com/55/22",
+            "cue_en": "Pearls, coral"
           },
           "after": {
             "reference": "55:24",
             "page": 532,
             "theme": "Navires dans la mer",
             "arabic": "وَلَهُ ٱلۡجَوَارِ ٱلۡمُنشَـَٔاتُ فِی ٱلۡبَحۡرِ كَٱلۡأَعۡلَـٰمِ",
-            "preuve": "https://quran.com/55/24"
+            "preuve": "https://quran.com/55/24",
+            "cue_en": "Great ships"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Sea gifts"
         },
         {
           "id": "R048-06",
@@ -248,16 +275,19 @@
             "page": 532,
             "theme": "Navires dans la mer",
             "arabic": "وَلَهُ ٱلۡجَوَارِ ٱلۡمُنشَـَٔاتُ فِی ٱلۡبَحۡرِ كَٱلۡأَعۡلَـٰمِ",
-            "preuve": "https://quran.com/55/24"
+            "preuve": "https://quran.com/55/24",
+            "cue_en": "Great ships"
           },
           "after": {
             "reference": "55:26",
             "page": 532,
             "theme": "Finitude des créatures",
             "arabic": "كُلُّ مَنۡ عَلَیۡهَا فَانࣲ",
-            "preuve": "https://quran.com/55/26"
+            "preuve": "https://quran.com/55/26",
+            "cue_en": "All perish"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Sea gifts"
         },
         {
           "id": "R048-07",
@@ -271,16 +301,19 @@
             "page": 532,
             "theme": "Permanence du Seigneur",
             "arabic": "وَیَبۡقَىٰ وَجۡهُ رَبِّكَ ذُو ٱلۡجَلَـٰلِ وَٱلۡإِكۡرَامِ",
-            "preuve": "https://quran.com/55/27"
+            "preuve": "https://quran.com/55/27",
+            "cue_en": "Lord endures"
           },
           "after": {
             "reference": "55:29",
             "page": 532,
             "theme": "Les créatures Lui demandent",
             "arabic": "یَسۡـَٔلُهُۥ مَن فِی ٱلسَّمَـٰوَ ٰ⁠تِ وَٱلۡأَرۡضِۚ كُلَّ یَوۡمٍ هُوَ فِی شَأۡنࣲ",
-            "preuve": "https://quran.com/55/29"
+            "preuve": "https://quran.com/55/29",
+            "cue_en": "All petition"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Dependence"
         },
         {
           "id": "R048-08",
@@ -294,16 +327,19 @@
             "page": 532,
             "theme": "Les créatures Lui demandent",
             "arabic": "یَسۡـَٔلُهُۥ مَن فِی ٱلسَّمَـٰوَ ٰ⁠تِ وَٱلۡأَرۡضِۚ كُلَّ یَوۡمٍ هُوَ فِی شَأۡنࣲ",
-            "preuve": "https://quran.com/55/29"
+            "preuve": "https://quran.com/55/29",
+            "cue_en": "All petition"
           },
           "after": {
             "reference": "55:31",
             "page": 532,
             "theme": "Adresse aux deux communautés",
             "arabic": "سَنَفۡرُغُ لَكُمۡ أَیُّهَ ٱلثَّقَلَانِ",
-            "preuve": "https://quran.com/55/31"
+            "preuve": "https://quran.com/55/31",
+            "cue_en": "Two peoples"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Dependence"
         },
         {
           "id": "R048-09",
@@ -317,16 +353,19 @@
             "page": 532,
             "theme": "Adresse aux deux communautés",
             "arabic": "سَنَفۡرُغُ لَكُمۡ أَیُّهَ ٱلثَّقَلَانِ",
-            "preuve": "https://quran.com/55/31"
+            "preuve": "https://quran.com/55/31",
+            "cue_en": "Two peoples"
           },
           "after": {
             "reference": "55:33",
             "page": 532,
             "theme": "Limites des humains et des djinns",
             "arabic": "یَـٰمَعۡشَرَ ٱلۡجِنِّ وَٱلۡإِنسِ إِنِ ٱسۡتَطَعۡتُمۡ أَن تَنفُذُوا۟ مِنۡ أَقۡطَارِ ٱلسَّمَـٰوَ ٰ⁠تِ وَٱلۡأَرۡضِ فَٱنفُذُوا۟ۚ لَا تَنفُذُونَ إِلَّا بِسُلۡطَـٰنࣲ",
-            "preuve": "https://quran.com/55/33"
+            "preuve": "https://quran.com/55/33",
+            "cue_en": "No escape"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Reckoning"
         },
         {
           "id": "R048-10",
@@ -340,16 +379,19 @@
             "page": 532,
             "theme": "Limites des humains et des djinns",
             "arabic": "یَـٰمَعۡشَرَ ٱلۡجِنِّ وَٱلۡإِنسِ إِنِ ٱسۡتَطَعۡتُمۡ أَن تَنفُذُوا۟ مِنۡ أَقۡطَارِ ٱلسَّمَـٰوَ ٰ⁠تِ وَٱلۡأَرۡضِ فَٱنفُذُوا۟ۚ لَا تَنفُذُونَ إِلَّا بِسُلۡطَـٰنࣲ",
-            "preuve": "https://quran.com/55/33"
+            "preuve": "https://quran.com/55/33",
+            "cue_en": "No escape"
           },
           "after": {
             "reference": "55:35",
             "page": 532,
             "theme": "Flammes et métal fondu",
             "arabic": "یُرۡسَلُ عَلَیۡكُمَا شُوَاظࣱ مِّن نَّارࣲ وَنُحَاسࣱ فَلَا تَنتَصِرَانِ",
-            "preuve": "https://quran.com/55/35"
+            "preuve": "https://quran.com/55/35",
+            "cue_en": "Flames, copper"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Reckoning"
         },
         {
           "id": "R048-11",
@@ -363,16 +405,19 @@
             "page": 532,
             "theme": "Flammes et métal fondu",
             "arabic": "یُرۡسَلُ عَلَیۡكُمَا شُوَاظࣱ مِّن نَّارࣲ وَنُحَاسࣱ فَلَا تَنتَصِرَانِ",
-            "preuve": "https://quran.com/55/35"
+            "preuve": "https://quran.com/55/35",
+            "cue_en": "Flames, copper"
           },
           "after": {
             "reference": "55:37",
             "page": 532,
             "theme": "Ciel déchiré",
             "arabic": "فَإِذَا ٱنشَقَّتِ ٱلسَّمَاۤءُ فَكَانَتۡ وَرۡدَةࣰ كَٱلدِّهَانِ",
-            "preuve": "https://quran.com/55/37"
+            "preuve": "https://quran.com/55/37",
+            "cue_en": "Sky splits"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Reckoning"
         },
         {
           "id": "R048-12",
@@ -386,16 +431,19 @@
             "page": 532,
             "theme": "Ciel déchiré",
             "arabic": "فَإِذَا ٱنشَقَّتِ ٱلسَّمَاۤءُ فَكَانَتۡ وَرۡدَةࣰ كَٱلدِّهَانِ",
-            "preuve": "https://quran.com/55/37"
+            "preuve": "https://quran.com/55/37",
+            "cue_en": "Sky splits"
           },
           "after": {
             "reference": "55:39",
             "page": 532,
             "theme": "Humains, djinns et leurs fautes",
             "arabic": "فَیَوۡمَىِٕذࣲ لَّا یُسۡـَٔلُ عَن ذَنۢبِهِۦۤ إِنسࣱ وَلَا جَاۤنࣱّ",
-            "preuve": "https://quran.com/55/39"
+            "preuve": "https://quran.com/55/39",
+            "cue_en": "No questioning"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Reckoning"
         },
         {
           "id": "R048-13",
@@ -409,16 +457,19 @@
             "page": 532,
             "theme": "Humains, djinns et leurs fautes",
             "arabic": "فَیَوۡمَىِٕذࣲ لَّا یُسۡـَٔلُ عَن ذَنۢبِهِۦۤ إِنسࣱ وَلَا جَاۤنࣱّ",
-            "preuve": "https://quran.com/55/39"
+            "preuve": "https://quran.com/55/39",
+            "cue_en": "No questioning"
           },
           "after": {
             "reference": "55:41",
             "page": 532,
             "theme": "Les criminels reconnus",
             "arabic": "یُعۡرَفُ ٱلۡمُجۡرِمُونَ بِسِیمَـٰهُمۡ فَیُؤۡخَذُ بِٱلنَّوَ ٰ⁠صِی وَٱلۡأَقۡدَامِ",
-            "preuve": "https://quran.com/55/41"
+            "preuve": "https://quran.com/55/41",
+            "cue_en": "Sinners marked"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Reckoning"
         },
         {
           "id": "R048-14",
@@ -432,16 +483,19 @@
             "page": 532,
             "theme": "Les criminels reconnus",
             "arabic": "یُعۡرَفُ ٱلۡمُجۡرِمُونَ بِسِیمَـٰهُمۡ فَیُؤۡخَذُ بِٱلنَّوَ ٰ⁠صِی وَٱلۡأَقۡدَامِ",
-            "preuve": "https://quran.com/55/41"
+            "preuve": "https://quran.com/55/41",
+            "cue_en": "Sinners marked"
           },
           "after": {
             "reference": "55:43",
             "page": 533,
             "theme": "La Géhenne déniée",
             "arabic": "هَـٰذِهِۦ جَهَنَّمُ ٱلَّتِی یُكَذِّبُ بِهَا ٱلۡمُجۡرِمُونَ",
-            "preuve": "https://quran.com/55/43"
+            "preuve": "https://quran.com/55/43",
+            "cue_en": "Hellfire"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Reckoning"
         },
         {
           "id": "R048-15",
@@ -455,16 +509,19 @@
             "page": 533,
             "theme": "Entre Géhenne et eau brûlante",
             "arabic": "یَطُوفُونَ بَیۡنَهَا وَبَیۡنَ حَمِیمٍ ءَانࣲ",
-            "preuve": "https://quran.com/55/44"
+            "preuve": "https://quran.com/55/44",
+            "cue_en": "Boiling water"
           },
           "after": {
             "reference": "55:46",
             "page": 533,
             "theme": "Deux jardins pour qui craint",
             "arabic": "وَلِمَنۡ خَافَ مَقَامَ رَبِّهِۦ جَنَّتَانِ",
-            "preuve": "https://quran.com/55/46"
+            "preuve": "https://quran.com/55/46",
+            "cue_en": "Two gardens"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Reckoning"
         },
         {
           "id": "R048-16",
@@ -478,16 +535,19 @@
             "page": 533,
             "theme": "Deux jardins pour qui craint",
             "arabic": "وَلِمَنۡ خَافَ مَقَامَ رَبِّهِۦ جَنَّتَانِ",
-            "preuve": "https://quran.com/55/46"
+            "preuve": "https://quran.com/55/46",
+            "cue_en": "Two gardens"
           },
           "after": {
             "reference": "55:48",
             "page": 533,
             "theme": "Des branches",
             "arabic": "ذَوَاتَاۤ أَفۡنَانࣲ",
-            "preuve": "https://quran.com/55/48"
+            "preuve": "https://quran.com/55/48",
+            "cue_en": "Branches"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "First gardens"
         },
         {
           "id": "R048-17",
@@ -501,16 +561,19 @@
             "page": 533,
             "theme": "Des branches",
             "arabic": "ذَوَاتَاۤ أَفۡنَانࣲ",
-            "preuve": "https://quran.com/55/48"
+            "preuve": "https://quran.com/55/48",
+            "cue_en": "Branches"
           },
           "after": {
             "reference": "55:50",
             "page": 533,
             "theme": "Deux sources qui coulent",
             "arabic": "فِیهِمَا عَیۡنَانِ تَجۡرِیَانِ",
-            "preuve": "https://quran.com/55/50"
+            "preuve": "https://quran.com/55/50",
+            "cue_en": "Flowing springs"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "First gardens"
         },
         {
           "id": "R048-18",
@@ -524,16 +587,19 @@
             "page": 533,
             "theme": "Deux sources qui coulent",
             "arabic": "فِیهِمَا عَیۡنَانِ تَجۡرِیَانِ",
-            "preuve": "https://quran.com/55/50"
+            "preuve": "https://quran.com/55/50",
+            "cue_en": "Flowing springs"
           },
           "after": {
             "reference": "55:52",
             "page": 533,
             "theme": "Fruits par paires",
             "arabic": "فِیهِمَا مِن كُلِّ فَـٰكِهَةࣲ زَوۡجَانِ",
-            "preuve": "https://quran.com/55/52"
+            "preuve": "https://quran.com/55/52",
+            "cue_en": "Paired fruits"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "First gardens"
         },
         {
           "id": "R048-19",
@@ -547,16 +613,19 @@
             "page": 533,
             "theme": "Fruits par paires",
             "arabic": "فِیهِمَا مِن كُلِّ فَـٰكِهَةࣲ زَوۡجَانِ",
-            "preuve": "https://quran.com/55/52"
+            "preuve": "https://quran.com/55/52",
+            "cue_en": "Paired fruits"
           },
           "after": {
             "reference": "55:54",
             "page": 533,
             "theme": "Couches et fruits à portée",
             "arabic": "مُتَّكِـِٔینَ عَلَىٰ فُرُشِۭ بَطَاۤىِٕنُهَا مِنۡ إِسۡتَبۡرَقࣲۚ وَجَنَى ٱلۡجَنَّتَیۡنِ دَانࣲ",
-            "preuve": "https://quran.com/55/54"
+            "preuve": "https://quran.com/55/54",
+            "cue_en": "Silken couches"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "First gardens"
         },
         {
           "id": "R048-20",
@@ -570,16 +639,19 @@
             "page": 533,
             "theme": "Couches et fruits à portée",
             "arabic": "مُتَّكِـِٔینَ عَلَىٰ فُرُشِۭ بَطَاۤىِٕنُهَا مِنۡ إِسۡتَبۡرَقࣲۚ وَجَنَى ٱلۡجَنَّتَیۡنِ دَانࣲ",
-            "preuve": "https://quran.com/55/54"
+            "preuve": "https://quran.com/55/54",
+            "cue_en": "Silken couches"
           },
           "after": {
             "reference": "55:56",
             "page": 533,
             "theme": "Regards réservés",
             "arabic": "فِیهِنَّ قَـٰصِرَ ٰ⁠تُ ٱلطَّرۡفِ لَمۡ یَطۡمِثۡهُنَّ إِنسࣱ قَبۡلَهُمۡ وَلَا جَاۤنࣱّ",
-            "preuve": "https://quran.com/55/56"
+            "preuve": "https://quran.com/55/56",
+            "cue_en": "Modest gaze"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "First gardens"
         },
         {
           "id": "R048-21",
@@ -593,16 +665,19 @@
             "page": 533,
             "theme": "Regards réservés",
             "arabic": "فِیهِنَّ قَـٰصِرَ ٰ⁠تُ ٱلطَّرۡفِ لَمۡ یَطۡمِثۡهُنَّ إِنسࣱ قَبۡلَهُمۡ وَلَا جَاۤنࣱّ",
-            "preuve": "https://quran.com/55/56"
+            "preuve": "https://quran.com/55/56",
+            "cue_en": "Modest gaze"
           },
           "after": {
             "reference": "55:58",
             "page": 533,
             "theme": "Rubis et corail",
             "arabic": "كَأَنَّهُنَّ ٱلۡیَاقُوتُ وَٱلۡمَرۡجَانُ",
-            "preuve": "https://quran.com/55/58"
+            "preuve": "https://quran.com/55/58",
+            "cue_en": "Rubies, coral"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "First gardens"
         },
         {
           "id": "R048-22",
@@ -616,16 +691,19 @@
             "page": 533,
             "theme": "Rubis et corail",
             "arabic": "كَأَنَّهُنَّ ٱلۡیَاقُوتُ وَٱلۡمَرۡجَانُ",
-            "preuve": "https://quran.com/55/58"
+            "preuve": "https://quran.com/55/58",
+            "cue_en": "Rubies, coral"
           },
           "after": {
             "reference": "55:60",
             "page": 533,
             "theme": "Récompense de la bienfaisance",
             "arabic": "هَلۡ جَزَاۤءُ ٱلۡإِحۡسَـٰنِ إِلَّا ٱلۡإِحۡسَـٰنُ",
-            "preuve": "https://quran.com/55/60"
+            "preuve": "https://quran.com/55/60",
+            "cue_en": "Good repaid"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "First gardens"
         },
         {
           "id": "R048-23",
@@ -639,16 +717,19 @@
             "page": 533,
             "theme": "Récompense de la bienfaisance",
             "arabic": "هَلۡ جَزَاۤءُ ٱلۡإِحۡسَـٰنِ إِلَّا ٱلۡإِحۡسَـٰنُ",
-            "preuve": "https://quran.com/55/60"
+            "preuve": "https://quran.com/55/60",
+            "cue_en": "Good repaid"
           },
           "after": {
             "reference": "55:62",
             "page": 533,
             "theme": "Deux autres jardins",
             "arabic": "وَمِن دُونِهِمَا جَنَّتَانِ",
-            "preuve": "https://quran.com/55/62"
+            "preuve": "https://quran.com/55/62",
+            "cue_en": "Other gardens"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "First gardens"
         },
         {
           "id": "R048-24",
@@ -662,16 +743,19 @@
             "page": 533,
             "theme": "Deux autres jardins",
             "arabic": "وَمِن دُونِهِمَا جَنَّتَانِ",
-            "preuve": "https://quran.com/55/62"
+            "preuve": "https://quran.com/55/62",
+            "cue_en": "Other gardens"
           },
           "after": {
             "reference": "55:64",
             "page": 533,
             "theme": "Verdure profonde",
             "arabic": "مُدۡهَاۤمَّتَانِ",
-            "preuve": "https://quran.com/55/64"
+            "preuve": "https://quran.com/55/64",
+            "cue_en": "Deep green"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Other gardens"
         },
         {
           "id": "R048-25",
@@ -685,16 +769,19 @@
             "page": 533,
             "theme": "Verdure profonde",
             "arabic": "مُدۡهَاۤمَّتَانِ",
-            "preuve": "https://quran.com/55/64"
+            "preuve": "https://quran.com/55/64",
+            "cue_en": "Deep green"
           },
           "after": {
             "reference": "55:66",
             "page": 533,
             "theme": "Deux sources jaillissantes",
             "arabic": "فِیهِمَا عَیۡنَانِ نَضَّاخَتَانِ",
-            "preuve": "https://quran.com/55/66"
+            "preuve": "https://quran.com/55/66",
+            "cue_en": "Gushing springs"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Other gardens"
         },
         {
           "id": "R048-26",
@@ -708,16 +795,19 @@
             "page": 533,
             "theme": "Deux sources jaillissantes",
             "arabic": "فِیهِمَا عَیۡنَانِ نَضَّاخَتَانِ",
-            "preuve": "https://quran.com/55/66"
+            "preuve": "https://quran.com/55/66",
+            "cue_en": "Gushing springs"
           },
           "after": {
             "reference": "55:68",
             "page": 533,
             "theme": "Fruits, palmiers et grenades",
             "arabic": "فِیهِمَا فَـٰكِهَةࣱ وَنَخۡلࣱ وَرُمَّانࣱ",
-            "preuve": "https://quran.com/55/68"
+            "preuve": "https://quran.com/55/68",
+            "cue_en": "Dates, pomegranates"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Other gardens"
         },
         {
           "id": "R048-27",
@@ -731,16 +821,19 @@
             "page": 533,
             "theme": "Fruits, palmiers et grenades",
             "arabic": "فِیهِمَا فَـٰكِهَةࣱ وَنَخۡلࣱ وَرُمَّانࣱ",
-            "preuve": "https://quran.com/55/68"
+            "preuve": "https://quran.com/55/68",
+            "cue_en": "Dates, pomegranates"
           },
           "after": {
             "reference": "55:70",
             "page": 534,
             "theme": "Compagnes bonnes et belles",
             "arabic": "فِیهِنَّ خَیۡرَ ٰ⁠تٌ حِسَانࣱ",
-            "preuve": "https://quran.com/55/70"
+            "preuve": "https://quran.com/55/70",
+            "cue_en": "Beautiful companions"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Other gardens"
         },
         {
           "id": "R048-28",
@@ -754,16 +847,19 @@
             "page": 534,
             "theme": "Compagnes bonnes et belles",
             "arabic": "فِیهِنَّ خَیۡرَ ٰ⁠تٌ حِسَانࣱ",
-            "preuve": "https://quran.com/55/70"
+            "preuve": "https://quran.com/55/70",
+            "cue_en": "Beautiful companions"
           },
           "after": {
             "reference": "55:72",
             "page": 534,
             "theme": "Compagnes dans les pavillons",
             "arabic": "حُورࣱ مَّقۡصُورَ ٰ⁠تࣱ فِی ٱلۡخِیَامِ",
-            "preuve": "https://quran.com/55/72"
+            "preuve": "https://quran.com/55/72",
+            "cue_en": "Pavilions"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Other gardens"
         },
         {
           "id": "R048-29",
@@ -777,16 +873,19 @@
             "page": 534,
             "theme": "Compagnes dans les pavillons",
             "arabic": "حُورࣱ مَّقۡصُورَ ٰ⁠تࣱ فِی ٱلۡخِیَامِ",
-            "preuve": "https://quran.com/55/72"
+            "preuve": "https://quran.com/55/72",
+            "cue_en": "Pavilions"
           },
           "after": {
             "reference": "55:74",
             "page": 534,
             "theme": "Compagnes préservées",
             "arabic": "لَمۡ یَطۡمِثۡهُنَّ إِنسࣱ قَبۡلَهُمۡ وَلَا جَاۤنࣱّ",
-            "preuve": "https://quran.com/55/74"
+            "preuve": "https://quran.com/55/74",
+            "cue_en": "Untouched companions"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Other gardens"
         },
         {
           "id": "R048-30",
@@ -800,16 +899,19 @@
             "page": 534,
             "theme": "Compagnes préservées",
             "arabic": "لَمۡ یَطۡمِثۡهُنَّ إِنسࣱ قَبۡلَهُمۡ وَلَا جَاۤنࣱّ",
-            "preuve": "https://quran.com/55/74"
+            "preuve": "https://quran.com/55/74",
+            "cue_en": "Untouched companions"
           },
           "after": {
             "reference": "55:76",
             "page": 534,
             "theme": "Coussins verts et beaux tapis",
             "arabic": "مُتَّكِـِٔینَ عَلَىٰ رَفۡرَفٍ خُضۡرࣲ وَعَبۡقَرِیٍّ حِسَانࣲ",
-            "preuve": "https://quran.com/55/76"
+            "preuve": "https://quran.com/55/76",
+            "cue_en": "Green cushions"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Other gardens"
         },
         {
           "id": "R048-31",
@@ -823,16 +925,19 @@
             "page": 534,
             "theme": "Coussins verts et beaux tapis",
             "arabic": "مُتَّكِـِٔینَ عَلَىٰ رَفۡرَفٍ خُضۡرࣲ وَعَبۡقَرِیٍّ حِسَانࣲ",
-            "preuve": "https://quran.com/55/76"
+            "preuve": "https://quran.com/55/76",
+            "cue_en": "Green cushions"
           },
           "after": {
             "reference": "55:78",
             "page": 534,
             "theme": "Clôture : majesté et générosité",
             "arabic": "تَبَـٰرَكَ ٱسۡمُ رَبِّكَ ذِی ٱلۡجَلَـٰلِ وَٱلۡإِكۡرَامِ",
-            "preuve": "https://quran.com/55/78"
+            "preuve": "https://quran.com/55/78",
+            "cue_en": "Majestic Lord"
           },
-          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e"
+          "refrainSha256": "4642c5f2f84e935733a9d9882870b7c62605c34825683ff317ad15f84a72168e",
+          "stage_en": "Other gardens"
         }
       ]
     },
@@ -840,9 +945,14 @@
       "titre": "Al-Mursalāt",
       "sources": [
         {
-          "titre": "al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 77:15",
-          "url": "https://quran-tafsir.net/qortoby/sura77-aya15.html",
-          "portee": "Retour de l’avertissement selon les occasions de dénégation ; les dix titres contextuels sont éditoriaux."
+          "titre": "al-Qurṭubī, al-Jāmiʿ li-aḥkām al-Qurʾān, 77:50",
+          "url": "https://quran.ksu.edu.sa/tafseer/qortobi/sura77-aya50.html",
+          "portee": "La répétition renvoie successivement à des objets de dénégation différents ; ne fournit pas les libellés mnémotechniques."
+        },
+        {
+          "titre": "Ibn Kathīr, Tafsīr al-Qurʾān al-ʿAẓīm, 77:15",
+          "url": "https://quran.ksu.edu.sa/tafseer/katheer/sura77-aya15.html",
+          "portee": "Avertissement des négateurs après les signes de la création ; les légendes anglaises restent éditoriales."
         }
       ],
       "nodes": [
@@ -858,16 +968,19 @@
             "page": 580,
             "theme": "Le Jour de la Décision",
             "arabic": "وَمَاۤ أَدۡرَىٰكَ مَا یَوۡمُ ٱلۡفَصۡلِ",
-            "preuve": "https://quran.com/77/14"
+            "preuve": "https://quran.com/77/14",
+            "cue_en": "Decision Day"
           },
           "after": {
             "reference": "77:16",
             "page": 580,
             "theme": "Destruction des premiers peuples",
             "arabic": "أَلَمۡ نُهۡلِكِ ٱلۡأَوَّلِینَ",
-            "preuve": "https://quran.com/77/16"
+            "preuve": "https://quran.com/77/16",
+            "cue_en": "Ancient peoples"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Decision"
         },
         {
           "id": "R059-02",
@@ -881,16 +994,19 @@
             "page": 580,
             "theme": "Sort des criminels",
             "arabic": "كَذَ ٰ⁠لِكَ نَفۡعَلُ بِٱلۡمُجۡرِمِینَ",
-            "preuve": "https://quran.com/77/18"
+            "preuve": "https://quran.com/77/18",
+            "cue_en": "Sinners' fate"
           },
           "after": {
             "reference": "77:20",
             "page": 581,
             "theme": "Création humaine",
             "arabic": "أَلَمۡ نَخۡلُقكُّم مِّن مَّاۤءࣲ مَّهِینࣲ",
-            "preuve": "https://quran.com/77/20"
+            "preuve": "https://quran.com/77/20",
+            "cue_en": "Human creation"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Creation"
         },
         {
           "id": "R059-03",
@@ -904,16 +1020,19 @@
             "page": 581,
             "theme": "Mesure de la création",
             "arabic": "فَقَدَرۡنَا فَنِعۡمَ ٱلۡقَـٰدِرُونَ",
-            "preuve": "https://quran.com/77/23"
+            "preuve": "https://quran.com/77/23",
+            "cue_en": "Creation measured"
           },
           "after": {
             "reference": "77:25",
             "page": 581,
             "theme": "La terre comme réceptacle",
             "arabic": "أَلَمۡ نَجۡعَلِ ٱلۡأَرۡضَ كِفَاتًا",
-            "preuve": "https://quran.com/77/25"
+            "preuve": "https://quran.com/77/25",
+            "cue_en": "Earth's embrace"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Creation"
         },
         {
           "id": "R059-04",
@@ -927,16 +1046,19 @@
             "page": 581,
             "theme": "Montagnes et eau douce",
             "arabic": "وَجَعَلۡنَا فِیهَا رَوَ ٰ⁠سِیَ شَـٰمِخَـٰتࣲ وَأَسۡقَیۡنَـٰكُم مَّاۤءࣰ فُرَاتࣰا",
-            "preuve": "https://quran.com/77/27"
+            "preuve": "https://quran.com/77/27",
+            "cue_en": "Mountains, water"
           },
           "after": {
             "reference": "77:29",
             "page": 581,
             "theme": "Départ vers le châtiment dénié",
             "arabic": "ٱنطَلِقُوۤا۟ إِلَىٰ مَا كُنتُم بِهِۦ تُكَذِّبُونَ",
-            "preuve": "https://quran.com/77/29"
+            "preuve": "https://quran.com/77/29",
+            "cue_en": "Punishment ahead"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Creation"
         },
         {
           "id": "R059-05",
@@ -950,16 +1072,19 @@
             "page": 581,
             "theme": "Étincelles du brasier",
             "arabic": "كَأَنَّهُۥ جِمَـٰلَتࣱ صُفۡرࣱ",
-            "preuve": "https://quran.com/77/33"
+            "preuve": "https://quran.com/77/33",
+            "cue_en": "Blazing sparks"
           },
           "after": {
             "reference": "77:35",
             "page": 581,
             "theme": "Jour sans parole",
             "arabic": "هَـٰذَا یَوۡمُ لَا یَنطِقُونَ",
-            "preuve": "https://quran.com/77/35"
+            "preuve": "https://quran.com/77/35",
+            "cue_en": "Silent day"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Judgement"
         },
         {
           "id": "R059-06",
@@ -973,16 +1098,19 @@
             "page": 581,
             "theme": "Aucune excuse permise",
             "arabic": "وَلَا یُؤۡذَنُ لَهُمۡ فَیَعۡتَذِرُونَ",
-            "preuve": "https://quran.com/77/36"
+            "preuve": "https://quran.com/77/36",
+            "cue_en": "No excuses"
           },
           "after": {
             "reference": "77:38",
             "page": 581,
             "theme": "Rassemblement au Jour de la Décision",
             "arabic": "هَـٰذَا یَوۡمُ ٱلۡفَصۡلِۖ جَمَعۡنَـٰكُمۡ وَٱلۡأَوَّلِینَ",
-            "preuve": "https://quran.com/77/38"
+            "preuve": "https://quran.com/77/38",
+            "cue_en": "Gathering"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Judgement"
         },
         {
           "id": "R059-07",
@@ -996,16 +1124,19 @@
             "page": 581,
             "theme": "Défi aux stratagèmes",
             "arabic": "فَإِن كَانَ لَكُمۡ كَیۡدࣱ فَكِیدُونِ",
-            "preuve": "https://quran.com/77/39"
+            "preuve": "https://quran.com/77/39",
+            "cue_en": "Vain schemes"
           },
           "after": {
             "reference": "77:41",
             "page": 581,
             "theme": "Ombres et sources des pieux",
             "arabic": "إِنَّ ٱلۡمُتَّقِینَ فِی ظِلَـٰلࣲ وَعُیُونࣲ",
-            "preuve": "https://quran.com/77/41"
+            "preuve": "https://quran.com/77/41",
+            "cue_en": "Shade, springs"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Judgement"
         },
         {
           "id": "R059-08",
@@ -1019,16 +1150,19 @@
             "page": 581,
             "theme": "Rétribution des bienfaisants",
             "arabic": "إِنَّا كَذَ ٰ⁠لِكَ نَجۡزِی ٱلۡمُحۡسِنِینَ",
-            "preuve": "https://quran.com/77/44"
+            "preuve": "https://quran.com/77/44",
+            "cue_en": "Good rewarded"
           },
           "after": {
             "reference": "77:46",
             "page": 581,
             "theme": "Jouissance brève des criminels",
             "arabic": "كُلُوا۟ وَتَمَتَّعُوا۟ قَلِیلًا إِنَّكُم مُّجۡرِمُونَ",
-            "preuve": "https://quran.com/77/46"
+            "preuve": "https://quran.com/77/46",
+            "cue_en": "Brief enjoyment"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Reward"
         },
         {
           "id": "R059-09",
@@ -1042,16 +1176,19 @@
             "page": 581,
             "theme": "Jouissance brève des criminels",
             "arabic": "كُلُوا۟ وَتَمَتَّعُوا۟ قَلِیلًا إِنَّكُم مُّجۡرِمُونَ",
-            "preuve": "https://quran.com/77/46"
+            "preuve": "https://quran.com/77/46",
+            "cue_en": "Brief enjoyment"
           },
           "after": {
             "reference": "77:48",
             "page": 581,
             "theme": "Refus de s’incliner",
             "arabic": "وَإِذَا قِیلَ لَهُمُ ٱرۡكَعُوا۟ لَا یَرۡكَعُونَ",
-            "preuve": "https://quran.com/77/48"
+            "preuve": "https://quran.com/77/48",
+            "cue_en": "Refused bowing"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Final warning"
         },
         {
           "id": "R059-10",
@@ -1065,16 +1202,19 @@
             "page": 581,
             "theme": "Refus de s’incliner",
             "arabic": "وَإِذَا قِیلَ لَهُمُ ٱرۡكَعُوا۟ لَا یَرۡكَعُونَ",
-            "preuve": "https://quran.com/77/48"
+            "preuve": "https://quran.com/77/48",
+            "cue_en": "Refused bowing"
           },
           "after": {
             "reference": "77:50",
             "page": 581,
             "theme": "Conclusion : quelle parole croiront-ils ?",
             "arabic": "فَبِأَیِّ حَدِیثِۭ بَعۡدَهُۥ یُؤۡمِنُونَ",
-            "preuve": "https://quran.com/77/50"
+            "preuve": "https://quran.com/77/50",
+            "cue_en": "Which message?"
           },
-          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905"
+          "refrainSha256": "459fa4c3b1ef38aaaf6c0204b4f9e45ae6d3afcc01064ba54ccb74c4ea60f905",
+          "stage_en": "Final warning"
         }
       ]
     }

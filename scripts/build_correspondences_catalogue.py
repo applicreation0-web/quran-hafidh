@@ -114,7 +114,7 @@ def build():
     doc={'version':1,'date':'2026-11-05','portee':'Surcouche éditoriale additive autorisée : observation textuelle ou attribution limitée, sans certification académique collective. Les statuts ADMIS portent sur le contenu ; la clôture technique exige les tests Android du commit intégré.','registreHistoriqueSha256':hashlib.sha256(raw).hexdigest(),'sourcesReutilisees':['registre-documentaire-110.json','pilotes-preuves-20261105.json','docs/work-checkpoints/DELIVERY_2026_10_20/CORRESPONDANCES_J3_TRIAGE_COMPLET_110.md','docs/work-checkpoints/DELIVERY_2026_10_20/CORRESPONDANCES_J3_14_REPETITIONS_DEUX_TEMOINS.md','docs/work-checkpoints/DELIVERY_2026_10_20/CORRESPONDANCES_J3_59_REPETITIONS_OPPOSITIONS_PROGRESSIONS.md','docs/work-checkpoints/DELIVERY_2026_10_20/CORRESPONDANCES_J3_83_CLASSIFICATIONS_CRITIQUES.md','docs/work-checkpoints/DELIVERY_2026_10_20/CORRESPONDANCES_J3_MARASID_8_SOURCE_COLLATED.md'],'exclusionsPreservees':[d['id'] for d in old['dossiers'] if d['decisionDocumentaire']=='EXCLURE'],'bilan':{'fiches':62,'admises':60,'conditionnelles':2,'excluesPreservees':48},'dossiers':dossiers}
     (BASE/'catalogue-62.json').write_text(json.dumps(doc,ensure_ascii=False,indent=2)+'\n')
     quote=lambda s:json.dumps(s,ensure_ascii=False)
-    lines=['package com.quransafeguard.hifz.preview;','','import com.quransafeguard.hifz.core.VerseRef;','import java.util.Arrays;','import java.util.Collections;','import java.util.List;','','/** Generated from catalogue-62.json. Conditional and excluded records are never runtime entries. */','final class CorrespondenceCatalogue {','    private CorrespondenceCatalogue() {}','    static final List<CorrespondenceCases.Entry> ADMITTED=Collections.unmodifiableList(Arrays.asList(']
+    lines=['package com.quransafeguard.hifz.preview;','','import com.quransafeguard.hifz.core.VerseRef;','import java.util.Arrays;','import java.util.Collections;','import java.util.List;','','/** Generated from catalogue-62.json plus reviewed 1.17.12 addenda. Conditional and excluded records are never runtime entries. */','final class CorrespondenceCatalogue {','    private CorrespondenceCatalogue() {}','    static final List<CorrespondenceCases.Entry> ADMITTED=Collections.unmodifiableList(Arrays.asList(']
     entries=[]
     for d in dossiers:
         if d['statut']!='ADMIS':continue
@@ -124,7 +124,27 @@ def build():
         refs=','.join('new VerseRef('+ref.replace(':',',')+')' for ref in d['reperes'])
         matrix='new int[][]{'+','.join('{'+','.join(str(d['reperes'].index(r)) for r in d['comparaisons'][ref])+'}' for ref in d['reperes'])+'}'
         entries.append('        new CorrespondenceCases.Entry('+','.join(map(quote,args))+','+matrix+','+refs+')')
+    # Explicitly reviewed 1.17.12 addenda are isolated from the frozen 110 registry.
+    addendum=json.loads((BASE/'additions-11712.json').read_text())
+    existing_ids={d['id'] for d in old['dossiers']}
+    for extra in addendum['dossiers']:
+        id=extra['id']
+        assert id not in existing_ids and id not in {x['id'] for x in dossiers},id
+        assert extra['statut']=='ADMIS',id
+        refs=extra['reperes']
+        assert len(refs)>=2 and len(refs)==len(set(refs)),id
+        for ref in refs:
+            assert ref in polygons and extra['folioQcfAttendu'] in geometry['verses'][ref],(id,ref)
+            assert extra['folioQcfAttendu'] in {p['folio'] for p in polygons[ref]},(id,ref)
+            assert extra['comparaisons'][ref] and all(x in refs and ref in extra['comparaisons'][x] for x in extra['comparaisons'][ref])
+        assert all(source['url'].startswith('https://') for source in extra['sources'])
+        source='\n\n'.join(src['titre']+'\n'+src['url']+'\n'+src['portee'] for src in extra['sources'])
+        mechanism='Passages : '+extra['passages']+'\n\n'+extra['explication']+'\n\nLimites : '+extra['limites']+'\n\nLes repères QCF désignent les versets cités, sans surlignage des seuls mots du motif.'
+        args=[id,extra['categorie'],extra['titre'],mechanism,source,extra['enBref']]
+        partners='new int[][]{'+','.join('{'+','.join(str(refs.index(x)) for x in extra['comparaisons'][ref])+'}' for ref in refs)+'}'
+        refs_code=','.join('new VerseRef('+ref.replace(':',',')+')' for ref in refs)
+        entries.append('        new CorrespondenceCases.Entry('+','.join(map(quote,args))+','+partners+','+refs_code+')')
     lines+= [',\n'.join(entries),'    ));','}','']
     JAVA.write_text('\n'.join(lines))
-    print('62 fiches, 60 admissions, 2 conditions, 48 exclusions préservées ;',sum(len(d['ancresQcf']) for d in dossiers),'polygones QCF')
+    print('62 historical fiches, 60 historical admissions, 2 conditions, 48 historical exclusions; '+str(len(addendum['dossiers']))+' independently sourced additions')
 if __name__=='__main__':build()
