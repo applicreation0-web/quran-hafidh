@@ -303,7 +303,7 @@ public final class MainActivity extends android.app.Activity {
         if (wideBoox()) todayObjective.setTextSize(21f);
         todayObjective.setTextColor(Ui.MUTED);
         // Never truncate the authentic page/verse range on the BOOX screen.
-        todayObjective.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 6));
+        todayObjective.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, wideBoox() ? 3 : 6));
         todayObjective.setMaxLines(3);
         todayObjective.setEllipsize(android.text.TextUtils.TruncateAt.END);
         line.addView(todayObjective);
@@ -311,7 +311,7 @@ public final class MainActivity extends android.app.Activity {
         if (wideBoox()) action.setTextSize(24f);
         action.setGravity(Gravity.END);
         line.addView(action);
-        line.setMinimumHeight(Ui.dp(this, 120));
+        line.setMinimumHeight(Ui.dp(this, wideBoox() ? 104 : 120));
         line.setContentDescription("Ouvrir la séance du jour");
         line.setClickable(true);
         line.setFocusable(true);
@@ -467,7 +467,8 @@ public final class MainActivity extends android.app.Activity {
                 && todayAction.getChildAt(3) instanceof TextView) {
             TextView action = (TextView) todayAction.getChildAt(3);
             action.setText(text.startsWith("Consolidation · état") ? "VÉRIFIER  ›"
-                : text.contains("à reprendre") ? "VOIR LES SÉANCES  ›" : "CONTINUER  ›");
+                : text.contains("à reprendre") ? "REPRENDRE  ›"
+                : text.contains("Programme à jour") ? "VOIR LES SÉANCES  ›" : "CONTINUER  ›");
         }
         setTodayEnabled(enabled);
     }
