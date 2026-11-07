@@ -72,6 +72,74 @@ public final class ConsolidationSevenAndSundayFinalTest {
         } catch(IllegalArgumentException expected){}
     }
 
+    @Test public void newItqanAdditionMustDoOldOnceNewSevenAndWholeFive() {
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle=engine.startCycle("stabilization-2026-11-05",
+            ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("p525-l01",ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+        cycle=engine.addUnit(cycle,new ConsolidationCycleEngine.Unit("p525-l02",
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        cycle=engine.addUnit(cycle,new ConsolidationCycleEngine.Unit("p525-l01,p525-l02",
+            ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE));
+        ConsolidationCycleEngine.Session session=engine.openSession(cycle,"fresh-five");
+        assertEquals(1,session.quotaAt(0));
+        assertEquals(7,session.quotaAt(1));
+        assertEquals("A+B must now be a real ×5 and never an extra ×7 receipt",5,session.quotaAt(2));
+        for(int i=0;i<12;i++)session=engine.recordRepetition(session);
+        assertFalse("Four of five cumulative repetitions must not close the evening",session.readyToClose());
+        session=engine.recordRepetition(session);
+        assertTrue(session.readyToClose());
+    }
+
+    @Test public void missedItqanEveningAddsTwoRealSevenReceiptsAndOnlyOneNewWholeFive() {
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle=engine.startCycle("stabilization-2026-11-05",
+            ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("p525-l01",ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        cycle=engine.addUnit(cycle,new ConsolidationCycleEngine.Unit("p525-l02",
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        cycle=engine.addUnit(cycle,new ConsolidationCycleEngine.Unit("p525-l01,p525-l02",
+            ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE));
+        ConsolidationCycleEngine.Session session=engine.openSession(cycle,"missed-evening");
+        assertEquals(7+7+5,session.quotaAt(0)+session.quotaAt(1)+session.quotaAt(2));
+        for(int i=0;i<18;i++)session=engine.recordRepetition(session);
+        assertFalse(session.readyToClose());
+        session=engine.recordRepetition(session);
+        assertTrue(session.readyToClose());
+    }
+
+    @Test public void historicalOpenWholeRemainsOneAndNewWholeNeedsFive() {
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle old=engine.startCycle("stabilization-2026-11-03",
+            ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("p525-l01",ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        old=engine.addUnit(old,new ConsolidationCycleEngine.Unit("p525-l01,p525-l02",
+            ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS));
+        ConsolidationCycleEngine.Session session=engine.openSession(old,"frozen-one");
+        assertEquals(1,session.quotaAt(1));
+        for(int i=0;i<7;i++)session=engine.recordRepetition(session);
+        assertFalse(session.readyToClose());
+        ConsolidationCycleEngine.Session restored=engine.restoreOpenSession(old,"frozen-one",
+            session.sessionGroupSize(),session.stage(),session.nextUnitIndex(),session.donePerStage());
+        assertEquals("Already OPEN ×1 cannot silently turn into ×5",1,restored.quotaAt(1));
+        restored=engine.recordRepetition(restored);
+        assertTrue(restored.readyToClose());
+        assertEquals(5,ConsolidationCycleEngine.quota(
+            ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,2,1));
+        assertEquals(10,ConsolidationCycleEngine.quota(
+            ConsolidationCycleEngine.Protocol.SNOWBALL,2,1));
+    }
+
+    @Test public void fiveTimesItqanFinalPassIsNeverValidOnSabqi() {
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        try {
+            engine.startCycle("wrong-family",ConsolidationCycleEngine.Family.LEARNING,
+                new ConsolidationCycleEngine.Unit("p525-l01,p525-l02",
+                    ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE));
+            fail("Five-times Itqan protocol must not contaminate Sabqi ×10");
+        } catch(IllegalArgumentException expected) {}
+    }
+
     @Test public void sundayRecommendedIsFinalsOnlyNeverOrdinaryItqanOrReview() throws Exception {
         assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY,
