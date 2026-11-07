@@ -34,6 +34,18 @@ public final class FreezeVisualInstrumentedTest {
                 assertEquals(View.VISIBLE,overview.getVisibility());
             });
             Independent11710ScreensInstrumentedTest.capture("freeze2-juz-overview");
+            // Read-only visual fixture: example fill levels on an actual Android
+            // screenshot, without changing Hifz prefs, receipts or saved progression.
+            s.onActivity(a->{
+                JuzProgressBar[] shapes=(JuzProgressBar[])get(a,"juzBars");
+                shapes[0].setLevels(18,9,3,100);
+                shapes[1].setLevels(0,0,75,100);
+                shapes[2].setLevels(20,30,40,100);
+                shapes[3].setLevels(0,0,100,100);
+                assertEquals(30,shapes[0].filledLines());
+                assertEquals(100,shapes[3].filledLines());
+            });
+            Independent11710ScreensInstrumentedTest.capture("freeze2-juz-filled-fixture");
             s.onActivity(a->{
                 LinearLayout[] cards=(LinearLayout[])get(a,"juzCards");
                 assertTrue("Tap Juz 30, not a modal picker",cards[29].performClick());
