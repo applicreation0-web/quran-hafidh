@@ -11,8 +11,8 @@ for(const [links,parallels,marginLeft,marginRight,reserve] of [
   [[],[], '0px','0px',96],
 ]){
   const script=raw.split('\n').filter(line=>!line.trimStart().startsWith('//')).join('\n')
-    .replace('+links.toString()+',JSON.stringify(links))
-    .replace('+parallels.toString()+',JSON.stringify(parallels));
+    .replace('+links.toString()+', '+ JSON.stringify(links) +')
+    .replace('+parallels.toString()+', '+ JSON.stringify(parallels) +');
   class Element {
     constructor(){this.style={};this.children=[];this.attrs={};this.events={};this.clientHeight=600;}
     appendChild(e){this.children.push(e);return e;}
