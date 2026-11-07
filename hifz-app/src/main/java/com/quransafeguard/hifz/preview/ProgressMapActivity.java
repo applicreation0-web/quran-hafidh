@@ -50,8 +50,6 @@ public final class ProgressMapActivity extends android.app.Activity {
     private final JuzProgressBar[] juzBars=new JuzProgressBar[30];
     private final LinearLayout[] juzCards=new LinearLayout[30];
     private int selectedJuz=0;
-    private TextView apprentissageEtaValue;
-    private TextView stabilisationEtaValue;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -115,11 +113,6 @@ public final class ProgressMapActivity extends android.app.Activity {
             int restored=savedInstanceState.getInt("freeze2SelectedJuz",0);
             if(restored>=1 && restored<=30)showJuz(restored);
         }
-
-        // Estimates follow the grid. The decoding legend stays above, visible at entry.
-        root.addView(Ui.divider(this));
-        apprentissageEtaValue = etaBox(root, "Fin Apprentissage");
-        stabilisationEtaValue = etaBox(root, "Fin Stabilisation");
 
         setContentView(scroll);
         Ui.respectSystemBars(this, scroll, 0, 0, 0, 0);
@@ -246,22 +239,6 @@ public final class ProgressMapActivity extends android.app.Activity {
         return box;
     }
 
-    /** "Fin Apprentissage ········ value": a plain line under a hairline, never a bordered panel. */
-    private TextView etaBox(LinearLayout root, String title) {
-        LinearLayout row = Ui.row(this);
-        row.setPadding(Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6));
-        TextView label = Ui.text(this, title, 12.5f, true);
-        Ui.weight(label, 1f);
-        row.addView(label);
-        TextView value = Ui.text(this, "Calcul en cours…", 12f, false);
-        value.setTextColor(Ui.MUTED);
-        value.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        row.addView(value);
-        root.addView(row);
-        root.addView(Ui.divider(this));
-        return value;
-    }
-
     /**
      * Touches every one of the ~8820 physical lines (a HashSet lookup each, against
      * progressionSnapshotV6's three sets) — cheap on a phone, but this app targets weak e-ink CPUs
@@ -270,15 +247,9 @@ public final class ProgressMapActivity extends android.app.Activity {
     private void loadStatuses() {
         io.execute(() -> {
             int[] statuses;
-            String apprentissageEta;
-            String stabilisationEta;
             int[][] juzCounts;
             try {
                 statuses = computeStatuses();
-                apprentissageEta = weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),
-                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());
-                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),
-                    PreviewConfig.STABILIZATION_WEEKLY_LINES);
                 // Read-only line levels, each physical QCF line accounted for once.
                 juzCounts=JuzProgressSummary.summarize(
                     geometry,prefs.progressionSnapshotV6());
@@ -301,20 +272,8 @@ public final class ProgressMapActivity extends android.app.Activity {
                     int acquired=c[JuzProgressSummary.ACQUIRED];
                     juzBars[i].setLevels(learned,stabilized,acquired,total);
                 }
-                apprentissageEtaValue.setText(apprentissageEta);
-                stabilisationEtaValue.setText(stabilisationEta);
             });
         });
-    }
-
-    /**
-     * Same shape as SettingsActivity's Diagnostic estimates: remaining lines divided by a weekly
-     * pace, ceiling-rounded, projected from today.
-     */
-    private static String weeksEtaSummary(int remaining, int weeklyPace) {
-        if (remaining == 0) return "à jour";
-        int weeks = (remaining + weeklyPace - 1) / weeklyPace;
-        return remaining + " ligne(s) restante(s) · ~" + weeks + " semaine(s) · ~" + HifzClock.today().plusWeeks(weeks);
     }
 
     private int[] computeStatuses() {
