@@ -75,8 +75,8 @@ public final class WeeklyProgramPolicyTest {
         assertFalse(plannerSource.contains("learningSessionCue("));
         assertFalse(homeSource.contains("learningSessionCue("));
         for(String label:new String[]{" · séance 1/3"," · séance 2/3"," · séance 3/3"}) {
-            assertFalse(plannerSource.contains("\\""+label+"\\""));
-            assertFalse(homeSource.contains("\\""+label+"\\""));
+            assertFalse(plannerSource.contains(label));
+            assertFalse(homeSource.contains(label));
         }
         LocalDate monday=LocalDate.of(2026,10,19);
         for(int week=0;week<8;week++){
