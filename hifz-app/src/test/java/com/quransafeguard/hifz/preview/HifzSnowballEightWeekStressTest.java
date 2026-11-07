@@ -31,8 +31,8 @@ public final class HifzSnowballEightWeekStressTest {
     private static GeometryRepository geometry;
 
     @BeforeClass public static void loadRealQcf() throws Exception {
-        EarnedEveningProtocolRegressionTest.setup();
-        geometry=EarnedEveningProtocolRegressionTest.geometry;
+        SnowballValidationIdempotenceTest.setup();
+        geometry=SnowballValidationIdempotenceTest.geo;
     }
 
     private static InMemoryPrefs disk() {
