@@ -100,5 +100,19 @@ class CatalogueTest(unittest.TestCase):
                 self.assertTrue(all(x['url'].startswith('https://')
                                     for x in dossier['sources']))
 
+    def test_r070_does_not_attribute_unsourced_pairings_to_ibn_ashur(self):
+        doc = json.loads((ROOT / 'docs/correspondances/catalogue-62.json').read_text())
+        item = next(x for x in doc['dossiers'] if x['id'] == 'R070')
+        self.assertEqual('ADMIS', item['statut'])
+        sources = item['sources']
+        commentary = [s for s in sources if 'al-Mawdūdī' in s['titre']]
+        self.assertEqual(1, len(commentary))
+        self.assertIn('sura=93', commentary[0]['url'])
+        self.assertIn('sans appariement exclusif', commentary[0]['portee'])
+        self.assertFalse(any('Ibn ʿĀshūr' in s['titre'] for s in sources))
+        self.assertEqual({'93:6': ['93:9'], '93:7': ['93:11'],
+                          '93:8': ['93:10'], '93:9': ['93:6'],
+                          '93:11': ['93:7'], '93:10': ['93:8']}, item['comparaisons'])
+
 if __name__ == '__main__':
     unittest.main()
