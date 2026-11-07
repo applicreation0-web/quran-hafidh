@@ -39,10 +39,17 @@ LIMITS={
 BIB={
 'R007':('al-Suyūṭī, Asrār tartīb al-Qurʾān, section Hūd','https://www.islamweb.net/ar/library/content/223/12/سورة-هود'),
 'R008':('al-Suyūṭī, Asrār tartīb al-Qurʾān, section Yūsuf, pagination du site p.109','https://www.islamweb.net/ar/library/content/223/13/سورة-يوسف'),
+    'R027':('al-Suyūṭī, Asrār tartīb al-Qurʾān, section Al-Sharḥ','https://g1.islamweb.com/ar/library/content/223/73/سورة-ألم-نشرح'),
+    'R091':('al-Suyūṭī, Asrār tartīb al-Qurʾān, section Al-Muʾminūn','https://g1.islamweb.com/ar/library/content/223/24/سورة-المؤمنون'),
 'R049':('al-Suyūṭī, Marāṣid al-Maṭāliʿ, éd. al-ʿAskar, Dār al-Minhāj, 2005, p.69','https://quranpedia.app/books/b38158/s4.html'),
 'R051':('al-Suyūṭī, Marāṣid al-Maṭāliʿ, éd. al-ʿAskar, 2005, p.70','https://quranpedia.app/books/b38158/s4.html'),
 'R057':('al-Suyūṭī, Marāṣid al-Maṭāliʿ, éd. al-ʿAskar, 2005, p.75','https://quranpedia.app/books/b38158/s4.html'),
 'R079':('al-Suyūṭī, Marāṣid al-Maṭāliʿ, éd. al-ʿAskar, 2005, p.51','https://quranpedia.app/books/b38158/s1.html')}
+
+BIB_SCOPE={
+    'R027':'Al-Suyūṭī rapproche expressément 93:6 et 94:1 dans sa discussion de la continuité des deux sourates. Ne démontre pas un parallélisme lexical terme à terme ni la fiabilité du récit rapporté.',
+    'R091':'Al-Suyūṭī relie explicitement 22:77 à 23:1–2 : l’appel final à faire le bien et à rechercher la réussite est développé dans l’ouverture d’Al-Muʾminūn. Ne prouve pas une identité des prescriptions.'
+}
 
 def comparisons(id, refs, typ, passages):
     # Explicit semantic edges prevent a multi-member opposition/beginning-end
@@ -88,7 +95,7 @@ def build():
         refs=list(dict.fromkeys(refs))
         sources=[{'titre':'Texte coranique arabe, '+ref, 'url':'https://quran.com/'+ref.replace(':','/'), 'portee':'Passage primaire ; ne constitue pas une attribution littéraire savante.'} for ref in refs]
         if id in BIB:
-            title,url=BIB[id];sources.insert(0,{'titre':title,'url':url,'portee':'Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid.'})
+            title,url=BIB[id];sources.insert(0,{'titre':title,'url':url,'portee':BIB_SCOPE.get(id,'Rapprochement précis consigné dans les preuves J3 existantes ; pagination imprimée seulement pour Marāṣid.')})
         if 'Jalalayn' in explanation or id in ('R030','R037','R047','R048'):
             sources.append({'titre':'al-Maḥallī / al-Suyūṭī, Tafsīr al-Jalālayn, commentaires des références indiquées','url':'https://rissc.jo/wp-content/uploads/2018/11/Tafsir-al-Jalalayn-ebook.pdf','portee':'Traduction Feras Hamza, 2008, ISBN 9781891785160. Appui exégétique des foyers explicitement cités dans la fiche.'})
         if id=='R070':sources.append({'titre':'Synthèse adaptée d’Ibn ʿĀshūr, contexte des bienfaits et de la gratitude','url':'https://quran.com/surah/93/info','portee':'Contexte général seulement ; ne démontre pas les trois appariements proposés.'})
