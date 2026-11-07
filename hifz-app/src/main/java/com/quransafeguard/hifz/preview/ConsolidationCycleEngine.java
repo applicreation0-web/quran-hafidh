@@ -17,7 +17,7 @@ final class ConsolidationCycleEngine {
      * backs Sunday's extended review: the current + 7 previous weeks' accumulated blocks, read
      * ×3 each instead of the evening's ×10, replacing the old this-week-only ×10 Sunday final.
      */
-    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SNOWBALL_ALL_PARTS, SUNDAY_PAGE, POST_NAS_WEEKLY_MASKED }
+    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS, SNOWBALL_ALL_PARTS, SNOWBALL_ALL_PARTS_FIVE, SUNDAY_PAGE, POST_NAS_WEEKLY_MASKED }
 
     /**
      * LEARNING37/LIGHT/FULL cycles freeze at three physical units (their quota tables only define
@@ -31,7 +31,8 @@ final class ConsolidationCycleEngine {
         if (protocol == Protocol.SNOWBALL_EXTENDED || protocol == Protocol.SUNDAY_PAGE) return 30;
         if (protocol == Protocol.POST_NAS_WEEKLY_MASKED) return 6; // up to six completed maintenance hizbs/week
         if (protocol == Protocol.SNOWBALL_STABILIZATION_SEVEN || protocol == Protocol.SNOWBALL_CONTINUOUS
-                || protocol == Protocol.SNOWBALL_ALL_PARTS) return 32; // up to 30 composite subblocks + old continuous
+                || protocol == Protocol.SNOWBALL_ALL_PARTS
+                || protocol == Protocol.SNOWBALL_ALL_PARTS_FIVE) return 32; // up to 30 composite subblocks + old continuous
         return (protocol == Protocol.SNOWBALL || protocol == Protocol.SNOWBALL_FINAL) ? 7 : 3;
     }
 
@@ -136,7 +137,8 @@ final class ConsolidationCycleEngine {
         if (cycle.units().size() >= cap) throw new IllegalStateException("cycle cannot exceed " + cap + " units");
         // The last slot beyond the historic 31-unit limit is reserved exclusively
         // for the final, non-crediting full pass; reject overflow while appending.
-        if (cycle.units().size() >= 31 && unit.protocol() != Protocol.SNOWBALL_ALL_PARTS)
+        if (cycle.units().size() >= 31 && unit.protocol() != Protocol.SNOWBALL_ALL_PARTS
+                && unit.protocol() != Protocol.SNOWBALL_ALL_PARTS_FIVE)
             throw new IllegalStateException("32nd slot must be the complete pass");
         validateUnitForFamily(cycle.family(), unit);
         for (Unit existing : cycle.units()) {
@@ -268,7 +270,9 @@ final class ConsolidationCycleEngine {
             case SNOWBALL_CONTINUOUS:
                 return copy(1, 0, 0, 0, 0); // previous blocks once continuously
             case SNOWBALL_ALL_PARTS:
-                return copy(1, 0, 0, 0, 0); // one final complete pass, no new x7 receipt
+                return copy(1, 0, 0, 0, 0); // Historical OPEN sessions remain at their frozen ×1
+            case SNOWBALL_ALL_PARTS_FIVE:
+                return copy(5, 0, 0, 0, 0); // NEW Itqan additions: A+B / A+B+C ×5; never x7 receipt
             case POST_NAS_WEEKLY_MASKED:
                 return copy(1, 0, 0, 0, 0); // one masked pass per actual completed hizb, in sequence
             case SNOWBALL_FINAL:
@@ -318,6 +322,7 @@ final class ConsolidationCycleEngine {
         if (unit.protocol() == Protocol.SNOWBALL_STABILIZATION_SEVEN
                 || unit.protocol() == Protocol.SNOWBALL_CONTINUOUS
                 || unit.protocol() == Protocol.SNOWBALL_ALL_PARTS
+                || unit.protocol() == Protocol.SNOWBALL_ALL_PARTS_FIVE
                 || unit.protocol() == Protocol.POST_NAS_WEEKLY_MASKED) {
             if(family!=Family.STABILIZATION)throw new IllegalArgumentException(
                 "Seven-times/continuous protocols belong to Stabilisation only");
@@ -341,7 +346,8 @@ final class ConsolidationCycleEngine {
         // Keep the pre-existing 31-unit cap: only the new, non-crediting
         // final all-parts pass may occupy a dedicated 32nd slot.
         if (cycle.units().size() > 31
-                && cycle.units().get(cycle.units().size()-1).protocol() != Protocol.SNOWBALL_ALL_PARTS)
+                && cycle.units().get(cycle.units().size()-1).protocol() != Protocol.SNOWBALL_ALL_PARTS
+                && cycle.units().get(cycle.units().size()-1).protocol() != Protocol.SNOWBALL_ALL_PARTS_FIVE)
             throw new IllegalStateException("32nd slot reserved for the final complete pass");
         LinkedHashSet<String> ids = new LinkedHashSet<>();
         for (Unit unit : cycle.units()) {
