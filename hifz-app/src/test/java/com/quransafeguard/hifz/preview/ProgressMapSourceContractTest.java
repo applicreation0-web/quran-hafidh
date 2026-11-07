@@ -73,12 +73,10 @@ public final class ProgressMapSourceContractTest {
         int totalSetColor = countOccurrences(grid, ".setColor(");
         int inkOrLineSetColor = countOccurrences(grid, ".setColor(Ui.INK)") +
             countOccurrences(grid, ".setColor(Ui.LINE)");
-        int acquiredPageNumberContrast=countOccurrences(grid,
-            "pageNumber.setColor(status[page]==ACQUIS?Ui.PAPER:Ui.INK)");
-        assertTrue("Only shared monochrome ink/line tokens or white-on-black Acquis page "
-                + "numbers are allowed; never introduce a status-specific color",
-            totalSetColor > 0 && totalSetColor == inkOrLineSetColor+acquiredPageNumberContrast
-            && acquiredPageNumberContrast==1);
+        assertTrue("Only shared monochrome ink/line tokens are allowed",
+            totalSetColor > 0 && totalSetColor == inkOrLineSetColor);
+        assertFalse("Page numbers are not shown inside the Juz page grid",
+            grid.contains("canvas.drawText(Integer.toString(page)"));
     }
 
     /**
@@ -195,6 +193,16 @@ public final class ProgressMapSourceContractTest {
             activity.contains("toucher un juz pour afficher ses pages")
             || activity.contains("toucher une page pour ouvrir le Mushaf")
             || activity.contains("toucher pour ouvrir en Lecture"));
+        assertFalse("Juz miniature pages must not display percentage or line counts",
+            activity.contains("juzPercentLabels")
+            || activity.contains("juzCountLabels")
+            || activity.contains("percent+\" %\"")
+            || activity.contains("done+\"/\"+total+\" lignes\""));
+        assertTrue("One page silhouette per Juz and one short visible label",
+            activity.contains("JuzProgressBar page=new JuzProgressBar(this);")
+            && activity.contains("Ui.bookText(this,\"Juz \"+j")
+            && activity.contains("item.addView(page)")
+            && activity.contains("item.addView(label)"));
         assertTrue("The Back button must return to the thirty juz, not close the app",
             activity.contains("if(selectedJuz>0)showAllPages();"));
     }
