@@ -48,8 +48,6 @@ public final class ProgressMapActivity extends android.app.Activity {
     private LinearLayout juzOverview, pageDetails;
     private TextView juzHeading;
     private final JuzProgressBar[] juzBars=new JuzProgressBar[30];
-    private final TextView[] juzPercentLabels=new TextView[30];
-    private final TextView[] juzCountLabels=new TextView[30];
     private final LinearLayout[] juzCards=new LinearLayout[30];
     private int selectedJuz=0;
     private TextView apprentissageEtaValue;
@@ -169,19 +167,9 @@ public final class ProgressMapActivity extends android.app.Activity {
             label.setGravity(Gravity.CENTER);
             label.setPadding(0,Ui.dp(this,3),0,0);
             item.addView(label);
-            TextView percent=Ui.text(this,"—",boox?15f:13f,true);
-            percent.setGravity(Gravity.CENTER);
-            item.addView(percent);
-            TextView count=Ui.text(this,"",boox?12f:11f,false);
-            count.setGravity(Gravity.CENTER);
-            count.setTextColor(Ui.MUTED);
-            item.addView(count);
-
             juzCards[index]=item;
             juzBars[index]=page;
-            juzPercentLabels[index]=percent;
-            juzCountLabels[index]=count;
-            item.setContentDescription("Juz "+j+" · calcul en cours");
+            item.setContentDescription("Juz "+j);
 
             LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(
                 0,LinearLayout.LayoutParams.WRAP_CONTENT,1f);
@@ -311,14 +299,7 @@ public final class ProgressMapActivity extends android.app.Activity {
                     int learned=c[JuzProgressSummary.LEARNED];
                     int stabilized=c[JuzProgressSummary.STABILIZED];
                     int acquired=c[JuzProgressSummary.ACQUIRED];
-                    int done=JuzProgressSummary.done(c);
-                    int percent=JuzProgressSummary.percent(done,total);
-                    int juz=i+1;
                     juzBars[i].setLevels(learned,stabilized,acquired,total);
-                    juzPercentLabels[i].setText(done>0&&percent==0?"<1 %":percent+" %");
-                    juzCountLabels[i].setText(done+"/"+total+" lignes");
-                    juzCards[i].setContentDescription("Juz "+juz+" · "+done+
-                        " sur "+total+" lignes · "+percent+" pour cent");
                 }
                 apprentissageEtaValue.setText(apprentissageEta);
                 stabilisationEtaValue.setText(stabilisationEta);
