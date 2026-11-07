@@ -59,48 +59,56 @@ public final class WeeklyProgramPolicyTest {
             assertEquals(java.time.DayOfWeek.SUNDAY,monday.plusDays(6).getDayOfWeek());
         }
     }
-    @Test public void recommendedLearningThreeOfThreeIsCalendarOnlyAndRestartsOnMonday(){
-        LocalDate monday=LocalDate.of(2026,10,19);
-        for(int week=0;week<4;week++){
-            LocalDate start=monday.plusWeeks(week);
-            assertEquals(" · séance 1/3",WeeklyDashboardPlanner.learningSessionCue(
-                start.getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
-            assertEquals(" · séance 2/3",WeeklyDashboardPlanner.learningSessionCue(
-                start.plusDays(2).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
-            assertEquals(" · séance 3/3",WeeklyDashboardPlanner.learningSessionCue(
-                start.plusDays(4).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
-            assertEquals("",WeeklyDashboardPlanner.learningSessionCue(
-                start.plusDays(1).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
-            assertEquals("",WeeklyDashboardPlanner.learningSessionCue(
-                start.plusDays(6).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED));
+    @Test public void calendarNeverReinventsLessonOneOfThreeAfterAnyMissedDate() throws Exception {
+        // A missed Sabqi day moves the physical cursor, not a pseudo-progress
+        // ordinal. Neither Home nor the seven-day planner may advertise 1/3.
+        java.nio.file.Path planner=java.nio.file.Path.of(
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
+        java.nio.file.Path home=java.nio.file.Path.of(
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        if(!java.nio.file.Files.exists(planner))
+            planner=java.nio.file.Path.of("src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
+        if(!java.nio.file.Files.exists(home))
+            home=java.nio.file.Path.of("src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        String plannerSource=java.nio.file.Files.readString(planner);
+        String homeSource=java.nio.file.Files.readString(home);
+        assertFalse(plannerSource.contains("learningSessionCue("));
+        assertFalse(homeSource.contains("learningSessionCue("));
+        for(String label:new String[]{" · séance 1/3"," · séance 2/3"," · séance 3/3"}) {
+            assertFalse(plannerSource.contains("\\""+label+"\\""));
+            assertFalse(homeSource.contains("\\""+label+"\\""));
         }
-        // Historic/other programme semantics remain unchanged.
-        assertEquals("",WeeklyDashboardPlanner.learningSessionCue(DayOfWeek.MONDAY,
-            HifzPrefs.WeeklyProgram.CLASSIC));
-        assertEquals("",WeeklyDashboardPlanner.learningSessionCue(DayOfWeek.MONDAY,
-            HifzPrefs.WeeklyProgram.MANUAL_SEVEN));
+        LocalDate monday=LocalDate.of(2026,10,19);
+        for(int week=0;week<8;week++){
+            LocalDate start=monday.plusWeeks(week);
+            assertEquals(CadenceAction.LEARNING,WeeklyProgramPolicy.actionFor(
+                start.getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED,3));
+            assertEquals(CadenceAction.LEARNING,WeeklyProgramPolicy.actionFor(
+                start.plusDays(2).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED,3));
+            assertEquals(CadenceAction.LEARNING,WeeklyProgramPolicy.actionFor(
+                start.plusDays(4).getDayOfWeek(),HifzPrefs.WeeklyProgram.RECOMMENDED,3));
+        }
     }
 
-    @Test public void weeklyScreenActuallyDisplaysLearningProgressNotOnlyPlannerRawText() throws Exception {
+    @Test public void weeklyScreenPreservesActualQcfLocationWithoutInventedFraction() throws Exception {
         java.lang.reflect.Method detail=MainActivity.class.getDeclaredMethod("scheduleDetail",String.class);
         detail.setAccessible(true);
-        for (String fraction : new String[]{"1/3","2/3","3/3"}) {
-            String verseRange="p. 18 l. 4–8 · 2:94–95";
-            String source="Révision active 30 min + Apprentissage · séance "+fraction
-                +" · "+verseRange+" · 5 lignes";
-            String actual=(String)detail.invoke(null,source);
-            assertTrue("The weekly learning fraction must remain visible",actual.contains("séance "+fraction));
-            assertTrue("The exact QCF page must remain visible",actual.contains("p. 18 l. 4–8"));
-            assertTrue("The exact verse limits must never be discarded",actual.contains("2:94–95"));
-            assertTrue("No compact replacement can discard the material",actual.contains("5 lignes"));
-        }
+        String verseRange="p. 18 l. 4–8 · 2:94–95";
+        String source="Révision active 30 min + Apprentissage · "+verseRange+" · 5 lignes";
+        String actual=(String)detail.invoke(null,source);
+        assertTrue(actual.contains("p. 18 l. 4–8"));
+        assertTrue(actual.contains("2:94–95"));
+        assertTrue(actual.contains("5 lignes"));
+        assertFalse(actual.contains("séance 1/3"));
+        assertTrue(((String)detail.invoke(null,"✓ Apprentissage · 5 lignes"))
+            .startsWith("✓ Apprentissage"));
+        // A real frozen four-date Itqan sub-session is independent of the
+        // removed Sabqi pseudo-fraction and keeps its own verified 2/4 label.
         String itqan=(String)detail.invoke(null,
             "Révision active 30 min + Stabilisation · séance 2/4 · p. 515 l. 9–15 · 50:1–5");
         assertTrue(itqan.contains("séance 2/4"));
         assertTrue(itqan.contains("p. 515 l. 9–15"));
         assertTrue(itqan.contains("50:1–5"));
-        assertTrue(((String)detail.invoke(null,"✓ Apprentissage · séance 3/3"))
-            .startsWith("✓ Apprentissage"));
     }
 
     @Test public void classicDelegatesOriginalCanonicalCadenceWithoutChange() {
