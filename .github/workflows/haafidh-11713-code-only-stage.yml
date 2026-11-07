@@ -6,6 +6,11 @@ on:
     branches: [release-candidate/haafidh-11713-semantic-hifz-20261107]
     paths:
       - '.github/workflows/haafidh-11713-code-only-stage.yml'
+      - 'hifz-app/src/main/**'
+      - 'hifz-app/build.gradle.kts'
+      - 'docs/correspondances/catalogue-62.json'
+      - 'docs/correspondances/additions-11712.json'
+      - 'scripts/build_correspondences_catalogue.py'
   workflow_dispatch:
 permissions:
   contents: read
