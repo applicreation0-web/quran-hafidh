@@ -77,7 +77,7 @@ public final class EarnedEveningProtocolRegressionTest {
    assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,cycle.get(0).protocol());
    for(int i=1;i<3;i++)assertEquals(
        ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,cycle.get(i).protocol());
-   assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,cycle.get(3).protocol());
+   assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,cycle.get(3).protocol());
    ConsolidationCycleEngine.Session session=ready(ConsolidationCycleEngine.Family.STABILIZATION,
        "stabilization-"+day,cycle);
    assertTrue(p.persistConsolidationSession(session));
