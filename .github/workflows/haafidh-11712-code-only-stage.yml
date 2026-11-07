@@ -1,5 +1,5 @@
 name: Haafidh 1.17.12 PRIVATE OFFLINE INPUT — code-only unsigned (NEVER INSTALL)
-# Restage 1.17.12 English Atlas refrain correction for offline private signing; no private input on GitHub.
+# Stage 1.17.12 Quran-neighbour mnemonic cues with Atlas visual rail only; no private input on GitHub.
 # Rebuild after the read-only rotation fallback fix; local private signer owns final APK.
 on:
   push:
