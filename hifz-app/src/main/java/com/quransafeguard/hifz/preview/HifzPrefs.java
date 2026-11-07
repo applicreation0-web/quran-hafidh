@@ -477,11 +477,13 @@ public final class HifzPrefs {
     }
 
     public ProgressionSnapshot progressionSnapshotV6() {
-        requireSchema6ProgressionState();
-        return new ProgressionSnapshot(
-            Collections.unmodifiableSet(v6LineIdSet("v6LearnedLineIds")),
-            Collections.unmodifiableSet(v6LineIdSet("v6StabilizedLineIds")),
-            Collections.unmodifiableSet(v6LineIdSet("v6AcquiredCreditLineIds")));
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            return new ProgressionSnapshot(
+                Collections.unmodifiableSet(v6LineIdSet("v6LearnedLineIds")),
+                Collections.unmodifiableSet(v6LineIdSet("v6StabilizedLineIds")),
+                Collections.unmodifiableSet(v6LineIdSet("v6AcquiredCreditLineIds")));
+        }
     }
 
     void transitionV6Lines(List<String> lineIds, ProgressEvent event) {
@@ -1162,21 +1164,26 @@ public final class HifzPrefs {
      * from the daily Entretien / weekly Révision finale reading pool.
      */
     public EligibleCorpus murajaahCorpus() {
-        return EligibleCorpus.Companion.of(progressionMurajaahRanges());
+        return EligibleCorpus.Companion.of(withAcquiredReviewRanges(progressionMurajaahRanges(), null));
     }
 
     /**
      * J6 passive-only supplement: freshly validated Appris lines are eligible immediately.
      * A Quranic verse is included only when ALL of its physical lines are already
-     * Appris or Acquis, and at least one of its lines is Appris. Straddling unfinished
+     * Appris or Acquis. Straddling unfinished
      * verses are never credited early. No promotion or cursor write occurs here.
      */
     public EligibleCorpus murajaahCorpus(GeometryRepository geometry) {
         if(geometry==null)return murajaahCorpus();
-        LinkedHashSet<String> appris=v6LineIdSet("v6LearnedLineIds");
-        if(appris.isEmpty())return murajaahCorpus();
+        Set<String> appris;
+        Set<String> acquired;
+        synchronized (V6_STATE_LOCK) {
+            appris = v6LineIdSet("v6LearnedLineIds");
+            acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        }
         LinkedHashSet<String> eligible=new LinkedHashSet<>(appris);
-        eligible.addAll(v6LineIdSet("v6AcquiredCreditLineIds"));
+        eligible.addAll(acquired);
+        if(eligible.isEmpty())return EligibleCorpus.Companion.of(progressionMurajaahRanges());
         // Persisted learning order may cross sourahs or resume an older page.
         // Geometry requires physical order; canonicalize only this read view.
         ArrayList<String> physicalAppris=new ArrayList<>();
@@ -1184,13 +1191,8 @@ public final class HifzPrefs {
             if(appris.contains(geometry.line(i).id))physicalAppris.add(geometry.line(i).id);
         if(physicalAppris.size()!=appris.size())
             throw new IllegalStateException("Unknown learned physical line id");
-        java.util.HashSet<VerseRef> touching=new java.util.HashSet<>(geometry.versesOnLines(
-            physicalAppris));
-        ArrayList<VerseRef> newlyEligible=new ArrayList<>();
-        for(VerseRef verse:geometry.allVersesFullyCredited(eligible))
-            if(touching.contains(verse))newlyEligible.add(verse);
         ArrayList<VerseRange> combined=new ArrayList<>(progressionMurajaahRanges());
-        combined.addAll(rangesFromVerses(newlyEligible));
+        combined.addAll(rangesFromVerses(geometry.allVersesFullyCredited(eligible)));
         return EligibleCorpus.Companion.of(combined);
     }
 
@@ -1295,7 +1297,18 @@ public final class HifzPrefs {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(legacyMurajaahPromotedRanges());
         all.addAll(consolidatedPromotedRanges());
-        return EligibleCorpus.Companion.of(all);
+        return EligibleCorpus.Companion.of(withAcquiredReviewRanges(all, null));
+    }
+
+    /** Add persisted credit to the review pool without modifying declared ranges or history. */
+    private List<VerseRange> withAcquiredReviewRanges(List<VerseRange> ranges, GeometryRepository geometry) {
+        if (geometry == null && geometryContext == null && testGeometry == null) return ranges;
+        Set<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        if (acquired.isEmpty()) return ranges;
+        if (geometry == null) geometry = reviewGeometry();
+        ArrayList<VerseRange> combined = new ArrayList<>(ranges);
+        combined.addAll(rangesFromVerses(geometry.allVersesFullyCredited(acquired)));
+        return combined;
     }
 
     /**

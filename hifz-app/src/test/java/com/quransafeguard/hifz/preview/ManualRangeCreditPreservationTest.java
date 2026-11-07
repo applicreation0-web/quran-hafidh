@@ -38,8 +38,14 @@ public final class ManualRangeCreditPreservationTest {
         }
         disk.disk.put("v6ActiveJ10LastReviewed", "{\"" + geometry.line(2).id + "\":20000}");
         disk.disk.put("v6UnknownDueLineIds", "[]");
-        disk.disk.put("v6ConsolidationStabilizationState", "{\"fixture\":\"preserve OPEN bytes\"}");
-        HifzPrefs prefs = new HifzPrefs(disk);
+        HifzPrefs prefs = new HifzPrefs(disk, geometry);
+        ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Family family = ConsolidationCycleEngine.Family.STABILIZATION;
+        String unitId = ConsolidationPhysicalUnitPolicy.encodeLineUnit(List.of(geometry.line(1).id));
+        ConsolidationCycleEngine.Cycle cycle = engine.startCycle("stabilization-2026-10-13", family,
+            new ConsolidationCycleEngine.Unit(unitId, ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        ConsolidationCycleEngine.Session open = engine.openSession(cycle, "manual-range-fixture");
+        assertTrue(prefs.persistConsolidationSession(open));
         Map<String, ?> before = protectedState(disk);
 
         for (List<VerseRange> ranges : List.of(List.of(range(1, 3)), List.of(range(1, 7)),
@@ -52,6 +58,12 @@ public final class ManualRangeCreditPreservationTest {
         assertEquals(before, protectedState(disk));
         assertTrue(prefs.setV6AcquiredRanges(List.of(), geometry));
         assertEquals(before, protectedState(disk));
+        InMemoryPrefs restored = PartialFinalEightWeekStressTest.backupRoundTrip(disk);
+        ConsolidationCycleEngine.Session resumed =
+            new HifzPrefs(restored, geometry).restoreConsolidationSession(engine, family);
+        assertNotNull(resumed);
+        assertEquals(open.sessionId(), resumed.sessionId());
+        assertEquals(open.unitIds(), resumed.unitIds());
     }
 
     @Test public void quarantineRefusalDoesNotWriteAnyPreference() throws Exception {
@@ -64,6 +76,27 @@ public final class ManualRangeCreditPreservationTest {
         Map<String, ?> before = new LinkedHashMap<>(disk.getAll());
         assertThrows(IllegalStateException.class,
             () -> prefs.setV6StabilizationRanges(List.of(range(1, 7)), geometry));
+        assertEquals(before, disk.getAll());
+    }
+
+    @Test public void aMultilineVerseEntersBothReviewPoolsOnlyWhenFullyAcquired() throws Exception {
+        Path source = Path.of("app/src/main/assets/reader109/geometry.json");
+        if (!Files.exists(source)) source = Path.of("..").resolve(source);
+        GeometryRepository geometry = GeometryRepository.fromJson(Files.readString(source));
+        VerseRef target = geometry.allVersesInOrder().stream().filter(verse ->
+            verse.getSurah() > 2 && geometry.firstLineIndex(verse) < geometry.lastLineIndex(verse))
+            .findFirst().orElseThrow();
+        InMemoryPrefs disk = PartialFinalEightWeekStressTest.empty();
+        HifzPrefs prefs = new HifzPrefs(disk, geometry);
+        assertTrue(prefs.setV6AcquiredRanges(List.of(range(1, 7)), geometry));
+        List<String> ids = geometry.lineIdsForVerseRange(target, target);
+        disk.disk.put(PROGRESS[2], new org.json.JSONArray(ids.subList(0, ids.size()-1)).toString());
+        assertFalse(prefs.activeMurajaahCorpus().contains(target));
+        assertFalse(prefs.murajaahCorpus(geometry).contains(target));
+        disk.disk.put(PROGRESS[2], new org.json.JSONArray(ids).toString());
+        Map<String, ?> before = new LinkedHashMap<>(disk.getAll());
+        assertTrue(prefs.activeMurajaahCorpus().contains(target));
+        assertTrue(prefs.murajaahCorpus(geometry).contains(target));
         assertEquals(before, disk.getAll());
     }
 }

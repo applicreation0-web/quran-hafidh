@@ -55,4 +55,31 @@ public final class JuzProgressSummaryTest {
         assertEquals(1,counts[2][JuzProgressSummary.STABILIZED]);
         assertEquals(0,JuzProgressSummary.done(counts[29]));
     }
+
+    @Test public void pagePatternsAndGaugesOnlyUseRecordedLines() throws Exception {
+        java.nio.file.Path source = java.nio.file.Path.of("app/src/main/assets/reader109/geometry.json");
+        if (!java.nio.file.Files.exists(source)) source = java.nio.file.Path.of("..").resolve(source);
+        GeometryRepository geometry = GeometryRepository.fromJson(java.nio.file.Files.readString(source));
+        InMemoryPrefs disk = PartialFinalEightWeekStressTest.empty();
+        HifzPrefs prefs = new HifzPrefs(disk);
+        prefs.setV6StabilizationRanges(Collections.singletonList(
+            new com.quransafeguard.hifz.core.VerseRange(new VerseRef(1,1), new VerseRef(1,7))), geometry);
+        HifzPrefs.ProgressionSnapshot snapshot = prefs.progressionSnapshotV6();
+        assertEquals(ProgressGridView.VIDE, ProgressMapActivity.computeStatuses(geometry, snapshot)[1]);
+        assertEquals(0, JuzProgressSummary.done(JuzProgressSummary.summarize(geometry, snapshot)[0]));
+
+        String learned = geometry.lineIdsOnPage(1).get(0);
+        String stabilized = geometry.lineIdsOnPage(1).get(2);
+        String acquired = geometry.lineIdsOnPage(1).get(4);
+        disk.disk.put("v6LearnedLineIds", "[\"" + learned + "\"]");
+        disk.disk.put("v6StabilizedLineIds", "[\"" + stabilized + "\"]");
+        disk.disk.put("v6AcquiredCreditLineIds", "[\"" + acquired + "\"]");
+        snapshot = prefs.progressionSnapshotV6();
+        assertEquals(ProgressGridView.STABILISER, ProgressMapActivity.computeStatuses(geometry, snapshot)[1]);
+        int[] juz1 = JuzProgressSummary.summarize(geometry, snapshot)[0];
+        assertEquals(1, juz1[JuzProgressSummary.LEARNED]);
+        assertEquals(1, juz1[JuzProgressSummary.STABILIZED]);
+        assertEquals(1, juz1[JuzProgressSummary.ACQUIRED]);
+        assertEquals(0, JuzProgressSummary.done(JuzProgressSummary.summarize(geometry, snapshot)[29]));
+    }
 }
