@@ -134,6 +134,10 @@ final class ConsolidationCycleEngine {
         if (cycle.hasOpenSession()) throw new IllegalStateException("cannot add unit while session is OPEN");
         int cap = maxUnitsFor(unit.protocol());
         if (cycle.units().size() >= cap) throw new IllegalStateException("cycle cannot exceed " + cap + " units");
+        // The last slot beyond the historic 31-unit limit is reserved exclusively
+        // for the final, non-crediting full pass; reject overflow while appending.
+        if (cycle.units().size() >= 31 && unit.protocol() != Protocol.SNOWBALL_ALL_PARTS)
+            throw new IllegalStateException("32nd slot must be the complete pass");
         validateUnitForFamily(cycle.family(), unit);
         for (Unit existing : cycle.units()) {
             if (existing.id().equals(unit.id())) throw new IllegalArgumentException("duplicate unit id");
