@@ -85,7 +85,7 @@ public final class ContradictoryHifzGuard11714Test {
                 List.of(early,next),geometry));
     }
 
-    @Test public void disjointEveningCompletesItsIndependentTenRepetitionReceiptsWithoutFakeWhole() {
+    @Test public void disjointEveningCompletesItsIndependentTenRepetitionReceiptsWithoutFakeWhole() throws Exception {
         int start = geometry.firstLineIndex(new VerseRef(2,75));
         List<String> early=physical(start,5);
         List<String> later=physical(start+20,5);
@@ -112,7 +112,7 @@ public final class ContradictoryHifzGuard11714Test {
         assertTrue("Evening never grants Sunday Acquis",prefs.progressionSnapshotV6().acquired.isEmpty());
     }
 
-    @Test public void readyButNotPersistedSundayFinalNeverPromotesEitherFamily() {
+    @Test public void readyButNotPersistedSundayFinalNeverPromotesEitherFamily() throws Exception {
         int start=geometry.firstLineIndex(new VerseRef(2,75));
         List<String> lines=physical(start,5);
         String block=encoded(lines);
