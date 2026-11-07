@@ -136,7 +136,7 @@ public final class HifzSnowballEightWeekStressTest {
             Map<String,Object> before=new LinkedHashMap<>(d.disk);
             List<ConsolidationCycleEngine.Unit> plan=prefs.stabilizedConsolidationUnits(THIS_WEDNESDAY);
             assertEquals("Week count "+weeks,3*weeks+1,plan.size());
-            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,
+            assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,
                 plan.get(plan.size()-1).protocol());
             assertEquals("Must read every genuinely stabilized line",15*weeks,
                 ConsolidationPhysicalUnitPolicy.decodeLineUnit(
@@ -198,7 +198,7 @@ public final class HifzSnowballEightWeekStressTest {
                 assertTrue("Nothing newly due means no new cycle",plan.isEmpty());
             } else {
                 assertFalse(plan.isEmpty());
-                assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,
+                assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,
                     plan.get(plan.size()-1).protocol());
                 assertEquals(full,ConsolidationPhysicalUnitPolicy.decodeLineUnit(
                     plan.get(plan.size()-1).id()));
@@ -350,7 +350,7 @@ public final class HifzSnowballEightWeekStressTest {
         assertEquals("Exact global QCF indices prove page continuity",3,plan.size());
         assertEquals(previous,plan.get(0).id());
         assertEquals(fresh,plan.get(1).id());
-        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS,
+        assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE,
             plan.get(2).protocol());
         assertEquals(lines,ConsolidationPhysicalUnitPolicy.decodeLineUnit(plan.get(2).id()));
     }
