@@ -1166,14 +1166,9 @@ public final class MainActivity extends android.app.Activity {
         }
         if(mode==null){setToday("Programme à jour · voir les séances",true);return;}
         String prefix=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
-        // Never query a live Itqan block or mutate its cursor merely
-        // to render a home navigation summary.
-        LocalDate scheduledForCue = !isTodayAnchoredMode(mode) && due != null
-            ? due.getScheduledDate() : current;
-        String learningFraction = HifzSessionActivity.SABQI.equals(mode)
-            ? WeeklyDashboardPlanner.learningSessionCue(scheduledForCue.getDayOfWeek(),
-                prefs.weeklyProgramFor(scheduledForCue)) : "";
-        setToday(prefix+todaySummary(mode)+learningFraction,true);
+        // A delayed lesson keeps its physical cursor. No fictitious 1/3
+        // marker on Home: attendance dates are not learned-unit ordinals.
+        setToday(prefix+todaySummary(mode),true);
         if(todayObjective!=null){
             String description=homePreviewForMode(mode,todayRow,prefs.itqanEntretienActive());
             todayObjective.setText(description);
