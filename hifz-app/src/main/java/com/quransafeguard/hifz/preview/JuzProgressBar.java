@@ -101,7 +101,7 @@ final class JuzProgressBar extends View {
         }
         canvas.restore();
         pen.setStyle(Paint.Style.STROKE);
-        pen.setStrokeWidth(stroke);
+        pen.setStrokeWidth(filledLines()==0 ? stroke*1.3f : stroke);
         pen.setColor(Ui.INK);
         canvas.drawPath(outline,pen);
         Path dogEar=new Path();
