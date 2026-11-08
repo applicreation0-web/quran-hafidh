@@ -58,7 +58,7 @@ jobs:
           with zipfile.ZipFile(sys.argv[1]) as z:
               names=set(z.namelist())
               assert z.testzip() is None
-              pages=[n for n in names if re.fullmatch(r'assets/mushaf/hafs/kfqc/svg-br/\\d{3}\\.svg\\.br',n)]
+              pages=[n for n in names if re.fullmatch(r'assets/mushaf/hafs/kfqc/svg-br/\d{3}\.svg\.br',n)]
               assert len(pages)==604, f'Expected 604 original QCF pages, got {len(pages)}'
               for prefix in ('assets/atlas_private/', 'assets/ayah_themes_private/'):
                   assert not any(n.startswith(prefix) for n in names),prefix
