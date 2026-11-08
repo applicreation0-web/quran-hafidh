@@ -46,6 +46,7 @@ jobs:
             "hifz-app/src/test/java/com/quransafeguard/hifz/preview/FatihaClosesEverySessionTest.java",
             "hifz-app/src/test/java/com/quransafeguard/hifz/preview/OfficialReleaseContractTest.java",
             "hifz-app/src/test/java/com/quransafeguard/hifz/preview/Haafidh11715VisualSourceContractTest.java",
+            "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/PhysicalConsolidationRuntimeInstrumentedTest.java",
             "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/Haafidh11715CumulCaptureInstrumentedTest.java",
             "scripts/run_11715_boox_before_after.sh",
             ".github/workflows/haafidh-11715-boox-visual-gate.yml",
