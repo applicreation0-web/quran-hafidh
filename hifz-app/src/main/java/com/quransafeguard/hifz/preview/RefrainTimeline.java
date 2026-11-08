@@ -96,7 +96,7 @@ final class RefrainTimeline {
 
         final int visible=Math.min(6, nodes.size());
         final int screenDp=a.getResources().getConfiguration().screenWidthDp;
-        final int slotDp=Math.max(40,(screenDp-104)/visible);
+        final int slotDp=Math.max(42,(screenDp-100)/visible);
         final int slotPx=Ui.dp(a,slotDp);
         final int[] current={state.selected};
         if(current[0]<0||current[0]>=nodes.size()){
@@ -130,12 +130,12 @@ final class RefrainTimeline {
             number.setGravity(Gravity.CENTER);
             card.addView(number,new LinearLayout.LayoutParams(-1,Ui.dp(a,17)));
             View dotSpacer=new View(a);
-            card.addView(dotSpacer,new LinearLayout.LayoutParams(-1,Ui.dp(a,25)));
-            TextView title=Ui.text(a,n[15],screenDp<540?11:14,false);
+            card.addView(dotSpacer,new LinearLayout.LayoutParams(-1,Ui.dp(a,23)));
+            TextView title=Ui.text(a,n[15],screenDp<540?11.5f:15f,false);
             title.setTextColor(Ui.INK);
             title.setGravity(Gravity.TOP|Gravity.CENTER_HORIZONTAL);
             title.setMaxLines(2);
-            card.addView(title,new LinearLayout.LayoutParams(-1,Ui.dp(a,34)));
+            card.addView(title,new LinearLayout.LayoutParams(-1,Ui.dp(a,36)));
             labels.add(title);
             card.setContentDescription("Refrain "+n[3]+" sur "+n[4]+
                 ", "+n[5]+" : "+n[15]);
