@@ -1321,19 +1321,38 @@ public final class MainActivity extends android.app.Activity {
         weeklyBalance.setOnClickListener(v -> new android.app.AlertDialog.Builder(this)
             .setTitle("Bilan de la semaine").setMessage(bilan.display())
             .setPositiveButton("Fermer",null).show());
-        dashboard.addView(Ui.divider(this));
-        dashboard.addView(weeklyBalance);
-        // Separate optional, non-crediting follow-up from the verified Hifz
-        // attendance totals. This never reopens an already validated finale.
-        TextView recallRecap=Ui.bookText(this,postFinalRecapPreview(),16f,true);
-        if(wideBoox())recallRecap.setTextSize(19f);
-        recallRecap.setPadding(Ui.dp(this,6),Ui.dp(this,14),
-            Ui.dp(this,6),Ui.dp(this,14));
-        recallRecap.setContentDescription("Récapitulatif des lectures cumulatives");
-        recallRecap.setClickable(true);
-        recallRecap.setFocusable(true);
-        recallRecap.setOnClickListener(v->showPostFinalRecap());
-        dashboard.addView(recallRecap);
+        // A blank 0/N accounting line is noise, not an actionable control.
+        // Existing verified totals and diagnostic days remain inspectable.
+        if (bilan.validated > 0 || bilan.dueToday > 0 || bilan.unverifiedDays > 0) {
+            dashboard.addView(Ui.divider(this));
+            dashboard.addView(weeklyBalance);
+        }
+        // Do not add an empty post-final recap. When a genuine history, pending
+        // reading or unverified legacy family exists, preserve the full action.
+        if (hasPostFinalRecapContent()) {
+            TextView recallRecap=Ui.bookText(this,postFinalRecapPreview(),16f,true);
+            if(wideBoox())recallRecap.setTextSize(19f);
+            recallRecap.setPadding(Ui.dp(this,6),Ui.dp(this,14),
+                Ui.dp(this,6),Ui.dp(this,14));
+            recallRecap.setContentDescription("Récapitulatif des lectures cumulatives");
+            recallRecap.setClickable(true);
+            recallRecap.setFocusable(true);
+            recallRecap.setOnClickListener(v->showPostFinalRecap());
+            dashboard.addView(recallRecap);
+        }
+    }
+
+    /** Read-only presentation gate. Never hide a legacy-warning or a saved recap. */
+    private boolean hasPostFinalRecapContent() {
+        try {
+            return postFinalStore.hasBlockedLegacyFamily(PostFinalRecallStore.SABQI)
+                || postFinalStore.hasBlockedLegacyFamily(PostFinalRecallStore.ITQAN)
+                || postFinalRecap(PostFinalRecallStore.SABQI) != null
+                || postFinalRecap(PostFinalRecallStore.ITQAN) != null;
+        } catch (RuntimeException unavailable) {
+            // Keep the diagnostic action visible on corrupted/ambiguous history.
+            return true;
+        }
     }
 
     private PostFinalRecallStore.Recap postFinalRecap(String family){
@@ -1520,7 +1539,8 @@ public final class MainActivity extends android.app.Activity {
         morningPreview.setClickable(true);
         morningPreview.setFocusable(true);
         morningPreview.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
-        weekDayPanel.addView(morningPreview);
+        if (hasUsefulSchedulePreview(morningPreview.getText().toString()))
+            weekDayPanel.addView(morningPreview);
         String completedFinale=completedFinaleFromPreview(chosen.morning);
         if(!completedFinale.isEmpty()){
             TextView finalStatus=Ui.bookText(this,completedFinale,16f,true);
@@ -1547,7 +1567,16 @@ public final class MainActivity extends android.app.Activity {
         eveningPreview.setClickable(true);
         eveningPreview.setFocusable(true);
         eveningPreview.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
-        weekDayPanel.addView(eveningPreview);
+        if (hasUsefulSchedulePreview(eveningPreview.getText().toString()))
+            weekDayPanel.addView(eveningPreview);
+    }
+
+    /** Suppress filler text only; the MATIN/SOIR detail actions and finales remain. */
+    private static boolean hasUsefulSchedulePreview(String value) {
+        return value != null && !value.trim().isEmpty()
+            && !"Détails disponibles".equals(value)
+            && !"Terminée".equals(value)
+            && !"Aucune séance".equals(value);
     }
 
     private void addCell(LinearLayout row, String value, float weight, boolean bold, boolean singleLine) {
