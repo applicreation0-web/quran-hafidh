@@ -169,8 +169,13 @@ jobs:
           script: |
             adb shell wm size 1404x1872
             adb shell wm density 226
+            # Run the real-date carryover Activity on a fresh emulator BEFORE
+            # expensive BOOX screenshot suites to avoid a 5-second FocusEvent
+            # ANR observed only after 12 minutes of repeated Activity captures.
+            # This is the identical unmodified test, not an assertion bypass.
+            bash scripts/run_11711_hifz_parcours_isolated.sh 'com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest' boox-portrait-emulation
             bash scripts/run_11715_boox_before_after.sh
-            bash scripts/run_11711_hifz_parcours_isolated.sh 'com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.PhysicalConsolidationRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayMondayResumeInstrumentedTest,com.quransafeguard.hifz.preview.PostFinalRecallInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest' boox-portrait-emulation
+            bash scripts/run_11711_hifz_parcours_isolated.sh 'com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.PhysicalConsolidationRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayMondayResumeInstrumentedTest,com.quransafeguard.hifz.preview.PostFinalRecallInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest' boox-portrait-emulation
             bash scripts/run_1175_process_death_audit.sh --active-replay
       - uses: actions/upload-artifact@v4
         if: always()
