@@ -30,6 +30,8 @@ jobs:
           cp "$tool/lib/apksigner.jar" public-verifier-tools/
           cp "$tool/aapt" public-verifier-tools/
           cp "$tool/zipalign" public-verifier-tools/
+          test -s "$tool/lib64/libc++.so"
+          cp "$tool/lib64/libc++.so" public-verifier-tools/
           chmod +x public-verifier-tools/aapt public-verifier-tools/zipalign
           java -jar public-verifier-tools/apksigner.jar --version
           echo "PUBLIC_TOOLING_ONLY_NO_APK_NO_PRIVATE_ASSETS"
