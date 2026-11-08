@@ -40,6 +40,40 @@ jobs:
         run: |
           sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
           bash scripts/fetch_mushaf_pages.sh
+      - name: Cache verified Kotlin compiler from alternate Maven mirror if GitHub release CDN is unavailable
+        run: |
+          set -euo pipefail
+          file='kotlin-compiler-embeddable-2.3.21.jar'
+          rel='org/jetbrains/kotlin/kotlin-compiler-embeddable/2.3.21'
+          expected='d3e70fb011675e77ef00f1a68918d3cd91eed26058977d1e3ea2a37a293233af'
+          mkdir -p "$HOME/.m2/repository/$rel"
+          artifact="$HOME/.m2/repository/$rel/$file"
+          pom="$HOME/.m2/repository/$rel/kotlin-compiler-embeddable-2.3.21.pom"
+          ok=0
+          for mirror in \
+            'https://nexus.xwiki.org/nexus/content/repositories/public' \
+            'https://maven.aliyun.com/repository/central' \
+            'https://repo1.maven.org/maven2'; do
+            if curl --fail --location --retry 2 --connect-timeout 20 --max-time 140 --silent --show-error \
+                "$mirror/$rel/$file" --output "$artifact" &&
+                printf '%s  %s\\n' "$expected" "$artifact" | sha256sum --check --status; then
+              curl --fail --location --retry 2 --connect-timeout 15 --max-time 50 --silent --show-error \
+                "$mirror/$rel/kotlin-compiler-embeddable-2.3.21.pom" --output "$pom"
+              test -s "$pom"
+              echo 'PINNED_KOTLIN_COMPILER_MAVEN_MIRROR_PASS'
+              ok=1; break
+            fi
+            rm -f "$artifact" "$pom"
+          done
+          test "$ok" -eq 1
+          # Runner-only repository override; committed source and app bytes unchanged.
+          python3 - <<'PY'
+          from pathlib import Path
+          for p in (Path('settings.gradle.kts'), Path('build.gradle.kts')):
+            s=p.read_text()
+            assert 'mavenCentral()' in s
+            p.write_text(s.replace('mavenCentral()', 'mavenLocal()\\n        mavenCentral()'))
+          PY
       - name: Compile and stage unsigned APK only (private check deferred until offline asset injection and official digest signature)
         run: |
           # NEVER sign or publish this incomplete staging binary.
