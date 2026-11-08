@@ -1,0 +1,35 @@
+name: Haafidh 1.17.15 — private offline delivery guard (NO APK)
+on:
+  push:
+    branches: [delivery/haafidh-11715-offline-builder-20261108]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-builder-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ensure trusted 1.17.15 UI candidate is ancestor and release tool cannot mutate product source
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor a304e2e905d0d08d6c25e3cfd7eacc592ca4c4dd HEAD
+          git diff --name-only a304e2e905d0d08d6c25e3cfd7eacc592ca4c4dd HEAD | python3 -c 'import sys; got=set(sys.stdin.read().splitlines()); permitted={"scripts/build_11715_private_offline.py","scripts/test_build_11715_private_offline.py",".github/workflows/haafidh-11715-private-delivery-contract.yml"}; assert got<=permitted, got-permitted; print("FROZEN_APP_CODE_IDENTICAL_TO_TESTED_11715_HEAD")'
+      - name: Verify historical offline signing, package and private resource fail-closed contracts
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/build_11715_private_offline.py scripts/test_build_11715_private_offline.py
+          python3 scripts/test_build_11715_private_offline.py -v
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/build_11715_private_offline.py').read_text()
+          assert 'VERSION = "1.17.15"' in p
+          assert 'VERSION_CODE = 53' in p
+          assert '(52, "1.17.14")' in p
+          for marker in ('HISTORICAL_CERT', 'check_assets(source)', 'check_reference(', 'check_candidate(', 'GITHUB_ACTIONS', 'HIFZ_PRIVATE_RELEASE_UPGRADE'):
+              assert marker in p,marker
+          print('OFFLINE_11715_BUILDER_CONTRACT_PASS__NO_PRIVATE_INPUTS__NO_APK')
+          PY
