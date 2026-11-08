@@ -21,6 +21,9 @@ html,body{margin:0;width:100%;height:100%;background:var(--paper);color:#000;-we
 #sidemarks.show{display:block}
 #sidemarks .seg{position:absolute;left:0;right:0;display:flex;flex-direction:row;justify-content:center;gap:3px}
 #sidemarks .seg span{width:1.4px;height:100%;background:var(--sidemark);border-radius:1px}
+/* BOOX: soften only the passive side cues, not QCF ink or reader geometry. */
+body.eink #sidemarks{opacity:.88}
+body.eink #centermark{opacity:.90}
 body.eink #sidemarks .seg span{width:1.7px}
 /* Hizb/Rubʿ écusson: sits in a real interruption of the three gutter lines, on the reader's own
    cream, at the exact height where the canonical boundary starts. Flat strokes, no shadow. */
