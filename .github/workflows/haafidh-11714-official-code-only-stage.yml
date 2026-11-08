@@ -1,0 +1,84 @@
+name: Haafidh 1.17.14 — public code-only UNSIGNED stage (NEVER INSTALL)
+on:
+  push:
+    branches: [stage/haafidh-11714-official-code-only-20261108]
+    paths:
+      - '.github/workflows/haafidh-11714-official-code-only-stage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unsigned-code-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Pin audited production source; allow ONLY this staging workflow addition
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=64943fe77480869bd654fe7f7ba555a46fdba31f
+          test -z "$(git status --porcelain)"
+          test "$(git diff --name-only "$BASE" HEAD)" = ".github/workflows/haafidh-11714-official-code-only-stage.yml"
+          test ! -d hifz-app/src/private114/assets/atlas_private
+          test -z "${HIFZ_KEYSTORE_PATH:-}${HIFZ_KEYSTORE_PASSWORD:-}${HIFZ_KEY_ALIAS:-}${HIFZ_KEY_PASSWORD:-}"
+      - name: Prepare original public QCF folios and Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Assemble strictly UNSIGNED 1.17.14 code only (NO PRIVATE CONTENT)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${HIFZ_PRIVATE_RELEASE_UPGRADE:-}${AYAH_THEMES_PRIVATE_114:-}${HIFZ_KEYSTORE_PATH:-}"
+          gradle --no-daemon --max-workers=2 :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs
+          APK=hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk
+          test -s "$APK"
+          SDK="$ANDROID_HOME/build-tools/36.0.0"
+          "$SDK/aapt" dump badging "$APK" | grep -q "package: name='com.quransafeguard.hifz' versionCode='52' versionName='1.17.14'"
+          if "$SDK/apksigner" verify "$APK" >/dev/null 2>&1; then
+            echo 'NO-GO: staged APK must be unsigned'; exit 1
+          fi
+          python3 - "$APK" <<'PY'
+          import sys,zipfile,re
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              names=set(z.namelist())
+              assert z.testzip() is None
+              pages=[n for n in names if re.fullmatch(r'assets/mushaf/hafs/kfqc/svg-br/\\d{3}\\.svg\\.br',n)]
+              assert len(pages)==604, f'Expected 604 original QCF pages, got {len(pages)}'
+              for prefix in ('assets/atlas_private/', 'assets/ayah_themes_private/'):
+                  assert not any(n.startswith(prefix) for n in names),prefix
+              assert 'assets/atlas/atlas_display_catalog_v1.json' not in names
+          print('PASS unsigned code-only; authentic QCF; ZERO private inputs')
+          PY
+          mkdir -p artifacts
+          cp "$APK" artifacts/HAAFIDH_11714_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk
+          cp "$SDK/zipalign" artifacts/zipalign
+          cp "$SDK/lib/apksigner.jar" artifacts/apksigner.jar
+          cp "$SDK/lib64/libc++.so" artifacts/libc++.so
+          cp "$SDK/aapt" artifacts/aapt
+          printf '%s\n' '64943fe77480869bd654fe7f7ba555a46fdba31f' > artifacts/AUDITED_CODE_SHA.txt
+          git rev-parse HEAD > artifacts/STAGING_WORKFLOW_SHA.txt
+          printf '%s\n' 'UNSIGNED PUBLIC CODE ONLY. MISSING SEVEN PRIVATE ASSETS. NEVER INSTALL; NEVER PUBLISH AS OFFICIAL APK.' > artifacts/NO_INSTALL.txt
+          (cd artifacts && sha256sum HAAFIDH_11714_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: haafidh-11714-code-only-unsigned-offline-input-NEVER-INSTALL
+          path: artifacts/
+          retention-days: 7
+          if-no-files-found: error
