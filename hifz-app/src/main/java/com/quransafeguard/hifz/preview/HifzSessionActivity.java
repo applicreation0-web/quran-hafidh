@@ -779,6 +779,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         // pass; stageVectorAt(position) below still displays the real ×5/×10/legacy ×1.
         boolean genuineCumul = protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS
             || protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE;
+        // Sabqi's composite pass remains a frozen SNOWBALL ×10 (no new protocol).
+        // Identify it by exact canonical concatenation of preceding source blocks,
+        // not by its label, position alone, or a guessed full-week quota.
+        if (!genuineCumul && family == ConsolidationCycleEngine.Family.LEARNING
+                && position >= 2 && position == consolidationSession.sessionGroupSize()-1) {
+            List<String> sources=consolidationSession.unitIds().subList(0,position);
+            genuineCumul=ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(sources)
+                    .equals(consolidationSession.unitIds().get(position))
+                && ConsolidationPhysicalUnitPolicy.physicallyContinuous(sources,geometry);
+        }
         program.setText(sundayPage
             ? displayName + " · page " + unitFirstPage
             : maskedMaintien
