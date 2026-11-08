@@ -230,11 +230,12 @@ public final class ProgressMapActivity extends android.app.Activity {
     private void loadStatuses() {
         io.execute(() -> {
             int[][] statuses;
-            int[][] juzCounts;
+            int[][] juzPositions;
             try {
                 HifzPrefs.ProgressionSnapshot progression = prefs.progressionSnapshotV6();
                 statuses = computeStatuses(geometry, progression);
-                juzCounts = JuzProgressSummary.summarize(geometry, progression);
+                // Position-preserving map from the very same V6 snapshot as the page grid.
+                juzPositions = JuzProgressSummary.lineStatuses(geometry, progression);
             } catch (RuntimeException corruptOrUnconfiguredState) {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
@@ -247,12 +248,7 @@ public final class ProgressMapActivity extends android.app.Activity {
                 pageStatuses = statuses;
                 applyPageStatuses();
                 for(int i=0;i<30;i++){
-                    int[] c=juzCounts[i];
-                    int total=c[JuzProgressSummary.TOTAL];
-                    int learned=c[JuzProgressSummary.LEARNED];
-                    int stabilized=c[JuzProgressSummary.STABILIZED];
-                    int acquired=c[JuzProgressSummary.ACQUIRED];
-                    juzBars[i].setLevels(learned,stabilized,acquired,total);
+                    juzBars[i].setLineStatuses(juzPositions[i]);
                 }
             });
         });
