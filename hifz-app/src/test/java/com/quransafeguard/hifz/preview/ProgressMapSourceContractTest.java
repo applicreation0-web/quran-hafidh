@@ -82,7 +82,7 @@ public final class ProgressMapSourceContractTest {
     @Test public void pageAndJuzUseOneEarnedProgressionSnapshot() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
         assertTrue(activity.contains("statuses = computeStatuses(geometry, progression);"));
-        assertTrue(activity.contains("JuzProgressSummary.summarize(geometry, progression)"));
+        assertTrue(activity.contains("JuzProgressSummary.lineStatuses(geometry, progression)"));
         assertFalse(activity.contains("effectiveItqanRanges()"));
     }
 
@@ -132,9 +132,12 @@ public final class ProgressMapSourceContractTest {
         assertTrue("Each Juz must be a vertical QCF-shaped page gauge, not a horizontal bar",
             page.contains("width*550f/345f")
             && page.contains("canvas.clipPath(outline)")
-            && page.contains("learned*scale")
-            && page.contains("stabilized*scale")
-            && page.contains("acquired*scale"));
+            && page.contains("body.top+body.height()*start/total")
+            && page.contains("body.top+body.height()*end/total")
+            && page.contains("lineStatuses[end]==state")
+            && activity.contains("juzBars[i].setLineStatuses(juzPositions[i]);"));
+        assertFalse("A summed bottom-fill cannot represent a beginning-of-Juz lesson",
+            page.contains("float y=body.bottom;") || activity.contains("juzBars[i].setLevels("));
         assertTrue("Every real physical QCF line counted exactly once by canonical Juz",
             summary.contains("for(GeometryRepository.LineMeta line:lines)")
             && summary.contains("rowForIndex(j*8+1)")
