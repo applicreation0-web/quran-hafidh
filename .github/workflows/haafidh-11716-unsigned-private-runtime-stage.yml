@@ -1,0 +1,149 @@
+name: Haafidh 1.17.16 — unsigned private-runtime staging ONLY
+on:
+  push:
+    branches: [fix/haafidh-11716-juz-position-20261108]
+    paths: [.github/workflows/haafidh-11716-unsigned-private-runtime-stage.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unsigned-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enforce exact certified product source and no payload in public repo
+        run: |
+          set -euo pipefail
+          base=53debe3d1b39d80460dae3c5505f775c0079eed7
+          git merge-base --is-ancestor "$base" HEAD
+          python3 - <<'PY'
+          import subprocess
+          base="53debe3d1b39d80460dae3c5505f775c0079eed7"
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          allowed={
+            ".github/workflows/haafidh-11716-unsigned-private-runtime-stage.yml",
+            "hifz-app/build.gradle.kts",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/JuzProgressSummary.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/JuzProgressBar.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java",
+            "hifz-app/src/test/java/com/quransafeguard/hifz/preview/JuzProgressSummaryTest.java",
+            "hifz-app/src/test/java/com/quransafeguard/hifz/preview/ProgressMapSourceContractTest.java",
+            "hifz-app/src/test/java/com/quransafeguard/hifz/preview/OfficialReleaseContractTest.java",
+            "hifz-app/src/test/java/com/quransafeguard/hifz/preview/Haafidh11715VisualSourceContractTest.java"}
+          assert changed==allowed, sorted(changed^allowed)
+          for path in ["hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java",
+                       "hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java",
+                       "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzBackup.java",
+                       "hifz-app/src/main/assets/hifzreader/reader.js"]:
+            a=subprocess.check_output(["git","rev-parse",base+":"+path],text=True)
+            b=subprocess.check_output(["git","rev-parse","HEAD:"+path],text=True)
+            assert a==b, "frozen Hifz/corpus data changed: "+path
+          print("EXACT_POSITION_ONLY_DELTA_PASS")
+          PY
+          grep -q 'versionCode = 54' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.16"' hifz-app/build.gradle.kts
+          ! find hifz-app/src/private114/assets -type f 2>/dev/null | grep -q .
+          echo 'NO_PRIVATE_ASSETS_IN_PUBLIC_CHECKOUT'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: SDK and authentic QCF pages
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Cache verified Kotlin compiler from alternate Maven mirror if GitHub release CDN is unavailable
+        run: |
+          set -euo pipefail
+          file='kotlin-compiler-embeddable-2.3.21.jar'
+          rel='org/jetbrains/kotlin/kotlin-compiler-embeddable/2.3.21'
+          expected='d3e70fb011675e77ef00f1a68918d3cd91eed26058977d1e3ea2a37a293233af'
+          mkdir -p "$HOME/.m2/repository/$rel"
+          artifact="$HOME/.m2/repository/$rel/$file"
+          pom="$HOME/.m2/repository/$rel/kotlin-compiler-embeddable-2.3.21.pom"
+          ok=0
+          for mirror in \
+            'https://nexus.xwiki.org/nexus/content/repositories/public' \
+            'https://maven.aliyun.com/repository/central' \
+            'https://repo1.maven.org/maven2'; do
+            if curl --fail --location --retry 2 --connect-timeout 20 --max-time 140 --silent --show-error \
+                "$mirror/$rel/$file" --output "$artifact" &&
+                printf '%s  %s\n' "$expected" "$artifact" | sha256sum --check --status; then
+              curl --fail --location --retry 2 --connect-timeout 15 --max-time 50 --silent --show-error \
+                "$mirror/$rel/kotlin-compiler-embeddable-2.3.21.pom" --output "$pom"
+              test -s "$pom"
+              echo 'PINNED_KOTLIN_COMPILER_MAVEN_MIRROR_PASS'
+              ok=1; break
+            fi
+            rm -f "$artifact" "$pom"
+          done
+          test "$ok" -eq 1
+          # Runner-only repository override; committed source and app bytes unchanged.
+          python3 - <<'PY'
+          from pathlib import Path
+          for p in (Path('settings.gradle.kts'), Path('build.gradle.kts')):
+            s=p.read_text()
+            assert 'mavenCentral()' in s
+            p.write_text(s.replace('mavenCentral()', 'mavenLocal()\n        mavenCentral()'))
+          PY
+      - name: JVM Hifz regression + real QCF Juz 26/27 geometry tests + source contracts
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --max-workers=2 --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Compile release candidate without APK before packaging
+        run: |
+          gradle --no-daemon --max-workers=2 -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac
+      - name: Compile and stage unsigned APK only (private check deferred until offline asset injection and official digest signature)
+        run: |
+          # NEVER sign or publish this incomplete staging binary.
+          for attempt in 1 2 3; do
+            if gradle --no-daemon :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs; then
+              break
+            fi
+            if [ "$attempt" = 3 ]; then exit 1; fi
+            echo "Transient Gradle/Maven download failure; retrying unchanged source"
+            sleep 10
+          done
+      - name: Verify unsigned app ID, version 53, absence of Atlas secrets and private sources
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(hifz-app/build-private114/outputs/apk/release/*.apk)
+          test "${#files[@]}" -eq 1
+          apk="${files[0]}"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | grep -q "package: name='com.quransafeguard.hifz' versionCode='54' versionName='1.17.16'"
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk" >/dev/null 2>&1; then
+            echo 'STAGING_MUST_BE_UNSIGNED'; exit 1
+          fi
+          ! unzip -Z1 "$apk" | grep -Eq '^assets/(atlas_private|ayah_themes_private)/'
+          test "$(unzip -Z1 "$apk" | grep -c '^assets/mushaf/hafs/kfqc/svg-br/' || true)" -ge 604 || {
+            echo 'QCF_604_PAGES_MISSING'; exit 1; }
+          mkdir -p unsigned-stage
+          cp "$apk" unsigned-stage/Quran_Haafidh_11716_UNSIGN_PRIVATE_RUNTIME_NO_ATLAS.apk
+          sha256sum unsigned-stage/*.apk > unsigned-stage/SHA256SUMS.txt
+          # Public certificate ONLY from the previous verified 1.17.4 remote-signing transaction.
+          # The input contains a certificate and digest, not the old private APK.
+          historical=241afb24c45b7e812eda0c09162d5ec7b4703ba9
+          git cat-file -e "$historical:signing-input/signed_data_1174.b64" ||
+            git fetch origin "$historical"
+          git show "$historical:signing-input/signed_data_1174.b64" > unsigned-stage/official_1174_public_signed_data.b64
+          test -s unsigned-stage/official_1174_public_signed_data.b64
+          echo 'STAGING_PASS__UNSIGNED__NO_PRIVATE_ASSETS__NOT_INSTALLABLE'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-11716-unsigned-private-runtime-no-private-assets
+          path: unsigned-stage/
+          retention-days: 2
+          if-no-files-found: error
