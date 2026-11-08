@@ -106,4 +106,59 @@ public final class JuzProgressSummaryTest {
         assertEquals(1, counts[2][JuzProgressSummary.ACQUIRED]);
         assertEquals(1, counts[3][JuzProgressSummary.STABILIZED]);
     }
+
+    @Test public void positionPreservingGaugesMatchHujuratThroughNajmAcrossJuzBoundary() throws Exception {
+        java.nio.file.Path source=java.nio.file.Path.of("app/src/main/assets/reader109/geometry.json");
+        if(!java.nio.file.Files.exists(source))source=java.nio.file.Path.of("..").resolve(source);
+        GeometryRepository geometry=GeometryRepository.fromJson(java.nio.file.Files.readString(source));
+        int[] boundaries=JuzProgressSummary.boundaries();
+        assertEquals("Al-Hujurat is physically in Juz 26",25,
+            JuzProgressSummary.ownerJuzIndex(GeometryRepository.ordinal(new VerseRef(49,1)),boundaries));
+        assertEquals("Beginning of An-Najm belongs to Juz 27",26,
+            JuzProgressSummary.ownerJuzIndex(GeometryRepository.ordinal(new VerseRef(53,1)),boundaries));
+
+        ArrayList<GeometryRepository.LineMeta> all=new ArrayList<>();
+        ArrayList<GeometryRepository.LineMeta> j26=new ArrayList<>(),j27=new ArrayList<>();
+        for(int i=0;i<geometry.lineCount();i++){
+            GeometryRepository.LineMeta line=geometry.line(i);
+            all.add(line);
+            int j=JuzProgressSummary.ownerJuzIndex(
+                GeometryRepository.ordinal(line.verses.get(0)),boundaries);
+            if(j==25)j26.add(line);
+            if(j==26)j27.add(line);
+        }
+        assertTrue(j26.size()>30 && j27.size()>30);
+        Set<String> acquired=new HashSet<>(),learned=new HashSet<>(),stabilized=new HashSet<>();
+        // The end of Juz 26 is done; the beginning of Juz 27 is done.
+        for(int i=j26.size()-20;i<j26.size();i++)acquired.add(j26.get(i).id);
+        for(int i=0;i<25;i++)learned.add(j27.get(i).id);
+        // An isolated later Itqan segment may exist; blank lines must remain blank.
+        stabilized.add(j27.get(40).id);
+        int[][] positions=JuzProgressSummary.statusesFromLines(all,learned,stabilized,acquired);
+        assertEquals(30,positions.length);
+        assertEquals(j26.size(),positions[25].length);
+        assertEquals(j27.size(),positions[26].length);
+        assertEquals(ProgressGridView.VIDE,positions[25][0]);
+        assertEquals(ProgressGridView.ACQUIS,positions[25][positions[25].length-1]);
+        assertEquals(ProgressGridView.APPRENTISSAGE,positions[26][0]);
+        assertEquals(ProgressGridView.VIDE,positions[26][positions[26].length-1]);
+        assertEquals(ProgressGridView.VIDE,positions[26][30]);
+        assertEquals(ProgressGridView.STABILISER,positions[26][40]);
+        assertEquals(ProgressGridView.VIDE,positions[26][41]);
+
+        int[][] counts=JuzProgressSummary.fromLines(all,learned,stabilized,acquired);
+        assertEquals(20,JuzProgressSummary.done(counts[25]));
+        assertEquals(26,JuzProgressSummary.done(counts[26]));
+        assertEquals(20,counts[25][JuzProgressSummary.ACQUIRED]);
+        assertEquals(25,counts[26][JuzProgressSummary.LEARNED]);
+        assertEquals(1,counts[26][JuzProgressSummary.STABILIZED]);
+
+        // A duplicate line credit is never a second physical stripe.
+        learned.add(j26.get(j26.size()-1).id);
+        int[][] overlap=JuzProgressSummary.statusesFromLines(all,learned,stabilized,acquired);
+        assertEquals(j26.size(),overlap[25].length);
+        assertEquals(ProgressGridView.ACQUIS,overlap[25][overlap[25].length-1]);
+        assertEquals(20,JuzProgressSummary.done(
+            JuzProgressSummary.fromLines(all,learned,stabilized,acquired)[25]));
+    }
 }
