@@ -188,3 +188,66 @@ jobs:
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
           retention-days: 21
+
+  public-code-only-offline-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Build exact 1.17.15 UNSIGNED public code only (NEVER INSTALL)
+        run: |
+          set -euo pipefail
+          test -z "${HIFZ_KEYSTORE_PATH:-}${HIFZ_KEYSTORE_PASSWORD:-}${HIFZ_KEY_PASSWORD:-}"
+          test ! -e hifz-app/src/private114/assets/atlas_private/maududi_original.pdf
+          test ! -e hifz-app/src/private114/assets/ayah_themes_private/titles_114.json
+          grep -q 'versionCode = 53' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.15"' hifz-app/build.gradle.kts
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+          gradle --no-daemon --max-workers=2 :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs
+          apk=hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk
+          test -s "$apk"
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          "$sdk/aapt" dump badging "$apk" | grep -q "package: name='com.quransafeguard.hifz' versionCode='53' versionName='1.17.15'"
+          if "$sdk/apksigner" verify "$apk" >/dev/null 2>&1; then echo 'Unexpected signed staging'; exit 1; fi
+          python3 - "$apk" <<'PY'
+          import sys,zipfile,re
+          with zipfile.ZipFile(sys.argv[1]) as z:
+            names=set(z.namelist())
+            assert z.testzip() is None
+            assert len([n for n in names if re.fullmatch(r'assets/mushaf/hafs/kfqc/svg-br/\d{3}\.svg\.br',n)])==604
+            assert not any(n.startswith(('assets/atlas_private/','assets/ayah_themes_private/')) for n in names)
+            assert 'assets/atlas/atlas_display_catalog_v1.json' not in names
+          print('PASS public code-only unsigned stage, NO PRIVATE ASSETS, NEVER INSTALL')
+          PY
+          mkdir -p artifacts
+          cp "$apk" artifacts/HAAFIDH_11715_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk
+          cp "$sdk/zipalign" artifacts/zipalign
+          cp "$sdk/lib/apksigner.jar" artifacts/apksigner.jar
+          cp "$sdk/lib64/libc++.so" artifacts/libc++.so
+          cp "$sdk/aapt" artifacts/aapt
+          git rev-parse HEAD > artifacts/SOURCE_SHA.txt
+          printf '%s\n' 'UNSIGNED CODE ONLY; PRIVATE CONTENT MISSING; DO NOT INSTALL' > artifacts/NO_INSTALL.txt
+          (cd artifacts && sha256sum HAAFIDH_11715_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: haafidh-11715-unsigned-private-OFFLINE-input-NEVER-INSTALL
+          path: artifacts/
+          retention-days: 3
+          if-no-files-found: error
