@@ -365,7 +365,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             program.setText(displayModeName() + " · état à vérifier");
             progress.setText("La séance ne peut pas être affichée. Ouvrez Diagnostic si nécessaire.");
         }
-        if (sessionCompleted && !awaitingValidation) showClosingFatiha();
+        if (hasAuthenticClosingReceipt()) showClosingFatiha();
         updateDiscriminantAction();
     }
 
@@ -498,6 +498,27 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      * session — read to close it, never part of the Révision loop. Shown only when its page holds
      * exactly 1:1–1:7 (fail closed: otherwise the reader keeps its previous state).
      */
+    /** Display-only guard: an inactive/blocked/error state is not a completed lesson.
+     * Reads existing dated receipts; never creates or modifies a credit. */
+    private boolean hasAuthenticClosingReceipt() {
+        if (sessionRenderFailed || !sessionCompleted || awaitingValidation) return false;
+        String date = sessionDate.toString();
+        if (SABQI.equals(mode)) return date.equals(prefs.lastSabqiDate());
+        if (SABQI_TODAY_REVIEW.equals(mode)) return date.equals(prefs.lastSabqiTodayReviewDate());
+        if (ITQAN.equals(mode)) return date.equals(prefs.lastItqanDate());
+        if (RECENT_SABQI_REVIEW.equals(mode))
+            return date.equals(prefs.lastStabilizationSnowballEveningDate());
+        if (LEARNING_CONSOLIDATION.equals(mode))
+            return date.equals(prefs.lastLearningSnowballEveningDate());
+        if (CONSOLIDATION_FINAL.equals(mode)) return date.equals(prefs.lastRecentSabqiReviewDate());
+        if (LEARNING_FINAL.equals(mode)) return date.equals(prefs.lastLearningConsolidationDate());
+        if (MURAJAAH.equals(mode)) return date.equals(prefs.lastMurajaahDate());
+        if (MURAJAAH_ACTIVE.equals(mode)) return date.equals(prefs.lastActiveMurajaahDate());
+        // Post-final recall owns no Hifz credit; use only its verified completion label.
+        return POST_FINAL_RECALL.equals(mode) && program != null
+            && program.getText().toString().contains(" · terminée");
+    }
+
     private void showClosingFatiha() {
         if (mushaf == null) return;
         try {
@@ -754,19 +775,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         // verse range. showCurrent() applies the same exact-line reading focus as Sabqi/Itqān,
         // clipped to these persisted line ids, without changing the unit or progression logic.
         sessionCompleted = false;
+        // "Cumul" names only a genuinely continuous, physically authenticated Mushaf
+        // pass; stageVectorAt(position) below still displays the real ×5/×10/legacy ×1.
+        boolean genuineCumul = protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS
+            || protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE;
         program.setText(sundayPage
-            ? displayName + " · page " + unitFirstPage + " · " + currentLineIds.size()
-                + " lignes · " + (position + 1) + "/" + consolidationSession.sessionGroupSize()
+            ? displayName + " · page " + unitFirstPage
             : maskedMaintien
                 ? "Consolidation Itqān · hizb " + (position + 1) + "/"
                     + consolidationSession.sessionGroupSize() + " · un passage masqué"
-                : (protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS
-                    || protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE)
-                    ? displayName + " · toutes les parties · " + currentLineIds.size()
-                        + " lignes · " + (protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE
-                            ? "passage final ×5" : "passage final")
-                    : displayName + " · " + currentLineIds.size() + " lignes · unité "
-                        + (position + 1) + "/" + consolidationSession.sessionGroupSize());
+                : genuineCumul ? displayName + " · Cumul" : displayName);
         showCurrent();
         updateGroupedCycleRepAction();
     }
@@ -2571,7 +2589,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
     @Override public void onReady(){
         if(StructuredSessionPolicy.shouldInitialReaderShow(hasShown, sessionCompleted))showCurrent();
-        else if(!hasShown&&sessionCompleted&&!awaitingValidation)showClosingFatiha();
+        else if(!hasShown&&hasAuthenticClosingReceipt())showClosingFatiha();
     }
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
     @Override public void onPageShown(int page){
