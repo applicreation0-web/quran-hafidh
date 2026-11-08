@@ -48,6 +48,11 @@ capture_phase(){
     sha256sum "$out/$phase/screens/"*.png > "$out/$phase/screens-sha256.txt"
     (cd "$source" && git rev-parse HEAD) > "$out/$phase/source-sha.txt"
 }
+# Earlier CI steps may have installed debug versionCode 53. A disposable
+# Android test package cannot be downgraded in-place to baseline code 52.
+# Uninstall ONLY the dedicated debug identity on this isolated emulator;
+# never target the official installed package com.quransafeguard.hifz.
+adb uninstall com.quransafeguard.hifz.ibnkathirtest >/dev/null 2>&1 || true
 capture_phase avant "$baseline"
 capture_phase apres "$root"
 echo "Android emulator: 1404 x 1872 / 226 dpi" > "$out/metadata.txt"
