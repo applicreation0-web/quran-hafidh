@@ -1,0 +1,58 @@
+name: Quran Haafidh 1.17.14 — actual ×5 / ×10 BOOX emulator screens (TEST ONLY)
+on:
+  push:
+    branches: [audit/haafidh-11714-real-boox-cumulative-screens-20261108]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  boox-real-cumul:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Original public 604 QCF and emulator system
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+          sdkmanager --install "system-images;android-35;google_apis;x86_64"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Exercise exact real 1.17.14 UI with synthetic frozen A+B sessions
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb shell wm size 1404x1872
+            adb shell wm density 226
+            bash scripts/run_11713_hifz_parcours_isolated.sh 'com.quransafeguard.hifz.preview.ActualCumulative11714InstrumentedTest' boox-portrait-emulation
+            mkdir -p hifz-app/build/boox-actual-cumul
+            adb pull "/sdcard/Pictures/HaafidhAudit/." hifz-app/build/boox-actual-cumul/ >/dev/null
+            for f in independent-itqan-new-AB-x5-real-QCF-0of5.png independent-itqan-new-AB-x5-real-QCF-1of5.png independent-sabqi-AB-x10-real-QCF-0of10.png independent-sabqi-AB-x10-real-QCF-1of10.png; do
+              test -s "hifz-app/build/boox-actual-cumul/$f" || { echo "MISSING real screen $f"; exit 1; }
+            done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11714-real-AB-five-and-ten-BOOX-emulator
+          path: |
+            hifz-app/build/boox-actual-cumul/
+            hifz-app/build/parcours-android-logs/
+          retention-days: 14
