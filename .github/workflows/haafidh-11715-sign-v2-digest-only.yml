@@ -43,8 +43,8 @@ jobs:
             }
             public static void main(String[] args) throws Exception {
               byte[] data=Base64.getMimeDecoder().decode(Files.readString(Path.of(args[0])).trim());
-              if(data.length < 1300 || data.length > 3000)
-                throw new SecurityException("Unexpected 11715 signedData envelope size");
+              if(data.length != 1449 || !hex(MessageDigest.getInstance("SHA-256").digest(data)).equals("5a4d80527721a1ea88933a20ee21337b869feee1f4cbaf3dcbc839e88480ee1c"))
+                throw new SecurityException("SignedData hash/length mismatch: refusing any unapproved payload");
               KeyStore ks=KeyStore.getInstance(Path.of(args[1]).toFile(),System.getenv("HIFZ_KEYSTORE_PASSWORD").toCharArray());
               String alias=System.getenv("HIFZ_KEY_ALIAS");
               Certificate c=ks.getCertificate(alias);
