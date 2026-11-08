@@ -83,6 +83,43 @@ final class JuzProgressSummary {
         return counts;
     }
 
+
+    /**
+     * Exact top-to-bottom QCF statuses, one element per real physical line.
+     * A miniature Juz is a positional map, NEVER a bottom-anchored percentage.
+     * Every line uses the same canonical owner and precedence as fromLines().
+     */
+    static int[][] statusesFromLines(List<GeometryRepository.LineMeta> lines,
+                                    Set<String> learned,Set<String> stabilized,Set<String> acquired){
+        int[][] counts=fromLines(lines,learned,stabilized,acquired);
+        int[][] statuses=new int[JUZ_COUNT][];
+        for(int j=0;j<JUZ_COUNT;j++)statuses[j]=new int[counts[j][TOTAL]];
+        int[] cursor=new int[JUZ_COUNT];
+        int[] starts=boundaries();
+        for(GeometryRepository.LineMeta line:lines){
+            int ordinal=GeometryRepository.ordinal(line.verses.get(0));
+            int j=ownerJuzIndex(ordinal,starts);
+            int state=acquired.contains(line.id)?ProgressGridView.ACQUIS
+                :stabilized.contains(line.id)?ProgressGridView.STABILISER
+                :learned.contains(line.id)?ProgressGridView.APPRENTISSAGE
+                :ProgressGridView.VIDE;
+            statuses[j][cursor[j]++]=state;
+        }
+        for(int j=0;j<JUZ_COUNT;j++){
+            if(cursor[j]!=counts[j][TOTAL])
+                throw new IllegalStateException("Juz physical line position mismatch");
+        }
+        return statuses;
+    }
+
+    static int[][] lineStatuses(GeometryRepository geometry,HifzPrefs.ProgressionSnapshot snapshot){
+        if(geometry==null||snapshot==null)
+            throw new IllegalArgumentException("Real V6 Hifz progression required");
+        java.util.ArrayList<GeometryRepository.LineMeta> all=new java.util.ArrayList<>();
+        for(int i=0;i<geometry.lineCount();i++)all.add(geometry.line(i));
+        return statusesFromLines(all,snapshot.learned,snapshot.stabilized,snapshot.acquired);
+    }
+
     static int[][] summarize(GeometryRepository geometry,HifzPrefs.ProgressionSnapshot snapshot){
         if(geometry==null||snapshot==null)
             throw new IllegalArgumentException("Real V6 Hifz progression required");
