@@ -55,11 +55,12 @@ public final class FatihaClosesEverySessionTest {
         Path direct = Paths.get("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         Path file = Files.exists(direct) ? direct : Paths.get("..", direct.toString());
         String session = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
-        assertTrue("renderMode ends on Al-Fātiḥa once the session is done",
-            session.contains("if (sessionCompleted && !awaitingValidation) showClosingFatiha();"));
+        assertTrue("Only a verified dated completion may show closing Al-Fātiḥa",
+            session.contains("if (hasAuthenticClosingReceipt()) showClosingFatiha();")
+                && session.contains("if (sessionRenderFailed || !sessionCompleted || awaitingValidation) return false;"));
         assertTrue("unmasked, no selection",
             session.contains("mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0, false);"));
         assertTrue("a session opened already done shows it too",
-            session.contains("else if(!hasShown&&sessionCompleted&&!awaitingValidation)showClosingFatiha();"));
+            session.contains("else if(!hasShown&&hasAuthenticClosingReceipt())showClosingFatiha();"));
     }
 }

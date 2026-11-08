@@ -142,8 +142,10 @@ public final class ConsolidationSevenAndSundayFinalTest {
 
     @Test public void booxItqanAdditionLabelsAndCountsTheActualFiveRepetitions() throws Exception {
         String session=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE)"));
-        assertTrue(session.contains("passage final ×5"));
+        assertTrue(session.contains("protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS_FIVE;"));
+        assertTrue("The whole-page Itqan header must be concise but frozen ×5 remains in the counter",
+            session.contains("genuineCumul ? displayName + \" · Cumul\" : displayName")
+                && !session.contains("\"passage final ×5\""));
         assertTrue("The visible repetition counter must read the frozen physical cycle quota",
             session.contains("consolidationSession.stageVectorAt(position)")
                 && session.contains("consolidationSession.donePerStage() + \"/\" + target"));

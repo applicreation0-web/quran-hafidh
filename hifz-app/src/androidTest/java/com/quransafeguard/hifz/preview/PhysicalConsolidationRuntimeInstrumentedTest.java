@@ -85,7 +85,7 @@ public final class PhysicalConsolidationRuntimeInstrumentedTest {
         assertEquals(7, units.get(1).lineIds.size());
     }
 
-    @Test public void completingFirstPhysicalHalfNeverAcquiresSecondHalfOfSamePage() throws Exception {
+    @Test public void unauthenticatedPhysicalHalfNeverAcquiresEitherHalfOfSamePage() throws Exception {
         HifzPrefs prefs = new HifzPrefs(context);
         List<StabilizationHalfPagePolicy.Unit> pair = firstCanonicalSplitPair();
         StabilizationHalfPagePolicy.Unit first = pair.get(0);
@@ -110,16 +110,27 @@ public final class PhysicalConsolidationRuntimeInstrumentedTest {
         assertTrue(main.edit().putString("v6StabilizationEarnedEveningUnitsV1",
             json(Collections.singletonList(unit.id()))).commit());
 
-        assertTrue(prefs.completeConsolidationSessionV6(session, geometry, "2026-09-16", "physical-half"));
+        // This legacy fixture never persisted an OPEN Sunday finale. The
+        // hardened V6 engine correctly refuses its forged completion request,
+        // even when a synthetic evening-unit string is placed in preferences.
+        // Positive, receipt-backed partial finales are covered by
+        // SundayFinalPersistenceInstrumentedTest and its real OPEN snapshot.
+        try {
+            prefs.completeConsolidationSessionV6(session, geometry, "2026-09-16", "physical-half");
+            fail("A finale without a persisted OPEN proof must not earn any Acquis");
+        } catch (IllegalStateException required) {
+            assertTrue("Reject specifically the absent trusted finale proof",
+                required.getMessage().contains("Missing persisted OPEN Sunday finale proof"));
+        }
         Set<String> acquired = stringSet("v6AcquiredCreditLineIds");
         Set<String> stabilized = stringSet("v6StabilizedLineIds");
         for (String id : first.lineIds) {
-            assertTrue("first half must become Acquired: " + id, acquired.contains(id));
-            assertFalse(stabilized.contains(id));
+            assertFalse("No forged first-half acquisition: " + id, acquired.contains(id));
+            assertTrue("First half must remain Stabilisé: " + id, stabilized.contains(id));
         }
         for (String id : second.lineIds) {
-            assertTrue("second half must remain Stabilised: " + id, stabilized.contains(id));
-            assertFalse("second half must not be over-credited: " + id, acquired.contains(id));
+            assertTrue("Second half must remain Stabilisé: " + id, stabilized.contains(id));
+            assertFalse("No fake second-half credit: " + id, acquired.contains(id));
         }
     }
 

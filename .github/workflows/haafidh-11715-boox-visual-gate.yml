@@ -1,0 +1,253 @@
+name: Haafidh 1.17.15 — exact-base BOOX visual + Hifz guard (NO PRIVATE APK)
+on:
+  push:
+    branches: [work/haafidh-11715-boox-visual-20261108]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: haafidh-11715-boox-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jvm-and-release-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Verify exact official 1.17.14 ancestry, strict UI-only delta and private data freeze
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          base="64943fe77480869bd654fe7f7ba555a46fdba31f"
+          subprocess.run(["git","merge-base","--is-ancestor",base,"HEAD"],check=True)
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          allowed={
+            "hifz-app/build.gradle.kts",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/RefrainTimeline.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/JuzProgressBar.java",
+            "hifz-app/src/main/assets/hifzreader/index.html",
+            "hifz-app/src/test/java/com/quransafeguard/hifz/preview/ConsolidationSevenAndSundayFinalTest.java",
+            "hifz-app/src/test/java/com/quransafeguard/hifz/preview/FatihaClosesEverySessionTest.java",
+            "hifz-app/src/test/java/com/quransafeguard/hifz/preview/OfficialReleaseContractTest.java",
+            "hifz-app/src/test/java/com/quransafeguard/hifz/preview/Haafidh11715VisualSourceContractTest.java",
+            "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/PhysicalConsolidationRuntimeInstrumentedTest.java",
+            "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/Haafidh11715CumulCaptureInstrumentedTest.java",
+            "scripts/run_11715_boox_before_after.sh",
+            ".github/workflows/haafidh-11715-boox-visual-gate.yml",
+            "docs/releases/HAAFIDH_11715_GO_NO_GO.md"
+          }
+          assert changed<=allowed, f"Unexpected engine/corpus/private diff: {sorted(changed-allowed)}"
+          assert len(changed & set(allowed))>=9, "Unexpectedly small candidate"
+          gradle=open("hifz-app/build.gradle.kts").read()
+          assert 'versionCode = 53' in gradle and 'versionName = "1.17.15"' in gradle
+          assert 'applicationId = "com.quransafeguard.hifz"' in gradle
+          for path in [
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/PostFinalFamilyCreditLedger.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzBackup.java",
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java",
+            "hifz-app/src/main/assets/hifzreader/reader.js"
+          ]:
+            for sha in (base,"HEAD"):
+              subprocess.run(["git","cat-file","-e",f"{sha}:{path}"],check=True)
+            before=subprocess.check_output(["git","rev-parse",f"{base}:{path}"],text=True)
+            after=subprocess.check_output(["git","rev-parse",f"HEAD:{path}"],text=True)
+            assert before==after, "Frozen Hifz/backup/QCF component changed: "+path
+          print("UI_ONLY_DELTA_AND_PRIVATE_DATA_FREEZE_PASS")
+          PY
+      - name: Install authentic public QCF + SDK
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: JVM, source contracts and week-boundary stress suite
+        run: |
+          gradle --no-daemon --continue :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Compile release without APK, signature or publish
+        run: |
+          gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac
+      - name: Compile private-flags code path without private assets, APK or signature
+        env:
+          AYAH_THEMES_PRIVATE_114: '1'
+          HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+        run: |
+          gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac
+      - name: Verify historical private signing gate remains untouched
+        run: |
+          set -euo pipefail
+          python3 scripts/test_build_11714_private_offline.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path("scripts/build_11714_private_offline.py").read_text()
+          for marker in ("HISTORICAL_CERT","check_candidate(","check_reference(","check_assets(","GITHUB_ACTIONS","HIFZ_PRIVATE_RELEASE_UPGRADE"):
+            assert marker in s, marker
+          print("PRIVATE_GUARDS_PRESENT__ACTUAL_CERT_AND_DATA_UPGRADE_NOT_YET_VERIFIED")
+          PY
+      - name: Fail if any APK was generated by the release-source path
+        if: always()
+        run: |
+          set -euo pipefail
+          if find hifz-app/build hifz-app/build-private114 -type f -name '*.apk' -print -quit 2>/dev/null | grep -q .; then
+            echo "RELEASE_APK_FORBIDDEN_IN_SOURCE_GATE"; exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11715-jvm-release-source-NO-APK
+          path: |
+            hifz-app/build/reports/
+            hifz-app/build/test-results/
+            hifz-core/build/test-results/
+          retention-days: 21
+
+  real-android-boox-visual-and-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install SDK and authentic public QCF pages
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - name: Verify a usable Android 35 AVD image
+        run: |
+          set -euo pipefail
+          location="$ANDROID_HOME/system-images/android-35/google_apis/x86_64"
+          for attempt in 1 2 3; do
+            if sdkmanager --install "system-images;android-35;google_apis;x86_64" --channel=0 \
+                && test -s "$location/system.img" && test -s "$location/source.properties"; then
+              exit 0
+            fi
+            rm -rf "$location"
+            sleep "$((attempt*5))"
+          done
+          echo "ANDROID_AVD_IMAGE_UNAVAILABLE" >&2
+          exit 1
+      - name: Enable disposable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Exact 1.17.14 versus 1.17.15 captured screens, Hifz and process-death regression
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb shell wm size 1404x1872
+            adb shell wm density 226
+            # Run the real-date carryover Activity on a fresh emulator BEFORE
+            # expensive BOOX screenshot suites to avoid a 5-second FocusEvent
+            # ANR observed only after 12 minutes of repeated Activity captures.
+            # This is the identical unmodified test, not an assertion bypass.
+            bash scripts/run_11711_hifz_parcours_isolated.sh 'com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest' boox-portrait-emulation
+            bash scripts/run_11715_boox_before_after.sh
+            bash scripts/run_11711_hifz_parcours_isolated.sh 'com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.PhysicalConsolidationRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayMondayResumeInstrumentedTest,com.quransafeguard.hifz.preview.PostFinalRecallInstrumentedTest,com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest' boox-portrait-emulation
+            bash scripts/run_1175_process_death_audit.sh --active-replay
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: haafidh-11715-real-android-BOOX-1404x1872-226dpi-no-release
+          path: |
+            hifz-app/build/11715-boox-comparison/
+            hifz-app/build/freeze-boox-proof/
+            hifz-app/build/parcours-android-logs/
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+          retention-days: 21
+
+  public-code-only-offline-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Build exact 1.17.15 UNSIGNED public code only (NEVER INSTALL)
+        run: |
+          set -euo pipefail
+          test -z "${HIFZ_KEYSTORE_PATH:-}${HIFZ_KEYSTORE_PASSWORD:-}${HIFZ_KEY_PASSWORD:-}"
+          test ! -e hifz-app/src/private114/assets/atlas_private/maududi_original.pdf
+          test ! -e hifz-app/src/private114/assets/ayah_themes_private/titles_114.json
+          grep -q 'versionCode = 53' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.15"' hifz-app/build.gradle.kts
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+          gradle --no-daemon --max-workers=2 :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs
+          apk=hifz-app/build-private114/outputs/apk/release/hifz-app-release-unsigned.apk
+          test -s "$apk"
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          "$sdk/aapt" dump badging "$apk" | grep -q "package: name='com.quransafeguard.hifz' versionCode='53' versionName='1.17.15'"
+          if "$sdk/apksigner" verify "$apk" >/dev/null 2>&1; then echo 'Unexpected signed staging'; exit 1; fi
+          python3 - "$apk" <<'PY'
+          import sys,zipfile,re
+          with zipfile.ZipFile(sys.argv[1]) as z:
+            names=set(z.namelist())
+            assert z.testzip() is None
+            assert len([n for n in names if re.fullmatch(r'assets/mushaf/hafs/kfqc/svg-br/\d{3}\.svg\.br',n)])==604
+            assert not any(n.startswith(('assets/atlas_private/','assets/ayah_themes_private/')) for n in names)
+            assert 'assets/atlas/atlas_display_catalog_v1.json' not in names
+          print('PASS public code-only unsigned stage, NO PRIVATE ASSETS, NEVER INSTALL')
+          PY
+          mkdir -p artifacts
+          cp "$apk" artifacts/HAAFIDH_11715_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk
+          cp "$sdk/zipalign" artifacts/zipalign
+          cp "$sdk/lib/apksigner.jar" artifacts/apksigner.jar
+          cp "$sdk/lib64/libc++.so" artifacts/libc++.so
+          cp "$sdk/aapt" artifacts/aapt
+          git rev-parse HEAD > artifacts/SOURCE_SHA.txt
+          printf '%s\n' 'UNSIGNED CODE ONLY; PRIVATE CONTENT MISSING; DO NOT INSTALL' > artifacts/NO_INSTALL.txt
+          (cd artifacts && sha256sum HAAFIDH_11715_CODE_ONLY_UNSIGNED_NEVER_INSTALL.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: haafidh-11715-unsigned-private-OFFLINE-input-NEVER-INSTALL
+          path: artifacts/
+          retention-days: 3
+          if-no-files-found: error
