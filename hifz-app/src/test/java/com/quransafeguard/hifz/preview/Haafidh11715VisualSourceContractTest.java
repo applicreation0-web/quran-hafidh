@@ -68,15 +68,16 @@ public final class Haafidh11715VisualSourceContractTest {
         assertTrue(timeline.contains("RefrainTimelineData.NODES"));
         assertTrue(timeline.contains("if(onSelect!=null)onSelect.selected"));
         assertTrue(bar.contains("filledLines()==0 ? stroke*1.3f : stroke"));
-        assertTrue(bar.contains("float acquiredTop=y-acquired*scale;"));
-        assertTrue(bar.contains("float stabilizedTop=y-stabilized*scale;"));
-        assertTrue(bar.contains("float learnedTop=y-learned*scale;"));
+        assertTrue(bar.contains("state==ProgressGridView.ACQUIS"));
+        assertTrue(bar.contains("state==ProgressGridView.STABILISER"));
+        assertTrue(bar.contains("state==ProgressGridView.APPRENTISSAGE"));
         assertTrue(map.contains("JuzProgressBar"));
+        assertTrue(map.contains("juzBars[i].setLineStatuses(juzPositions[i]);"));
     }
     @Test public void buildIdentityIsOnlyIncrement()throws Exception{
         String gradle=source("hifz-app/build.gradle.kts");
-        assertTrue(gradle.contains("versionCode = 53"));
-        assertTrue(gradle.contains("versionName = \"1.17.15\""));
+        assertTrue(gradle.contains("versionCode = 54"));
+        assertTrue(gradle.contains("versionName = \"1.17.16\""));
         assertTrue(gradle.contains("applicationId = \"com.quransafeguard.hifz\""));
     }
 }
