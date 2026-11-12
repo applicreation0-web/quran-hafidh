@@ -53,6 +53,7 @@ public final class HifzPrefs {
 
     private static final String NAME = "quran_hifz_preview_v1";
     private static final String LEGACY_GATES = "hifz_preview_session_gates";
+    private static final String SABQI_END_FATH_DEFAULT_MIGRATION_V1 = "sabqiEndFathDefaultMigrationV1";
     private static final Object V6_STATE_LOCK = new Object();
     private static volatile String migrationFaultPointForTest;
     private final SharedPreferences p;
@@ -103,7 +104,8 @@ public final class HifzPrefs {
                 .putString("promotedFrontier", "2:74")
                 .putString("upperTailStart", "49:1")
                 .putString("sabqiStart", "2:75")
-                .putString("sabqiEnd", "2:286")
+                .putString("sabqiEnd", SabqiRoute.ROUTE_END.toString())
+                .putBoolean(SABQI_END_FATH_DEFAULT_MIGRATION_V1, true)
                 // First install: no fictitious acquired credit from a prefilled range.
                 .putString("itqanRanges", "[]")
                 .putBoolean("v6AcquiredBootstrapSeeded", true)
@@ -225,6 +227,26 @@ public final class HifzPrefs {
             if (!p.contains("lastMurajaahCreditStart")) repair.putString("lastMurajaahCreditStart", "");
             if (!p.contains("lastMurajaahCreditEnd")) repair.putString("lastMurajaahCreditEnd", "");
             if (!repair.commit()) throw new IllegalStateException("Unable to repair Hifz schema v5 optional state");
+        }
+        migrateLegacySabqiEndDefault();
+    }
+
+    /**
+     * One-time default-only expansion for existing installations. The old default 2:286
+     * would otherwise stop Apprentissage at Al-Baqara even though the canonical Sabqi
+     * route continues through Al-Fath 48:29. Never move the physical cursor, change
+     * a frozen lesson, credits, elapsed time, or a custom end other than the former default.
+     * A durable latch prevents a later deliberate manual choice of 2:286 being overridden.
+     */
+    void migrateLegacySabqiEndDefault() {
+        synchronized (V6_STATE_LOCK) {
+            if (p.getBoolean(SABQI_END_FATH_DEFAULT_MIGRATION_V1, false)) return;
+            SharedPreferences.Editor edit = p.edit();
+            if (SabqiRoute.BAQARA_END.toString().equals(p.getString("sabqiEnd", ""))) {
+                edit.putString("sabqiEnd", SabqiRoute.ROUTE_END.toString());
+            }
+            edit.putBoolean(SABQI_END_FATH_DEFAULT_MIGRATION_V1, true);
+            if (!edit.commit()) throw new IllegalStateException("Unable to extend legacy Sabqi default end");
         }
     }
 
@@ -757,7 +779,7 @@ public final class HifzPrefs {
         }
         SharedPreferences.Editor e = p.edit()
             .putString("sabqiStart", p.getString("sabqiStart", "2:75"))
-            .putString("sabqiEnd", p.getString("sabqiEnd", "2:286"))
+            .putString("sabqiEnd", p.getString("sabqiEnd", SabqiRoute.ROUTE_END.toString()))
             .putString("itqanRanges", defaultItqanRangesJson())
             .putString("promotedRanges", rangesJson(promoted))
             .putString("itqanRotationStart", p.getString("itqanRotationStart", "49:1"))
