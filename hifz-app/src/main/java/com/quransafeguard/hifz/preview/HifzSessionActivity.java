@@ -574,23 +574,30 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         unitLastPage = geometry.line(sabqiBlock.endLineIndex).page;
         currentSelection = sabqiBlock.verses; currentLineIds = sabqiBlock.lineIds;
         int rep = prefs.sabqiRep();
-        if (rep >= PreviewConfig.SABQI_TOTAL_REPS) {
-            boolean assistancePassed = StructuredSessionPolicy.assistancePasses(prefs.sabqiAssisted());
+        int target=prefs.sabqiLessonTargetReps();
+        if(target<=0){
+            onError("Protocole de répétition Sabqi non authentifiable.");
+            return;
+        }
+        if (rep >= target) {
+            boolean assistancePassed = prefs.sabqiLessonReadyForCredit();
             awaitingValidation = assistancePassed;
             sessionCompleted = true;
             clock.pause();
             currentMask = 0;
             program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · " + sabqiBlock.lineIds.size() + " lignes");
             progress.setText(assistancePassed
-                ? "37/37 · prêt à valider · révélations " + prefs.sabqiAssisted()
-                : "37/37 · à renforcer · révélations " + prefs.sabqiAssisted() + " · maximum 2");
+                ? target+"/"+target+" · prêt à valider · révélations " + prefs.sabqiAssisted()
+                : target+"/"+target+" · à renforcer · révélations " + prefs.sabqiAssisted());
             showCurrent();
             if (assistancePassed) addRoundAction("✓","Valider",v->runValidationSafely(this::validateSabqi));
             else addRoundAction("↻","Reprendre",v->restartSabqiAfterAssistance());
+            if(target>=SabqiFortyFiveRecoveryPolicy.BASE)
+                addRoundAction("↻","Échec · +5 visibles + 5 masquées",v->beginSabqiFortyFiveRecovery());
             return;
         }
         sessionCompleted = false;
-        currentMask = PreviewConfig.sabqiMaskForNextRep(rep);
+        currentMask = prefs.sabqiLessonMaskForNextRep(rep);
         program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · " + sabqiBlock.lineIds.size() + " lignes");
         updateSabqiProgress(rep, prefs.sabqiAssisted());
         showCurrent();
@@ -603,7 +610,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void updateSabqiProgress(int rep, int reveals) {
-        progress.setText(Math.min(rep+1,PreviewConfig.SABQI_TOTAL_REPS) + "/37 · masque " + currentMask + "% · révélations " + reveals);
+        int target=prefs.sabqiLessonTargetReps();
+        progress.setText(Math.min(rep+1,target) + "/" + target +
+            " · masque " + currentMask + "% · révélations " + reveals);
         eink.local(progress, prefs);
     }
 
@@ -617,17 +626,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void completeSabqiRep() {
         if (!takeRepLock()) return;
         boolean revealed = consumeReveal();
-        int rep=prefs.sabqiRep(); if(rep>=PreviewConfig.SABQI_TOTAL_REPS)return;
+        int rep=prefs.sabqiRep();
+        int target=prefs.sabqiLessonTargetReps();
+        if(target<=0 || rep>=target)return;
         int oldMask=currentMask;
         rep++; int reveals=prefs.sabqiAssisted()+(revealed?1:0);
         if(!prefs.recordSabqiRepetition(sabqiLessonToken,rep-1,revealed)){onError("Impossible d’enregistrer la répétition de l’Apprentissage.");return;}
-        if(rep>=PreviewConfig.SABQI_TOTAL_REPS){
+        target=prefs.sabqiLessonTargetReps();
+        if(target<=0){onError("Sabqi : reprise non authentifiable.");return;}
+        if(rep>=target){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
             awaitingValidation=true;sessionCompleted=true;
             renderMode();return;
         }
-        currentMask=PreviewConfig.sabqiMaskForNextRep(rep);
+        currentMask=prefs.sabqiLessonMaskForNextRep(rep);
         if(currentMask!=oldMask)mushaf.setMask(currentMask);
         updateRevealButton();
         if (currentPage != unitFirstPage) { currentPage = unitFirstPage; showCurrent(); }
@@ -635,12 +648,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void validateSabqi() {
-        if (sabqiBlock==null || prefs.sabqiRep()<PreviewConfig.SABQI_TOTAL_REPS) return;
-        if (!StructuredSessionPolicy.assistancePasses(prefs.sabqiAssisted())) {
-            restartSabqiAfterAssistance();
+        if (sabqiBlock==null || prefs.sabqiRep()<prefs.sabqiLessonTargetReps()) return;
+        if (!prefs.sabqiLessonReadyForCredit()) {
+            onError("Récitation Sabqi non validée : reprise nécessaire.");
             return;
         }
-        String label="Apprentissage · "+sabqiBlock.verseLabel()+" · 37/37 · révélations "+prefs.sabqiAssisted();
+        String label="Apprentissage · "+sabqiBlock.verseLabel()+" · "
+            +prefs.sabqiLessonTargetReps()+"/"+prefs.sabqiLessonTargetReps()
+            +" · révélations "+prefs.sabqiAssisted();
         boolean ok = prefs.completeSabqiBlockV6(
             sabqiBlock.startLineIndex,
             sabqiBlock.endLineIndex,
@@ -653,6 +668,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         awaitingValidation=false;
         closeClockForCompletedSession();
         mushaf.cycleCompleted();
+        renderMode();
+    }
+
+    /** Explicit unsuccessful final recall: extend the *same* lesson by 5+5,
+     * never issue a credit and never reset earlier earned repetitions. */
+    private void beginSabqiFortyFiveRecovery() {
+        if(prefs.sabqiLessonTargetReps()<SabqiFortyFiveRecoveryPolicy.BASE
+                ||!prefs.beginSabqiRecovery(sabqiLessonToken)) {
+            onError("Impossible d'ouvrir la reprise Sabqi 5+5.");
+            return;
+        }
+        awaitingValidation=false;
+        sessionCompleted=false;
+        clock.resume();
         renderMode();
     }
 
