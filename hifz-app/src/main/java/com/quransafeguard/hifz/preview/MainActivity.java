@@ -130,7 +130,7 @@ public final class MainActivity extends android.app.Activity {
 
         // --- Parcours Hifz: the five paths, one line each, then this week.
         LinearLayout path = page();
-        parcoursScroll = scrollOf(path);
+        parcoursScroll = wideBoox() ? fixedBooxParcours(path) : scrollOf(path);
         LinearLayout pathHeader = Ui.row(this);
         pathHeader.setGravity(Gravity.CENTER_VERTICAL);
         pathHeader.addView(Ui.iconButton(this, "‹", "Retour", v -> showHome()));
@@ -143,7 +143,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(pathHeader);
         path.addView(Ui.divider(this));
         backlogParcoursRow = backlogRow();
-        path.addView(backlogParcoursRow);
+        if(!wideBoox())path.addView(backlogParcoursRow);
         // The full weekly planner follows the six large pictograms. This direct
         // text link makes it reachable in one tap without shrinking those icons.
         TextView jumpToWeek = Ui.bookText(this, "PLANNING DE LA SEMAINE ↓", 16f, true);
@@ -154,7 +154,7 @@ public final class MainActivity extends android.app.Activity {
         jumpToWeek.setFocusable(true);
         jumpToWeek.setOnClickListener(v ->
             parcoursScroll.post(() -> parcoursScroll.scrollTo(0, dashboardTitle.getTop())));
-        path.addView(jumpToWeek);
+        if(!wideBoox())path.addView(jumpToWeek);
         // Hifz semantic grammar: paired by the real corpus and operation.
         // Sabqi: introduce one set, then cumulatively revisit it.
         path.addView(pathSectionTitle("SABQI"));
@@ -173,7 +173,7 @@ public final class MainActivity extends android.app.Activity {
         // BOOX: understated future-regime hint directly below the original
         // pictogram. Nothing added to the six-icon hierarchy; no tinted card.
         TextView maintienCue = Ui.text(this, "(Maintien)", 14f, false);
-        if(wideBoox())maintienCue.setTextSize(17f);
+        if(wideBoox())maintienCue.setTextSize(14f);
         maintienCue.setGravity(Gravity.CENTER);
         maintienCue.setTextColor(Ui.MUTED);
         maintienCue.setPadding(0,Ui.dp(this,3),0,0);
@@ -204,11 +204,12 @@ public final class MainActivity extends android.app.Activity {
         setGeometryActionsEnabled(false);
 
         dashboardTitle = Ui.bookText(this, "7 prochains jours", 20, true);
-        if (wideBoox()) dashboardTitle.setTextSize(24f);
-        dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
+        if (wideBoox()) dashboardTitle.setTextSize(18f);
+        dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, wideBoox()?5:14), 0, Ui.dp(this, 3));
         dashboardTitle.setOnClickListener(v -> {
             if(weekRows.isEmpty()) refreshDashboard();
-            parcoursScroll.post(() -> parcoursScroll.smoothScrollTo(0,dashboardTitle.getTop()));
+            if(wideBoox())showBooxDayDetails();
+            else parcoursScroll.post(() -> parcoursScroll.smoothScrollTo(0,dashboardTitle.getTop()));
         });
         dashboardTitle.setContentDescription("Voir le calendrier sur sept jours");
         path.addView(dashboardTitle);
@@ -216,7 +217,7 @@ public final class MainActivity extends android.app.Activity {
         dashboard.setPadding(0, 0, 0, 0);
         weekStrip = Ui.row(this);
         weekDayPanel = Ui.column(this);
-        weekDayPanel.setPadding(Ui.dp(this, 6), Ui.dp(this, 14), Ui.dp(this, 6), 0);
+        weekDayPanel.setPadding(Ui.dp(this, 6), Ui.dp(this, wideBoox()?2:14), Ui.dp(this, 6), 0);
         path.addView(dashboard);
 
         showHome();
@@ -280,6 +281,30 @@ public final class MainActivity extends android.app.Activity {
         int side = Ui.dp(this, 16);
         root.setPadding(side, Ui.dp(this, 4), side, Ui.dp(this, 16));
         return root;
+    }
+
+    /**
+     * BOOX-only fixed viewport: six pictograms and the seven-day ribbon fit on
+     * the same screen. Details and history open as dialogs; no swipe is required
+     * (or permitted) to reach a hidden footer. Phone rendering remains scrollable.
+     */
+    private ScrollView fixedBooxParcours(LinearLayout root) {
+        ScrollView viewport=new ScrollView(this) {
+            @Override public boolean onInterceptTouchEvent(android.view.MotionEvent event) {
+                return false; // keep all child buttons and timeline stations interactive
+            }
+            @Override public boolean onTouchEvent(android.view.MotionEvent event) {
+                return false; // no vertical scrolling for the BOOX Parcours screen
+            }
+            @Override public void scrollTo(int x,int y) { super.scrollTo(0,0); }
+        };
+        viewport.setFillViewport(true);
+        viewport.setBackgroundColor(Ui.PAPER);
+        viewport.setVerticalScrollBarEnabled(false);
+        viewport.addView(root,new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+        Ui.respectSystemBars(this,viewport,0,0,0,0);
+        return viewport;
     }
 
     /** A single true full-width portrait column; fillViewport expands height, never constrains scroll. */
@@ -353,9 +378,16 @@ public final class MainActivity extends android.app.Activity {
     /** BOOX-only text hierarchy for Hifz group labels; leaves modes and icons untouched. */
     private TextView pathSectionTitle(String caption) {
         TextView heading = Ui.bookText(this, caption, 16f, true);
-        if (wideBoox()) heading.setTextSize(22f);
-        heading.setPadding(Ui.dp(this, 4), Ui.dp(this, wideBoox() ? 4 : 9), 0, Ui.dp(this, 2));
+        if (wideBoox()) heading.setTextSize(18f);
+        heading.setPadding(Ui.dp(this, 4), Ui.dp(this, wideBoox() ? 1 : 9), 0, Ui.dp(this, 2));
         return heading;
+    }
+
+    /** Size from available BOOX display height, not tablet width: one-screen Hifz. */
+    private int booxPathIconDp() {
+        int heightDp=getResources().getConfiguration().screenHeightDp;
+        if(heightDp<=0)heightDp=800;
+        return Math.max(74,Math.min(106,heightDp/9));
     }
 
     /** Keep the pictograms compact enough for the calendar and session controls on BOOX. */
@@ -404,13 +436,13 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout tile = Ui.column(this);
         tile.setPadding(Ui.dp(this, 2), Ui.dp(this, wideBoox() ? 4 : 8), Ui.dp(this, 2), Ui.dp(this, wideBoox() ? 4 : 8));
         tile.setGravity(Gravity.CENTER);
-        int sideDp = booxIconDp(2, 124);
-        tile.setMinimumHeight(Ui.dp(this, sideDp + (wideBoox() ? 40 : 52)));
+        int sideDp = wideBoox()?booxPathIconDp():booxIconDp(2, 124);
+        tile.setMinimumHeight(Ui.dp(this, sideDp + (wideBoox() ? 30 : 52)));
         String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
             : "Stabilisation".equals(label) ? "Stabiliser"
             : "Révision".equals(label) ? "Réviser" : label;
         TextView name = Ui.bookText(this, shortLabel, 19f, true);
-        if (wideBoox()) name.setTextSize(22f);
+        if (wideBoox()) name.setTextSize(19f);
         name.setGravity(Gravity.CENTER);
         name.setMaxLines(2);
         int icon = largeIconFor(label);
@@ -1285,7 +1317,8 @@ public final class MainActivity extends android.app.Activity {
     private void refreshDashboard() {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
-        if (dashboardTitle != null) dashboardTitle.setText("7 prochains jours  ⌄");
+        if (dashboardTitle != null) dashboardTitle.setText(
+            wideBoox()?"CYCLE HIFZ · 7 JOURS  ›":"7 prochains jours  ⌄");
         List<WeeklyDashboardPlanner.Row> rows;
         try {
             rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today());
