@@ -447,7 +447,8 @@ public final class SettingsActivity extends android.app.Activity {
     private void refreshSabqi(){
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());
         int total=last-first+1;
-        boolean aligned=total>0&&total%PreviewConfig.SABQI_LINES==0;
+        boolean aligned=total>0&&(total%PreviewConfig.SABQI_LINES==0
+            || SabqiRoute.ROUTE_END.equals(prefs.sabqiEnd()));
         sabqiStatus.setText(total+" lignes"+(aligned?"":" · ⚠ fin à ajuster"));
         TextView startValue=Ui.settingValue(sabqiStartRow),endValue=Ui.settingValue(sabqiEndRow);
         if(startValue!=null)startValue.setText(prefs.sabqiStart().toString());
