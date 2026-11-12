@@ -18,7 +18,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # GitHub ubuntu runner already includes the Android command line SDK.
+      # setup-android@v3 currently fails on deprecated "tools" package.
       - name: Android 37 build tools and Hifz debug build
         run: |
           yes | sdkmanager --licenses >/dev/null || true
