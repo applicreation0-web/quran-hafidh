@@ -474,7 +474,7 @@ public final class MainActivity extends android.app.Activity {
         tile.setFocusable(true);
         tile.setOnClickListener(listener);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            wideBoox()?ViewGroup.LayoutParams.MATCH_PARENT:ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.setMargins(Ui.dp(this,wideBoox()?4:2),Ui.dp(this,wideBoox()?2:0),
             Ui.dp(this,wideBoox()?4:2),Ui.dp(this,wideBoox()?2:0));
         parent.addView(tile,lp);
