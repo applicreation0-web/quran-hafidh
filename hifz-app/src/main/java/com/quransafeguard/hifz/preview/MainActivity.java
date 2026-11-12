@@ -130,6 +130,7 @@ public final class MainActivity extends android.app.Activity {
 
         // --- Parcours Hifz: the five paths, one line each, then this week.
         LinearLayout path = page();
+        if(wideBoox())path.setPadding(Ui.dp(this,12),Ui.dp(this,2),Ui.dp(this,12),Ui.dp(this,6));
         parcoursScroll = wideBoox() ? fixedBooxParcours(path) : scrollOf(path);
         LinearLayout pathHeader = Ui.row(this);
         pathHeader.setGravity(Gravity.CENTER_VERTICAL);
@@ -1565,7 +1566,7 @@ public final class MainActivity extends android.app.Activity {
             boolean itqanDay=row.date.getDayOfWeek()==DayOfWeek.TUESDAY
                 ||row.date.getDayOfWeek()==DayOfWeek.THURSDAY
                 ||row.date.getDayOfWeek()==DayOfWeek.SATURDAY;
-            TextView node = Ui.text(this, done?"✓":wideBoox()&&itqanDay?"↻":"", 15f, true);
+            TextView node = Ui.text(this, done?"✓":wideBoox()&&row.date.getDayOfWeek()==DayOfWeek.SUNDAY?"F":wideBoox()&&itqanDay?"↻":"", 15f, true);
             node.setGravity(Gravity.CENTER);
             node.setTextColor(done ? Ui.PAPER : Ui.INK);
             android.graphics.drawable.GradientDrawable circle =
@@ -1599,7 +1600,7 @@ public final class MainActivity extends android.app.Activity {
             TextView date = Ui.text(this, Integer.toString(row.date.getDayOfMonth()),wideBoox()?16f:12f,active);
             date.setGravity(Gravity.CENTER);
             station.addView(date);
-            if (row.date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            if (row.date.getDayOfWeek() == DayOfWeek.SUNDAY && !wideBoox()) {
                 TextView finale = Ui.text(this,"Finale",wideBoox()?15f:10f,false);
                 finale.setGravity(Gravity.CENTER);
                 station.addView(finale);
