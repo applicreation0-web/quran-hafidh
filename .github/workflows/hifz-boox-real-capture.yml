@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - feature/boox-parcours-one-screen-itqan-frise-20261112
+  pull_request:
+    branches:
+      - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
   workflow_dispatch:
 
 jobs:
