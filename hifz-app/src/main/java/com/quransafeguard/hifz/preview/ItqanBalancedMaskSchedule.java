@@ -23,6 +23,8 @@ final class ItqanBalancedMaskSchedule {
         if(plan==null)throw new IllegalArgumentException("unit plan required");
         if(plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE)
             return ItqanMaintenancePolicy.maskForNextRep(plan,completed);
+        if (ItqanThirtyRecoveryPolicy.eligible(plan))
+            return ItqanThirtyRecoveryPolicy.maskForNextRep(completed);
         if(plan.protocol==AnchoringQueue.ItqanProtocol.LIGHT
                 ||plan.maskProfile==ItqanRegimeStore.MaskProfile.LEGACY_15_5_5_5_10)
             return ItqanMaintenancePolicy.maskForNextRep(plan.regime,plan.protocol,completed);
