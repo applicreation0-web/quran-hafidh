@@ -58,6 +58,7 @@ final class ItqanMaintenancePolicy {
         if (plan.regime == Regime.POST_NAS_MAINTENANCE
                 && plan.maskProfile != ItqanRegimeStore.MaskProfile.POST_NAS_THREE)
             return LEGACY_OPEN_TOTAL_REPS;
+        if (ItqanThirtyRecoveryPolicy.eligible(plan)) return ItqanThirtyRecoveryPolicy.BASE;
         return totalReps(plan.regime, plan.protocol);
     }
 
@@ -91,6 +92,8 @@ final class ItqanMaintenancePolicy {
     /** The new ×3 validates its only masked pass; old OPEN ×4 preserves its final two. */
     static boolean isValidationRep(ItqanRegimeStore.UnitPlan plan, int completedBefore) {
         if (plan == null) throw new IllegalArgumentException("Itqan plan required");
+        if (ItqanThirtyRecoveryPolicy.eligible(plan))
+            return ItqanThirtyRecoveryPolicy.finalRecallRep(completedBefore);
         if (plan.regime != Regime.POST_NAS_MAINTENANCE)
             return isValidationRep(plan.regime, plan.protocol, completedBefore);
         int next = completedBefore + 1, total = totalReps(plan);

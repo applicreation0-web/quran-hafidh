@@ -170,6 +170,14 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout otherModes = Ui.row(this);
         itqanCard = pathTile(otherModes, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
+        // BOOX: understated future-regime hint directly below the original
+        // pictogram. Nothing added to the six-icon hierarchy; no tinted card.
+        TextView maintienCue = Ui.text(this, "(Maintien)", 14f, false);
+        if(wideBoox())maintienCue.setTextSize(17f);
+        maintienCue.setGravity(Gravity.CENTER);
+        maintienCue.setTextColor(Ui.MUTED);
+        maintienCue.setPadding(0,Ui.dp(this,3),0,0);
+        itqanCard.addView(maintienCue);
         LinearLayout itqan = itqanCard;
         LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
             v -> openMode(consolidationQuickAccessMode()));
@@ -508,9 +516,14 @@ public final class MainActivity extends android.app.Activity {
         if(itqanCard!=null){
             if(itqanCard.getChildAt(0) instanceof TextView)
                 ((TextView)itqanCard.getChildAt(0)).setText(afterNas?"Maintien":"Stabiliser");
-            if(itqanCard.getChildCount()>3 && itqanCard.getChildAt(3) instanceof TextView)
-                ((TextView)itqanCard.getChildAt(3)).setText(afterNas?"Un hizb · trois répétitions":"Répétitions approfondies");
-            itqanCard.setContentDescription(afterNas?"Maintien · Un hizb, trois répétitions":"Stabiliser · Répétitions approfondies");
+            if(itqanCard.getChildCount()>3 && itqanCard.getChildAt(3) instanceof TextView){
+                TextView prochain=(TextView)itqanCard.getChildAt(3);
+                prochain.setText("(Maintien)");
+                prochain.setVisibility(afterNas?View.GONE:View.VISIBLE);
+            }
+            itqanCard.setContentDescription(afterNas
+                ?"Maintien · Un hizb, trois répétitions"
+                :"Stabiliser · Premier passage ; ensuite Maintien après An-Nās, un hizb, trois répétitions");
         }
         if(consolidationCard.getChildAt(0) instanceof TextView)
             ((TextView)consolidationCard.getChildAt(0)).setText("Consolidation");
@@ -590,7 +603,10 @@ public final class MainActivity extends android.app.Activity {
         // Position, cursor, repetitions and block geometry stay inside Itqan.
         cue.setText(stabilizationProgramCue());
         // Keep the full live programme accessible without overcrowding the visible subtitle.
-        itqanCard.setContentDescription("Stabilisation · " + cue.getText());
+        itqanCard.setContentDescription(
+            (prefs.itqanPostNasMaintenance()?"Maintien":"Stabilisation")
+                +" · "+cue.getText()
+                +(prefs.itqanPostNasMaintenance()?"":" · Ensuite : Maintien après An-Nās · 1 hizb ×3"));
     }
 
     /**

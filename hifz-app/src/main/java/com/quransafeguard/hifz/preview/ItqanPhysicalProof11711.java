@@ -106,7 +106,9 @@ final class ItqanPhysicalProof11711 {
                 return existing.optString("start").equals(start.toString())
                     &&existing.optString("end").equals(end.toString())
                     &&existing.optInt("block",-1)==index
-                    &&existing.optInt("target",-1)==target
+                    &&(ItqanThirtyRecoveryPolicy.eligible(plan)
+                        ?ItqanThirtyRecoveryPolicy.validTarget(existing.optInt("target",-1))
+                        :existing.optInt("target",-1)==target)
                     &&existing.optString("cursor").equals(cursor)
                     &&existing.optString("regime").equals(plan.regime.name())
                     &&existing.optString("protocol").equals(plan.protocol.name())
@@ -124,7 +126,7 @@ final class ItqanPhysicalProof11711 {
                 .put("v",7).put("token",UUID.randomUUID().toString())
                 .put("date",requestedDate).put("start",start.toString())
                 .put("end",end.toString()).put("block",index)
-                .put("target",target).put("reps",0)
+                .put("target",target).put("reps",0).put("passReveals",0)
                 .put("regime",plan.regime.name())
                 .put("protocol",plan.protocol.name())
                 .put("mask",plan.maskProfile.name())
@@ -154,10 +156,27 @@ final class ItqanPhysicalProof11711 {
         if(!currentEnd.isEmpty()&&!currentEnd.equals(proof.optString("end")))return false;
         int next=expectedRep+1;
         int assisted=p.getInt("itqanAssisted",0)+(revealed?1:0);
+        boolean newProtocol=ItqanThirtyRecoveryPolicy.eligible(plan);
+        boolean maskedTrial = newProtocol
+            && ItqanThirtyRecoveryPolicy.finalRecallRep(expectedRep);
         int finalReveals=p.getInt("itqanFinalReveals",0)
             +(revealed&&ItqanMaintenancePolicy.isValidationRep(plan,expectedRep)?1:0);
         try{
+            int passReveals=proof.optInt("passReveals",-1);
+            if(newProtocol && passReveals<0)return false;
+            if(newProtocol && maskedTrial && revealed)passReveals++;
             proof.put("reps",next);
+            if(newProtocol){
+                int target=proof.getInt("target");
+                if(!ItqanThirtyRecoveryPolicy.validTarget(target))return false;
+                if(next==target && passReveals>0){
+                    // Failure: no physical credit. Start 5 visible + 5 fully masked.
+                    target=ItqanThirtyRecoveryPolicy.nextRecoveryTarget(target);
+                    passReveals=0; // only the last recall trial decides the next receipt
+                    proof.put("target",target);
+                }
+                proof.put("passReveals",passReveals);
+            }
             return p.edit().putInt("itqanRep",next)
                 .putInt("itqanAssisted",assisted)
                 .putInt("itqanFinalReveals",finalReveals)
@@ -167,13 +186,58 @@ final class ItqanPhysicalProof11711 {
         }catch(Exception invalid){return false;}
     }
 
+
+    /** Current full target is durable in the V7 physical proof, not a UI counter. */
+    static int target(SharedPreferences p,ItqanRegimeStore.UnitPlan plan){
+        JSONObject proof=read(p);
+        if(!ItqanThirtyRecoveryPolicy.eligible(plan))return ItqanMaintenancePolicy.totalReps(plan);
+        if(proof==null || !ItqanThirtyRecoveryPolicy.validTarget(proof.optInt("target",-1))
+                ||!plan.maskProfile.name().equals(proof.optString("mask")))
+            return -1;
+        return proof.optInt("target",-1);
+    }
+
+    /** Only a fully earned final masked attempt can validate the unit. */
+    static boolean readyForCredit(SharedPreferences p,ItqanRegimeStore.UnitPlan plan){
+        JSONObject proof=read(p);
+        if(proof==null || plan==null)return false;
+        if(!ItqanThirtyRecoveryPolicy.eligible(plan))
+            return proof.optInt("target",-1)==p.getInt("itqanRep",-1)
+                &&ItqanMaintenancePolicy.validationAllowed(plan.regime,p.getInt("itqanAssisted",0));
+        return proof.optInt("target",-1)==p.getInt("itqanRep",-1)
+            &&proof.optInt("reps",-1)==p.getInt("itqanRep",-1)
+            &&proof.optInt("passReveals",-1)==0
+            &&ItqanThirtyRecoveryPolicy.validTarget(proof.optInt("target",-1))
+            &&plan.maskProfile.name().equals(proof.optString("mask"));
+    }
+
+    /** Explicitly reported failure without a reveal; never erase earned repetitions. */
+    static boolean beginRecovery(SharedPreferences p,String expectedToken,ItqanRegimeStore.UnitPlan plan){
+        if(!ItqanThirtyRecoveryPolicy.eligible(plan))return false;
+        JSONObject proof=read(p);
+        if(proof==null||expectedToken==null||!expectedToken.equals(proof.optString("token"))
+                ||!plan.maskProfile.name().equals(proof.optString("mask")))return false;
+        int target=proof.optInt("target",-1);
+        if(!ItqanThirtyRecoveryPolicy.validTarget(target)
+                ||proof.optInt("reps",-1)!=target||p.getInt("itqanRep",-1)!=target
+                ||proof.optInt("passReveals",-1)!=0
+                ||proof.optInt("block",-1)!=p.getInt("itqanBlockIndex",-1))return false;
+        try {
+            proof.put("target",ItqanThirtyRecoveryPolicy.nextRecoveryTarget(target));
+            return p.edit().putString(KEY,proof.toString()).commit();
+        }catch(Exception failed){return false;}
+    }
+
     /** Strict replay guard, also applied to reinforcement and maintenance. */
     static boolean complete(SharedPreferences p,List<String> lines,List<String> bonus,
             int nextBlockIndex,boolean finalBlock,VerseRef start,VerseRef end,
             VerseRef nextCursor,String date) {
         JSONObject v=read(p);
         if(v==null||start==null||end==null||date==null)return false;
-        return v.optString("start").equals(start.toString())
+        return (!"THREE_STAGE_10_10_10".equals(v.optString("mask"))
+                ||(ItqanThirtyRecoveryPolicy.validTarget(v.optInt("target",-1))
+                    &&v.optInt("passReveals",-1)==0))
+            &&v.optString("start").equals(start.toString())
             &&v.optString("end").equals(end.toString())
             &&v.optString("date").equals(date)
             &&v.optInt("block",-1)==p.getInt("itqanBlockIndex",0)

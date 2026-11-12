@@ -574,23 +574,30 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         unitLastPage = geometry.line(sabqiBlock.endLineIndex).page;
         currentSelection = sabqiBlock.verses; currentLineIds = sabqiBlock.lineIds;
         int rep = prefs.sabqiRep();
-        if (rep >= PreviewConfig.SABQI_TOTAL_REPS) {
-            boolean assistancePassed = StructuredSessionPolicy.assistancePasses(prefs.sabqiAssisted());
+        int target=prefs.sabqiLessonTargetReps();
+        if(target<=0){
+            onError("Protocole de répétition Sabqi non authentifiable.");
+            return;
+        }
+        if (rep >= target) {
+            boolean assistancePassed = prefs.sabqiLessonReadyForCredit();
             awaitingValidation = assistancePassed;
             sessionCompleted = true;
             clock.pause();
             currentMask = 0;
             program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · " + sabqiBlock.lineIds.size() + " lignes");
             progress.setText(assistancePassed
-                ? "37/37 · prêt à valider · révélations " + prefs.sabqiAssisted()
-                : "37/37 · à renforcer · révélations " + prefs.sabqiAssisted() + " · maximum 2");
+                ? target+"/"+target+" · prêt à valider · révélations " + prefs.sabqiAssisted()
+                : target+"/"+target+" · à renforcer · révélations " + prefs.sabqiAssisted());
             showCurrent();
             if (assistancePassed) addRoundAction("✓","Valider",v->runValidationSafely(this::validateSabqi));
             else addRoundAction("↻","Reprendre",v->restartSabqiAfterAssistance());
+            if(target>=SabqiFortyFiveRecoveryPolicy.BASE)
+                addRoundAction("↻","Échec · +5 visibles + 5 masquées",v->beginSabqiFortyFiveRecovery());
             return;
         }
         sessionCompleted = false;
-        currentMask = PreviewConfig.sabqiMaskForNextRep(rep);
+        currentMask = prefs.sabqiLessonMaskForNextRep(rep);
         program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · " + sabqiBlock.lineIds.size() + " lignes");
         updateSabqiProgress(rep, prefs.sabqiAssisted());
         showCurrent();
@@ -603,7 +610,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void updateSabqiProgress(int rep, int reveals) {
-        progress.setText(Math.min(rep+1,PreviewConfig.SABQI_TOTAL_REPS) + "/37 · masque " + currentMask + "% · révélations " + reveals);
+        int target=prefs.sabqiLessonTargetReps();
+        progress.setText(Math.min(rep+1,target) + "/" + target +
+            " · masque " + currentMask + "% · révélations " + reveals);
         eink.local(progress, prefs);
     }
 
@@ -617,17 +626,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void completeSabqiRep() {
         if (!takeRepLock()) return;
         boolean revealed = consumeReveal();
-        int rep=prefs.sabqiRep(); if(rep>=PreviewConfig.SABQI_TOTAL_REPS)return;
+        int rep=prefs.sabqiRep();
+        int target=prefs.sabqiLessonTargetReps();
+        if(target<=0 || rep>=target)return;
         int oldMask=currentMask;
         rep++; int reveals=prefs.sabqiAssisted()+(revealed?1:0);
         if(!prefs.recordSabqiRepetition(sabqiLessonToken,rep-1,revealed)){onError("Impossible d’enregistrer la répétition de l’Apprentissage.");return;}
-        if(rep>=PreviewConfig.SABQI_TOTAL_REPS){
+        target=prefs.sabqiLessonTargetReps();
+        if(target<=0){onError("Sabqi : reprise non authentifiable.");return;}
+        if(rep>=target){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
             awaitingValidation=true;sessionCompleted=true;
             renderMode();return;
         }
-        currentMask=PreviewConfig.sabqiMaskForNextRep(rep);
+        currentMask=prefs.sabqiLessonMaskForNextRep(rep);
         if(currentMask!=oldMask)mushaf.setMask(currentMask);
         updateRevealButton();
         if (currentPage != unitFirstPage) { currentPage = unitFirstPage; showCurrent(); }
@@ -635,12 +648,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void validateSabqi() {
-        if (sabqiBlock==null || prefs.sabqiRep()<PreviewConfig.SABQI_TOTAL_REPS) return;
-        if (!StructuredSessionPolicy.assistancePasses(prefs.sabqiAssisted())) {
-            restartSabqiAfterAssistance();
+        if (sabqiBlock==null || prefs.sabqiRep()<prefs.sabqiLessonTargetReps()) return;
+        if (!prefs.sabqiLessonReadyForCredit()) {
+            onError("Récitation Sabqi non validée : reprise nécessaire.");
             return;
         }
-        String label="Apprentissage · "+sabqiBlock.verseLabel()+" · 37/37 · révélations "+prefs.sabqiAssisted();
+        String label="Apprentissage · "+sabqiBlock.verseLabel()+" · "
+            +prefs.sabqiLessonTargetReps()+"/"+prefs.sabqiLessonTargetReps()
+            +" · révélations "+prefs.sabqiAssisted();
         boolean ok = prefs.completeSabqiBlockV6(
             sabqiBlock.startLineIndex,
             sabqiBlock.endLineIndex,
@@ -653,6 +668,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         awaitingValidation=false;
         closeClockForCompletedSession();
         mushaf.cycleCompleted();
+        renderMode();
+    }
+
+    /** Explicit unsuccessful final recall: extend the *same* lesson by 5+5,
+     * never issue a credit and never reset earlier earned repetitions. */
+    private void beginSabqiFortyFiveRecovery() {
+        if(prefs.sabqiLessonTargetReps()<SabqiFortyFiveRecoveryPolicy.BASE
+                ||!prefs.beginSabqiRecovery(sabqiLessonToken)) {
+            onError("Impossible d'ouvrir la reprise Sabqi 5+5.");
+            return;
+        }
+        awaitingValidation=false;
+        sessionCompleted=false;
+        clock.resume();
         renderMode();
     }
 
@@ -1406,9 +1435,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         itqanProofToken=prefs.itqanBlockProofTokenV7();
+        // V7 proof may have atomically appended 5 visible + 5 masked after a
+        // failed recall. The proof's durable target outranks the initial plan.
+        if (ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan)) {
+            itqanTargetReps=prefs.itqanBlockProofTargetV7(itqanUnitPlan);
+            if (itqanTargetReps<ItqanThirtyRecoveryPolicy.BASE) {
+                onError("Protocole Itqān incomplet : reprise protégée.");
+                return;
+            }
+        }
         if(rep>=itqanTargetReps){
             // Post-An-Nās maintenance: reveals are recorded, never a reason to restart the hizb.
-            boolean assistancePassed = ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted());
+            boolean assistancePassed = ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan)
+                ? prefs.itqanBlockProofReadyV7(itqanUnitPlan)
+                : ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted());
             awaitingValidation=assistancePassed;sessionCompleted=true;clock.pause();currentMask=0;
             program.setText(itqanProgramLabel());
             progress.setText(assistancePassed
@@ -1417,6 +1457,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             showCurrent();
             if (assistancePassed) addRoundAction("✓","Valider",v->runValidationSafely(this::validateItqan));
             else addRoundAction("↻","Reprendre",v->restartItqanAfterAssistance());
+            if (ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan))
+                addRoundAction("↻","Échec · 5 visibles + 5 masquées",
+                    v->beginItqanThirtyRecovery());
             return;
         }
         sessionCompleted=false;
@@ -1591,7 +1634,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void updateItqanProgress(int rep,int reveals){
         String stage=ItqanMaintenancePolicy.anchoredRecallRep(itqanUnitPlan, rep)
             ? "rappel avec ancrages" : "masque "+currentMask+"%";
-        progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · "+stage+" · révélations "+reveals);
+        String recovery=ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan) && rep>=30
+            ? " · reprise 5+5" : "";
+        progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · "+stage+recovery+" · révélations "+reveals);
         eink.local(progress, prefs);
     }
 
@@ -1624,6 +1669,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(!prefs.recordItqanRepV7(itqanProofToken,rep-1,revealed,itqanUnitPlan)){
             onError("Séance modifiée ou périmée : aucune répétition créditée.");return;
         }
+        if (ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan)) {
+            itqanTargetReps=prefs.itqanBlockProofTargetV7(itqanUnitPlan);
+            if(itqanTargetReps<ItqanThirtyRecoveryPolicy.BASE) {
+                onError("Cible de répétition Itqān non authentifiable.");return;
+            }
+        }
         if(rep>=itqanTargetReps){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
@@ -1648,7 +1699,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void validateItqan(){
         if(frozenItqan!=null){validateFrozenItqan();return;}
         if(itqanUnit==null||anchoringEntry==null||prefs.itqanRep()<itqanTargetReps)return;
-        if (!ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted())) {
+        boolean passes=ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan)
+            ?prefs.itqanBlockProofReadyV7(itqanUnitPlan)
+            :ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted());
+        if (!passes) {
+            if (ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan)) {
+                onError("Récitation finale non validée : reprise 5+5 nécessaire.");
+                return;
+            }
             restartItqanAfterAssistance();
             return;
         }
@@ -1682,6 +1740,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         metricsStore.recordAnchoring("Stabilisation réussie · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)
             +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
+    }
+
+    /** Declared failure after a 30-rep or recovery checkpoint: preserve the
+     * physical lesson and receipts, and earn an additional 5+5. */
+    private void beginItqanThirtyRecovery() {
+        if (frozenItqan!=null || !ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan)
+                ||itqanUnit==null || prefs.itqanRep()!=itqanTargetReps
+                ||!prefs.beginItqanBlockRecoveryV7(itqanProofToken,itqanUnitPlan)) {
+            onError("Impossible de reprendre les 5+5 répétitions de l’Itqān.");
+            return;
+        }
+        awaitingValidation=false;
+        sessionCompleted=false;
+        clock.resume();
+        renderMode();
     }
 
     private void restartItqanAfterAssistance() {
