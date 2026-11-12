@@ -1353,6 +1353,20 @@ public final class MainActivity extends android.app.Activity {
         dashboard.addView(weekStrip);
         dashboard.addView(weekDayPanel);
         renderSelectedWeekDay();
+        if(wideBoox()){
+            // Full recap/bilan is one tap away rather than taking the space of
+            // the seven-day frieze and forcing a vertical swipe on E-Ink.
+            TextView details=Ui.text(this,"Bilan · Lectures cumulatives ›",14f,true);
+            details.setTextColor(Ui.INK);
+            details.setGravity(Gravity.CENTER);
+            details.setPadding(0,Ui.dp(this,2),0,0);
+            details.setContentDescription("Ouvrir le bilan et les lectures cumulatives");
+            details.setClickable(true);
+            details.setFocusable(true);
+            details.setOnClickListener(v->showBooxExtras());
+            dashboard.addView(details);
+            return;
+        }
         // CP6: receipts only; never interpret time spent as acquired mastery.
         // Unlike the seven-day forward rail, this balance covers Monday through today.
         WeeklyBilan.Summary bilan=WeeklyBilan.calculate(HifzClock.today(),
@@ -1389,6 +1403,36 @@ public final class MainActivity extends android.app.Activity {
             recallRecap.setOnClickListener(v->showPostFinalRecap());
             dashboard.addView(recallRecap);
         }
+    }
+
+    /** All details still available on BOOX, but not stacked below the viewport. */
+    private void showBooxExtras(){
+        new android.app.AlertDialog.Builder(this).setTitle("Parcours Hifz · détails")
+            .setItems(new String[]{"Bilan de la semaine","Lectures cumulatives"},(d,choice)->{
+                if(choice==1){showPostFinalRecap();return;}
+                WeeklyBilan.Summary bilan=WeeklyBilan.calculate(HifzClock.today(),
+                    prefs.programStartDate(),ledger.coverageStartDate(),
+                    date->WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
+                        prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
+                    (date,mode)->ledger.find(date,mode)!=null);
+                new android.app.AlertDialog.Builder(this)
+                    .setTitle("Bilan de la semaine").setMessage(bilan.display())
+                    .setPositiveButton("Fermer",null).show();
+            }).setNegativeButton("Fermer",null).show();
+    }
+
+    /** Tap the selected timeline date; preserve every planning detail verbatim. */
+    private void showBooxDayDetails(){
+        WeeklyDashboardPlanner.Row selected=null;
+        for(WeeklyDashboardPlanner.Row row:weekRows)
+            if(row.date.equals(selectedWeekDate)){selected=row;break;}
+        if(selected==null)return;
+        final WeeklyDashboardPlanner.Row day=selected;
+        new android.app.AlertDialog.Builder(this)
+            .setTitle(day.day+" "+day.date.getDayOfMonth()+" · "+compactState(day.state))
+            .setItems(new String[]{"Matin · détail","Soir · détail"},(dialog,index)->
+                showScheduleDetail(index==0?"Matin":"Soir",index==0?day.morning:day.evening))
+            .setNegativeButton("Fermer",null).show();
     }
 
     /** Read-only presentation gate. Never hide a legacy-warning or a saved recap. */
@@ -1499,7 +1543,7 @@ public final class MainActivity extends android.app.Activity {
         timeline.addView(axis, lineParams);
         LinearLayout stations = Ui.row(this);
         stations.setGravity(Gravity.TOP);
-        int stationHeight=Ui.dp(this,wideBoox()?104:80);
+        int stationHeight=Ui.dp(this,wideBoox()?75:80);
         for (WeeklyDashboardPlanner.Row row : weekRows) {
             boolean active = row.date.equals(selectedWeekDate);
             if (active) chosen = row;
@@ -1512,7 +1556,11 @@ public final class MainActivity extends android.app.Activity {
             station.setPadding(0,0,0,0);
             station.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             station.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-            TextView node = Ui.text(this, done ? "✓" : "", 15f, true);
+            // Itqān-cadence glyph: rotation means "scheduled type", not "done".
+            boolean itqanDay=row.date.getDayOfWeek()==DayOfWeek.TUESDAY
+                ||row.date.getDayOfWeek()==DayOfWeek.THURSDAY
+                ||row.date.getDayOfWeek()==DayOfWeek.SATURDAY;
+            TextView node = Ui.text(this, done?"✓":wideBoox()&&itqanDay?"↻":"", 15f, true);
             node.setGravity(Gravity.CENTER);
             node.setTextColor(done ? Ui.PAPER : Ui.INK);
             android.graphics.drawable.GradientDrawable circle =
@@ -1559,12 +1607,41 @@ public final class MainActivity extends android.app.Activity {
             station.setOnClickListener(v -> {
                 selectedWeekDate = row.date;
                 renderSelectedWeekDay();
+                if(wideBoox())showBooxDayDetails();
             });
             stations.addView(station,new LinearLayout.LayoutParams(
                 0,stationHeight,1f));
         }
         timeline.addView(stations,new FrameLayout.LayoutParams(-1,stationHeight));
         weekStrip.addView(timeline,new LinearLayout.LayoutParams(-1,stationHeight));
+        if(wideBoox()){
+            // Read-only compact strip; the full morning/evening descriptions
+            // open as dialogs, preserving actions without a long scrolling panel.
+            TextView summary=Ui.bookText(this,
+                chosen.day+" "+chosen.date.getDayOfMonth()+" · "+
+                compactState(chosen.state),17f,true);
+            summary.setGravity(Gravity.CENTER_VERTICAL);
+            summary.setSingleLine(true);
+            summary.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            weekDayPanel.addView(summary);
+            TextView morning=Ui.text(this,
+                "MATIN  "+readableScheduleTitle(chosen.morning,prefs.itqanEntretienActive())+"  ›",
+                15f,false);
+            morning.setSingleLine(true);
+            morning.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            morning.setContentDescription(scheduleDetail(chosen.morning));
+            morning.setOnClickListener(v->showScheduleDetail("Matin",chosen.morning));
+            weekDayPanel.addView(morning);
+            TextView evening=Ui.text(this,
+                "SOIR  "+readableScheduleTitle(chosen.evening,prefs.itqanEntretienActive())+"  ›",
+                15f,false);
+            evening.setSingleLine(true);
+            evening.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            evening.setContentDescription(scheduleDetail(chosen.evening));
+            evening.setOnClickListener(v->showScheduleDetail("Soir",chosen.evening));
+            weekDayPanel.addView(evening);
+            return;
+        }
         TextView heading = Ui.bookText(this,
             chosen.day+" "+chosen.date.getDayOfMonth()+" · "+compactState(chosen.state), 20f, true);
         weekDayPanel.addView(heading);
