@@ -1615,6 +1615,7 @@ public final class MainActivity extends android.app.Activity {
         timeline.addView(stations,new FrameLayout.LayoutParams(-1,stationHeight));
         weekStrip.addView(timeline,new LinearLayout.LayoutParams(-1,stationHeight));
         if(wideBoox()){
+            final WeeklyDashboardPlanner.Row selected=chosen;
             // Read-only compact strip; the full morning/evening descriptions
             // open as dialogs, preserving actions without a long scrolling panel.
             TextView summary=Ui.bookText(this,
@@ -1630,7 +1631,7 @@ public final class MainActivity extends android.app.Activity {
             morning.setSingleLine(true);
             morning.setEllipsize(android.text.TextUtils.TruncateAt.END);
             morning.setContentDescription(scheduleDetail(chosen.morning));
-            morning.setOnClickListener(v->showScheduleDetail("Matin",chosen.morning));
+            morning.setOnClickListener(v->showScheduleDetail("Matin",selected.morning));
             weekDayPanel.addView(morning);
             TextView evening=Ui.text(this,
                 "SOIR  "+readableScheduleTitle(chosen.evening,prefs.itqanEntretienActive())+"  ›",
@@ -1638,7 +1639,7 @@ public final class MainActivity extends android.app.Activity {
             evening.setSingleLine(true);
             evening.setEllipsize(android.text.TextUtils.TruncateAt.END);
             evening.setContentDescription(scheduleDetail(chosen.evening));
-            evening.setOnClickListener(v->showScheduleDetail("Soir",chosen.evening));
+            evening.setOnClickListener(v->showScheduleDetail("Soir",selected.evening));
             weekDayPanel.addView(evening);
             return;
         }
