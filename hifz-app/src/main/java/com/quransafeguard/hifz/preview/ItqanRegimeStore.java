@@ -23,7 +23,7 @@ final class ItqanRegimeStore {
     static final String LEGACY_LEG = "p4AncrageLeg";
     static final String LEGACY_INITIAL_TAIL_COMPLETED = "p4AncrageInitialTailCompleted";
     static final String UNIT_PLAN = "itqanUnitPlanV1";
-    enum MaskProfile { LEGACY_15_5_5_5_10, BALANCED_20_5_5_5_5, POST_NAS_THREE }
+    enum MaskProfile { LEGACY_15_5_5_5_10, BALANCED_20_5_5_5_5, POST_NAS_THREE, THREE_STAGE_10_10_10 }
 
     private ItqanRegimeStore() {}
 
@@ -156,7 +156,7 @@ final class ItqanRegimeStore {
         ItqanMaintenancePolicy.Regime regime=ItqanMaintenancePolicy.regimeFor(maintenanceForNewSession(p));
         return new UnitPlan(regime,ItqanMaintenancePolicy.protocolForNewSession(),
             regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
-                ?MaskProfile.POST_NAS_THREE:MaskProfile.BALANCED_20_5_5_5_5);
+                ?MaskProfile.POST_NAS_THREE:MaskProfile.THREE_STAGE_10_10_10);
     }
 
     /** Regime a new selection should be sized with, honouring a unit already mid-repetition. */
