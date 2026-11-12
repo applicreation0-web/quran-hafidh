@@ -1911,6 +1911,15 @@ public final class HifzPrefs {
     }
     String itqanBlockProofTokenV7(){return ItqanPhysicalProof11711.token(p);}
     String itqanBlockProofDateV7(){return ItqanPhysicalProof11711.date(p);}
+    int itqanBlockProofTargetV7(ItqanRegimeStore.UnitPlan plan){
+        synchronized(V6_STATE_LOCK) {return ItqanPhysicalProof11711.target(p,plan);}
+    }
+    boolean itqanBlockProofReadyV7(ItqanRegimeStore.UnitPlan plan){
+        synchronized(V6_STATE_LOCK) {return ItqanPhysicalProof11711.readyForCredit(p,plan);}
+    }
+    boolean beginItqanBlockRecoveryV7(String token,ItqanRegimeStore.UnitPlan plan){
+        synchronized(V6_STATE_LOCK) {return ItqanPhysicalProof11711.beginRecovery(p,token,plan);}
+    }
     boolean recordItqanRepV7(String token,int expectedRep,boolean revealed,
                              ItqanRegimeStore.UnitPlan plan){
         synchronized(V6_STATE_LOCK){
@@ -1918,11 +1927,14 @@ public final class HifzPrefs {
         }
     }
 
+    /** A V7 final credit is bound to its specific frozen mask profile and proof. */
     private boolean legacyItqanRepetitionProof(VerseRef start,VerseRef end) {
         if(!start.equals(itqanUnitStart()) || !end.equals(itqanUnitEnd()))return false;
         AnchoringQueue.Entry entry=new AnchoringQueue.Entry(start.toString(),end.toString(),
             AnchoringQueue.Origin.PROMOTED,AnchoringQueue.ItqanProtocol.FULL,0);
         ItqanRegimeStore.UnitPlan plan=itqanUnitPlan(entry);
+        if (ItqanThirtyRecoveryPolicy.eligible(plan))
+            return ItqanPhysicalProof11711.readyForCredit(p,plan);
         return itqanRep()==ItqanMaintenancePolicy.totalReps(plan)
             && ItqanMaintenancePolicy.validationAllowed(plan.regime,itqanAssisted());
     }
