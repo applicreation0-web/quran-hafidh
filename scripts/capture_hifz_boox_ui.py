@@ -30,7 +30,7 @@ def visible(node):
     return node.attrib.get("text","") + " " + node.attrib.get("content-desc","")
 def bounds(node):
     v = node.attrib.get("bounds", "")
-    m = re.fullmatch(r"\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]", v)
+    m = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", v)
     return tuple(int(p) for p in m.groups()) if m else None
 def tap_parcours():
     for _ in range(10):
