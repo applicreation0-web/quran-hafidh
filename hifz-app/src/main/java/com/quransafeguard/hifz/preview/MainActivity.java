@@ -52,7 +52,7 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout consolidationCard;
     private TextView todayHeading;
     private ScrollView homeScroll;
-    private ScrollView parcoursScroll;
+    private ViewGroup parcoursScroll;
     private TextView backlogHomeRow;
     private TextView backlogParcoursRow;
     private List<HifzBacklog.Due> backlogPending = java.util.Collections.emptyList();
@@ -135,7 +135,7 @@ public final class MainActivity extends android.app.Activity {
         pathHeader.setGravity(Gravity.CENTER_VERTICAL);
         pathHeader.addView(Ui.iconButton(this, "‹", "Retour", v -> showHome()));
         TextView pathTitle = Ui.bookText(this, "Parcours Hifz", 24, true);
-        if (wideBoox()) pathTitle.setTextSize(27f);
+        if (wideBoox()) pathTitle.setTextSize(22f);
         pathTitle.setGravity(Gravity.CENTER);
         Ui.weight(pathTitle, 1f);
         pathHeader.addView(pathTitle);
@@ -163,7 +163,8 @@ public final class MainActivity extends android.app.Activity {
             v -> openMode(HifzSessionActivity.SABQI));
         LinearLayout renforcement = pathTile(learningModes, "Renforcement", "Sabqi",
             v -> openMode(renforcementQuickAccessMode()));
-        path.addView(learningModes);
+        if(wideBoox())path.addView(learningModes,new LinearLayout.LayoutParams(-1,0,1f));
+        else path.addView(learningModes);
 
         // Itqan: one bounded memorization unit, then its accumulated units.
         path.addView(pathSectionTitle("ITQĀN"));
@@ -182,7 +183,8 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
             v -> openMode(consolidationQuickAccessMode()));
         consolidationCard = consolidation; // Same action and immutable original icon.
-        path.addView(otherModes);
+        if(wideBoox())path.addView(otherModes,new LinearLayout.LayoutParams(-1,0,1f));
+        else path.addView(otherModes);
 
         // Same acquired corpus, two modalities: text masked vs text visible.
         path.addView(pathSectionTitle("RÉVISION"));
@@ -191,7 +193,8 @@ public final class MainActivity extends android.app.Activity {
             v -> openMode(HifzSessionActivity.MURAJAAH_ACTIVE));
         LinearLayout passiveRevision = pathTile(reviewModes, "Révision passive", "Texte visible",
             v -> openMode(HifzSessionActivity.MURAJAAH));
-        path.addView(reviewModes);
+        if(wideBoox())path.addView(reviewModes,new LinearLayout.LayoutParams(-1,0,1f));
+        else path.addView(reviewModes);
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
         geometryActions.add(parcours);
@@ -209,7 +212,7 @@ public final class MainActivity extends android.app.Activity {
         dashboardTitle.setOnClickListener(v -> {
             if(weekRows.isEmpty()) refreshDashboard();
             if(wideBoox())showBooxDayDetails();
-            else parcoursScroll.post(() -> parcoursScroll.smoothScrollTo(0,dashboardTitle.getTop()));
+            else parcoursScroll.post(() -> ((ScrollView)parcoursScroll).smoothScrollTo(0,dashboardTitle.getTop()));
         });
         dashboardTitle.setContentDescription("Voir le calendrier sur sept jours");
         path.addView(dashboardTitle);
@@ -284,25 +287,15 @@ public final class MainActivity extends android.app.Activity {
     }
 
     /**
-     * BOOX-only fixed viewport: six pictograms and the seven-day ribbon fit on
-     * the same screen. Details and history open as dialogs; no swipe is required
-     * (or permitted) to reach a hidden footer. Phone rendering remains scrollable.
+     * True fixed BOOX display, NOT a ScrollView whose content overflows invisibly.
+     * Three tile rows each get an equal share of remaining height. All secondary
+     * information remains accessible from the seven-day strip via dialogs.
      */
-    private ScrollView fixedBooxParcours(LinearLayout root) {
-        ScrollView viewport=new ScrollView(this) {
-            @Override public boolean onInterceptTouchEvent(android.view.MotionEvent event) {
-                return false; // keep all child buttons and timeline stations interactive
-            }
-            @Override public boolean onTouchEvent(android.view.MotionEvent event) {
-                return false; // no vertical scrolling for the BOOX Parcours screen
-            }
-            @Override public void scrollTo(int x,int y) { super.scrollTo(0,0); }
-        };
-        viewport.setFillViewport(true);
+    private FrameLayout fixedBooxParcours(LinearLayout root) {
+        FrameLayout viewport=new FrameLayout(this);
         viewport.setBackgroundColor(Ui.PAPER);
-        viewport.setVerticalScrollBarEnabled(false);
-        viewport.addView(root,new ScrollView.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+        viewport.addView(root,new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
         Ui.respectSystemBars(this,viewport,0,0,0,0);
         return viewport;
     }
@@ -387,7 +380,7 @@ public final class MainActivity extends android.app.Activity {
     private int booxPathIconDp() {
         int heightDp=getResources().getConfiguration().screenHeightDp;
         if(heightDp<=0)heightDp=800;
-        return Math.max(74,Math.min(106,heightDp/9));
+        return Math.max(48,Math.min(96,(heightDp-270)/5));
     }
 
     /** Keep the pictograms compact enough for the calendar and session controls on BOOX. */
@@ -437,7 +430,16 @@ public final class MainActivity extends android.app.Activity {
         tile.setPadding(Ui.dp(this, 2), Ui.dp(this, wideBoox() ? 4 : 8), Ui.dp(this, 2), Ui.dp(this, wideBoox() ? 4 : 8));
         tile.setGravity(Gravity.CENTER);
         int sideDp = wideBoox()?booxPathIconDp():booxIconDp(2, 124);
-        tile.setMinimumHeight(Ui.dp(this, sideDp + (wideBoox() ? 30 : 52)));
+        if(wideBoox()){
+            // Monochrome E-Ink tile: stroke instead of shadow or coloured fill.
+            android.graphics.drawable.GradientDrawable tileBg=
+                new android.graphics.drawable.GradientDrawable();
+            tileBg.setColor(Ui.SURFACE);
+            tileBg.setCornerRadius(Ui.dp(this,10));
+            tileBg.setStroke(Ui.dp(this,1),Ui.LINE);
+            tile.setBackground(tileBg);
+            tile.setMinimumHeight(0); // weighted row owns exact viewport allocation
+        } else tile.setMinimumHeight(Ui.dp(this,sideDp+52));
         String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
             : "Stabilisation".equals(label) ? "Stabiliser"
             : "Révision".equals(label) ? "Réviser" : label;
@@ -456,9 +458,11 @@ public final class MainActivity extends android.app.Activity {
         iconView.setImageDrawable(architectural);
         iconView.setScaleType(ImageView.ScaleType.FIT_CENTER);
         iconView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        LinearLayout.LayoutParams iconLayout = new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp));
-        iconLayout.topMargin = Ui.dp(this, wideBoox() ? 3 : 6);
-        tile.addView(iconView, iconLayout);
+        LinearLayout.LayoutParams iconLayout = wideBoox()
+            ?new LinearLayout.LayoutParams(Ui.dp(this,sideDp),0,1f)
+            :new LinearLayout.LayoutParams(Ui.dp(this,sideDp),Ui.dp(this,sideDp));
+        iconLayout.topMargin=Ui.dp(this,wideBoox()?1:6);
+        tile.addView(iconView,iconLayout);
         // The real target/verse range is on the selected day, not crammed into a 1/3-width cell.
         TextView cue = Ui.text(this, state, 15f, false);
         cue.setVisibility(View.GONE);
@@ -471,8 +475,9 @@ public final class MainActivity extends android.app.Activity {
         tile.setOnClickListener(listener);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(Ui.dp(this, 2), 0, Ui.dp(this, 2), 0);
-        parent.addView(tile, lp);
+        lp.setMargins(Ui.dp(this,wideBoox()?4:2),Ui.dp(this,wideBoox()?2:0),
+            Ui.dp(this,wideBoox()?4:2),Ui.dp(this,wideBoox()?2:0));
+        parent.addView(tile,lp);
         return tile;
     }
 
@@ -554,8 +559,8 @@ public final class MainActivity extends android.app.Activity {
                 prochain.setVisibility(afterNas?View.GONE:View.VISIBLE);
             }
             itqanCard.setContentDescription(afterNas
-                ?"Maintien · Un hizb, trois répétitions"
-                :"Stabiliser · Premier passage ; ensuite Maintien après An-Nās, un hizb, trois répétitions");
+                ?"Maintien · deuxième régime Itqān"
+                :"Stabiliser · Premier passage ; ensuite Maintien après An-Nās");
         }
         if(consolidationCard.getChildAt(0) instanceof TextView)
             ((TextView)consolidationCard.getChildAt(0)).setText("Consolidation");
@@ -638,7 +643,7 @@ public final class MainActivity extends android.app.Activity {
         itqanCard.setContentDescription(
             (prefs.itqanPostNasMaintenance()?"Maintien":"Stabilisation")
                 +" · "+cue.getText()
-                +(prefs.itqanPostNasMaintenance()?"":" · Ensuite : Maintien après An-Nās · 1 hizb ×3"));
+                +(prefs.itqanPostNasMaintenance()?"":" · Ensuite : Maintien après An-Nās"));
     }
 
     /**
