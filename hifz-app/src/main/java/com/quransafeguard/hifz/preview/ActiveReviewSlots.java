@@ -110,6 +110,19 @@ final class ActiveReviewSlots {
         return draft != null && draft.revision == revision() && draft.start.equals(cursor);
     }
 
+    /**
+     * Two slots are independent receipts, not permission to revise the same
+     * uncredited passage twice. An unfinished slot reserves today's active
+     * cursor until it has a genuine receipt. A skipped slot reserves nothing.
+     */
+    boolean canOpen(LocalDate date, Slot slot) {
+        if (date == null || slot == null) return false;
+        synchronized (LOCK) {
+            Slot other = slot == Slot.MORNING ? Slot.EVENING : Slot.MORNING;
+            return receipt(date, other) != null || draft(date, other) == null;
+        }
+    }
+
     boolean checkpoint(LocalDate date, Slot slot, VerseRef start, VerseRef end, int page, long elapsed) {
         return checkpoint(date, slot, start, end, page, elapsed, false, LEGACY_MINUTES);
     }
@@ -122,9 +135,10 @@ final class ActiveReviewSlots {
     boolean checkpoint(LocalDate date, Slot slot, VerseRef start, VerseRef end, int page, long elapsed,
             boolean paused, int proposedMinutes) {
         synchronized (LOCK) {
-            if (receipt(date, slot) != null) return false;
+            if (receipt(date, slot) != null || !canOpen(date, slot)) return false;
             Draft saved = draft(date, slot);
-            if (saved != null && !saved.start.equals(start)) return false;
+            if (saved != null && (!saved.start.equals(start)
+                    || !isCurrent(saved, currentCursor(start)))) return false;
             long checkpointRevision = saved == null ? revision() : saved.revision;
             long savedElapsed = saved == null ? 0L : saved.elapsedMs;
             return save(date, slot, start, end, page, Math.max(elapsed, savedElapsed),
@@ -221,6 +235,7 @@ final class ActiveReviewSlots {
             Draft saved = draft(date, slot);
             if (saved == null || !saved.start.equals(start) || saved.end == null || next == null
                     || saved.elapsedMs != saved.durationMs() || receipt(date, slot) != null
+                    || !canOpen(date, slot) || !isCurrent(saved, currentCursor(start))
                     || label == null || label.isEmpty()) return false;
 
             ActiveReviewCorrectionStore correction = correction(date, slot);
@@ -237,8 +252,7 @@ final class ActiveReviewSlots {
                 .putString(RECEIPT + scope(date, slot), label)
                 .putInt(RECEIPT_MINUTES + scope(date, slot), saved.targetMinutes)
                 .remove(DRAFT + scope(date, slot));
-            if (isCurrent(saved, currentCursor(start)))
-                editor.putString(CURSOR, next.toString()).putLong(REVISION, revision() + 1L);
+            editor.putString(CURSOR, next.toString()).putLong(REVISION, revision() + 1L);
             return editor.commit();
         }
     }
