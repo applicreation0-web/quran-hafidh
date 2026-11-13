@@ -140,6 +140,7 @@ final class ActiveReviewSlots {
         synchronized (LOCK) {
             if (receipt(date, slot) != null || !canOpen(date, slot)) return false;
             Draft saved = draft(date, slot);
+            if (saved == null && !start.equals(currentCursor(start))) return false;
             if (saved != null && (!saved.start.equals(start)
                     || !isCurrent(saved, currentCursor(start)))) return false;
             long checkpointRevision = saved == null ? revision() : saved.revision;
