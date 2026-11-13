@@ -1569,13 +1569,12 @@ public final class MainActivity extends android.app.Activity {
             station.setPadding(0,0,0,0);
             station.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             station.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-            // Itqān-cadence glyph: rotation means "scheduled type", not "done".
-            boolean itqanDay=row.date.getDayOfWeek()==DayOfWeek.TUESDAY
-                ||row.date.getDayOfWeek()==DayOfWeek.THURSDAY
-                ||row.date.getDayOfWeek()==DayOfWeek.SATURDAY;
-            TextView node = Ui.text(this, done?"✓":wideBoox()&&row.date.getDayOfWeek()==DayOfWeek.SUNDAY?"F":wideBoox()&&itqanDay?"↻":"", 15f, true);
+            // BOOX calendar: keep every day circle completely empty.
+            // Completion is signalled only by a solid fill, selection by an outer
+            // ring, and the weekday/date remain outside the circle. Never use
+            // cadence arrows, finale letters or checks inside the nodes.
+            TextView node = Ui.text(this, "", 15f, true);
             node.setGravity(Gravity.CENTER);
-            node.setTextColor(done ? Ui.PAPER : Ui.INK);
             android.graphics.drawable.GradientDrawable circle =
                 new android.graphics.drawable.GradientDrawable();
             circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
