@@ -122,6 +122,58 @@ public final class ItqanWeeklyIntegrationTest {
         assertNull(prefs.openWeeklyItqan(geo,day("2026-11-26")));
     }
 
+    @Test public void sixtyFourMissedDatePatternsNeverSkipOrDoubleCountNajmQamar() throws Exception {
+        // Six candidate attendance decisions plus three follow-up dates.
+        // Every variant starts from the same never-credited 12 November proof,
+        // advances only on real dates, and is restored between date slots.
+        LocalDate[] calendar={
+            LocalDate.of(2026,11,14),LocalDate.of(2026,11,17),
+            LocalDate.of(2026,11,19),LocalDate.of(2026,11,21),
+            LocalDate.of(2026,11,24),LocalDate.of(2026,11,26),
+            LocalDate.of(2026,11,28),LocalDate.of(2026,12,1),
+            LocalDate.of(2026,12,3)
+        };
+        List<String> ordered=new ArrayList<>(geo.lineIdsOnPage(527).subList(10,15));
+        ordered.addAll(geo.lineIdsOnPage(528));
+        assertEquals(18,ordered.size());
+        for(int absentMask=0;absentMask<64;absentMask++){
+            InMemoryPrefs disk=fixture(0);
+            HifzPrefs prefs=new HifzPrefs(disk,geo);
+            List<String> completedLines=new ArrayList<>();
+            for(int slot=0;slot<calendar.length;slot++){
+                LocalDate date=day(calendar[slot].toString());
+                int before=new JSONArray(disk.getString("v6DailyLessonReceiptsV1","[]")).length();
+                if(slot<6 && ((absentMask >> slot)&1)!=0) {
+                    // No phantom attendance from an absent weekday.
+                    assertEquals(before,new JSONArray(disk.getString("v6DailyLessonReceiptsV1","[]")).length());
+                    continue;
+                }
+                if(!prefs.weeklyItqanPageClosed(date)){
+                    ItqanFourSessionSnapshot plan=prefs.openWeeklyItqan(geo,date);
+                    if(plan!=null) complete(prefs,date);
+                }
+                JSONArray receipts=new JSONArray(disk.getString("v6DailyLessonReceiptsV1","[]"));
+                assertTrue("No more than one dated receipt: mask="+absentMask+" slot="+slot,
+                    receipts.length()<=before+1);
+                for(int r=before;r<receipts.length();r++){
+                    JSONObject receipt=receipts.getJSONObject(r);
+                    assertEquals("Real attendance date",date.toString(),receipt.getString("date"));
+                    JSONArray lines=receipt.getJSONArray("lines");
+                    assertTrue("No zero-line receipt",lines.length()>0);
+                    for(int j=0;j<lines.length();j++)completedLines.add(lines.getString(j));
+                }
+                assertTrue("Never move beyond acquired 527-528 lines",completedLines.size()<=ordered.size());
+                assertEquals("Physical prefix order mask="+absentMask+" slot="+slot,
+                    ordered.subList(0,completedLines.size()),completedLines);
+                assertEquals(completedLines.size(),new java.util.HashSet<>(completedLines).size());
+                // Force a reboot against the same durable preferences.
+                prefs=new HifzPrefs(disk,geo);
+            }
+            assertFalse("No phantom 12 November receipt",
+                disk.getString("v6DailyLessonReceiptsV1","").contains("\\"date\\":\\"2026-11-12\\""));
+        }
+    }
+
     @Test public void multiSurahSlotEarnsOnlyOneReceiptAfterEverySubblock() throws Exception {
         InMemoryPrefs disk=fixture(0);
         disk.disk.remove(ItqanPhysicalProof11711.KEY);
