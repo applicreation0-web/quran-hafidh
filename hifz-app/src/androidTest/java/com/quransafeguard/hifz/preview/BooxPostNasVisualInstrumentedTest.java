@@ -90,12 +90,14 @@ public final class BooxPostNasVisualInstrumentedTest {
                 original[0] = (HifzPrefs) field(a, "prefs");
                 set(a, "prefs", overlay(original[0], false));
                 call(a, "refreshItqanCardVocabulary");
+                call(a, "refreshStabilizationPosition");
                 check((LinearLayout) field(a, "itqanCard"), false);
             });
             Independent11710ScreensInstrumentedTest.capture("itqan-before-nas");
             scenario.onActivity(a -> {
                 set(a, "prefs", overlay(original[0], true));
                 call(a, "refreshItqanCardVocabulary");
+                call(a, "refreshStabilizationPosition");
                 check((LinearLayout) field(a, "itqanCard"), true);
             });
             Independent11710ScreensInstrumentedTest.capture("itqan-after-nas");
