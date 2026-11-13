@@ -17,8 +17,8 @@ import java.util.Set;
  */
 final class ActiveReviewCorrectionStore {
     private static final String PREFS = "quran_hifz_preview_v1";
-    private static final String KEY_REVEALED = "activeReviewRevealedPagesV1";
-    private static final String KEY_STATE = "activeReviewCorrectionV2";
+    static final String KEY_REVEALED = "activeReviewRevealedPagesV1";
+    static final String KEY_STATE = "activeReviewCorrectionV2";
     private final SharedPreferences prefs;
     private final String revealedKey;
     private final String stateKey;
