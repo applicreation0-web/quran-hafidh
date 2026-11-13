@@ -175,6 +175,18 @@ public final class ActiveReviewSlotsTest {
         assertEquals(FIRST.toString(), disk.getString("activeMurajaahCursor", ""));
     }
 
+    @Test public void delayedEveningStartCannotReopenMorningContent() {
+        ActiveReviewSlots.Slot morning = ActiveReviewSlots.Slot.MORNING;
+        ActiveReviewSlots.Slot evening = ActiveReviewSlots.Slot.EVENING;
+        assertTrue(store.checkpoint(SUNDAY, morning, FIRST, END, 2, 1_800_000L));
+        assertTrue(store.complete(SUNDAY, morning, FIRST, NEXT, "matin"));
+        assertFalse(store.checkpoint(SUNDAY, evening, FIRST, END, 2, 1_800_000L));
+        assertNull(store.draft(SUNDAY, evening));
+        assertTrue(store.checkpoint(SUNDAY, evening, NEXT, NEXT, 2, 1_800_000L));
+        assertTrue(store.complete(SUNDAY, evening, NEXT, FIRST, "soir"));
+        assertEquals("soir", store.receipt(SUNDAY, evening));
+    }
+
     @Test public void skippedMorningDoesNotBlockEvening() {
         ActiveReviewSlots.Slot morning = ActiveReviewSlots.Slot.MORNING;
         ActiveReviewSlots.Slot evening = ActiveReviewSlots.Slot.EVENING;
