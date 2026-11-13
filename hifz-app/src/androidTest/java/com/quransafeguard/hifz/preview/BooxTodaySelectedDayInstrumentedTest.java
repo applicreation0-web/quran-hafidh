@@ -38,13 +38,13 @@ public final class BooxTodaySelectedDayInstrumentedTest {
             throw new AssertionError("Unable to set visual-only field " + name, e);
         }
     }
-    private static void render(MainActivity activity) {
+    private static void call(MainActivity activity, String method) {
         try {
-            Method m = MainActivity.class.getDeclaredMethod("renderSelectedWeekDay");
+            Method m = MainActivity.class.getDeclaredMethod(method);
             m.setAccessible(true);
             m.invoke(activity);
         } catch (Exception e) {
-            throw new AssertionError("Calendar render failed", e);
+            throw new AssertionError("BOOX visual action failed: " + method, e);
         }
     }
     private static LinearLayout station(MainActivity activity, int index) {
@@ -81,6 +81,7 @@ public final class BooxTodaySelectedDayInstrumentedTest {
         final LocalDate today = HifzClock.today();
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a -> {
+                call(a, "showParcours");
                 List<WeeklyDashboardPlanner.Row> rows = new ArrayList<>();
                 for (int i = 0; i < 7; i++) {
                     LocalDate day = today.plusDays(i);
@@ -90,7 +91,7 @@ public final class BooxTodaySelectedDayInstrumentedTest {
                 }
                 set(a, "weekRows", rows);
                 set(a, "selectedWeekDate", today);
-                render(a);
+                call(a, "renderSelectedWeekDay");
                 check(station(a, 0), true, true, true);
                 check(station(a, 2), false, false, true);
                 check(station(a, 1), false, false, false);
@@ -98,7 +99,7 @@ public final class BooxTodaySelectedDayInstrumentedTest {
             Independent11710ScreensInstrumentedTest.capture("calendar-today-selected-and-validated");
             scenario.onActivity(a -> {
                 set(a, "selectedWeekDate", today.plusDays(2));
-                render(a);
+                call(a, "renderSelectedWeekDay");
                 check(station(a, 0), true, false, true);
                 check(station(a, 2), false, true, true);
                 check(station(a, 1), false, false, false);
