@@ -68,6 +68,23 @@ public final class BooxMemoryPalaceNavigationContractTest {
             calendar.contains("station.addView(day);") && calendar.contains("station.addView(date);"));
     }
 
+    @Test public void maintiensTitleIsAdjacentAndUsesSameTypefaceBeforeNas() throws Exception {
+        String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertTrue("Future Maintien is a second title line, in the same font as Stabiliser",
+            main.contains("Ui.bookText(this, \"(Maintien)\", 19f, true)"));
+        assertTrue("Subtitle is inserted immediately after heading, before weighted pictogram",
+            main.contains("itqanCard.addView(maintienCue, 1);"));
+        assertFalse("Do not strand future Maintien below the pictogram",
+            main.contains("itqanCard.addView(maintienCue);"));
+        assertTrue("After An-Nas, title becomes Maintien; parenthesized second title is hidden",
+            main.contains("setText(afterNas ? \"Maintien\" : \"Stabiliser\")")
+            && main.contains("prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE)"));
+        assertTrue("Restored programme cue must not overwrite visible Maintien subtitle",
+            main.contains("itqanCard.getChildAt(3) instanceof TextView"));
+        assertFalse("Wrong child-1 lookup must never replace the subtitle onResume",
+            main.contains("Ui.settingValue(itqanCard)"));
+    }
+
     @Test public void exactNineSemanticsAreSeparated() throws Exception {
         String ui = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         for (String name : new String[]{"home", "route", "compass", "door", "column",
