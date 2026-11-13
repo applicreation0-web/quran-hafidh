@@ -627,6 +627,13 @@ public final class MainActivity extends android.app.Activity {
             .setPositiveButton("Fermer",null).show();
     }
 
+    /** The original hidden state cue, never the visible Maintien subtitle. */
+    private TextView hiddenItqanProgramCue() {
+        return itqanCard != null && itqanCard.getChildCount() > 3
+            && itqanCard.getChildAt(3) instanceof TextView
+            ? (TextView) itqanCard.getChildAt(3) : null;
+    }
+
     /** Describes the selected weekly plan, never a stale fixed 22-line budget. */
     private String stabilizationProgramCue() {
         return prefs.itqanPostNasMaintenance() ? "1 juz · visible puis masqué"
@@ -635,7 +642,7 @@ public final class MainActivity extends android.app.Activity {
 
     /** Option 7B: where the Stabilisation rotation stands, e.g. "Hizb 52 · 3/61 séances". */
     private void refreshStabilizationPosition() {
-        TextView cue = Ui.settingValue(itqanCard);
+        TextView cue = hiddenItqanProgramCue();
         if (cue == null || geometry == null) return;
         // The Parcours menu contains navigation labels, not engine diagnostics.
         // Position, cursor, repetitions and block geometry stay inside Itqan.
