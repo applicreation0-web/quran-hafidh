@@ -69,11 +69,22 @@ public final class ActiveReviewSlotsInstrumentedTest {
                 assertTrue(elapsed(activity) > background);
                 assertNull(prefs.activeReviewSlots().receipt(SUNDAY, AM));
             }
+            // A started, unfinished morning session must remain resumable;
+            // opening evening must not silently reread or claim the same pages.
+            long morningElapsed = prefs.activeReviewSlots().draft(SUNDAY, AM).elapsedMs;
             try (ActivityScenario<HifzSessionActivity> activity = open(context, PM)) {
-                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity, "mushaf", "Sunday evening review");
-                assertTrue(elapsed(activity) < prefs.activeReviewSlots().draft(SUNDAY, AM).elapsedMs);
-                activity.onActivity(a -> assertFalse(
-                    ((View) field(a, "murajaahFinishButton")).isEnabled()));
+                activity.onActivity(a -> assertTrue(
+                    ((android.widget.TextView) field(a, "program")).getText()
+                        .toString().contains("en attente")));
+                assertNull(prefs.activeReviewSlots().draft(SUNDAY, PM));
+                assertNull(prefs.activeReviewSlots().receipt(SUNDAY, PM));
+                assertEquals(morningElapsed,
+                    prefs.activeReviewSlots().draft(SUNDAY, AM).elapsedMs);
+            }
+            try (ActivityScenario<HifzSessionActivity> resumed = open(context, AM)) {
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
+                    resumed, "mushaf", "Unfinished morning resumes");
+                assertTrue(elapsed(resumed) >= morningElapsed);
             }
         } finally {
             HifzClock.resetClockForTests();
