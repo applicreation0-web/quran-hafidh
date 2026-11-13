@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/boox-parcours-one-screen-itqan-frise-20261112
+      - release-candidate/haafidh-11717-code-only-20261113
   pull_request:
     branches:
       - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
@@ -41,6 +42,12 @@ jobs:
         run: gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac --stacktrace
       - name: Check historical offline signer and upgrade protections
         run: python3 scripts/test_build_11714_private_offline.py
+      - name: Confirm isolated 1.17.17 version identity and no release artifact
+        run: |
+          grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
+          grep -q 'versionCode = 55' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.17"' hifz-app/build.gradle.kts
+          test ! -e hifz-app/build-private114/outputs/apk/release/hifz-app-release.apk
       - name: Enable hardware acceleration for the Android emulator
         run: |
           test -c /dev/kvm
