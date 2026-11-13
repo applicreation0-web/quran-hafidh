@@ -1985,6 +1985,25 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText("Le corpus acquis ne contient pas ce curseur.");
             return;
         }
+        // The other slot may have an unfinished checkpoint on this same date.
+        // Never show the same passage as two independent sessions.
+        if (activeSlot != null && !activeSlots.canOpen(sessionDate, activeSlot)) {
+            sessionCompleted = true;
+            program.setText(activeReviewTitle() + " · en attente");
+            progress.setText("Terminez d’abord l’autre révision active commencée aujourd’hui.");
+            updateActiveClockAction();
+            return;
+        }
+        // Historical overlapping drafts are preserved, not silently moved onto
+        // the newer cursor or awarded an additional receipt.
+        if (activeSlot != null && activeDraft != null && correctionState == null
+                && !activeSlots.isCurrent(activeDraft, prefs.activeMurajaahCursor())) {
+            sessionCompleted = true;
+            program.setText(activeReviewTitle() + " · reprise à vérifier");
+            progress.setText("Ancienne séance conservée. Le contenu a déjà avancé.");
+            updateActiveClockAction();
+            return;
+        }
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
         EligibleCorpus corpus = prefs.activeMurajaahCorpus();
@@ -2015,6 +2034,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             : activeDraft == null ? 0 : activeDraft.page;
         currentPage = savedPage >= 1 && savedPage <= 604
             ? savedPage : geometry.pageForVerse(murajaahPlan.start);
+        // Reserve the shared cursor BEFORE showing the Mushaf. Otherwise two
+        // Activities opened quickly can start at the same uncredited verse.
+        if (activeSlot != null && !checkpointMurajaah(clock.elapsedMs())) {
+            sessionCompleted = true;
+            program.setText(activeReviewTitle() + " · en attente");
+            progress.setText("Une autre révision active est en cours. Aucun nouveau passage lancé.");
+            updateActiveClockAction();
+            return;
+        }
         currentSelection = Collections.emptyList();
         currentMask = 100;
         currentLineIds = applyActiveLandmarks(currentPage);
