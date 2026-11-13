@@ -27,7 +27,10 @@ jobs:
           mkdir -p public-verify-tools/lib
           cp "$folder/lib/apksigner.jar" public-verify-tools/lib/
           cp "$folder/aapt" "$folder/zipalign" public-verify-tools/
-          sha256sum public-verify-tools/lib/apksigner.jar public-verify-tools/aapt public-verify-tools/zipalign > public-verify-tools/SHA256SUMS.txt
+          shared="$(find "$folder" -type f -name 'libc++.so' -print -quit)"
+          test -n "$shared" && test -s "$shared"
+          cp "$shared" public-verify-tools/libc++.so
+          sha256sum public-verify-tools/lib/apksigner.jar public-verify-tools/aapt public-verify-tools/zipalign public-verify-tools/libc++.so > public-verify-tools/SHA256SUMS.txt
           echo 'PUBLIC_ANDROID_VERIFY_TOOLS_ONLY__NO_APK_NO_KEYS_NO_ATLAS'
       - uses: actions/upload-artifact@v4
         with:
