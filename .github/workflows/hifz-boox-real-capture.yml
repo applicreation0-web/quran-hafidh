@@ -41,7 +41,7 @@ jobs:
           sudo chmod u+rw /dev/kvm
           ls -l /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
-      - name: Real Android UI at BOOX-like viewport sizes
+      - name: Real Android Hifz regression and BOOX screen verification
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -49,7 +49,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
           script: |
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest --stacktrace
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest --stacktrace
             python3 scripts/capture_hifz_boox_ui.py
       - name: Upload screenshots, UI hierarchy and diagnostics
         if: always()
