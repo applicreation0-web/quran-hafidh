@@ -2051,7 +2051,10 @@ public final class HifzPrefs {
             && "54:1".equals(proof.optString("cursor")) && proof.has("final")
             && !proof.optBoolean("final", true)
             && itqanRep() == 0 && itqanAssisted() == 0 && p.getInt("itqanFinalReveals", 0) == 0
-            && p.getLong("itqanElapsedMs", -1L) == 16340L
+            // Elapsed time is not proof of repetitions: legitimate device/session timing
+            // varies. Require a valid stored counter, never a fixture-specific millisecond.
+            // Dated physical proof, receipts, geometry and zero reps remain mandatory.
+            && p.getLong("itqanElapsedMs", -1L) >= 0L
             && ("".equals(p.getString("itqanUnitStart", "")) || "53:33".equals(p.getString("itqanUnitStart", "")))
             && ("".equals(p.getString("itqanUnitEnd", "")) || "53:62".equals(p.getString("itqanUnitEnd", "")))
             && itqanConsumedBonusLineIds().isEmpty()
