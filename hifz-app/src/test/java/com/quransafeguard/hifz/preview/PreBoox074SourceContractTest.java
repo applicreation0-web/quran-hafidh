@@ -43,8 +43,15 @@ public final class PreBoox074SourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(session.contains("LocalDate capturedToday = HifzClock.today()"));
         assertTrue(session.contains("dateAtSessionOpen = capturedToday;"));
-        assertTrue("New active review may not validate under an elapsed date",
-            session.contains("if(activeSlot!=null&&!sessionDate.equals(HifzClock.today()))return;"));
+        // The old hard stop is superseded by an atomic transfer to the actual day.
+        // Both ordinary completion and the revealed-page correction must use it:
+        // no receipt can be written against yesterday's closed slot.
+        assertTrue("Active review must rebind before a dated receipt, never backdate",
+            session.contains("private boolean carryActiveOverMidnight()")
+                && session.contains("if (!activeSlots.carryForward(sessionDate, activeSlot, now, activeSlot)) return false;")
+                && session.contains("sessionDate = now;")
+                && session.contains("if(activeSlot!=null&&!carryActiveOverMidnight())return;")
+                && session.contains("if (activeSlot != null && correctionState != null && !carryActiveOverMidnight())"));
         Path root = Paths.get("hifz-app/src/main/java/com/quransafeguard/hifz/preview");
         if (!Files.exists(root)) root = Paths.get("..", root.toString());
         for (Path path : (Iterable<Path>) Files.walk(root).filter(p -> p.toString().endsWith(".java"))::iterator) {
