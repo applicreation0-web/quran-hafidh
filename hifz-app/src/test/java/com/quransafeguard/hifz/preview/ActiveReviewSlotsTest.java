@@ -199,6 +199,105 @@ public final class ActiveReviewSlotsTest {
         assertEquals("matin", store.receipt(SUNDAY, morning));
     }
 
+    @Test public void unstartedMissedDayAddsNoMinutesAndNeverMovesTheCursor() {
+        LocalDate monday=SUNDAY.plusDays(1);
+        setDay(monday);
+        assertFalse(store.carryForward(monday,ActiveReviewSlots.Slot.MORNING));
+        assertNull(store.receipt(SUNDAY,ActiveReviewSlots.Slot.MORNING));
+        assertTrue(store.checkpoint(monday,ActiveReviewSlots.Slot.MORNING,
+            FIRST,END,2,ActiveReviewSlots.DURATION_MS));
+        assertTrue(store.complete(monday,ActiveReviewSlots.Slot.MORNING,FIRST,NEXT,"today"));
+        assertNull(store.receipt(SUNDAY,ActiveReviewSlots.Slot.MORNING));
+        assertEquals("today",store.receipt(monday,ActiveReviewSlots.Slot.MORNING));
+        assertEquals(NEXT.toString(),disk.getString("activeMurajaahCursor",""));
+    }
+
+    @Test public void yesterdayEveningCanFinishAsTodaysMorningWithoutBackdatedReceipt() {
+        LocalDate monday=SUNDAY.plusDays(1);
+        assertTrue(store.checkpoint(SUNDAY,ActiveReviewSlots.Slot.EVENING,
+            FIRST,END,2,600_000L,true,45));
+        setDay(monday);
+        assertFalse(store.checkpoint(monday,ActiveReviewSlots.Slot.MORNING,FIRST,END,2,1L));
+        assertTrue(store.carryForward(monday,ActiveReviewSlots.Slot.MORNING));
+        assertNull(store.draft(SUNDAY,ActiveReviewSlots.Slot.EVENING));
+        ActiveReviewSlots.Draft carried=store.draft(monday,ActiveReviewSlots.Slot.MORNING);
+        assertEquals(FIRST,carried.start);
+        assertEquals(END,carried.end);
+        assertEquals(600_000L,carried.elapsedMs);
+        assertTrue(carried.paused);
+        assertEquals(45,carried.targetMinutes);
+        assertFalse(store.complete(monday,ActiveReviewSlots.Slot.MORNING,FIRST,NEXT,"premature"));
+        assertTrue(store.checkpoint(monday,ActiveReviewSlots.Slot.MORNING,
+            FIRST,END,2,2_700_000L,false,60));
+        assertTrue(store.complete(monday,ActiveReviewSlots.Slot.MORNING,FIRST,NEXT,"today"));
+        assertNull(store.receipt(SUNDAY,ActiveReviewSlots.Slot.EVENING));
+        assertNull(store.receipt(SUNDAY,ActiveReviewSlots.Slot.MORNING));
+        assertEquals("today",store.receipt(monday,ActiveReviewSlots.Slot.MORNING));
+        assertEquals(45,store.targetMinutes(monday,ActiveReviewSlots.Slot.MORNING,90));
+        assertEquals(NEXT.toString(),disk.getString("activeMurajaahCursor",""));
+    }
+
+    @Test public void revealedPageJournalMovesAtomicallyAndMustBeRecalled() {
+        LocalDate monday=SUNDAY.plusDays(1);
+        assertTrue(store.checkpoint(SUNDAY,ActiveReviewSlots.Slot.EVENING,
+            FIRST,END,2,1_800_000L,true));
+        ActiveReviewCorrectionStore prior=store.correction(SUNDAY,ActiveReviewSlots.Slot.EVENING);
+        assertTrue(prior.recordReveal(SUNDAY.toString(),FIRST,2));
+        assertTrue(prior.begin(SUNDAY.toString(),FIRST,END,1_800_000L,java.util.List.of(2),2));
+        assertTrue(prior.pageReread(prior.pending()));
+        setDay(monday);
+        assertTrue(store.carryForward(monday,ActiveReviewSlots.Slot.MORNING));
+        assertNull(prior.pending());
+        assertTrue(prior.revealed(SUNDAY.toString(),FIRST).isEmpty());
+        ActiveReviewCorrectionStore carried=store.correction(monday,ActiveReviewSlots.Slot.MORNING);
+        assertEquals("RECALL",carried.pending().stage);
+        assertEquals(monday.toString(),carried.pending().date);
+        assertEquals(java.util.Set.of(2),carried.revealed(monday.toString(),FIRST));
+        assertFalse(store.complete(monday,ActiveReviewSlots.Slot.MORNING,FIRST,NEXT,"no replay"));
+        assertTrue(carried.pageRecalled(carried.pending()));
+        assertTrue(store.complete(monday,ActiveReviewSlots.Slot.MORNING,FIRST,NEXT,"earned now"));
+        assertNull(carried.pending());
+        assertNull(store.receipt(SUNDAY,ActiveReviewSlots.Slot.EVENING));
+        assertEquals("earned now",store.receipt(monday,ActiveReviewSlots.Slot.MORNING));
+        assertEquals(NEXT.toString(),disk.getString("activeMurajaahCursor",""));
+    }
+
+    @Test public void staleOldCursorNeverRollsIntoTodayOrMintsReceipt() {
+        LocalDate monday=SUNDAY.plusDays(1);
+        assertTrue(store.checkpoint(SUNDAY,ActiveReviewSlots.Slot.EVENING,FIRST,END,2,120_000L));
+        disk.disk.put("activeMurajaahCursor",NEXT.toString());
+        setDay(monday);
+        java.util.Map<String,?> old=java.util.Map.copyOf(disk.getAll());
+        assertFalse(store.carryForward(monday,ActiveReviewSlots.Slot.MORNING));
+        assertEquals(old,disk.getAll());
+        assertNull(store.receipt(SUNDAY,ActiveReviewSlots.Slot.EVENING));
+        assertNull(store.receipt(monday,ActiveReviewSlots.Slot.MORNING));
+    }
+
+    @Test public void todaysExistingDraftCannotBeReplacedByYesterday() {
+        LocalDate monday=SUNDAY.plusDays(1);
+        assertTrue(store.checkpoint(SUNDAY,ActiveReviewSlots.Slot.EVENING,FIRST,END,2,600_000L));
+        setDay(monday);
+        // Manually imported preexisting today checkpoint must win, never be overwritten.
+        String frozen=disk.getString("activeReviewDraftV1|"+SUNDAY+"|EVENING","");
+        disk.disk.put("activeReviewDraftV1|"+monday+"|MORNING",frozen);
+        assertFalse(store.carryForward(monday,ActiveReviewSlots.Slot.MORNING));
+        assertNotNull(store.draft(SUNDAY,ActiveReviewSlots.Slot.EVENING));
+        assertNotNull(store.draft(monday,ActiveReviewSlots.Slot.MORNING));
+        assertNull(store.receipt(monday,ActiveReviewSlots.Slot.MORNING));
+    }
+
+    @Test public void malformedOldCorrectionRefusesCarryWithoutErasingAnyBytes() {
+        LocalDate monday=SUNDAY.plusDays(1);
+        assertTrue(store.checkpoint(SUNDAY,ActiveReviewSlots.Slot.EVENING,FIRST,END,2,600_000L));
+        String corrupted="{\\"date\\":\\"2026-11-15\\",\\"start\\":\\"2:1\\",\\"pages\\":[999]}";
+        disk.disk.put("activeReviewRevealedPagesV1|"+SUNDAY+"|EVENING",corrupted);
+        setDay(monday);
+        java.util.Map<String,?> before=java.util.Map.copyOf(disk.getAll());
+        assertThrows(IllegalStateException.class,()->store.carryForward(monday,ActiveReviewSlots.Slot.MORNING));
+        assertEquals(before,disk.getAll());
+    }
+
     @Test public void durationIsFrozenPerSlotAndEachReceiptKeepsItsEarnedTarget() {
         var morning = ActiveReviewSlots.Slot.MORNING;
         var evening = ActiveReviewSlots.Slot.EVENING;
