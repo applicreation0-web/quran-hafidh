@@ -182,11 +182,24 @@ public final class ActiveReviewSlotsInstrumentedTest {
                 +new HifzPrefs(context).activeMurajaahCursor(),
                 slots.isCurrent(proof,new HifzPrefs(context).activeMurajaahCursor()));
             assertTrue("Carried slot must be open",slots.canOpen(monday,AM));
-            assertNull("Unexpected outstanding correction",slots.correction(monday,AM).pending());
-            assertTrue("Unexpected revealed pages",slots.correction(monday,AM)
-                .revealed(monday.toString(),START).isEmpty());
-            assertTrue("Proof passed all preconditions",slots.complete(
-                monday,AM,START,next,"Reprise effectuée lundi"));
+            ActiveReviewCorrectionStore correction=slots.correction(monday,AM);
+            assertNull("Correction must not be claimed completed automatically",correction.pending());
+            java.util.List<Integer> revealed=ActiveReviewCorrectionPlan.select(
+                correction.revealed(monday.toString(),START));
+            // Public CI lacks private Ayah Themes word geometry, so the app
+            // safely displays its fallback page in clear. This is REAL help:
+            // it must be logged, then explicitly reread and recalled masked.
+            assertFalse("Unmasked fallback page must require correction",revealed.isEmpty());
+            assertFalse("A revealed page cannot earn a receipt",slots.complete(
+                monday,AM,START,next,"unearned"));
+            assertTrue(correction.begin(monday.toString(),START,END,2_700_000L,revealed,page));
+            while(!"DONE".equals(correction.pending().stage)) {
+                ActiveReviewCorrectionStore.State state=correction.pending();
+                if("READ".equals(state.stage))assertTrue(correction.pageReread(state));
+                else assertTrue(correction.pageRecalled(state));
+            }
+            assertTrue("Completed visible+masked correction can earn TODAY only",
+                slots.complete(monday,AM,START,next,"Reprise effectuée lundi"));
             assertNull(slots.receipt(SUNDAY,PM));
             assertEquals("Reprise effectuée lundi",slots.receipt(monday,AM));
         } finally {
