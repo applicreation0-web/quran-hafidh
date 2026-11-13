@@ -88,9 +88,12 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertEquals(1, count(main, "pathTile(otherModes, \"Stabilisation\", stabilizationProgramCue(),"));
         assertEquals(1, count(main, "if (itqanCue != null) itqanCue.setText(stabilizationProgramCue());"));
-        assertTrue("The refreshed Stabilisation tile must expose its live cue in child index 1",
+        assertTrue("The refreshed Stabilisation tile keeps its invisible programme cue at child index 3",
             main.contains("TextView cue = Ui.text(this, state, 15f, false);")
-            && main.contains("TextView itqanCue = Ui.settingValue(itqanCard);"));
+            && main.contains("itqanCard.getChildAt(3) instanceof TextView"));
+        assertTrue("Visible Maintien subtitle is adjacent to Stabiliser, never overwritten onResume",
+            main.contains("itqanCard.addView(maintienCue, 1);")
+            && !main.contains("Ui.settingValue(itqanCard)"));
         assertTrue("Post-Nas summary gives the whole-juz protocol",
             main.contains("prefs.itqanPostNasMaintenance() ? \"1 juz · visible puis masqué\""));
         assertTrue("Both weekly menu goals are expressed in pages, without session counts",

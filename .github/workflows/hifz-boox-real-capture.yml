@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/boox-parcours-one-screen-itqan-frise-20261112
+      - release-candidate/haafidh-11717-code-only-20261113
   pull_request:
     branches:
       - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
@@ -41,6 +42,14 @@ jobs:
         run: gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac --stacktrace
       - name: Check historical offline signer and upgrade protections
         run: python3 scripts/test_build_11714_private_offline.py
+      - name: Verify fail-closed 1.17.17 private offline release guard (synthetic only)
+        run: python3 scripts/test_build_11717_private_offline.py
+      - name: Confirm isolated 1.17.17 version identity and no release artifact
+        run: |
+          grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
+          grep -q 'versionCode = 55' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.17"' hifz-app/build.gradle.kts
+          test ! -e hifz-app/build-private114/outputs/apk/release/hifz-app-release.apk
       - name: Enable hardware acceleration for the Android emulator
         run: |
           test -c /dev/kvm
@@ -57,6 +66,29 @@ jobs:
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
           script: |
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest --stacktrace
+            # Isolated synthetic, read-only visual fixture: same actual Android UI
+            # before/after the An-Nas milestone, with no fake Hifz credits.
+            adb shell wm size 1404x1872
+            adb shell wm density 240
+            adb shell settings put system font_scale 1.0
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest --stacktrace
+            # connectedDebugAndroidTest uninstalls the instrumented app during cleanup,
+            # removing MediaStore screenshots owned by that app. Its Gradle doLast
+            # reinstalls the actual debug + test APKs. Run only the visual tests
+            # once more without Gradle teardown, then pull their fresh captures.
+            mkdir -p boox-real-renders
+            # Install again explicitly: Gradle instrumented task may remove packages.
+            adb install -r "$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' | head -1)"
+            adb install -r "$(find hifz-app/build/outputs/apk/androidTest/debug -type f -name '*.apk' | head -1)"
+            adb shell pm list instrumentation | tee boox-real-renders/available-instrumentation.txt
+            grep -q 'target=com.quransafeguard.hifz.ibnkathirtest' boox-real-renders/available-instrumentation.txt || { echo 'BOOX test package missing'; exit 1; }
+            adb shell am instrument -w -e class com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest "$(sed -n 's/^instrumentation:\([^ ]*\) (target=com.quransafeguard.hifz.ibnkathirtest).*/\1/p' boox-real-renders/available-instrumentation.txt | head -1 | tr -d '\r')" | tee boox-real-renders/visual-instrumentation.txt
+            grep -Eq 'OK \(2 tests\)' boox-real-renders/visual-instrumentation.txt || { echo 'BOOX visual instrumentation did not pass'; exit 1; }
+            adb shell ls -l /sdcard/Pictures/HaafidhAudit/independent-itqan-before-nas.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-before-nas.png boox-real-renders/boox-1404x1872-itqan-before-nas.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-after-nas.png boox-real-renders/boox-1404x1872-itqan-after-nas.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-calendar-today-selected-and-validated.png boox-real-renders/boox-1404x1872-calendar-today-selected-and-validated.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-calendar-other-day-consulted-today-stays-ringed.png boox-real-renders/boox-1404x1872-calendar-other-day-consulted-today-stays-ringed.png
             python3 scripts/capture_hifz_boox_ui.py
       - name: Upload screenshots, UI hierarchy and diagnostics
         if: always()

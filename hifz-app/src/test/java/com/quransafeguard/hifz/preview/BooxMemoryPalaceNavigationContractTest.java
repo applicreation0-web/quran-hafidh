@@ -50,6 +50,49 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertTrue(main.contains("?\"Maintien · \"+JuzMaintenanceStore.CUE"));
     }
 
+    @Test public void weeklyBooxCirclesAreEmptyAndStateUsesFillAndOutline() throws Exception {
+        String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        int start = main.indexOf("private void renderSelectedWeekDay()");
+        int end = main.indexOf("private void ", start + 1);
+        String calendar = main.substring(start, end > start ? end : main.length());
+        assertTrue("No letters, arrows or ticks in calendar circles",
+            calendar.contains("TextView node = Ui.text(this, \"\", 15f, true);"));
+        assertFalse("No rotating Itqān arrows in circles", calendar.contains("↻"));
+        assertFalse("No finale F inside circles", calendar.contains("done?\"✓\""));
+        assertTrue("Only real receipts fill the validation circle",
+            calendar.contains("boolean done = !future && \"Validé\".equals(row.state);")
+            && calendar.contains("circle.setColor(done ? Ui.INK : Ui.PAPER);"));
+        assertTrue("Only the actual day gets the double-ring even when another day is selected",
+            calendar.contains("LocalDate realToday = HifzClock.today();")
+            && calendar.contains("boolean currentDay = row.date.equals(realToday);")
+            && calendar.contains("if (currentDay) {")
+            && calendar.contains("selection.setStroke(Ui.dp(this,2),Ui.INK);"));
+        assertTrue("The selected date alone is underlined, without changing today's ring",
+            calendar.contains("if (active) date.setPaintFlags(date.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);"));
+        assertTrue("Today and the selected date have separate accessibility labels",
+            calendar.contains("(currentDay?\" · aujourd’hui\":\"\")")
+            && calendar.contains("(active?\" · sélectionné\":\"\")"));
+        assertTrue("Weekday and date remain separate from the circle",
+            calendar.contains("station.addView(day);") && calendar.contains("station.addView(date);"));
+    }
+
+    @Test public void maintiensTitleIsAdjacentAndUsesSameTypefaceBeforeNas() throws Exception {
+        String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertTrue("Future Maintien is a second title line, in the same font as Stabiliser",
+            main.contains("Ui.bookText(this, \"(Maintien)\", 19f, true)"));
+        assertTrue("Subtitle is inserted immediately after heading, before weighted pictogram",
+            main.contains("itqanCard.addView(maintienCue, 1);"));
+        assertFalse("Do not strand future Maintien below the pictogram",
+            main.contains("itqanCard.addView(maintienCue);"));
+        assertTrue("After An-Nas, title becomes Maintien; parenthesized second title is hidden",
+            main.contains("setText(afterNas ? \"Maintien\" : \"Stabiliser\")")
+            && main.contains("prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE)"));
+        assertTrue("Restored programme cue must not overwrite visible Maintien subtitle",
+            main.contains("itqanCard.getChildAt(3) instanceof TextView"));
+        assertFalse("Wrong child-1 lookup must never replace the subtitle onResume",
+            main.contains("Ui.settingValue(itqanCard)"));
+    }
+
     @Test public void exactNineSemanticsAreSeparated() throws Exception {
         String ui = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         for (String name : new String[]{"home", "route", "compass", "door", "column",
