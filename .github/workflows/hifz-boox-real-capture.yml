@@ -32,8 +32,15 @@ jobs:
           gradle-version: '9.5.0'
       - name: Compile real Hifz debug APK (not official signed release)
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
-      - name: Run Hifz JVM regression suite on this exact SHA
-        run: gradle --no-daemon :hifz-app:testDebugUnitTest --stacktrace
+      - name: Run full Hifz core, app, and source-contract regressions on this exact SHA
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
+      - name: Compile the private-release source variant without creating or signing any APK
+        env:
+          AYAH_THEMES_PRIVATE_114: '1'
+          HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+        run: gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac --stacktrace
+      - name: Check historical offline signer and upgrade protections
+        run: python3 scripts/test_build_11714_private_offline.py
       - name: Enable hardware acceleration for the Android emulator
         run: |
           test -c /dev/kvm
