@@ -172,14 +172,13 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout otherModes = Ui.row(this);
         itqanCard = pathTile(otherModes, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
-        // BOOX: understated future-regime hint directly below the original
-        // pictogram. Nothing added to the six-icon hierarchy; no tinted card.
-        TextView maintienCue = Ui.text(this, "(Maintien)", 14f, false);
-        if(wideBoox())maintienCue.setTextSize(14f);
+        // The future Maintien regime is a second title line, directly beneath
+        // Stabiliser, in the exact same BOOX book font. Never strand it below
+        // the pictogram or alter the six destination icons.
+        TextView maintienCue = Ui.bookText(this, "(Maintien)", 19f, true);
         maintienCue.setGravity(Gravity.CENTER);
-        maintienCue.setTextColor(Ui.MUTED);
-        maintienCue.setPadding(0,Ui.dp(this,3),0,0);
-        itqanCard.addView(maintienCue);
+        maintienCue.setPadding(0,Ui.dp(this,1),0,0);
+        itqanCard.addView(maintienCue, 1);
         LinearLayout itqan = itqanCard;
         LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
             v -> openMode(consolidationQuickAccessMode()));
@@ -538,7 +537,11 @@ public final class MainActivity extends android.app.Activity {
         speedStore = new HifzSpeedStore(this);
         if (ledger == null) ledger = new DashboardLedger(this);
         ledger.capture(prefs);
-        TextView itqanCue = Ui.settingValue(itqanCard);
+        // The visible Maintien subtitle sits at child 1; update only the
+        // original hidden program cue at child 3 when resuming.
+        TextView itqanCue = itqanCard != null && itqanCard.getChildCount() > 3
+            && itqanCard.getChildAt(3) instanceof TextView
+            ? (TextView) itqanCard.getChildAt(3) : null;
         if (itqanCue != null) itqanCue.setText(stabilizationProgramCue());
         if (today != null && geometry != null) refreshAll();
     }
@@ -547,12 +550,12 @@ public final class MainActivity extends android.app.Activity {
     private void refreshItqanCardVocabulary() {
         if(consolidationCard==null || prefs==null) return;
         boolean afterNas=prefs.itqanPostNasMaintenance();
-        // Child order: title, pictogram, invisible cue, subtitle.
+        // Child order: title, subtitle, pictogram, invisible program cue.
         if(itqanCard!=null){
             if(itqanCard.getChildAt(0) instanceof TextView)
                 ((TextView)itqanCard.getChildAt(0)).setText(afterNas ? "Maintien" : "Stabiliser");
-            if(itqanCard.getChildCount()>3 && itqanCard.getChildAt(3) instanceof TextView){
-                TextView prochain=(TextView)itqanCard.getChildAt(3);
+            if(itqanCard.getChildCount()>1 && itqanCard.getChildAt(1) instanceof TextView){
+                TextView prochain=(TextView)itqanCard.getChildAt(1);
                 prochain.setText("(Maintien)");
                 prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE);
             }
