@@ -77,7 +77,7 @@ public final class BooxTodaySelectedDayInstrumentedTest {
         assertEquals("Selected status must be spoken separately", selected, spoken.contains("sélectionné"));
         assertTrue("The seven stations remain clickable", station.isClickable());
     }
-    @Test public void todayRingPersistsWhenAnotherValidatedDayIsConsulted() {
+    @Test public void todayRingPersistsWhenAFutureDayIsConsulted() {
         final LocalDate today = HifzClock.today();
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a -> {
@@ -87,13 +87,13 @@ public final class BooxTodaySelectedDayInstrumentedTest {
                     LocalDate day = today.plusDays(i);
                     rows.add(new WeeklyDashboardPlanner.Row(day,
                         WeeklyDashboardPlanner.day(day, today), "Matin", "Soir",
-                        i == 0 || i == 2 ? "Validé" : "À faire"));
+                        i == 0 || i == 2 ? "Validé" : "À faire")); // Future cannot count as validated.
                 }
                 set(a, "weekRows", rows);
                 set(a, "selectedWeekDate", today);
                 call(a, "renderSelectedWeekDay");
                 check(station(a, 0), true, true, true);
-                check(station(a, 2), false, false, true);
+                check(station(a, 2), false, false, false); // No fake future completion.
                 check(station(a, 1), false, false, false);
             });
             Independent11710ScreensInstrumentedTest.capture("calendar-today-selected-and-validated");
@@ -101,7 +101,7 @@ public final class BooxTodaySelectedDayInstrumentedTest {
                 set(a, "selectedWeekDate", today.plusDays(2));
                 call(a, "renderSelectedWeekDay");
                 check(station(a, 0), true, false, true);
-                check(station(a, 2), false, true, true);
+                check(station(a, 2), false, true, false); // Consulted, but still future.
                 check(station(a, 1), false, false, false);
             });
             Independent11710ScreensInstrumentedTest.capture("calendar-other-day-consulted-today-stays-ringed");
