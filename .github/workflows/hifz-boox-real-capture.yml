@@ -32,6 +32,8 @@ jobs:
           gradle-version: '9.5.0'
       - name: Compile real Hifz debug APK (not official signed release)
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+      - name: Run Hifz JVM regression suite on this exact SHA
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest --stacktrace
       - name: Enable hardware acceleration for the Android emulator
         run: |
           test -c /dev/kvm
