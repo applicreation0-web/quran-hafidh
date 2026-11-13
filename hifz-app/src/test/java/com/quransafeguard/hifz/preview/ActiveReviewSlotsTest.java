@@ -7,6 +7,7 @@ import org.junit.Test;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import org.json.JSONObject;
 
 import static org.junit.Assert.*;
 
@@ -47,19 +48,27 @@ public final class ActiveReviewSlotsTest {
         assertNull(store.draft(SUNDAY.plusDays(1), evening));
     }
 
-    @Test public void independentCheckpointRetainsElapsedAndEndWhenStoreIsReopened() {
+    @Test public void unfinishedMorningResumesAndEveningStartsOnlyAfterMorningReceipt() {
         ActiveReviewSlots.Slot morning = ActiveReviewSlots.Slot.MORNING;
         ActiveReviewSlots.Slot evening = ActiveReviewSlots.Slot.EVENING;
         assertTrue(store.checkpoint(SUNDAY, morning, FIRST, END, 2, 650_000L));
-        assertTrue(store.checkpoint(SUNDAY, evening, FIRST, NEXT, 3, 171_000L, true));
+        assertFalse(store.canOpen(SUNDAY, evening));
+        assertFalse(store.checkpoint(SUNDAY, evening, FIRST, NEXT, 3, 171_000L, true));
         ActiveReviewSlots resumed = new ActiveReviewSlots(disk);
         assertEquals(650_000L, resumed.draft(SUNDAY, morning).elapsedMs);
-        assertEquals(171_000L, resumed.draft(SUNDAY, evening).elapsedMs);
-        assertEquals(NEXT, resumed.draft(SUNDAY, evening).end);
-        assertEquals(3, resumed.draft(SUNDAY, evening).page);
-        assertTrue(resumed.draft(SUNDAY, evening).paused);
-        assertTrue(resumed.checkpoint(SUNDAY, evening, FIRST, NEXT, 3, 100_000L));
-        assertEquals(171_000L, resumed.draft(SUNDAY, evening).elapsedMs);
+        assertNull(resumed.draft(SUNDAY, evening));
+        assertTrue(resumed.checkpoint(SUNDAY, morning, FIRST, END, 2, 1_800_000L));
+        assertTrue(resumed.complete(SUNDAY, morning, FIRST, NEXT, "matin"));
+        assertTrue(resumed.canOpen(SUNDAY, evening));
+        assertTrue(resumed.checkpoint(SUNDAY, evening, NEXT, NEXT, 3, 171_000L, true));
+        ActiveReviewSlots restarted = new ActiveReviewSlots(disk);
+        assertEquals(171_000L, restarted.draft(SUNDAY, evening).elapsedMs);
+        assertEquals(NEXT, restarted.draft(SUNDAY, evening).start);
+        assertEquals(NEXT, restarted.draft(SUNDAY, evening).end);
+        assertEquals(3, restarted.draft(SUNDAY, evening).page);
+        assertTrue(restarted.draft(SUNDAY, evening).paused);
+        assertTrue(restarted.checkpoint(SUNDAY, evening, NEXT, NEXT, 3, 100_000L));
+        assertEquals(171_000L, restarted.draft(SUNDAY, evening).elapsedMs);
     }
 
     @Test public void reopenedEveningCorrectionMustFinishBeforeTheReceipt() {
@@ -125,18 +134,26 @@ public final class ActiveReviewSlotsTest {
         assertNull(store.draft(SUNDAY,slot));
     }
 
-    @Test public void staleDraftCannotRegressTheCommonCursor() {
+    @Test public void legacyOverlappingDraftCannotIssueDuplicateReceipt() throws Exception {
         ActiveReviewSlots.Slot morning = ActiveReviewSlots.Slot.MORNING;
         ActiveReviewSlots.Slot evening = ActiveReviewSlots.Slot.EVENING;
         assertTrue(store.checkpoint(SUNDAY, morning, FIRST, END, 2, 1_800_000L));
-        assertTrue(store.checkpoint(SUNDAY, evening, FIRST, FIRST, 2, 1_800_000L));
+        // Simulate two drafts left by the prior version, bypassing the new gate.
+        String legacy = new JSONObject().put("start", FIRST.toString())
+            .put("end", FIRST.toString()).put("page", 2)
+            .put("elapsedMs", 1_800_000L).put("revision", 0L)
+            .put("targetMinutes", 30).put("paused", true).toString();
+        disk.disk.put("activeReviewDraftV1|" + SUNDAY + "|EVENING", legacy);
+        assertTrue(store.canOpen(SUNDAY, morning));
+        assertFalse(store.canOpen(SUNDAY, evening));
         assertTrue(store.complete(SUNDAY, morning, FIRST, NEXT, "matin"));
-        assertTrue(store.complete(SUNDAY, evening, FIRST, END, "soir"));
-        assertEquals("soir", store.receipt(SUNDAY, evening));
+        assertFalse(store.complete(SUNDAY, evening, FIRST, END, "doublon"));
+        assertNull(store.receipt(SUNDAY, evening));
+        assertNotNull(store.draft(SUNDAY, evening));
         assertEquals(NEXT.toString(), disk.getString("activeMurajaahCursor", ""));
     }
 
-    @Test public void overlappingDraftEarnsItsOwnReceiptOnlyAfterUnaidedReplay() {
+    @Test public void unfinishedCorrectionCannotBeDuplicatedByOtherSlot() {
         ActiveReviewSlots.Slot morning = ActiveReviewSlots.Slot.MORNING;
         ActiveReviewSlots.Slot evening = ActiveReviewSlots.Slot.EVENING;
         assertTrue(store.checkpoint(SUNDAY, morning, FIRST, END, 2, 1_800_000L));
@@ -144,16 +161,30 @@ public final class ActiveReviewSlotsTest {
         assertTrue(replay.recordReveal(SUNDAY.toString(), FIRST, 2));
         assertTrue(replay.begin(SUNDAY.toString(), FIRST, END, 1_800_000L,
             Collections.singletonList(2), 2));
-        assertTrue(store.checkpoint(SUNDAY, evening, FIRST, END, 2, 1_800_000L));
-        assertTrue(store.complete(SUNDAY, evening, FIRST, NEXT, "soir"));
-        assertFalse(store.finishCorrectionWithoutReceipt(SUNDAY, morning));
+        assertFalse(store.checkpoint(SUNDAY, evening, FIRST, END, 2, 1_800_000L));
+        assertNull(store.draft(SUNDAY, evening));
+        assertNull(store.receipt(SUNDAY, evening));
         assertTrue(replay.pageReread(replay.pending()));
         assertTrue(replay.pageRecalled(replay.pending()));
-        assertTrue(store.complete(SUNDAY, morning, FIRST, END, "matin"));
+        assertTrue(store.complete(SUNDAY, morning, FIRST, NEXT, "matin"));
+        assertTrue(store.checkpoint(SUNDAY, evening, NEXT, NEXT, 2, 1_800_000L));
+        assertTrue(store.complete(SUNDAY, evening, NEXT, FIRST, "soir"));
         assertEquals("matin", store.receipt(SUNDAY, morning));
-        assertNull(store.draft(SUNDAY, morning));
+        assertEquals("soir", store.receipt(SUNDAY, evening));
         assertNull(replay.pending());
-        assertEquals(NEXT.toString(), disk.getString("activeMurajaahCursor", ""));
+        assertEquals(FIRST.toString(), disk.getString("activeMurajaahCursor", ""));
+    }
+
+    @Test public void skippedMorningDoesNotBlockEvening() {
+        ActiveReviewSlots.Slot morning = ActiveReviewSlots.Slot.MORNING;
+        ActiveReviewSlots.Slot evening = ActiveReviewSlots.Slot.EVENING;
+        assertTrue(store.checkpoint(SUNDAY, evening, FIRST, END, 2, 1_800_000L));
+        assertFalse(store.checkpoint(SUNDAY, morning, FIRST, END, 2, 1_800_000L));
+        assertTrue(store.complete(SUNDAY, evening, FIRST, NEXT, "soir"));
+        assertTrue(store.checkpoint(SUNDAY, morning, NEXT, NEXT, 2, 1_800_000L));
+        assertTrue(store.complete(SUNDAY, morning, NEXT, FIRST, "matin"));
+        assertEquals("soir", store.receipt(SUNDAY, evening));
+        assertEquals("matin", store.receipt(SUNDAY, morning));
     }
 
     @Test public void durationIsFrozenPerSlotAndEachReceiptKeepsItsEarnedTarget() {
