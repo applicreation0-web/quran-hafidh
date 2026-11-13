@@ -66,6 +66,15 @@ jobs:
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
           script: |
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest --stacktrace
+            # Isolated synthetic, read-only visual fixture: same actual Android UI
+            # before/after the An-Nas milestone, with no fake Hifz credits.
+            adb shell wm size 1404x1872
+            adb shell wm density 240
+            adb shell settings put system font_scale 1.0
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest --stacktrace
+            mkdir -p boox-real-renders
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-before-nas.png boox-real-renders/boox-1404x1872-itqan-before-nas.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-after-nas.png boox-real-renders/boox-1404x1872-itqan-after-nas.png
             python3 scripts/capture_hifz_boox_ui.py
       - name: Upload screenshots, UI hierarchy and diagnostics
         if: always()
