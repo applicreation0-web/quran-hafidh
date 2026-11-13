@@ -282,16 +282,21 @@ public final class RevisionAtlasInstrumentedTest {
         Instrumentation.ActivityMonitor atlas=ins.addMonitor(AtlasDiscriminantActivity.class.getName(),null,false);
         try{
             HifzPrefs p=fixture(c);
-            ActiveReviewCorrectionStore corrections=new ActiveReviewCorrectionStore(c);
-            String sessionDate="2026-10-29";
+            java.time.LocalDate slotDate=HifzClock.today();
+            String sessionDate=slotDate.toString();
+            ActiveReviewSlots.Slot slot=ActiveReviewSlots.Slot.EVENING;
+            ActiveReviewSlots slots=p.activeReviewSlots();
+            ActiveReviewCorrectionStore corrections=slots.correction(slotDate,slot);
             VerseRef start=p.activeMurajaahCursor(),end=new VerseRef(30,37);
+            assertTrue(slots.checkpoint(slotDate,slot,start,null,GeometryRepository.get(c).pageForVerse(end),
+                ActiveReviewSlots.DURATION_MS));
             VerseRef passiveCursor=p.murajaahCursor();
             int acquiredLines=p.acquiredLineCountV6();
             String acquiredCredit=c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE)
                 .getString("v6AcquiredCreditLineIds",null);
             AyahThemesCueIndex titles=recallTitleFixture(c);
             try(ActivityScenario<HifzSessionActivity> s=ActivityScenario.launch(new Intent(c,HifzSessionActivity.class)
-                .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE)
+                .putExtra(HifzSessionActivity.EXTRA_MODE,slot.mode)
                 .putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,sessionDate))){
                 prepareRealRecallMask(s,titles);
                 assertRealRecallMask(s);
@@ -331,9 +336,9 @@ public final class RevisionAtlasInstrumentedTest {
                 assertNotNull(corrections.pending());
                 assertEquals("READ",corrections.pending().stage);
                 long originalElapsed=corrections.pending().activeElapsedMs;
-                assertEquals("",p.lastActiveMurajaahDate());
+                assertNull(slots.receipt(slotDate,slot));
                 assertEquals(start,p.activeMurajaahCursor());
-                assertEquals(end,p.activeMurajaahActualEnd());
+                assertEquals(end,slots.draft(slotDate,slot).end);
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Corrective visible reread");
                 assertEquals("true",js(s,"mask===0&&protectedWordBoxes().length===0"));
                 s.onActivity(a->{
@@ -351,7 +356,7 @@ public final class RevisionAtlasInstrumentedTest {
                     // A later scheduling date cannot relabel the pending replay.
                     a.getIntent().putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,"2026-10-30");
                 });
-                assertEquals("",p.lastActiveMurajaahDate());
+                assertNull(slots.receipt(slotDate,slot));
                 assertEquals("RECALL",corrections.pending().stage);
                 s.recreate();
                 assertCorrectiveRecallMask(s);
@@ -362,8 +367,8 @@ public final class RevisionAtlasInstrumentedTest {
                     assertEquals(originalElapsed,corrections.pending().activeElapsedMs);
                     assertFalse(find((View)field(a,"actions"),"Page récitée sans aide").isEnabled());
                     assertEquals(start,p.activeMurajaahCursor());
-                    assertEquals(end,p.activeMurajaahActualEnd());
-                    assertEquals("",p.lastActiveMurajaahDate());
+                    assertEquals(end,slots.draft(slotDate,slot).end);
+                    assertNull(slots.receipt(slotDate,slot));
                     find((View)field(a,"actions"),"Recommencer la page").performClick();
                 });
                 assertEquals("READ",corrections.pending().stage);
@@ -375,13 +380,13 @@ public final class RevisionAtlasInstrumentedTest {
                     View done=find((View)field(a,"actions"),"Page récitée sans aide");
                     assertTrue("Only the painted unaided recall can finish",done.isEnabled());
                     done.performClick();
-                    assertEquals(sessionDate,p.lastActiveMurajaahDate());
+                    assertNotNull(slots.receipt(slotDate,slot));
                     assertEquals(p.activeMurajaahCorpus().next(end),p.activeMurajaahCursor());
                     assertEquals(passiveCursor,p.murajaahCursor());
                     assertEquals(acquiredLines,p.acquiredLineCountV6());
                     assertEquals(acquiredCredit,c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE)
                         .getString("v6AcquiredCreditLineIds",null));
-                    assertTrue("Correction time cannot add active credit",p.lastActiveMurajaahLabel()
+                    assertTrue("Correction time cannot add active credit",slots.receipt(slotDate,slot)
                         .endsWith("L/"+(originalElapsed/1000L)+"s"));
                     assertNull(corrections.pending());
                     assertTrue(corrections.revealed(sessionDate,start).isEmpty());

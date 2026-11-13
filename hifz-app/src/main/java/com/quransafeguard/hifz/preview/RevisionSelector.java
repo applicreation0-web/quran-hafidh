@@ -3,36 +3,39 @@ package com.quransafeguard.hifz.preview;
 import android.app.Activity;
 import android.app.AlertDialog;
 
-/**
- * The compact Révision selector (P2): Révision active, Révision passive — free order. A dialogue, not a
- * new Activity. Carries no progression logic of its own; it only reports today's done/to-do status
- * and defers the actual navigation to the caller.
- */
+import java.time.LocalDate;
+
+/** Dated active slots and optional passive reading. */
 final class RevisionSelector {
     private RevisionSelector() {}
 
     interface Choice {
-        void openActiveRevision();
+        void openActiveRevision(ActiveReviewSlots.Slot slot);
         void openPassiveRevision();
     }
 
     static void show(Activity activity, HifzPrefs prefs, GeometryRepository geometry,
-                      HifzSpeedStore speedStore, Choice choice) {
-        String today = HifzClock.today().toString();
-        boolean activeDone = today.equals(prefs.lastActiveMurajaahDate());
-        boolean passiveDone = today.equals(prefs.lastMurajaahDate());
-        String maintenanceCue = geometry != null
-            ? MaintenanceCoveragePolicy.minutes(
-                prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()) + " min"
-            : "durée variable";
-        String[] items = {
-            "Révision active · " + maintenanceCue + " · " + (activeDone ? "fait" : "à faire"),
-            "Révision passive · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
-        };
+                      HifzSpeedStore speedStore, boolean includePassive, Choice choice) {
+        LocalDate today = HifzClock.today();
+        ActiveReviewSlots store = prefs.activeReviewSlots();
+        ActiveReviewSlots.Slot[] slots = ActiveReviewSlots.Slot.values();
+        String[] items = new String[slots.length + (includePassive ? 1 : 0)];
+        int proposedMinutes = geometry == null ? ActiveReviewSlots.LEGACY_MINUTES
+            : MaintenanceCoveragePolicy.minutes(
+                prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
+        String maintenanceCue = geometry == null ? "durée variable" : proposedMinutes + " min";
+        for (int i = 0; i < slots.length; i++) {
+            ActiveReviewSlots.Slot slot = slots[i];
+            boolean done = store.receipt(today, slot) != null;
+            items[i] = slot.title() + " · " + store.targetMinutes(today, slot, proposedMinutes)
+                + " min · " + (done ? "fait" : "à faire");
+        }
+        if (includePassive) items[slots.length] = "Révision passive · " + maintenanceCue
+            + (today.toString().equals(prefs.lastMurajaahDate()) ? " · fait" : " · facultative");
         new AlertDialog.Builder(activity)
             .setTitle("Révision")
             .setItems(items, (dialog, which) -> {
-                if (which == 0) choice.openActiveRevision();
+                if (which < slots.length) choice.openActiveRevision(slots[which]);
                 else choice.openPassiveRevision();
             })
             .show();

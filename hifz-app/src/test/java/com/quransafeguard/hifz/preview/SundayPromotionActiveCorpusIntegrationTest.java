@@ -238,7 +238,7 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
         assertEquals(new VerseRef(1, 3), secondRestart.activeMurajaahCursor());
     }
 
-    @Test public void sundayCadenceAndUiRoutingContainNoGeneralActiveOrPassiveSession() throws Exception {
+    @Test public void sundayKeepsFinalsAndShowsBothActiveSlots() throws Exception {
         assertEquals(DayOfWeek.SUNDAY, SUNDAY.getDayOfWeek());
         assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY, HifzPrefs.WeeklyProgram.CLASSIC, 3));
@@ -251,7 +251,7 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
             "hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         if (!Files.exists(plannerPath)) plannerPath = Paths.get("..", plannerPath.toString());
         String planner = new String(Files.readAllBytes(plannerPath), StandardCharsets.UTF_8);
-        assertTrue(planner.contains("Sunday must NEVER forecast active/passive revision"));
-        assertTrue(planner.contains("Sunday cannot consume a passive cursor or schedule any general revisions."));
+        assertTrue(planner.contains("morning=joinSessions(activeMorning,morning);"));
+        assertTrue(planner.contains("evening=joinSessions(evening,activeEvening);"));
     }
 }

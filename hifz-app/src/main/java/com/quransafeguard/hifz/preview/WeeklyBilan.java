@@ -40,7 +40,12 @@ final class WeeklyBilan {
 
     static Summary calculate(LocalDate today, LocalDate programStart, LocalDate receiptCoverage,
             Calendar calendar, Attendance attendance) {
-        if(today==null || programStart==null || receiptCoverage==null
+        return calculate(today, programStart, receiptCoverage, LocalDate.MAX, calendar, attendance);
+    }
+
+    static Summary calculate(LocalDate today, LocalDate programStart, LocalDate receiptCoverage,
+            LocalDate activeSlotsFrom, Calendar calendar, Attendance attendance) {
+        if(today==null || programStart==null || receiptCoverage==null || activeSlotsFrom==null
                 || calendar==null || attendance==null)
             throw new IllegalArgumentException("Dates and validated evidence are required");
         int planned=0, validated=0, late=0, missed=0, due=0, unknown=0;
@@ -57,15 +62,19 @@ final class WeeklyBilan {
                 else if(day.isBefore(today))late++;
                 else due++;
             }
-            // General reviews are never scheduled on Sunday, including historical programmes.
-            if(day.getDayOfWeek()!=DayOfWeek.SUNDAY) {
-                String[] reviews={HifzSessionActivity.MURAJAAH_ACTIVE,HifzSessionActivity.MURAJAAH};
-                for(String mode:reviews) {
-                    planned++;
-                    if(attendance.completed(day,mode))validated++;
-                    else if(day.isBefore(today))missed++;
-                    else due++;
-                }
+            String[] reviews;
+            if (!day.isBefore(activeSlotsFrom)) {
+                reviews=new String[]{ActiveReviewSlots.Slot.MORNING.mode,ActiveReviewSlots.Slot.EVENING.mode};
+            } else if (day.getDayOfWeek()!=DayOfWeek.SUNDAY) {
+                reviews=new String[]{HifzSessionActivity.MURAJAAH_ACTIVE,HifzSessionActivity.MURAJAAH};
+            } else {
+                continue;
+            }
+            for(String mode:reviews) {
+                planned++;
+                if(attendance.completed(day,mode))validated++;
+                else if(day.isBefore(today))missed++;
+                else due++;
             }
         }
         return new Summary(planned,validated,late,missed,due,unknown);

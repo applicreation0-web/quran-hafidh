@@ -60,7 +60,7 @@ public final class AuditRemainingBypasses11711Test {
         LocalDate day=LocalDate.of(2026,11,6);
         assertEquals(day,p.openSabqiLesson(geometry,day));
         String token=p.sabqiLessonToken();
-        for(int n=0;n<PreviewConfig.SABQI_TOTAL_REPS;n++)assertTrue(p.recordSabqiRepetition(token,n,false));
+        for(int n=0;n<p.sabqiLessonTargetReps();n++)assertTrue(p.recordSabqiRepetition(token,n,false));
         Map<String,Object> before=new LinkedHashMap<>(d.disk);
         boolean accepted=p.completeSabqiBlockV6(100,104,105,
             Arrays.asList("604:0","604:1","604:2","604:3","604:4"),"2026-11-06","foreign physical payload");

@@ -43,8 +43,8 @@ final class WeeklyProgramPolicy {
     }
 
     static int recommendedItqanTargetLines(DayOfWeek day) {
-        if(day==DayOfWeek.TUESDAY)return 8;
-        if(day==DayOfWeek.THURSDAY || day==DayOfWeek.SATURDAY)return 7;
+        if(day==DayOfWeek.TUESDAY || day==DayOfWeek.THURSDAY || day==DayOfWeek.SATURDAY)
+            return ItqanFourSessionPolicy.WEEKLY_PAGE_LINES_PER_SESSION;
         return 0;
     }
 }

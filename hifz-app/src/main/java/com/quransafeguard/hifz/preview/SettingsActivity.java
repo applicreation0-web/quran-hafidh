@@ -319,7 +319,7 @@ public final class SettingsActivity extends android.app.Activity {
         if(!stabilizationDays.isEmpty())out.append(stabilizationDays).append(" · Stabilisation   ·   ");
         return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC
             ? out.append("Dim · Finales (historique uniquement)").toString()
-            : out.append("Dim · Finales sans révision").toString();
+            : out.append("Dim · Finales").toString();
     }
 
     private String learningDaysSummary(){
@@ -346,7 +346,7 @@ public final class SettingsActivity extends android.app.Activity {
         renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") :"
             +"\n1. Renforcement Sabqi : protocole conservé. Consolidation Itqān : ×7 sur le nouveau bloc, puis passage continu des blocs précédents (sans refaire chacun ×7)."
             +"\n2. Dimanche matin : finale Sabqi. Dimanche soir : finale Itqān seulement pendant le premier régime. Après An-Nās, aucune finale Itqān."
-            +"\n3. Matin : Révision active "+maintenanceMinutes()+" min + Révision passive "+maintenanceMinutes()+" min. Soir : Apprentissage ou Stabilisation, puis Renforcement ou Consolidation. Aucune Révision le dimanche.");
+            +"\n3. Révision active : durée progressive, matin et soir, dimanche compris. Révision passive facultative : "+maintenanceMinutes()+" min.");
     }
 
     private String suggestedTimeLabel(boolean morning) {
@@ -650,15 +650,15 @@ public final class SettingsActivity extends android.app.Activity {
         Toast.makeText(this,"Début de rotation enregistré. Les positions actuelles restent inchangées.",Toast.LENGTH_LONG).show();
     }
 
-    /** P4 J-15: both revisions grow with the real ACQUIRED corpus instead of staying a
-     *  flat constant — see MaintenanceCoveragePolicy. */
     private int maintenanceMinutes(){
         return MaintenanceCoveragePolicy.minutes(
             prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Matin · Révision active "+maintenanceMinutes()+" min + Révision passive "
+        murajaahStatus.setText("Révision active · "+MaintenanceCoveragePolicy.minutes(
+            prefs.acquiredLineCountV6(),geometry.lineCount(),speedStore.maintenanceSecondsPerLine())
+            +" min matin et soir\nRévision passive facultative · "
             +maintenanceMinutes()+" min · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
     }
@@ -843,14 +843,15 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     /**
-     * Calendar-only estimates, never earned credits. Recommended Itqan target
-     * is 8+7+7 physical lines on Tue/Thu/Sat; manual uses seven
-     * lines per Itqan day (actual physical surah/page boundaries can reduce it).
-     * Historical CLASSIC retains its original 22-line estimate.
+     * Calendar-only estimates. The Recommended maximum is five physical lines
+     * per Itqan day, with a weekly limit of one page. Manual and historical
+     * CLASSIC keep their prior estimates.
      */
     private int forecastItqanLinesPerWeek(){
         HifzPrefs.WeeklyProgram mode=prefs.weeklyProgramMode();
-        if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return PreviewConfig.STABILIZATION_WEEKLY_LINES;
+        if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED && !prefs.itqanPostNasMaintenance())
+            return ItqanFourSessionPolicy.WEEKLY_PAGE_SESSIONS
+                * ItqanFourSessionPolicy.WEEKLY_PAGE_LINES_PER_SESSION;
         if(mode==HifzPrefs.WeeklyProgram.MANUAL_SEVEN)
             return Math.max(0,(6-effectiveLearningDaysPerWeek())*7);
         return PreviewConfig.STABILIZATION_WEEKLY_LINES;

@@ -29,9 +29,9 @@ public final class AtlasFinalizationSourceContractTest {
     @Test public void weeklyGoalLabelsUsePagesOnlyWithoutChangingSchedules() throws Exception {
         String home=read(ROOT+"MainActivity.java");
         assertTrue(home.contains("pathTile(learningModes, \"Apprentissage\", \"1 page/semaine\""));
-        assertTrue(home.contains(": \"2 pages/semaine\";"));
+        assertTrue(home.contains(": \"1 page/semaine\";"));
         assertTrue("Post-Nas maintenance remains distinct",
-            home.contains("prefs.itqanEntretienActive() ? \"1 hizb · répétitions\""));
+            home.contains("prefs.itqanPostNasMaintenance() ? \"1 juz · visible puis masqué\""));
         assertFalse(home.contains("pathTile(learningModes, \"Apprentissage\", \"5 lignes\""));
         assertFalse(home.contains("2 pages / 4 séances"));
     }

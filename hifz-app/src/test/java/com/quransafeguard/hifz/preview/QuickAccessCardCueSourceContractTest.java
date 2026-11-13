@@ -12,7 +12,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * Home quick-access cues use the same units for both weekly objectives:
- * Apprentissage 1 page/semaine; Stabilisation 2 pages/semaine.
+ * Apprentissage 1 page/semaine; Stabilisation 1 page/semaine.
  * Per-session details and repetitions remain inside the actual sessions.
  */
 public final class QuickAccessCardCueSourceContractTest {
@@ -30,7 +30,7 @@ public final class QuickAccessCardCueSourceContractTest {
         assertTrue("Apprentissage states its weekly objective, not per-session lines",
             main.contains("pathTile(learningModes, \"Apprentissage\", \"1 page/semaine\""));
         assertTrue("Stabilisation uses the identical page/week unit",
-            main.contains("2 pages/semaine"));
+            main.contains("1 page/semaine"));
         assertTrue("Stabilisation's cue must state its own fixed weekly line target, not a vague word",
             ui.contains(": PreviewConfig.STABILIZATION_WEEKLY_LINES + \" lignes/semaine\""));
         assertFalse("the old unquantified label must not remain", ui.contains("? \"Répétitions\""));

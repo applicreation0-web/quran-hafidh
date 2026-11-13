@@ -191,7 +191,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(pathSectionTitle("RÉVISION"));
         LinearLayout reviewModes = Ui.row(this);
         LinearLayout activeRevision = pathTile(reviewModes, "Révision active", "Récitation masquée",
-            v -> openMode(HifzSessionActivity.MURAJAAH_ACTIVE));
+            v -> showRevisionSelector(false));
         LinearLayout passiveRevision = pathTile(reviewModes, "Révision passive", "Texte visible",
             v -> openMode(HifzSessionActivity.MURAJAAH));
         if(wideBoox())path.addView(reviewModes,new LinearLayout.LayoutParams(-1,0,1f));
@@ -463,7 +463,7 @@ public final class MainActivity extends android.app.Activity {
             ?new LinearLayout.LayoutParams(Ui.dp(this,sideDp),0,1f)
             :new LinearLayout.LayoutParams(Ui.dp(this,sideDp),Ui.dp(this,sideDp));
         iconLayout.topMargin=Ui.dp(this,wideBoox()?1:6);
-        tile.addView(iconView,iconLayout);
+        tile.addView(iconView, iconLayout);
         // The real target/verse range is on the selected day, not crammed into a 1/3-width cell.
         TextView cue = Ui.text(this, state, 15f, false);
         cue.setVisibility(View.GONE);
@@ -560,7 +560,7 @@ public final class MainActivity extends android.app.Activity {
                 prochain.setVisibility(afterNas?View.GONE:View.VISIBLE);
             }
             itqanCard.setContentDescription(afterNas
-                ?"Maintien · deuxième régime Itqān"
+                ?"Maintien · "+JuzMaintenanceStore.CUE
                 :"Stabiliser · Premier passage ; ensuite Maintien après An-Nās");
         }
         if(consolidationCard.getChildAt(0) instanceof TextView)
@@ -629,8 +629,8 @@ public final class MainActivity extends android.app.Activity {
 
     /** Describes the selected weekly plan, never a stale fixed 22-line budget. */
     private String stabilizationProgramCue() {
-        return prefs.itqanEntretienActive() ? "1 hizb · répétitions"
-            : "2 pages/semaine";
+        return prefs.itqanPostNasMaintenance() ? "1 juz · visible puis masqué"
+            : "1 page/semaine";
     }
 
     /** Option 7B: where the Stabilisation rotation stands, e.g. "Hizb 52 · 3/61 séances". */
@@ -672,11 +672,13 @@ public final class MainActivity extends android.app.Activity {
         setLineEnabled(itqanQuickAccess,slot!=null && HifzSessionActivity.ITQAN.equals(slot.mode));
     }
 
-    /** The Révision card opens this compact selector rather than jumping straight to a mode:
-        Révision active and Révision passive can now be done in any order. */
     private void showRevisionSelector() {
-        RevisionSelector.show(this, prefs, geometry, speedStore, new RevisionSelector.Choice() {
-            @Override public void openActiveRevision() { openMode(HifzSessionActivity.MURAJAAH_ACTIVE); }
+        showRevisionSelector(true);
+    }
+
+    private void showRevisionSelector(boolean includePassive) {
+        RevisionSelector.show(this, prefs, geometry, speedStore, includePassive, new RevisionSelector.Choice() {
+            @Override public void openActiveRevision(ActiveReviewSlots.Slot slot) { openMode(slot.mode); }
             @Override public void openPassiveRevision() { openMode(HifzSessionActivity.MURAJAAH); }
         });
     }
@@ -684,15 +686,6 @@ public final class MainActivity extends android.app.Activity {
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
 
     private void openMode(String mode,LocalDate scheduledDate) {
-        if (HifzClock.today().getDayOfWeek()==DayOfWeek.SUNDAY
-                && (HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)
-                    || HifzSessionActivity.MURAJAAH.equals(mode))) {
-            new android.app.AlertDialog.Builder(this)
-                .setTitle("Dimanche sans révision")
-                .setMessage("Aucune Révision active ou Révision passive n’est programmée le dimanche. Consultez les séances Itqān et les finales du jour.")
-                .setPositiveButton("Fermer",null).show();
-            return;
-        }
         if (HifzSessionActivity.SABQI.equals(mode) || HifzSessionActivity.ITQAN.equals(mode)) {
             // Date/weekday and durable completion receipts gate real work;
             // old misses stay recorded but do not authorize retroactive credits.
@@ -785,7 +778,7 @@ public final class MainActivity extends android.app.Activity {
         CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek());
         switch(action){
             case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI);
-            case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
+            case STABILIZATION:return prefs.weeklyItqanPageClosed(date) || modeComplete(date,HifzSessionActivity.ITQAN);
             case REVISION:
                 if(!date.equals(HifzClock.today()))return true;
                 return learningFinalResolved(date)
@@ -841,46 +834,40 @@ public final class MainActivity extends android.app.Activity {
 
     private String computeNextMode(ScheduledCadence due){
         LocalDate today=HifzClock.today();
-        // Review still appears when all dated lessons are complete for the day.
-        if(due==null) {
-            if(today.getDayOfWeek()==DayOfWeek.SUNDAY)return null;
-            if(!today.toString().equals(prefs.lastActiveMurajaahDate()))
-                return HifzSessionActivity.MURAJAAH_ACTIVE;
-            if(!today.toString().equals(prefs.lastMurajaahDate()))
-                return HifzSessionActivity.MURAJAAH;
-            return null;
+        ActiveReviewSlots reviews=prefs.activeReviewSlots();
+        if (reviews.receipt(today,ActiveReviewSlots.Slot.MORNING)==null)
+            return ActiveReviewSlots.Slot.MORNING.mode;
+        if (due!=null) {
+            String lesson=nextCadenceMode(due.getScheduledDate(),today,due.getAction());
+            if(lesson!=null)return lesson;
+        } else {
+            CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),
+                prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+            String evening=action==CadenceAction.LEARNING?eveningLearningMode(today)
+                :action==CadenceAction.STABILIZATION?eveningStabilizationMode(today):null;
+            if(evening!=null)return evening;
         }
-        LocalDate date=due.getScheduledDate();
+        return reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null
+            ?ActiveReviewSlots.Slot.EVENING.mode:null;
+    }
+
+    private String nextCadenceMode(LocalDate date,LocalDate today,CadenceAction action){
         boolean isToday=date.equals(today);
-        // Both independent reviews belong to 05:30, ahead of today's 20:00 work.
-        // An older dated lesson stays prioritaire: isToday=false for carry-over.
-        if(isToday && today.getDayOfWeek()!=DayOfWeek.SUNDAY) {
-            if(!date.toString().equals(prefs.lastActiveMurajaahDate()))
-                return HifzSessionActivity.MURAJAAH_ACTIVE;
-            if(!date.toString().equals(prefs.lastMurajaahDate()))
-                return HifzSessionActivity.MURAJAAH;
-        }
-        if(recommendedSunday(date)){
-            // Older Sunday finals are resumed via their original OPEN snapshots.
-            if(!isToday)return null;
-            if(!learningFinalResolved(date))return HifzSessionActivity.LEARNING_FINAL;
-            if(!prefs.itqanPostNasMaintenance() && !consolidationFinalResolved(date))
+        if (recommendedSunday(date) || action==CadenceAction.REVISION) {
+            if (!isToday) return null;
+            if(!learningFinalResolved(today))return HifzSessionActivity.LEARNING_FINAL;
+            if(!prefs.itqanPostNasMaintenance() && !consolidationFinalResolved(today))
                 return HifzSessionActivity.CONSOLIDATION_FINAL;
             return null;
         }
-        switch(due.getAction()){
+        switch(action){
             case LEARNING:
                 if(!modeComplete(date,HifzSessionActivity.SABQI))return HifzSessionActivity.SABQI;
                 return isToday?eveningLearningMode(today):null;
             case STABILIZATION:
+                if(prefs.weeklyItqanPageClosed(date))return null;
                 if(!modeComplete(date,HifzSessionActivity.ITQAN))return HifzSessionActivity.ITQAN;
                 return isToday?eveningStabilizationMode(today):null;
-            case REVISION:
-                if(!isToday)return null;
-                if(!learningFinalResolved(today))return HifzSessionActivity.LEARNING_FINAL;
-                if(!prefs.itqanPostNasMaintenance() && !consolidationFinalResolved(today))
-                    return HifzSessionActivity.CONSOLIDATION_FINAL;
-                return null; // No active/passive review on Sunday in EITHER programme.
             default:return null;
         }
     }
@@ -891,7 +878,7 @@ public final class MainActivity extends android.app.Activity {
             ||HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode)
             ||HifzSessionActivity.LEARNING_FINAL.equals(mode)
             ||HifzSessionActivity.MURAJAAH.equals(mode)
-            ||HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode);
+            ||ActiveReviewSlots.Slot.fromMode(mode)!=null;
     }
 
     private void openToday() {
@@ -1033,9 +1020,7 @@ public final class MainActivity extends android.app.Activity {
     private List<TodaySession> todaySessions(LocalDate today,String nextMode,LocalDate nextScheduled){
         ArrayList<TodaySession> out=new ArrayList<>();
         String todayStr=today.toString();
-        // Both review modes share the dynamic duration; only corpora/masks remain distinct.
-        final int revisionMinutes=MaintenanceCoveragePolicy.minutes(
-            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
+        final int revisionMinutes=revisionCoverageMinutes();
         String eveningLessonDetail=todayRow!=null?stripDone(compactSession(todayRow.evening)):null;
         // Preserve the exact 5-line/Itqan range from the EVENING row, not revisions.
         if(eveningLessonDetail!=null && eveningLessonDetail.contains(" + "))
@@ -1044,11 +1029,10 @@ public final class MainActivity extends android.app.Activity {
             out.add(new TodaySession("Report "+nextScheduled+" · "+modeTitle(nextMode),nextMode,nextScheduled,false,true));
         }
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+        ActiveReviewSlots reviews = prefs.activeReviewSlots();
+        addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING,reviews,nextMode);
         if(today.getDayOfWeek()!=DayOfWeek.SUNDAY) {
-            addToday(out,"Révision active · matin · "+revisionMinutes+" min",
-                HifzSessionActivity.MURAJAAH_ACTIVE,today,
-                todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
-            addToday(out,"Révision passive · matin · "+revisionMinutes+" min"+revisionPassiveDetail(),
+            addToday(out,"Révision passive · matin · "+revisionMinutes+" min"+revisionPassiveDetail()+" · facultative",
                 HifzSessionActivity.MURAJAAH,today,
                 todayStr.equals(prefs.lastMurajaahDate()),nextMode);
         }
@@ -1062,7 +1046,8 @@ public final class MainActivity extends android.app.Activity {
                         || todayStr.equals(prefs.lastRecentSabqiReviewDate())))
                 addToday(out,"Finale Itqān · soir",HifzSessionActivity.CONSOLIDATION_FINAL,
                     today,consolidationFinalResolved(today),nextMode);
-            return out; // No active/passive reviews or ordinary Itqan on Sunday.
+            addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
+            return out;
         }
         switch(action){
             case LEARNING:
@@ -1077,6 +1062,7 @@ public final class MainActivity extends android.app.Activity {
                         learningEvening==EveningReviewDisplay.Status.COMPLETED,nextMode);
                 break;
             case STABILIZATION:
+                if(prefs.weeklyItqanPageClosed(today))break;
                 addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Stabilisation",HifzSessionActivity.ITQAN,today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
                 EveningReviewDisplay.Status stabilizationEvening=EveningReviewDisplay.forDay(
                     modeComplete(today,HifzSessionActivity.ITQAN),
@@ -1097,7 +1083,19 @@ public final class MainActivity extends android.app.Activity {
                 break;
             default:break;
         }
+        addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
         return out;
+    }
+
+    private int revisionCoverageMinutes(){
+        return MaintenanceCoveragePolicy.minutes(
+            prefs.acquiredLineCountV6(),geometry.lineCount(),speedStore.maintenanceSecondsPerLine());
+    }
+
+    private void addActiveReviewToday(List<TodaySession> out,LocalDate today,ActiveReviewSlots.Slot slot,
+            ActiveReviewSlots reviews,String nextMode){
+        addToday(out,slot.title()+" · "+reviews.targetMinutes(today,slot,revisionCoverageMinutes())+" min",
+            slot.mode,today,reviews.receipt(today,slot)!=null,nextMode);
     }
 
     private void addToday(List<TodaySession> out,String label,String mode,LocalDate scheduled,boolean done,String nextMode){
@@ -1136,7 +1134,8 @@ public final class MainActivity extends android.app.Activity {
             // line geometry. Never present a Sabqi finale as Itqān repetition.
             items[i]=(s.done?"✓ ":s.next?"▸ ":"  ")+slot+title+
                 (s.label.contains("en attente")?" · En attente":
-                    (s.done?" · Terminé":" · À faire"))+
+                    (s.done?" · Terminé":s.mode.equals(HifzSessionActivity.MURAJAAH)
+                        ?" · Facultative":" · À faire"))+
                 ("Détails disponibles".equals(essential) || "Terminée".equals(essential)
                     ? "" : "\n"+essential);
         }
@@ -1235,7 +1234,8 @@ public final class MainActivity extends android.app.Activity {
         if(HifzSessionActivity.ITQAN.equals(mode))return prefs.itqanEntretienActive()
             ? "Itqān · Maintien de la maîtrise" : "Itqān · Consolidation";
         if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode))return "Revue apprentissage";
-        if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode))return "Révision active";
+        ActiveReviewSlots.Slot slot=ActiveReviewSlots.Slot.fromMode(mode);
+        if(slot!=null)return slot.title();
         if(HifzSessionActivity.MURAJAAH.equals(mode))return "Révision passive";
         if(HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode)
             ||HifzSessionActivity.LEARNING_FINAL.equals(mode))return "Renforcement";
@@ -1245,6 +1245,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     static String anchoringTodayDetail(HifzPrefs prefs,GeometryRepository geometry){
+        if (prefs.usesJuzMaintenance()) return "Maintien · " + JuzMaintenanceStore.CUE;
         AnchoringQueue.Entry entry=prefs.inProgressAnchoringEntry();
         if(entry==null)entry=prefs.currentAnchoringEntry(geometry);
         if(entry==null)return "Stabilisation · aucune unité à stabiliser";
@@ -1376,7 +1377,7 @@ public final class MainActivity extends android.app.Activity {
         // CP6: receipts only; never interpret time spent as acquired mastery.
         // Unlike the seven-day forward rail, this balance covers Monday through today.
         WeeklyBilan.Summary bilan=WeeklyBilan.calculate(HifzClock.today(),
-            prefs.programStartDate(),ledger.coverageStartDate(),
+            prefs.programStartDate(),ledger.coverageStartDate(),prefs.activeReviewSlots().programmeStart(),
             date->WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
                 prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
             (date,mode)->ledger.find(date,mode)!=null);
@@ -1549,7 +1550,8 @@ public final class MainActivity extends android.app.Activity {
         timeline.addView(axis, lineParams);
         LinearLayout stations = Ui.row(this);
         stations.setGravity(Gravity.TOP);
-        int stationHeight=Ui.dp(this,wideBoox()?75:80);
+        int stationHeight=Ui.dp(this,wideBoox()
+            ? Math.max(75, Math.round(34 + 47 * getResources().getConfiguration().fontScale)) : 80);
         for (WeeklyDashboardPlanner.Row row : weekRows) {
             boolean active = row.date.equals(selectedWeekDate);
             if (active) chosen = row;
@@ -1798,7 +1800,7 @@ public final class MainActivity extends android.app.Activity {
             String scheduled=morning.contains("Stabilisation")?morning:
                 evening.contains("Stabilisation")?evening:"";
             if(!scheduled.isEmpty())return readableScheduleEssentials(scheduled);
-            return postNas?"1 hizb · 2 visibles + 1 masquée":"Voir le programme Itqān";
+            return postNas?JuzMaintenanceStore.CUE:"Voir le programme Itqān";
         }
         if(HifzSessionActivity.SABQI.equals(mode))
             return readableScheduleEssentials(evening.contains("Apprentissage")?evening:morning);
@@ -1809,8 +1811,9 @@ public final class MainActivity extends android.app.Activity {
         if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
             ||HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode))
             return readableScheduleEssentials(evening);
-        if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)
-            ||HifzSessionActivity.MURAJAAH.equals(mode))return "Révision du matin";
+        ActiveReviewSlots.Slot slot=ActiveReviewSlots.Slot.fromMode(mode);
+        if(slot!=null)return "Récitation masquée";
+        if(HifzSessionActivity.MURAJAAH.equals(mode))return "Révision facultative";
         return "Consulter les séances prévues";
     }
 

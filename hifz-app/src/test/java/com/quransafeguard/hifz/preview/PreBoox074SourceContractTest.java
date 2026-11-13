@@ -42,7 +42,9 @@ public final class PreBoox074SourceContractTest {
     @Test public void c12SessionFlowCapturesDateOnceAndOnlyHifzClockCallsLocalDateNow() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(session.contains("LocalDate capturedToday = HifzClock.today()"));
-        assertTrue(session.indexOf("HifzClock.today()") == session.lastIndexOf("HifzClock.today()"));
+        assertTrue(session.contains("dateAtSessionOpen = capturedToday;"));
+        assertTrue("New active review may not validate under an elapsed date",
+            session.contains("if(activeSlot!=null&&!sessionDate.equals(HifzClock.today()))return;"));
         Path root = Paths.get("hifz-app/src/main/java/com/quransafeguard/hifz/preview");
         if (!Files.exists(root)) root = Paths.get("..", root.toString());
         for (Path path : (Iterable<Path>) Files.walk(root).filter(p -> p.toString().endsWith(".java"))::iterator) {

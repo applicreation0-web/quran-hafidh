@@ -62,29 +62,29 @@ public final class MaintenanceCoverageWiringSourceContractTest {
             read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java")
                 .contains("MaintenanceCoveragePolicy.minutes("));
         assertTrue(main.contains("new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today());"));
-        assertTrue(main.contains("final int revisionMinutes=MaintenanceCoveragePolicy.minutes("));
+        assertTrue(main.contains("final int revisionMinutes=revisionCoverageMinutes()"));
         assertFalse(main.contains("HifzSchedule.ACTIVE_REVIEW_MINUTES"));
     }
 
-    @Test public void revisionSelectorUsesTheSameAcquiredDurationForBothModes() throws Exception {
+    @Test public void revisionSelectorSharesDynamicDuration() throws Exception {
         String selector = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java");
-        assertTrue("One acquired-corpus coverage calculation must drive both menu options",
+        assertTrue("Passive menu duration uses the acquired corpus",
             selector.contains("MaintenanceCoveragePolicy.minutes(")
                 && selector.contains("prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()"));
-        assertTrue("Active revision must display the same dynamic duration as Révision passive",
-            selector.contains("\"Révision active · \" + maintenanceCue + \" · \"")
-                && selector.contains("\"Révision passive · \" + maintenanceCue + \" · \""));
+        assertTrue("Active slots retain their own computed targets",
+            selector.contains("slot.title() + \" · \" + store.targetMinutes(today, slot, proposedMinutes)")
+                && selector.contains("\"Révision passive · \" + maintenanceCue"));
         assertFalse("The historical 15-minute label must never return to the menu",
             selector.contains("Révision active · 15 min"));
     }
 
-    @Test public void settingsActivityDisplayStringsBothUseTheDynamicDuration() throws Exception {
+    @Test public void settingsKeepDynamicDurationForBoth() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertFalse(settings.contains("HifzSchedule.MAINTENANCE_MINUTES"));
         assertTrue(settings.contains("private int maintenanceMinutes(){"));
-        assertTrue(settings.contains("+maintenanceMinutes()+\" min. Soir : Apprentissage ou Stabilisation, puis Renforcement ou Consolidation. Aucune Révision le dimanche.\");"));
+        assertTrue(settings.contains("dimanche compris. Révision passive facultative : \"+maintenanceMinutes()"));
         assertTrue(settings.contains("+maintenanceMinutes()+\" min · position \"+prefs.murajaahCursor());"));
-        assertTrue(settings.contains("Révision active \"+maintenanceMinutes()+\" min + Révision passive"));
+        assertTrue(settings.contains("\"Révision active · \"+MaintenanceCoveragePolicy.minutes("));
         assertFalse(settings.contains("HifzSchedule.ACTIVE_REVIEW_MINUTES"));
     }
 }

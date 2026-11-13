@@ -13,8 +13,7 @@ import static org.junit.Assert.assertTrue;
  * Diagnostic's "Estimation fin Stabilisation" answers a real learner question ("when will à
  * stabiliser be done?") from the same live data everything else in Diagnostic already reads —
  * unconsolidatedPromotedRanges' physical lines not yet Stabilized/Acquired — divided by
- * Stabilisation's actual fixed weekly pace (PreviewConfig.STABILIZATION_WEEKLY_LINES), never a
- * hand-typed guess.
+ * the selected cadence's estimated maximum weekly pace.
  */
 public final class StabilizationEtaSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -41,7 +40,8 @@ public final class StabilizationEtaSourceContractTest {
             settings.contains("+\"\\nEstimation fin Stabilisation : \"+stabilizationEtaSummary()"));
         assertTrue("forecast is programme-specific rather than stale fixed 22 lines",
             settings.contains("int weeklyPace=forecastItqanLinesPerWeek();")
-                && settings.contains("if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return PreviewConfig.STABILIZATION_WEEKLY_LINES;")
+                && settings.contains("if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED && !prefs.itqanPostNasMaintenance())")
+                && settings.contains("* ItqanFourSessionPolicy.WEEKLY_PAGE_LINES_PER_SESSION;")
                 && settings.contains("(6-effectiveLearningDaysPerWeek())*7"));
         assertTrue("projection uses the selected weekly pace",
             settings.contains("(remaining+weeklyPace-1)/weeklyPace"));

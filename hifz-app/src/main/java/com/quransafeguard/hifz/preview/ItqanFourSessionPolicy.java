@@ -19,6 +19,8 @@ import java.util.*;
 final class ItqanFourSessionPolicy {
     static final int SESSIONS=4;
     static final int MAX_BLOCK_LINES=11;
+    static final int WEEKLY_PAGE_SESSIONS=3;
+    static final int WEEKLY_PAGE_LINES_PER_SESSION=5;
 
     static final class Block {
         final int surah;
@@ -72,6 +74,91 @@ final class ItqanFourSessionPolicy {
                 last(geometry.lineIdsOnPage(endPage)));
         return plan(owned,complete);
     }
+    /** Builds a weekly candidate from the first still-eligible physical line.
+     *  The caller must supply eligibility from the authoritative progression. */
+    static Plan weeklyPage(GeometryRepository geometry, int firstLine, Set<String> eligible) {
+        return weeklyPage(geometry, firstLine, eligible, true);
+    }
+
+    static Plan weeklyPage(GeometryRepository geometry, int firstLine, Set<String> eligible,
+            boolean preferWholeVerses) {
+        if (geometry == null || eligible == null || firstLine < 0 || firstLine >= geometry.lineCount())
+            throw new IllegalArgumentException("Canonical Itqan cursor required");
+        GeometryRepository.LineMeta first = geometry.line(firstLine);
+        if (!eligible.contains(first.id)) return null;
+        if (first.page <= 2)
+            throw new IllegalStateException("Special-page Itqan geometry requires verification");
+
+        List<GeometryRepository.LineMeta> owned = new ArrayList<>();
+        for (int i = firstLine; i < geometry.lineCount(); i++) {
+            GeometryRepository.LineMeta line = geometry.line(i);
+            if (line.page != first.page || !eligible.contains(line.id)) break;
+            if (line.verses.isEmpty())
+                throw new IllegalStateException("Missing verses for physical line " + line.id);
+            owned.add(line);
+        }
+        int count = owned.size();
+        if (count > WEEKLY_PAGE_SESSIONS * WEEKLY_PAGE_LINES_PER_SESSION)
+            throw new IllegalStateException("Unexpected Itqan page geometry");
+
+        List<Session> slots = new ArrayList<>();
+        // Only this complete page has the approved verse/surah-preserving exception.
+        boolean splitNajmQamar = first.id.equals("528:0") && count == 13
+            && owned.get(8).verses.contains(new VerseRef(53, 62))
+            && owned.get(9).verses.contains(new VerseRef(54, 1));
+        int[] quotas = splitNajmQamar ? new int[]{4,5,4}
+            : preferWholeVerses ? weeklyQuotas(owned) : new int[]{5,5,5};
+        int from = 0;
+        for (int slot = 0; slot < WEEKLY_PAGE_SESSIONS; slot++) {
+            int quota = quotas[slot];
+            int to = Math.min(count, from + quota);
+            List<Block> blocks = new ArrayList<>();
+            for (int index = from; index < to;) {
+                int surah = surahOf(owned.get(index));
+                List<String> ids = new ArrayList<>();
+                do {
+                    ids.add(owned.get(index++).id);
+                } while (index < to && surahOf(owned.get(index)) == surah);
+                blocks.add(new Block(surah, ids));
+            }
+            slots.add(new Session(slot + 1, blocks, to - from));
+            from = to;
+        }
+        List<String> pageIds = geometry.lineIdsOnPage(first.page);
+        boolean fullPage = first.id.equals(pageIds.get(0)) && count == pageIds.size();
+        return new Plan(first.page, first.page, fullPage, slots);
+    }
+
+    private static int[] weeklyQuotas(List<GeometryRepository.LineMeta> lines) {
+        int count = lines.size();
+        int limit = WEEKLY_PAGE_LINES_PER_SESSION;
+        int[] best = null;
+        int bestSplits = Integer.MAX_VALUE;
+        // Largest earlier blocks win ties. A smaller first or second block
+        // is used when it avoids splitting a verse and still fits this week.
+        for (int first = Math.min(count, limit); first >= 1; first--) {
+            for (int second = Math.min(count - first, limit); second >= 0; second--) {
+                int third = count - first - second;
+                if (third > limit || second == 0 && third > 0) continue;
+                int splits = weeklyVerseCut(lines, first);
+                if (second > 0) splits += weeklyVerseCut(lines, first + second);
+                if (splits < bestSplits) {
+                    bestSplits = splits;
+                    best = new int[]{first,second,third};
+                }
+            }
+        }
+        if (best == null) throw new IllegalStateException("No weekly Itqan page partition");
+        return best;
+    }
+
+    private static int weeklyVerseCut(List<GeometryRepository.LineMeta> lines, int cut) {
+        if (cut >= lines.size()) return 0;
+        List<VerseRef> before = lines.get(cut - 1).verses;
+        List<VerseRef> after = lines.get(cut).verses;
+        return before.get(before.size() - 1).equals(after.get(0)) ? 1 : 0;
+    }
+
     private static <T>T last(List<T> list){
         if(list.isEmpty())throw new IllegalStateException("Page without physical lines");
         return list.get(list.size()-1);

@@ -13,7 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import static org.junit.Assert.*;
 
-/** J6: no premature Acquis, stable cursors, Sunday without revision. */
+/** J6: no premature Acquis, stable cursors, Sunday without planned passive review. */
 public final class PassiveApprisAndSundayContractTest {
     private static GeometryRepository geometry() throws Exception {
         java.nio.file.Path p=Paths.get("app/src/main/assets/reader109/geometry.json");
@@ -88,7 +88,7 @@ public final class PassiveApprisAndSundayContractTest {
         catch(IllegalArgumentException expected){}
     }
 
-    @Test public void bothProgrammesEnforceSundayNoActiveAndNoPassive() throws Exception {
+    @Test public void bothProgrammesScheduleActiveButNotPassiveOnSunday() throws Exception {
         java.nio.file.Path mainFile=Paths.get(
             "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         if(!Files.exists(mainFile))mainFile=Paths.get("..",mainFile.toString());
@@ -98,8 +98,8 @@ public final class PassiveApprisAndSundayContractTest {
         String main=new String(Files.readAllBytes(mainFile),StandardCharsets.UTF_8);
         String planner=new String(Files.readAllBytes(plannerFile),StandardCharsets.UTF_8);
         assertTrue(main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY)"));
-        assertTrue(main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
-        assertTrue(planner.contains("// Sunday cannot consume a passive cursor or schedule any general revisions."));
+        assertTrue(main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING"));
+        assertTrue(planner.contains("evening=joinSessions(evening,activeEvening);"));
         assertTrue(main.contains("Finale Sabqi · matin"));
         assertTrue(main.contains("Finale Itqān · soir"));
     }

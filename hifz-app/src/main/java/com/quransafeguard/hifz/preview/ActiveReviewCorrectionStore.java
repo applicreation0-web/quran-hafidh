@@ -20,13 +20,20 @@ final class ActiveReviewCorrectionStore {
     private static final String KEY_REVEALED = "activeReviewRevealedPagesV1";
     private static final String KEY_STATE = "activeReviewCorrectionV2";
     private final SharedPreferences prefs;
+    private final String revealedKey;
+    private final String stateKey;
 
     ActiveReviewCorrectionStore(Context context) {
         this(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE));
     }
     ActiveReviewCorrectionStore(SharedPreferences prefs) {
+        this(prefs, "");
+    }
+    ActiveReviewCorrectionStore(SharedPreferences prefs, String scope) {
         if (prefs == null) throw new IllegalArgumentException("Missing correction store");
         this.prefs = prefs;
+        revealedKey = KEY_REVEALED + scope;
+        stateKey = KEY_STATE + scope;
     }
 
     static final class State {
@@ -62,7 +69,7 @@ final class ActiveReviewCorrectionStore {
     }
 
     State pending() {
-        String raw=prefs.getString(KEY_STATE,"");
+        String raw=prefs.getString(stateKey,"");
         if(raw==null||raw.isEmpty())return null;
         try {
             JSONObject doc=new JSONObject(raw);
@@ -150,13 +157,13 @@ final class ActiveReviewCorrectionStore {
             JSONArray array=new JSONArray();
             for(Integer page:state.pages)array.put(page);
             doc.put("pages",array);
-            return prefs.edit().putString(KEY_STATE,doc.toString()).commit();
+            return prefs.edit().putString(stateKey,doc.toString()).commit();
         }catch(Exception invalid){return false;}
     }
 
     Set<Integer> revealed(String date,VerseRef start){
         try{
-            String raw=prefs.getString(KEY_REVEALED,"");
+            String raw=prefs.getString(revealedKey,"");
             if(raw==null||raw.isEmpty())return Collections.emptySet();
             JSONObject doc=new JSONObject(raw);
             if(!date.equals(doc.optString("date"))||!start.toString().equals(doc.optString("start")))
@@ -176,7 +183,7 @@ final class ActiveReviewCorrectionStore {
     boolean recordReveal(String date,VerseRef start,int page){
         if(date==null||start==null||page<1||page>604)return false;
         try{
-            String raw=prefs.getString(KEY_REVEALED,"");
+            String raw=prefs.getString(revealedKey,"");
             if(raw!=null&&!raw.isEmpty()){
                 JSONObject existing=new JSONObject(raw);
                 if(!date.equals(existing.getString("date"))
@@ -189,13 +196,13 @@ final class ActiveReviewCorrectionStore {
             JSONArray array=new JSONArray();
             for(Integer value:pages)array.put(value);
             doc.put("pages",array);
-            return prefs.edit().putString(KEY_REVEALED,doc.toString()).commit();
+            return prefs.edit().putString(revealedKey,doc.toString()).commit();
         }catch(Exception invalid){return false;}
     }
 
     /** Restore the original date even when force-stop preceded the replay's begin(). */
     String revealedSessionDate(VerseRef start,String validatedDate){
-        String raw=prefs.getString(KEY_REVEALED,"");
+        String raw=prefs.getString(revealedKey,"");
         if(raw==null||raw.isEmpty())return null;
         try{
             JSONObject doc=new JSONObject(raw);
@@ -211,6 +218,10 @@ final class ActiveReviewCorrectionStore {
         }
     }
     boolean clear(){
-        return prefs.edit().remove(KEY_STATE).remove(KEY_REVEALED).commit();
+        return clear(prefs.edit()).commit();
+    }
+
+    SharedPreferences.Editor clear(SharedPreferences.Editor editor) {
+        return editor.remove(stateKey).remove(revealedKey);
     }
 }

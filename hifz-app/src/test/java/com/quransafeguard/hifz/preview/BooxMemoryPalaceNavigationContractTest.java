@@ -25,7 +25,7 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertTrue(main.contains("pathTile(reviewModes, \"Révision passive\""));
         assertTrue(main.contains("pathTile(learningModes, \"Renforcement\""));
         assertTrue(main.contains("pathTile(otherModes, \"Consolidation\""));
-        assertTrue(main.contains("HifzSessionActivity.MURAJAAH_ACTIVE"));
+        assertTrue(main.contains("showRevisionSelector(false)"));
         assertTrue(main.contains("HifzSessionActivity.MURAJAAH"));
     }
 

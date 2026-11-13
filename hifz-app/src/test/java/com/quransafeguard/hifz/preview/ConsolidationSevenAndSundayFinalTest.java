@@ -153,22 +153,23 @@ public final class ConsolidationSevenAndSundayFinalTest {
             session.contains("protocol == ConsolidationCycleEngine.Protocol.SNOWBALL_ALL_PARTS"));
     }
 
-    @Test public void sundayRecommendedIsFinalsOnlyNeverOrdinaryItqanOrReview() throws Exception {
+    @Test public void sundayRecommendedOffersFinalsAndActiveReviewWithoutOrdinaryItqan() throws Exception {
         assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY,
                 HifzPrefs.WeeklyProgram.RECOMMENDED,3));
         String main=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String dashboard=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(main.contains("if(recommendedSunday(date))"));
-        assertTrue(main.contains("if(!learningFinalResolved(date))return HifzSessionActivity.LEARNING_FINAL;"));
-        assertTrue(main.contains("!consolidationFinalResolved(date)")); 
-        int sunday=main.indexOf("if(recommendedSunday(date)){",main.indexOf("private String computeNextMode("));
-        int next=main.indexOf("switch(due.getAction())",sunday);
+        assertTrue(main.contains("if(!learningFinalResolved(today))return HifzSessionActivity.LEARNING_FINAL;"));
+        assertTrue(main.contains("!consolidationFinalResolved(today)"));
+        int sunday=main.indexOf("if (recommendedSunday(date) || action==CadenceAction.REVISION)",
+            main.indexOf("private String nextCadenceMode("));
+        int next=main.indexOf("switch(action)",sunday);
         assertTrue(sunday>=0&&next>sunday);
         assertFalse("Sunday must not route an ordinary Itqan lesson",
             main.substring(sunday,next).contains("return HifzSessionActivity.ITQAN;"));
         assertTrue(main.contains("if(recommendedSunday(today)){"));
-        assertTrue(main.contains("return out; // No active/passive reviews or ordinary Itqan on Sunday."));
+        assertTrue(main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);"));
         assertTrue(dashboard.contains("Finale Sabqi"));
         assertTrue(dashboard.contains("Finale Itqān"));
     }

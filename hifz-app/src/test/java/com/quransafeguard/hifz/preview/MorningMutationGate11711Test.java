@@ -35,7 +35,7 @@ public final class MorningMutationGate11711Test {
         p.setSabqiLineCursor(100);EarnedEveningProtocolRegressionTest.setup();
         GeometryRepository geo=EarnedEveningProtocolRegressionTest.geometry;
         p.openSabqiLesson(geo,EveningMutationGate11711Test.FRIDAY);String old=p.sabqiLessonToken();
-        for(int rep=0;rep<PreviewConfig.SABQI_TOTAL_REPS;rep++)assertTrue(p.recordSabqiRepetition(old,rep,false));
+        for(int rep=0;rep<p.sabqiLessonTargetReps();rep++)assertTrue(p.recordSabqiRepetition(old,rep,false));
         java.util.List<String> ids=geo.fiveLineBlock(100,geo.lineCount()-1).lineIds;
         assertTrue(p.completeSabqiBlockV6(100,104,105,ids,"2026-11-06","first"));
         p.openSabqiLesson(geo,EveningMutationGate11711Test.FRIDAY);

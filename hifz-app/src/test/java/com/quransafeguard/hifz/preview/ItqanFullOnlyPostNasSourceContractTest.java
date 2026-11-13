@@ -91,10 +91,10 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
         assertTrue("The refreshed Stabilisation tile must expose its live cue in child index 1",
             main.contains("TextView cue = Ui.text(this, state, 15f, false);")
             && main.contains("TextView itqanCue = Ui.settingValue(itqanCard);"));
-        assertTrue("Post-Nas summary stays a concise hizb cue",
-            main.contains("prefs.itqanEntretienActive() ? \"1 hizb · répétitions\""));
+        assertTrue("Post-Nas summary gives the whole-juz protocol",
+            main.contains("prefs.itqanPostNasMaintenance() ? \"1 juz · visible puis masqué\""));
         assertTrue("Both weekly menu goals are expressed in pages, without session counts",
-            main.contains("2 pages/semaine") && main.contains("1 page/semaine"));
+            main.contains("1 page/semaine"));
         assertFalse("Detailed session count belongs inside Itqan",main.contains("2 pages / 4 séances"));
         assertFalse("A detailed weekly quota belongs inside Itqan, not its menu",
             main.contains("30 lignes/semaine · 4 séances"));

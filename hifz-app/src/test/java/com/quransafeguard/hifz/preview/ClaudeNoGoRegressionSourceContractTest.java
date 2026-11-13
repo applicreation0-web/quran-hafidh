@@ -178,7 +178,9 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             block.contains("!= PreviewConfig.SABQI_LINES"));
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue("validateSabqi must advance from the block's real end, not a fixed +5",
-            session.contains("sabqiBlock.endLineIndex+1"));
+            session.contains("prefs.completeCurrentSabqi(sabqiBlock")
+                && read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java")
+                    .contains("block.endLineIndex+1"));
     }
 
     /**
@@ -615,27 +617,20 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             murajaahCorpus.contains("all.addAll(promotedRanges());"));
     }
 
-    /**
-     * Sunday evening used to have no Entretien slot at all: HifzSchedule.planFor(SUNDAY) carried a
-     * dummy zero-minute SABQI_NEW placeholder for the evening, and MainActivity.computeNextMode's
-     * REVISION case returned null the instant the morning ×5 finales were resolved, with no path
-     * to the ordinary nightly Murajaah. Sunday evening must now behave like every other evening:
-     * a real 30-minute Entretien, gated behind the morning finales and tracked the same way
-     * (lastMurajaahDate) so it can't be silently skipped or double-validated.
-     */
-    @Test public void sundayFinalsNeverScheduleGeneralReviewInEitherProgramme() throws Exception {
+    /** Sunday finals and the two active slots are independent in either programme. */
+    @Test public void sundayFinalsRetainIndependentActiveSlotsInEitherProgramme() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue("after two Sunday finales, no general active/passive review may be proposed",
-            main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
+        assertTrue("after Sunday finales the evening active slot remains available",
+            main.contains("return reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null"));
         assertTrue("classic Sunday is complete after two separate finales",
             main.contains("return learningFinalResolved(date)")
                 && main.contains("prefs.itqanPostNasMaintenance() || consolidationFinalResolved(date)"));
         assertTrue("Sunday has final reviews, not a seventh ordinary Itqan",
             main.contains("if(recommendedSunday(date))")
-            && main.contains("!prefs.itqanPostNasMaintenance() && !consolidationFinalResolved(date)"));
+            && main.contains("!prefs.itqanPostNasMaintenance() && !consolidationFinalResolved(today)"));
         assertFalse(main.contains("if(!modeComplete(date,HifzSessionActivity.ITQAN))return false;"));
-        assertTrue("Sunday selector excludes both active and passive review",
+        assertTrue("Sunday schedule excludes passive review",
             main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY) {"));
         assertTrue("Sunday forecast offers Consolidation finale instead of general Entretien",
             weekly.contains("evening=!itqanFinalDue?\"—\":consolidationDone?\"✓ Finale Itqān\""));
