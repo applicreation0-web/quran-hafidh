@@ -835,8 +835,16 @@ public final class MainActivity extends android.app.Activity {
     private String computeNextMode(ScheduledCadence due){
         LocalDate today=HifzClock.today();
         ActiveReviewSlots reviews=prefs.activeReviewSlots();
-        if (reviews.receipt(today,ActiveReviewSlots.Slot.MORNING)==null)
+        if (reviews.receipt(today,ActiveReviewSlots.Slot.MORNING)==null) {
+            // A skipped morning has no draft. If the evening was already
+            // started instead, Continue must reopen that reserved passage,
+            // not lead into a blocked new morning session.
+            if (reviews.draft(today,ActiveReviewSlots.Slot.MORNING)==null
+                    && reviews.draft(today,ActiveReviewSlots.Slot.EVENING)!=null
+                    && reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null)
+                return ActiveReviewSlots.Slot.EVENING.mode;
             return ActiveReviewSlots.Slot.MORNING.mode;
+        }
         if (due!=null) {
             String lesson=nextCadenceMode(due.getScheduledDate(),today,due.getAction());
             if(lesson!=null)return lesson;
