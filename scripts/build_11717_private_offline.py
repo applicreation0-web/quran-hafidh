@@ -136,7 +136,7 @@ def check_reference(aapt: Path, apksigner: Path, reference: Path) -> dict:
         nogo("un APK historique réellement signé est obligatoire")
     app, version_code, version = package_identity(aapt, reference)
     if app != PACKAGE or (version_code, version) not in ALLOWED_INSTALLED:
-        nogo("version exacte de l'APK antérieure inconnue ou signature non certifiée")
+        nogo("APK historique : version exacte antérieure inconnue ou signature non certifiée")
     if package_certificate(apksigner, reference) != HISTORICAL_CERT:
         nogo("signature de l'APK historique différente")
     return {"versionCode": version_code, "versionName": version,
