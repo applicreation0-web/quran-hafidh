@@ -553,15 +553,15 @@ public final class MainActivity extends android.app.Activity {
         // Child order: title, pictogram, invisible cue, subtitle.
         if(itqanCard!=null){
             if(itqanCard.getChildAt(0) instanceof TextView)
-                ((TextView)itqanCard.getChildAt(0)).setText(afterNas?"Maintien":"Stabiliser");
+                ((TextView)itqanCard.getChildAt(0)).setText("Stabiliser");
             if(itqanCard.getChildCount()>3 && itqanCard.getChildAt(3) instanceof TextView){
                 TextView prochain=(TextView)itqanCard.getChildAt(3);
                 prochain.setText("(Maintien)");
-                prochain.setVisibility(afterNas?View.GONE:View.VISIBLE);
+                prochain.setVisibility(View.VISIBLE);
             }
             itqanCard.setContentDescription(afterNas
-                ?"Maintien · "+JuzMaintenanceStore.CUE
-                :"Stabiliser · Premier passage ; ensuite Maintien après An-Nās");
+                ?"Stabiliser (Maintien) · "+JuzMaintenanceStore.CUE
+                :"Stabiliser (Maintien) · Premier passage ; ensuite Maintien après An-Nās");
         }
         if(consolidationCard.getChildAt(0) instanceof TextView)
             ((TextView)consolidationCard.getChildAt(0)).setText("Consolidation");
