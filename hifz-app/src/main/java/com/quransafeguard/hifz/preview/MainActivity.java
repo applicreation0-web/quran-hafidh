@@ -184,6 +184,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
             v -> openMode(consolidationQuickAccessMode()));
         consolidationCard = consolidation; // Same action and immutable original icon.
+        refreshItqanCardVocabulary(); // Correct title on first draw, not just onResume.
         if(wideBoox())path.addView(otherModes,new LinearLayout.LayoutParams(-1,0,1f));
         else path.addView(otherModes);
 
@@ -432,14 +433,10 @@ public final class MainActivity extends android.app.Activity {
         tile.setGravity(Gravity.CENTER);
         int sideDp = wideBoox()?booxPathIconDp():booxIconDp(2, 124);
         if(wideBoox()){
-            // Monochrome E-Ink tile: stroke instead of shadow or coloured fill.
-            android.graphics.drawable.GradientDrawable tileBg=
-                new android.graphics.drawable.GradientDrawable();
-            tileBg.setColor(Ui.SURFACE);
-            tileBg.setCornerRadius(Ui.dp(this,10));
-            tileBg.setStroke(Ui.dp(this,1),Ui.LINE);
-            tile.setBackground(tileBg);
-            tile.setMinimumHeight(0); // weighted row owns exact viewport allocation
+            // Keep the original sober six-icon layout, without individual cards.
+            // The weighted row still owns the fixed viewport height.
+            tile.setBackgroundColor(Ui.PAPER);
+            tile.setMinimumHeight(0);
         } else tile.setMinimumHeight(Ui.dp(this,sideDp+52));
         String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
             : "Stabilisation".equals(label) ? "Stabiliser"
@@ -553,14 +550,14 @@ public final class MainActivity extends android.app.Activity {
         // Child order: title, pictogram, invisible cue, subtitle.
         if(itqanCard!=null){
             if(itqanCard.getChildAt(0) instanceof TextView)
-                ((TextView)itqanCard.getChildAt(0)).setText("Stabiliser");
+                ((TextView)itqanCard.getChildAt(0)).setText(afterNas ? "Maintien" : "Stabiliser");
             if(itqanCard.getChildCount()>3 && itqanCard.getChildAt(3) instanceof TextView){
                 TextView prochain=(TextView)itqanCard.getChildAt(3);
                 prochain.setText("(Maintien)");
-                prochain.setVisibility(View.VISIBLE);
+                prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE);
             }
             itqanCard.setContentDescription(afterNas
-                ?"Stabiliser (Maintien) · "+JuzMaintenanceStore.CUE
+                ?"Maintien · "+JuzMaintenanceStore.CUE
                 :"Stabiliser (Maintien) · Premier passage ; ensuite Maintien après An-Nās");
         }
         if(consolidationCard.getChildAt(0) instanceof TextView)
