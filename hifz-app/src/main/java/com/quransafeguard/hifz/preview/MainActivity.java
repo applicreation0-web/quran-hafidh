@@ -1552,10 +1552,12 @@ public final class MainActivity extends android.app.Activity {
         weekStrip.removeAllViews();
         weekDayPanel.removeAllViews();
         if (weekRows.isEmpty()) return;
-        // Atlas is the GRAPHIC vocabulary only: one rail, seven real day targets, circular
-        // nodes and an outlined selection. No Atlas editorial titles are borrowed.
+        // Atlas is the GRAPHIC vocabulary only: one rail and seven real day targets.
+        // A double ring marks TODAY; an underlined date marks the consulted day.
+        // Both may coexist with a genuine completed day's solid fill.
         // This read-only view never changes Hifz receipts, dates, or the weekly programme.
         String[] initials = {"L", "M", "M", "J", "V", "S", "D"};
+        LocalDate realToday = HifzClock.today();
         WeeklyDashboardPlanner.Row chosen = weekRows.get(0);
         FrameLayout timeline = new FrameLayout(this);
         View axis = new View(this);
@@ -1569,8 +1571,9 @@ public final class MainActivity extends android.app.Activity {
             ? Math.max(75, Math.round(34 + 47 * getResources().getConfiguration().fontScale)) : 80);
         for (WeeklyDashboardPlanner.Row row : weekRows) {
             boolean active = row.date.equals(selectedWeekDate);
+            boolean currentDay = row.date.equals(realToday);
             if (active) chosen = row;
-            boolean future = row.date.isAfter(HifzClock.today());
+            boolean future = row.date.isAfter(realToday);
             // Validation is a real signed-off ledger state, never a forecast for future days.
             boolean done = !future && "Validé".equals(row.state);
             String status = future ? "Prévu" : done ? "Validé"
@@ -1579,10 +1582,9 @@ public final class MainActivity extends android.app.Activity {
             station.setPadding(0,0,0,0);
             station.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             station.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-            // BOOX calendar: keep every day circle completely empty.
-            // Completion is signalled only by a solid fill, selection by an outer
-            // ring, and the weekday/date remain outside the circle. Never use
-            // cadence arrows, finale letters or checks inside the nodes.
+            // BOOX calendar: all circles remain empty of glyphs. Only a genuinely
+            // validated day gets an ink fill. Today gets a permanent outer ring
+            // even while the user consults another date in the seven-day strip.
             TextView node = Ui.text(this, "", 15f, true);
             node.setGravity(Gravity.CENTER);
             android.graphics.drawable.GradientDrawable circle =
@@ -1593,11 +1595,10 @@ public final class MainActivity extends android.app.Activity {
             node.setBackground(circle);
             LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(
                 Ui.dp(this,26), Ui.dp(this,26));
-            // Atlas selected station: two concentric rings. Inner fill/check
-            // belongs only to a real Hifz completion; outer ring means
-            // "consulted date", NEVER "validated". No E-Ink animation.
+            // The double ring tracks today's real date, not the user's selection.
+            // Its white gap keeps a filled (validated) node legible on E-Ink.
             FrameLayout marker = new FrameLayout(this);
-            if (active) {
+            if (currentDay) {
                 android.graphics.drawable.GradientDrawable selection =
                     new android.graphics.drawable.GradientDrawable();
                 selection.setShape(android.graphics.drawable.GradientDrawable.OVAL);
@@ -1615,6 +1616,7 @@ public final class MainActivity extends android.app.Activity {
             station.addView(day);
             TextView date = Ui.text(this, Integer.toString(row.date.getDayOfMonth()),wideBoox()?16f:12f,active);
             date.setGravity(Gravity.CENTER);
+            if (active) date.setPaintFlags(date.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             station.addView(date);
             if (row.date.getDayOfWeek() == DayOfWeek.SUNDAY && !wideBoox()) {
                 TextView finale = Ui.text(this,"Finale",wideBoox()?15f:10f,false);
@@ -1625,6 +1627,7 @@ public final class MainActivity extends android.app.Activity {
             station.setClickable(true);
             station.setFocusable(true);
             station.setContentDescription(row.day+" "+row.date+" · "+status+
+                (currentDay?" · aujourd’hui":"")+
                 (active?" · sélectionné":"")+" · ouvrir le détail matin et soir");
             station.setOnClickListener(v -> {
                 selectedWeekDate = row.date;
