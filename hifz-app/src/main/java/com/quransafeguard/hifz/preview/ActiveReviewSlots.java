@@ -119,7 +119,10 @@ final class ActiveReviewSlots {
         if (date == null || slot == null) return false;
         synchronized (LOCK) {
             Slot other = slot == Slot.MORNING ? Slot.EVENING : Slot.MORNING;
-            return receipt(date, other) != null || draft(date, other) == null;
+            if (receipt(date, other) != null || draft(date, other) == null) return true;
+            // Old versions could persist both unfinished slots. Allow the
+            // morning proof to finish, never both, without discarding either.
+            return slot == Slot.MORNING && draft(date, slot) != null;
         }
     }
 
