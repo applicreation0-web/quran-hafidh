@@ -290,7 +290,7 @@ public final class ActiveReviewSlotsTest {
     @Test public void malformedOldCorrectionRefusesCarryWithoutErasingAnyBytes() {
         LocalDate monday=SUNDAY.plusDays(1);
         assertTrue(store.checkpoint(SUNDAY,ActiveReviewSlots.Slot.EVENING,FIRST,END,2,600_000L));
-        String corrupted="{\\"date\\":\\"2026-11-15\\",\\"start\\":\\"2:1\\",\\"pages\\":[999]}";
+        String corrupted = "{invalid-revealed-pages-json";
         disk.disk.put("activeReviewRevealedPagesV1|"+SUNDAY+"|EVENING",corrupted);
         setDay(monday);
         java.util.Map<String,?> before=java.util.Map.copyOf(disk.getAll());
