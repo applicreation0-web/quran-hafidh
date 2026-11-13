@@ -65,6 +65,47 @@ public final class ItqanWeeklyIntegrationTest {
         return disk;
     }
 
+    @Test public void realElapsedForecastsNajmRemainderWithoutMutatingState() throws Exception {
+        // Reproduce a legitimate 2026-11-13 backup: the untouched session has
+        // a real saved elapsed time, not the artificial 16340 ms fixture time.
+        for(long elapsed:new long[]{0L,49176L,120000L}){
+            InMemoryPrefs disk=fixture(0);
+            disk.disk.put("itqanElapsedMs",elapsed);
+            HifzPrefs prefs=new HifzPrefs(disk,geo);
+            LocalDate saturday=day("2026-11-14");
+            Map<String,?> before=Map.copyOf(disk.getAll());
+            ItqanFourSessionPolicy.Plan forecast=prefs.previewWeeklyItqan(geo,saturday);
+            assertNotNull(forecast);
+            assertEquals(5,forecast.lines());
+            assertEquals(geo.lineIdsOnPage(527).subList(10,15),
+                forecast.sessions.get(0).blocks.get(0).lineIds);
+            assertEquals("Forecast must not rewrite saved progress",before,disk.getAll());
+            ItqanFourSessionSnapshot actual=prefs.openWeeklyItqan(geo,saturday);
+            assertNotNull(actual);
+            assertEquals(geo.lineIdsOnPage(527).subList(10,15),
+                actual.plan.sessions.get(0).blocks.get(0).lineIds);
+            assertEquals("2026-11-10",prefs.lastItqanDate());
+            assertNull("Old unearned physical proof must not become a receipt",
+                ItqanPhysicalProof11711.read(disk));
+        }
+    }
+
+    @Test public void missingOrInvalidElapsedCannotBypassMigrationGuards() throws Exception {
+        for(long elapsed:new long[]{-1L,Long.MIN_VALUE}){
+            InMemoryPrefs disk=fixture(0);
+            disk.disk.put("itqanElapsedMs",elapsed);
+            HifzPrefs prefs=new HifzPrefs(disk,geo);
+            LocalDate saturday=day("2026-11-14");
+            Map<String,?> before=Map.copyOf(disk.getAll());
+            assertThrows(IllegalStateException.class,
+                ()->prefs.previewWeeklyItqan(geo,saturday));
+            assertEquals(before,disk.getAll());
+            assertThrows(IllegalStateException.class,
+                ()->prefs.openWeeklyItqan(geo,saturday));
+            assertEquals("No synthetic receipt or state mutation",before,disk.getAll());
+        }
+    }
+
     @Test public void remainderThenNajmQamarAndExactNextPage() throws Exception {
         InMemoryPrefs disk=fixture(0);
         HifzPrefs prefs=new HifzPrefs(disk,geo);
