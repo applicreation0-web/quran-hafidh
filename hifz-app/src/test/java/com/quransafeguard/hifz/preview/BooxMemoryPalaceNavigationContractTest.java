@@ -38,6 +38,18 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertFalse(main.contains("new BooxFlowStroke(this)"));
     }
 
+    @Test public void booxHasNoCardPavementAndMaintienChangesOnlyAfterNas() throws Exception {
+        String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertFalse("BOOX six icons must not become bordered cards", main.contains("tileBg.setStroke("));
+        assertFalse(main.contains("tile.setBackground(tileBg)"));
+        assertTrue(main.contains("tile.setBackgroundColor(Ui.PAPER)"));
+        assertTrue("First draw must reflect a post-Nas installation",
+            main.contains("refreshItqanCardVocabulary(); // Correct title on first draw"));
+        assertTrue(main.contains("setText(afterNas ? \"Maintien\" : \"Stabiliser\")"));
+        assertTrue(main.contains("prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE)"));
+        assertTrue(main.contains("?\"Maintien · \"+JuzMaintenanceStore.CUE"));
+    }
+
     @Test public void exactNineSemanticsAreSeparated() throws Exception {
         String ui = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         for (String name : new String[]{"home", "route", "compass", "door", "column",
