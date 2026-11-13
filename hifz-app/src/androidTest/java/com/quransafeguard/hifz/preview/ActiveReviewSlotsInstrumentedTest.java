@@ -173,7 +173,20 @@ public final class ActiveReviewSlotsInstrumentedTest {
             ActiveReviewSlots slots=new HifzPrefs(context).activeReviewSlots();
             assertTrue(slots.checkpoint(monday,AM,START,END,page,2_700_000L,true,45));
             VerseRef next=new HifzPrefs(context).activeMurajaahCorpus().next(END);
-            assertTrue(slots.complete(monday,AM,START,next,"Reprise effectuée lundi"));
+            ActiveReviewSlots.Draft proof=slots.draft(monday,AM);
+            assertNotNull("Carried proof must survive Activity close",proof);
+            assertEquals("Carried target duration must be frozen",45,proof.targetMinutes);
+            assertEquals("Carried duration must be fully earned",2_700_000L,proof.elapsedMs);
+            assertEquals("Carried endpoint must be present",END,proof.end);
+            assertTrue("Current cursor/revision must match carried start: "
+                +new HifzPrefs(context).activeMurajaahCursor(),
+                slots.isCurrent(proof,new HifzPrefs(context).activeMurajaahCursor()));
+            assertTrue("Carried slot must be open",slots.canOpen(monday,AM));
+            assertNull("Unexpected outstanding correction",slots.correction(monday,AM).pending());
+            assertTrue("Unexpected revealed pages",slots.correction(monday,AM)
+                .revealed(monday.toString(),START).isEmpty());
+            assertTrue("Proof passed all preconditions",slots.complete(
+                monday,AM,START,next,"Reprise effectuée lundi"));
             assertNull(slots.receipt(SUNDAY,PM));
             assertEquals("Reprise effectuée lundi",slots.receipt(monday,AM));
         } finally {
