@@ -72,7 +72,16 @@ jobs:
             adb shell wm density 240
             adb shell settings put system font_scale 1.0
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest --stacktrace
+            # connectedDebugAndroidTest uninstalls the instrumented app during cleanup,
+            # removing MediaStore screenshots owned by that app. Its Gradle doLast
+            # reinstalls the actual debug + test APKs. Run only the visual tests
+            # once more without Gradle teardown, then pull their fresh captures.
             mkdir -p boox-real-renders
+            RUNNER="$(adb shell pm list instrumentation | sed -n 's/^instrumentation:\\([^ ]*\\) (target=com.quransafeguard.hifz.ibnkathirtest).*/\\1/p' | head -1 | tr -d '\\r')"
+            test -n "$RUNNER" || { echo 'BOOX visual instrumentation runner absent'; exit 1; }
+            adb shell am instrument -w -e class com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest "$RUNNER" | tee boox-real-renders/visual-instrumentation.txt
+            grep -Eq 'OK \\(2 tests\\)' boox-real-renders/visual-instrumentation.txt || { echo 'BOOX visual instrumentation did not pass'; exit 1; }
+            adb shell ls -l /sdcard/Pictures/HaafidhAudit/independent-itqan-before-nas.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-before-nas.png boox-real-renders/boox-1404x1872-itqan-before-nas.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-after-nas.png boox-real-renders/boox-1404x1872-itqan-after-nas.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-calendar-today-selected-and-validated.png boox-real-renders/boox-1404x1872-calendar-today-selected-and-validated.png
