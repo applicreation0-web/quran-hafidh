@@ -1,0 +1,37 @@
+name: Haafidh 1.17.17 — public Android build-tools for local APK verification only
+on:
+  push:
+    branches:
+      - stage/haafidh-11717-unsigned-historical-v2-20261113
+    paths:
+      - .github/workflows/haafidh-11717-public-android-verify-tools.yml
+permissions:
+  contents: read
+jobs:
+  public-sdk-tools-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install public Android SDK build-tools only
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Acquire pinned public build-tools
+        run: |
+          set -euo pipefail
+          sdkmanager "build-tools;36.0.0"
+          folder="$ANDROID_HOME/build-tools/36.0.0"
+          test -s "$folder/lib/apksigner.jar"
+          test -s "$folder/aapt"
+          test -s "$folder/zipalign"
+          mkdir -p public-verify-tools/lib
+          cp "$folder/lib/apksigner.jar" public-verify-tools/lib/
+          cp "$folder/aapt" "$folder/zipalign" public-verify-tools/
+          sha256sum public-verify-tools/lib/apksigner.jar public-verify-tools/aapt public-verify-tools/zipalign > public-verify-tools/SHA256SUMS.txt
+          echo 'PUBLIC_ANDROID_VERIFY_TOOLS_ONLY__NO_APK_NO_KEYS_NO_ATLAS'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-11717-public-apksigner-aapt-zipalign-NO-APK
+          path: public-verify-tools/
+          retention-days: 3
+          if-no-files-found: error
