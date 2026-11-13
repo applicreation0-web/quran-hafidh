@@ -176,6 +176,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                     else {
                         activeSlot = requestedActiveSlot == null
                             ? ActiveReviewSlots.Slot.MORNING : requestedActiveSlot;
+                        // Rebind yesterday's real checkpoint to today's chosen
+                        // slot, without manufacturing yesterday's receipt.
+                        activeSlots.carryForward(capturedToday, activeSlot);
                         sessionDate = activeSlots.dateToResume(capturedToday, activeSlot);
                         String restoredDate = state == null ? null : state.getString("activeSessionDate");
                         if (restoredDate != null) {
@@ -242,7 +245,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         murajaahActualEnd = prefs.murajaahActualEnd();
         clock = new SessionClock(persistedSessionElapsed(), elapsed -> {
             if (activeSlot != null && !sessionCompleted && correctionState==null
-                    && !sessionDate.equals(HifzClock.today())) {
+                    && !carryActiveOverMidnight()) {
                 expireActiveReview();
                 return;
             }
@@ -2265,7 +2268,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void finishMurajaah(){
-        if (activeSlot != null && (!sessionDate.equals(HifzClock.today())
+        if (activeSlot != null && (!carryActiveOverMidnight()
                 || clock.elapsedMs() < activeTargetMs())) return;
         if (!StructuredSessionPolicy.murajaahCanValidate(murajaahActualEnd != null)) {
             Toast.makeText(this, "Touchez d’abord le dernier verset réellement révisé.", Toast.LENGTH_LONG).show();
@@ -2304,7 +2307,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (activeSlot != null && correctionState == null
                 && clock.elapsedMs() < activeTargetMs()) return;
         if(active && correctionState==null){
-            if(activeSlot!=null&&!sessionDate.equals(HifzClock.today()))return;
+            if(activeSlot!=null&&!carryActiveOverMidnight())return;
             if (!checkpointMurajaah(clock.elapsedMs())) {
                 onError("Impossible de sauvegarder la révision avant validation.");
                 return;
@@ -2327,13 +2330,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(active&&correctionState!=null&&!"DONE".equals(correctionState.stage)){
             onError("Relisez puis récitez en masqué toutes les pages dévoilées.");return;
         }
-        if (activeSlot != null && correctionState != null && !sessionDate.equals(HifzClock.today())) {
-            if (!activeSlots.finishCorrectionWithoutReceipt(sessionDate, activeSlot)) {
-                onError("La correction est conservée. Vérifiez la date du créneau.");
-                return;
-            }
-            correctionState = null;
-            expireActiveReview();
+        if (activeSlot != null && correctionState != null && !carryActiveOverMidnight()) {
+            onError("La correction est conservée. Vérifiez le créneau de reprise.");
             return;
         }
         long elapsed=activeSlot!=null?activeTargetMs()
@@ -2527,6 +2525,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean checkpointMurajaah(long elapsed){
         if (!isMurajaahMode() || sessionCompleted || correctionState!=null || murajaahPlan==null) return true;
         if (activeSlot != null) {
+            if (!carryActiveOverMidnight()) return false;
             if (!activeSlots.checkpoint(sessionDate, activeSlot, murajaahPlan.start,
                     murajaahActualEnd, currentPage, elapsed, activeClockPaused, targetMinutes())) return false;
             activeDraft = activeSlots.draft(sessionDate, activeSlot);
@@ -2978,6 +2977,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if(stale.isShowing())stale.dismiss();
         }
         if(clock==null)return;
+        if(activeSlot!=null && !sessionCompleted && !carryActiveOverMidnight()) {
+            expireActiveReview();
+            return;
+        }
         clock.syncPersistedElapsed(persistedSessionElapsed());
         if(correspondenceSelector==null&&correspondenceSelectorVerse!=null){
             VerseRef verse=correspondenceSelectorVerse;
@@ -3015,6 +3018,29 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionDisplayElapsed(clock.elapsedMs()), targetMinutes()));
     }
 
+    /**
+     * A running or paused active session remains genuinely resumable across
+     * midnight. The old date remains unvalidated; only the date of actual
+     * completion can receive a receipt. Never add missed-day minutes or move
+     * the acquired-corpus cursor until an authentic completion.
+     */
+    private boolean carryActiveOverMidnight() {
+        if (activeSlot == null || sessionDate.equals(HifzClock.today())) return true;
+        LocalDate now = HifzClock.today();
+        if (sessionDate.isAfter(now) || activeDraft == null || sessionCompleted) return false;
+        if (correctionState == null && murajaahPlan != null && clock != null) {
+            if (!activeSlots.checkpoint(sessionDate, activeSlot, murajaahPlan.start,
+                    murajaahActualEnd, currentPage, clock.elapsedMs(),
+                    activeClockPaused, targetMinutes())) return false;
+        }
+        if (!activeSlots.carryForward(sessionDate, activeSlot, now, activeSlot)) return false;
+        sessionDate = now;
+        activeDraft = activeSlots.draft(now, activeSlot);
+        correctionStore = activeSlots.correction(now, activeSlot);
+        correctionState = correctionStore.pending();
+        return true;
+    }
+
     private void expireActiveReview() {
         sessionCompleted = true;
         clock.pause();
@@ -3035,7 +3061,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void resumeSessionClock(){
         if (activeSlot != null && !sessionCompleted && correctionState==null
-                && !sessionDate.equals(HifzClock.today())) { expireActiveReview(); return; }
+                && !carryActiveOverMidnight()) { expireActiveReview(); return; }
         if (activeSlot != null && (!activeReaderReady || activeClockPaused || timedSessionLimitReached)) return;
         if(sessionResumed&&!isFinishing()&&correspondenceSelector==null&&!sessionCompleted&&!awaitingValidation&&correctionState==null
                 &&(!timedSessionLimitReached||isMurajaahMode()))clock.resume();
