@@ -50,6 +50,24 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertTrue(main.contains("?\"Maintien · \"+JuzMaintenanceStore.CUE"));
     }
 
+    @Test public void weeklyBooxCirclesAreEmptyAndStateUsesFillAndOutline() throws Exception {
+        String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        int start = main.indexOf("private void renderSelectedWeekDay()");
+        int end = main.indexOf("private void ", start + 1);
+        String calendar = main.substring(start, end > start ? end : main.length());
+        assertTrue("No letters, arrows or ticks in calendar circles",
+            calendar.contains("TextView node = Ui.text(this, \"\", 15f, true);"));
+        assertFalse("No rotating Itqān arrows in circles", calendar.contains("↻"));
+        assertFalse("No finale F inside circles", calendar.contains("done?\"✓\""));
+        assertTrue("Only real receipts fill the validation circle",
+            calendar.contains("boolean done = !future && \"Validé\".equals(row.state);")
+            && calendar.contains("circle.setColor(done ? Ui.INK : Ui.PAPER);"));
+        assertTrue("Selected day remains outlined, independently of completion",
+            calendar.contains("if (active)") && calendar.contains("selection.setStroke(Ui.dp(this,2),Ui.INK);"));
+        assertTrue("Weekday and date remain separate from the circle",
+            calendar.contains("station.addView(day);") && calendar.contains("station.addView(date);"));
+    }
+
     @Test public void exactNineSemanticsAreSeparated() throws Exception {
         String ui = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         for (String name : new String[]{"home", "route", "compass", "door", "column",
