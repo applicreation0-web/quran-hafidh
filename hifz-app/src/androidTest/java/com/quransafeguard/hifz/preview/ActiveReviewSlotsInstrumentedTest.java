@@ -141,6 +141,79 @@ public final class ActiveReviewSlotsInstrumentedTest {
         }
     }
 
+    @Test public void interruptedEveningFromYesterdayResumesOnTodayWithoutBackdatedCredit()
+            throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        new HifzPrefs(context);
+        JSONObject original=HifzBackup.export(context);
+        try {
+            HifzClock.setClockForTests(Clock.fixed(
+                SUNDAY.atStartOfDay(ZoneOffset.UTC).toInstant(),ZoneOffset.UTC));
+            HifzPrefs prefs=fixture(context);
+            int page=GeometryRepository.get(context).pageForVerse(START);
+            assertTrue(prefs.activeReviewSlots().checkpoint(SUNDAY, PM,
+                START,END,page,600_000L,true,45));
+            LocalDate monday=SUNDAY.plusDays(1);
+            HifzClock.setClockForTests(Clock.fixed(
+                monday.atStartOfDay(ZoneOffset.UTC).toInstant(),ZoneOffset.UTC));
+            try(ActivityScenario<HifzSessionActivity> activity=open(context,AM)) {
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
+                    activity,"mushaf","Resumed real active review after midnight");
+                activity.onActivity(a->{
+                    assertEquals(monday,field(a,"sessionDate"));
+                    assertEquals(45,((ActiveReviewSlots.Draft)field(a,"activeDraft")).targetMinutes);
+                    assertEquals(600_000L,((ActiveReviewSlots.Draft)field(a,"activeDraft")).elapsedMs);
+                    assertFalse(((android.widget.TextView)field(a,"program")).getText()
+                        .toString().contains("en attente"));
+                });
+                assertNull(prefs.activeReviewSlots().draft(SUNDAY,PM));
+                assertNull(prefs.activeReviewSlots().receipt(SUNDAY,PM));
+                assertEquals(600_000L,prefs.activeReviewSlots().draft(monday,AM).elapsedMs);
+            }
+            ActiveReviewSlots slots=new HifzPrefs(context).activeReviewSlots();
+            assertTrue(slots.checkpoint(monday,AM,START,END,page,2_700_000L,true,45));
+            VerseRef next=new HifzPrefs(context).activeMurajaahCorpus().next(END);
+            assertTrue(slots.complete(monday,AM,START,next,"Reprise effectuée lundi"));
+            assertNull(slots.receipt(SUNDAY,PM));
+            assertEquals("Reprise effectuée lundi",slots.receipt(monday,AM));
+        } finally {
+            HifzClock.resetClockForTests();
+            HifzBackup.restore(context,original);
+        }
+    }
+
+    @Test public void openForegroundReviewCrossesMidnightAndKeepsItsExactCheckpoint()
+            throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        new HifzPrefs(context);
+        JSONObject original=HifzBackup.export(context);
+        try {
+            HifzClock.setClockForTests(Clock.fixed(
+                SUNDAY.atStartOfDay(ZoneOffset.UTC).toInstant(),ZoneOffset.UTC));
+            HifzPrefs prefs=fixture(context);
+            try(ActivityScenario<HifzSessionActivity> activity=open(context,AM)) {
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
+                    activity,"mushaf","Before midnight active review");
+                long before=elapsed(activity);
+                LocalDate monday=SUNDAY.plusDays(1);
+                HifzClock.setClockForTests(Clock.fixed(
+                    monday.atStartOfDay(ZoneOffset.UTC).toInstant(),ZoneOffset.UTC));
+                activity.moveToState(Lifecycle.State.CREATED);
+                activity.moveToState(Lifecycle.State.RESUMED);
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
+                    activity,"mushaf","After midnight active review");
+                activity.onActivity(a->assertEquals(monday,field(a,"sessionDate")));
+                assertNull(prefs.activeReviewSlots().draft(SUNDAY,AM));
+                assertNull(prefs.activeReviewSlots().receipt(SUNDAY,AM));
+                assertNotNull(prefs.activeReviewSlots().draft(monday,AM));
+                assertTrue(elapsed(activity)>=before);
+            }
+        } finally {
+            HifzClock.resetClockForTests();
+            HifzBackup.restore(context,original);
+        }
+    }
+
     private static HifzPrefs fixture(Context context) {
         assertTrue(context.getSharedPreferences("quran_hifz_preview_v1", 0).edit().clear().commit());
         HifzPrefs prefs = new HifzPrefs(context);
