@@ -42,6 +42,8 @@ jobs:
         run: gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac --stacktrace
       - name: Check historical offline signer and upgrade protections
         run: python3 scripts/test_build_11714_private_offline.py
+      - name: Verify fail-closed 1.17.17 private offline release guard (synthetic only)
+        run: python3 scripts/test_build_11717_private_offline.py
       - name: Confirm isolated 1.17.17 version identity and no release artifact
         run: |
           grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
