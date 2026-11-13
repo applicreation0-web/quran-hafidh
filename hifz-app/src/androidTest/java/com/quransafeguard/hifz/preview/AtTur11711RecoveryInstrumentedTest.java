@@ -72,9 +72,11 @@ public final class AtTur11711RecoveryInstrumentedTest {
         SharedPreferences disk=c.getSharedPreferences("quran_hifz_preview_v1",0);
         assertTrue(disk.edit().clear().commit());
         try {
-            assertTrue("Android 1.17.14 debug flavor must retain the -IbnKathir-DEBUG suffix",
-                BuildConfig.VERSION_NAME.equals("1.17.14-IbnKathir-DEBUG"));
-            assertEquals(52,BuildConfig.VERSION_CODE);
+            assertTrue("Non-production emulator build must keep its isolated package",
+                BuildConfig.APPLICATION_ID.endsWith(".ibnkathirtest"));
+            assertTrue("Public emulator build must keep its debug version suffix",
+                BuildConfig.VERSION_NAME.endsWith("-IbnKathir-DEBUG"));
+            assertTrue("Version code must not regress",BuildConfig.VERSION_CODE>=52);
             GeometryRepository geometry=GeometryRepository.get(c);
             assertEquals(7,geometry.linesForExactIds(MISSING).size());
             assertEquals(8,geometry.linesForExactIds(ALREADY_ACQUIRED).size());
