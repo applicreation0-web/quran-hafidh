@@ -169,8 +169,10 @@ public final class ItqanWeeklyIntegrationTest {
                 // Force a reboot against the same durable preferences.
                 prefs=new HifzPrefs(disk,geo);
             }
-            assertFalse("No phantom 12 November receipt",
-                disk.getString("v6DailyLessonReceiptsV1","").contains("\\"date\\":\\"2026-11-12\\""));
+            JSONArray allReceipts=new JSONArray(disk.getString("v6DailyLessonReceiptsV1","[]"));
+            for(int r=0;r<allReceipts.length();r++)
+                assertNotEquals("No phantom 12 November receipt", "2026-11-12",
+                    allReceipts.getJSONObject(r).getString("date"));
         }
     }
 
