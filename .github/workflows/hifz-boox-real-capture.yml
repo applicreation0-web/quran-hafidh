@@ -71,10 +71,12 @@ jobs:
             adb shell wm size 1404x1872
             adb shell wm density 240
             adb shell settings put system font_scale 1.0
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest --stacktrace
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest --stacktrace
             mkdir -p boox-real-renders
             adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-before-nas.png boox-real-renders/boox-1404x1872-itqan-before-nas.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-after-nas.png boox-real-renders/boox-1404x1872-itqan-after-nas.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-calendar-today-selected-and-validated.png boox-real-renders/boox-1404x1872-calendar-today-selected-and-validated.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-calendar-other-day-consulted-today-stays-ringed.png boox-real-renders/boox-1404x1872-calendar-other-day-consulted-today-stays-ringed.png
             python3 scripts/capture_hifz_boox_ui.py
       - name: Upload screenshots, UI hierarchy and diagnostics
         if: always()
