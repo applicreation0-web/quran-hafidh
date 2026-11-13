@@ -126,6 +126,109 @@ final class ActiveReviewSlots {
         }
     }
 
+    /**
+     * Missing dates never earn receipts or extra daily minutes. Rehome a real,
+     * unfinished checkpoint to the ACTUAL day and slot being resumed. The same
+     * frozen target, elapsed time, physical cursor and corrective page journal
+     * travel atomically. Yesterday stays visibly unvalidated.
+     */
+    boolean carryForward(LocalDate today, Slot destination) {
+        if (today == null || destination == null) return false;
+        synchronized (LOCK) {
+            if (receipt(today, destination) != null || draft(today, destination) != null
+                    || !canOpen(today, destination)) return false;
+            LocalDate oldest = null;
+            Slot source = null;
+            for (Map.Entry<String, ?> item : prefs.getAll().entrySet()) {
+                String key = item.getKey();
+                if (!key.startsWith(DRAFT + "|")) continue;
+                String[] parts = key.split("\\|", -1);
+                if (parts.length != 3) throw new IllegalStateException("Invalid active draft key");
+                LocalDate date = LocalDate.parse(parts[1]);
+                Slot slot = Slot.valueOf(parts[2]);
+                if (!date.isBefore(today) || receipt(date, slot) != null) continue;
+                Draft pending = draft(date, slot);
+                if (pending == null || !isCurrent(pending, currentCursor(pending.start))) continue;
+                if (oldest == null || date.isBefore(oldest)
+                        || date.equals(oldest) && slot == Slot.MORNING) {
+                    oldest = date;
+                    source = slot;
+                }
+            }
+            return oldest != null && carryForward(oldest, source, today, destination);
+        }
+    }
+
+    /** Explicit source used when a live foreground session crosses midnight. */
+    boolean carryForward(LocalDate oldDate, Slot oldSlot, LocalDate today, Slot newSlot) {
+        if (oldDate == null || oldSlot == null || today == null || newSlot == null
+                || !oldDate.isBefore(today)) return false;
+        synchronized (LOCK) {
+            Draft saved = draft(oldDate, oldSlot);
+            if (saved == null || receipt(oldDate, oldSlot) != null
+                    || receipt(today, newSlot) != null || draft(today, newSlot) != null
+                    || !canOpen(today, newSlot)
+                    || !isCurrent(saved, currentCursor(saved.start))) return false;
+            String origin = scope(oldDate, oldSlot);
+            String destination = scope(today, newSlot);
+            String rawDraft = prefs.getString(DRAFT + origin, null);
+            String oldRevealKey = ActiveReviewCorrectionStore.KEY_REVEALED + origin;
+            String oldStateKey = ActiveReviewCorrectionStore.KEY_STATE + origin;
+            String newRevealKey = ActiveReviewCorrectionStore.KEY_REVEALED + destination;
+            String newStateKey = ActiveReviewCorrectionStore.KEY_STATE + destination;
+            if (rawDraft == null || prefs.contains(newRevealKey) || prefs.contains(newStateKey))
+                return false;
+            // Read and validate ALL source bytes before any edit; on failure
+            // leave the old draft and both page journals intact.
+            ActiveReviewCorrectionStore journal = correction(oldDate, oldSlot);
+            String revealed = prefs.getString(oldRevealKey, null);
+            String pending = prefs.getString(oldStateKey, null);
+            try {
+                JSONObject movedReveal = null;
+                JSONObject movedState = null;
+                if (revealed != null) {
+                    if (journal.revealed(oldDate.toString(), saved.start).isEmpty())
+                        throw new IllegalStateException("Invalid active reveal journal");
+                    movedReveal = new JSONObject(revealed);
+                    movedReveal.put("date", today.toString());
+                }
+                if (pending != null) {
+                    ActiveReviewCorrectionStore.State verified = journal.pending();
+                    if (verified == null || !verified.date.equals(oldDate.toString())
+                            || !verified.start.equals(saved.start)
+                            || !verified.end.equals(saved.end == null ? saved.start : saved.end)
+                            || verified.activeElapsedMs > saved.durationMs())
+                        throw new IllegalStateException("Invalid active correction journal");
+                    movedState = new JSONObject(pending);
+                    movedState.put("date", today.toString());
+                }
+                SharedPreferences.Editor edit = prefs.edit()
+                    .putString(DRAFT + destination, rawDraft).remove(DRAFT + origin);
+                if (movedReveal != null)
+                    edit.putString(newRevealKey, movedReveal.toString()).remove(oldRevealKey);
+                if (movedState != null)
+                    edit.putString(newStateKey, movedState.toString()).remove(oldStateKey);
+                return edit.commit();
+            } catch (JSONException invalid) {
+                throw new IllegalStateException("Unable to carry active correction safely", invalid);
+            }
+        }
+    }
+
+    private boolean earlierCurrentDraftExists(LocalDate today) {
+        for (String key : prefs.getAll().keySet()) {
+            if (!key.startsWith(DRAFT + "|")) continue;
+            String[] parts = key.split("\\|", -1);
+            if (parts.length != 3) throw new IllegalStateException("Invalid active draft key");
+            LocalDate date = LocalDate.parse(parts[1]);
+            Slot slot = Slot.valueOf(parts[2]);
+            if (!date.isBefore(today) || receipt(date, slot) != null) continue;
+            Draft old = draft(date, slot);
+            if (old != null && isCurrent(old, currentCursor(old.start))) return true;
+        }
+        return false;
+    }
+
     boolean checkpoint(LocalDate date, Slot slot, VerseRef start, VerseRef end, int page, long elapsed) {
         return checkpoint(date, slot, start, end, page, elapsed, false, LEGACY_MINUTES);
     }
@@ -140,7 +243,8 @@ final class ActiveReviewSlots {
         synchronized (LOCK) {
             if (receipt(date, slot) != null || !canOpen(date, slot)) return false;
             Draft saved = draft(date, slot);
-            if (saved == null && !start.equals(currentCursor(start))) return false;
+            if (saved == null && (earlierCurrentDraftExists(date)
+                    || !start.equals(currentCursor(start)))) return false;
             if (saved != null && (!saved.start.equals(start)
                     || !isCurrent(saved, currentCursor(start)))) return false;
             long checkpointRevision = saved == null ? revision() : saved.revision;
