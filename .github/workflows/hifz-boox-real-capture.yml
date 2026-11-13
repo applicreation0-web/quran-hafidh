@@ -1,0 +1,71 @@
+name: Hifz BOOX actual emulator capture
+on:
+  push:
+    branches:
+      - feature/boox-parcours-one-screen-itqan-frise-20261112
+  pull_request:
+    branches:
+      - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
+  workflow_dispatch:
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      # GitHub ubuntu runner already includes the Android command line SDK.
+      # setup-android@v3 currently fails on deprecated "tools" package.
+      - name: Android 37 build tools and Hifz debug build
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          test -x "$SDKMANAGER" || { echo "Android sdkmanager unavailable"; exit 1; }
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Compile real Hifz debug APK (not official signed release)
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+      - name: Run full Hifz core, app, and source-contract regressions on this exact SHA
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
+      - name: Compile the private-release source variant without creating or signing any APK
+        env:
+          AYAH_THEMES_PRIVATE_114: '1'
+          HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+        run: gradle --no-daemon -I scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac --stacktrace
+      - name: Check historical offline signer and upgrade protections
+        run: python3 scripts/test_build_11714_private_offline.py
+      - name: Enable hardware acceleration for the Android emulator
+        run: |
+          test -c /dev/kvm
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
+          sudo chmod u+rw /dev/kvm
+          ls -l /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Real Android Hifz regression and BOOX screen verification
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
+          script: |
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest --stacktrace
+            python3 scripts/capture_hifz_boox_ui.py
+      - name: Upload screenshots, UI hierarchy and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hifz-boox-android-real-capture
+          path: |
+            boox-real-renders/
+            hifz-app/build/reports/tests/testDebugUnitTest/
+            hifz-app/build/reports/androidTests/
+            hifz-app/build/outputs/androidTest-results/
+          if-no-files-found: warn

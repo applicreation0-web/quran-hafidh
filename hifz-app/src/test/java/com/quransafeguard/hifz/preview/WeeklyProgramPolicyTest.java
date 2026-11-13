@@ -11,7 +11,7 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public final class WeeklyProgramPolicyTest {
-    @Test public void recommendedItqanIsThreeDaysTwentyTwoPhysicalLineTargets() {
+    @Test public void recommendedItqanIsThreeDaysWithAtMostFivePhysicalLines() {
         int itqanCount=0,sabqiCount=0,lines=0;
         for(DayOfWeek day:DayOfWeek.values()) {
             CadenceAction action=WeeklyProgramPolicy.actionFor(day,
@@ -30,10 +30,10 @@ public final class WeeklyProgramPolicyTest {
         }
         assertEquals(3,itqanCount);
         assertEquals(3,sabqiCount);
-        assertEquals(22,lines);
-        assertEquals(8,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.TUESDAY));
-        assertEquals(7,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.THURSDAY));
-        assertEquals(7,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.SATURDAY));
+        assertEquals(15,lines);
+        assertEquals(5,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.TUESDAY));
+        assertEquals(5,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.THURSDAY));
+        assertEquals(5,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.SATURDAY));
         assertEquals(0,WeeklyProgramPolicy.recommendedItqanTargetLines(DayOfWeek.SUNDAY));
     }
 
@@ -53,7 +53,7 @@ public final class WeeklyProgramPolicyTest {
                         :com.quransafeguard.hifz.core.CadenceAction.STABILIZATION);
                 assertEquals("Invalid future day "+day,expected,actual);
                 assertEquals("Sunday never gets Itqan ordinary units",d==6?0:
-                    (d==1?8:(d==3||d==5?7:0)),
+                    (d==1||d==3||d==5?5:0),
                     WeeklyProgramPolicy.recommendedItqanTargetLines(day.getDayOfWeek()));
             }
             assertEquals(java.time.DayOfWeek.SUNDAY,monday.plusDays(6).getDayOfWeek());

@@ -31,6 +31,15 @@ final class ItqanPhysicalProof11711 {
             return v;
         } catch(Exception malformed){return null;}
     }
+    static boolean isNajmRemainderProof(JSONObject proof) {
+        if (!"2026-11-12".equals(proof.optString("date"))) return false;
+        if ("53:33".equals(proof.optString("start")) && "53:62".equals(proof.optString("end")))
+            return true;
+        JSONArray lines = proof.optJSONArray("lines");
+        return lines != null && "527:10".equals(lines.optString(0))
+            && "528:0".equals(lines.optString(lines.length()-1));
+    }
+
     static String token(SharedPreferences p) {
         JSONObject v=read(p);
         return v==null?"":v.optString("token","");
@@ -103,7 +112,7 @@ final class ItqanPhysicalProof11711 {
             int target=ItqanMaintenancePolicy.totalReps(plan);
             JSONObject existing=read(p);
             if(existing!=null){
-                return existing.optString("start").equals(start.toString())
+                boolean sameBlock = existing.optString("start").equals(start.toString())
                     &&existing.optString("end").equals(end.toString())
                     &&existing.optInt("block",-1)==index
                     &&(ItqanThirtyRecoveryPolicy.eligible(plan)
@@ -118,7 +127,19 @@ final class ItqanPhysicalProof11711 {
                     &&equal(existing.optJSONArray("lines"),expected)
                     &&equal(existing.optJSONArray("bonus"),bonus)
                     &&existing.optInt("reps",-1)==h.itqanRep();
+                if (!sameBlock) return false;
+                LocalDate original = LocalDate.parse(existing.getString("date"));
+                if (original.equals(date)) return true;
+                // Keep genuine legacy repetitions, but never carry the date
+                // of an unfinished lesson into a new day's receipt.
+                String lastReceipt = h.lastItqanDate();
+                if (isNajmRemainderProof(existing) || !date.equals(HifzClock.today())
+                        || !date.isAfter(original)
+                        || !lastReceipt.isEmpty() && !original.isAfter(LocalDate.parse(lastReceipt)))
+                    return false;
+                return p.edit().putString(KEY, existing.put("date", requestedDate).toString()).commit();
             }
+            if (p.contains(KEY)) return false;
             // Legacy scalar-only OPEN: preserve, quarantine from credit, offer
             // explicit protocol replay; never grant today's dated receipt.
             if(h.itqanRep()!=0)return false;

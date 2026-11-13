@@ -8,49 +8,73 @@ import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.util.*;
 
-/** Versioned, immutable, fail-closed frozen 2-page / 4-session Itqan window.
+/** Versioned, immutable Itqan window for the historical four slots or a weekly page.
  * A partially completed window is NEVER replanned from current corpus.
  * This is a durable model; enabling it requires atomic session/V6 integration.
  */
 final class ItqanFourSessionSnapshot {
  static final int VERSION=1;
+ static final int WEEKLY_PAGE_VERSION=2;
  final ItqanFourSessionPolicy.Plan plan;
  final String originLeg,originCursor,scheduledWeek;
  final boolean originalTailCompleted;
  final int sessionIndex,blockIndex,reps;
+ final int recoveryTarget;
  final String fingerprint;
 
  private ItqanFourSessionSnapshot(ItqanFourSessionPolicy.Plan plan,String leg,
-       String cursor,String week,boolean tail,int slot,int block,int repetitions,String digest){
+       String cursor,String week,boolean tail,int slot,int block,int repetitions,int recoveryTarget,String digest){
    this.plan=Objects.requireNonNull(plan);
    this.originLeg=Objects.requireNonNull(leg);
    this.originCursor=Objects.requireNonNull(cursor);
    this.scheduledWeek=Objects.requireNonNull(week);
    this.originalTailCompleted=tail;
    this.sessionIndex=slot;this.blockIndex=block;this.reps=repetitions;
+   this.recoveryTarget=recoveryTarget;
    this.fingerprint=digest;
  }
 
  static ItqanFourSessionSnapshot freeze(ItqanFourSessionPolicy.Plan plan,
              ItqanRotationPolicy.State rotation,LocalDate week,GeometryRepository geo) {
+   return freeze(plan,rotation,week,geo,false);
+ }
+
+ static ItqanFourSessionSnapshot freeze(ItqanFourSessionPolicy.Plan plan,
+             ItqanRotationPolicy.State rotation,LocalDate week,GeometryRepository geo,boolean recovery) {
    if(rotation==null||week==null)throw new IllegalArgumentException("Itqan origin required");
    ItqanFourSessionSnapshot snap=new ItqanFourSessionSnapshot(plan,rotation.leg.name(),
-      rotation.cursor.toString(),week.toString(),rotation.initialTailCompleted,0,0,0,null);
+      rotation.cursor.toString(),week.toString(),rotation.initialTailCompleted,0,0,0,recovery?ItqanThirtyRecoveryPolicy.BASE:0,null);
    snap.validate(geo);
    return snap.withDigest();
  }
 
  private ItqanFourSessionSnapshot withDigest(){
    return new ItqanFourSessionSnapshot(plan,originLeg,originCursor,scheduledWeek,
-      originalTailCompleted,sessionIndex,blockIndex,reps,digest(plan,originLeg,originCursor,scheduledWeek,originalTailCompleted));
+      originalTailCompleted,sessionIndex,blockIndex,reps,recoveryTarget,digest(plan,originLeg,originCursor,scheduledWeek,originalTailCompleted,usesRecovery()));
+ }
+
+ boolean weeklyPage() {
+   return version(plan)==WEEKLY_PAGE_VERSION;
+ }
+
+ boolean usesRecovery() { return recoveryTarget != 0; }
+
+ int targetReps() { return usesRecovery() ? recoveryTarget : 40; }
+
+
+ private static int version(ItqanFourSessionPolicy.Plan plan) {
+   return plan.sessions.size()==ItqanFourSessionPolicy.WEEKLY_PAGE_SESSIONS
+       ? WEEKLY_PAGE_VERSION : VERSION;
  }
 
  private static String digest(ItqanFourSessionPolicy.Plan plan,String leg,String cursor,
-                              String week,boolean latched){
-   StringBuilder b=new StringBuilder("ITQAN4|V1|").append(plan.firstPage).append('|')
+                              String week,boolean latched,boolean recovery){
+   StringBuilder b=new StringBuilder(version(plan)==VERSION ? "ITQAN4|V1|" : "ITQAN_PAGE|V2|")
+      .append(plan.firstPage).append('|')
       .append(plan.lastPage).append('|').append(plan.fullWindow).append('|')
       .append(leg).append('|').append(cursor).append('|').append(week)
       .append('|').append(latched);
+   if(recovery)b.append("|THREE_STAGE_10_10_10");
    for(ItqanFourSessionPolicy.Session session:plan.sessions){
      b.append("|S").append(session.index);
      for(ItqanFourSessionPolicy.Block block:session.blocks){
@@ -70,13 +94,14 @@ final class ItqanFourSessionSnapshot {
  String encode(){
    try{
      JSONObject data=new JSONObject();
-     data.put("version",VERSION);
+     data.put("version",version(plan));
      data.put("firstPage",plan.firstPage).put("lastPage",plan.lastPage)
        .put("fullWindow",plan.fullWindow).put("originLeg",originLeg)
        .put("originCursor",originCursor).put("scheduledWeek",scheduledWeek)
        .put("tailCompletedAtStart",originalTailCompleted)
        .put("sessionIndex",sessionIndex).put("blockIndex",blockIndex)
        .put("reps",reps).put("sha256",fingerprint);
+     if (usesRecovery()) data.put("recoveryTarget", recoveryTarget);
      JSONArray sessions=new JSONArray();
      for(ItqanFourSessionPolicy.Session s:plan.sessions){
        JSONObject slot=new JSONObject();slot.put("index",s.index).put("lineCount",s.lineCount);
@@ -93,14 +118,25 @@ final class ItqanFourSessionSnapshot {
  }
 
  static ItqanFourSessionSnapshot decode(String raw,GeometryRepository geometry){
+   return decode(raw,geometry,VERSION,ItqanFourSessionPolicy.SESSIONS);
+ }
+
+ /** Reads the one-page format independently of the historical V1 decoder. */
+ static ItqanFourSessionSnapshot decodeWeeklyPage(String raw,GeometryRepository geometry){
+   return decode(raw,geometry,WEEKLY_PAGE_VERSION,ItqanFourSessionPolicy.WEEKLY_PAGE_SESSIONS);
+ }
+
+ private static ItqanFourSessionSnapshot decode(String raw,GeometryRepository geometry,
+                                                int expectedVersion,int sessionCount){
    if(raw==null||raw.isEmpty())throw new IllegalStateException("Missing frozen Itqan plan");
    try{
      JSONObject obj=new JSONObject(raw);
-     if(obj.getInt("version")!=VERSION)throw new IllegalStateException("Unknown Itqan snapshot version");
+     if(obj.getInt("version")!=expectedVersion)
+       throw new IllegalStateException("Unsupported Itqan snapshot version");
      JSONArray rawSlots=obj.getJSONArray("sessions");
-     if(rawSlots.length()!=4)throw new IllegalStateException("Exactly four Itqan slots required");
+     if(rawSlots.length()!=sessionCount)throw new IllegalStateException("Invalid Itqan slot count");
      ArrayList<ItqanFourSessionPolicy.Session> slots=new ArrayList<>();
-     for(int i=0;i<4;i++){
+     for(int i=0;i<sessionCount;i++){
        JSONObject slot=rawSlots.getJSONObject(i);
        if(slot.getInt("index")!=i+1)throw new IllegalStateException("Reordered date slot");
        JSONArray parts=slot.getJSONArray("blocks");
@@ -122,7 +158,8 @@ final class ItqanFourSessionSnapshot {
      ItqanFourSessionSnapshot result=new ItqanFourSessionSnapshot(plan,
        obj.getString("originLeg"),obj.getString("originCursor"),obj.getString("scheduledWeek"),
        obj.getBoolean("tailCompletedAtStart"),obj.getInt("sessionIndex"),
-       obj.getInt("blockIndex"),obj.getInt("reps"),obj.getString("sha256"));
+       obj.getInt("blockIndex"),obj.getInt("reps"),obj.has("recoveryTarget")
+           ? obj.getInt("recoveryTarget") : 0,obj.getString("sha256"));
      result.validate(geometry);
      return result;
    }catch(Exception malformed){
@@ -131,9 +168,13 @@ final class ItqanFourSessionSnapshot {
  }
 
  private void validate(GeometryRepository geo){
-   if(geo==null||plan.sessions.size()!=4||plan.firstPage<1||plan.lastPage>604
-      ||plan.lastPage<plan.firstPage||plan.lastPage>plan.firstPage+1
-      ||sessionIndex<0||sessionIndex>4||blockIndex<0||reps<0||reps>40)
+   int sessionCount=plan.sessions.size();
+   boolean weeklyPage=version(plan)==WEEKLY_PAGE_VERSION;
+   if(geo==null||!weeklyPage&&sessionCount!=ItqanFourSessionPolicy.SESSIONS
+      ||plan.firstPage<1||plan.lastPage>604||plan.lastPage<plan.firstPage
+      ||plan.lastPage>plan.firstPage+(weeklyPage?0:1)
+      ||sessionIndex<0||sessionIndex>sessionCount||blockIndex<0||reps<0||reps>targetReps()
+      ||usesRecovery()&&(!weeklyPage||!ItqanThirtyRecoveryPolicy.validTarget(recoveryTarget)))
      throw new IllegalStateException("Invalid Itqan snapshot coordinates");
    ItqanRotationPolicy.Leg.valueOf(originLeg);
    GeometryRepository.parseVerse(originCursor);
@@ -160,18 +201,33 @@ final class ItqanFourSessionSnapshot {
    }
    if(seen.isEmpty()||plan.lines()!=seen.size())
       throw new IllegalStateException("Itqan coverage mismatch");
-   if(sessionIndex<4&&blockIndex>plan.sessions.get(sessionIndex).blocks.size())
+   if(sessionIndex<sessionCount&&blockIndex>plan.sessions.get(sessionIndex).blocks.size())
       throw new IllegalStateException("Invalid Itqan subblock cursor");
-   if(sessionIndex==4&&(blockIndex!=0||reps!=0))
+   if(sessionIndex==sessionCount&&(blockIndex!=0||reps!=0))
       throw new IllegalStateException("Finished snapshot still carries reps");
-   String computed=digest(plan,originLeg,originCursor,scheduledWeek,originalTailCompleted);
+   String computed=digest(plan,originLeg,originCursor,scheduledWeek,originalTailCompleted,usesRecovery());
+   if(weeklyPage){
+     int firstLine=geo.linesForExactIds(Collections.singletonList(seen.iterator().next())).get(0).globalIndex;
+     ItqanFourSessionPolicy.Plan canonical=ItqanFourSessionPolicy.weeklyPage(geo,firstLine,seen,usesRecovery());
+     if(canonical==null||!computed.equals(digest(canonical,originLeg,originCursor,
+         scheduledWeek,originalTailCompleted,usesRecovery())))
+       throw new IllegalStateException("Invalid weekly Itqan page split");
+     if(sessionIndex<sessionCount&&blockIndex>=plan.sessions.get(sessionIndex).blocks.size())
+       throw new IllegalStateException("Weekly Itqan cursor points to an empty block");
+   }
    if(fingerprint!=null&&!fingerprint.equals(computed))
       throw new IllegalStateException("Itqan geometry/frozen source signature differs");
  }
 
  ItqanFourSessionSnapshot withProgress(int slot,int block,int repetition,GeometryRepository geo){
+   int target=usesRecovery() && (slot!=sessionIndex || block!=blockIndex)
+       ? ItqanThirtyRecoveryPolicy.BASE : recoveryTarget;
+   return withProgress(slot,block,repetition,target,geo);
+ }
+
+ ItqanFourSessionSnapshot withProgress(int slot,int block,int repetition,int target,GeometryRepository geo){
    ItqanFourSessionSnapshot next=new ItqanFourSessionSnapshot(plan,originLeg,originCursor,
-      scheduledWeek,originalTailCompleted,slot,block,repetition,fingerprint);
+      scheduledWeek,originalTailCompleted,slot,block,repetition,target,fingerprint);
    next.validate(geo);
    return next;
  }

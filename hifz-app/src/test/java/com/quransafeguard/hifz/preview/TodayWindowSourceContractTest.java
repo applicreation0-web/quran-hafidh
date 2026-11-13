@@ -22,13 +22,13 @@ public final class TodayWindowSourceContractTest {
         org.junit.Assert.assertFalse(main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));
         assertTrue(main.contains("showTodayWindow(sessions);"));
         assertTrue(main.contains("if(sessions.isEmpty()){"));
-        assertTrue("both Révision sessions are always listed",
-            main.contains("HifzSessionActivity.MURAJAAH_ACTIVE,today,")
-            && main.contains("todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);")
-            && main.contains("HifzSessionActivity.MURAJAAH,today,")
-            && main.contains("todayStr.equals(prefs.lastMurajaahDate()),nextMode);"));
+        assertTrue("Both active slots have their own receipt and selectable entry",
+            main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING")
+            && main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING")
+            && main.contains("slot.mode,today,reviews.receipt(today,slot)!=null,nextMode);"));
+        assertTrue("Passive reading is optional",main.contains("?\" · Facultative\""));
         assertTrue("each line carries its state and the next one due is marked",
             main.contains("items[i]=(s.done?\"✓ \":s.next?\"▸ \":\"  \")+slot+title+")
-                && main.contains("(s.done?\" · Terminé\":\" · À faire\")"));
+                && main.contains("(s.done?\" · Terminé\""));
     }
 }

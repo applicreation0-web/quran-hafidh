@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Additive Itqan two-page FOUR-SESSION MODEL only. Production Hifz stays frozen.
-
-Only the future migration may activate this planner, after separately proved
-snapshot, date completion and snowball atomicity. Keep it side-effect free.
-"""
+"""Check the read-only planning models and historical V1 compatibility."""
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 APP=ROOT/'hifz-app/src/main/java/com/quransafeguard/hifz/preview'
@@ -27,7 +23,8 @@ for contract in ('all604PagesAndEveryPairHaveExactFourWayCoverage',
 snapshot=(APP/'ItqanFourSessionSnapshot.java').read_text(encoding='utf-8')
 snapshot_test=(ROOT/'hifz-app/src/test/java/com/quransafeguard/hifz/preview/ItqanFourSessionSnapshotTest.java').read_text(encoding='utf-8')
 for tag in ('static final int VERSION=1;', 'static ItqanFourSessionSnapshot decode(', 
- 'String encode()', 'originalTailCompleted', 'plan.sessions.size()!=4',
+ 'String encode()', 'originalTailCompleted',
+ 'return decode(raw,geometry,VERSION,ItqanFourSessionPolicy.SESSIONS);',
  'Corrupt frozen Itqan snapshot; do not replan', 'SHA-256'):
     assert tag in snapshot,"Missing frozen 4-session snapshot contract: "+tag
 for tag in ('partiallyCompletedSnapshotPreservesExactSlotAndRep',

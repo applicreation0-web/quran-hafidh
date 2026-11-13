@@ -9,7 +9,7 @@ public final class SabqiTinyRemnantSourceContractTest {
     }
     @Test public void tinyRemnantUsesTheBoundedNormalLesson()throws Exception {
         String s=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(s.contains("sabqiBlock = geometry.fiveLineBlock(cursor,endLimit)"));
+        assertTrue(s.contains("sabqiBlock = prefs.frozenSabqiBlock(geometry,endLimit)"));
         assertFalse(s.contains("creditTinySabqiRemnant"));
     }
     @Test public void compatibilityRemnantEndpointDelegatesToVerifiedProtocol()throws Exception {

@@ -74,6 +74,11 @@ final class DashboardLedger {
         display=captureOne(display,completed,prefs.lastLearningConsolidationDate(),HifzSessionActivity.LEARNING_FINAL,prefs.lastLearningConsolidationLabel(),today);
         display=captureOne(display,completed,prefs.lastMurajaahDate(),HifzSessionActivity.MURAJAAH,prefs.lastMurajaahLabel(),today);
         display=captureOne(display,completed,prefs.lastActiveMurajaahDate(),HifzSessionActivity.MURAJAAH_ACTIVE,prefs.lastActiveMurajaahLabel(),today);
+        for (Record active : prefs.activeReviewSlots().receipts()) {
+            if (completed.add(completionKey(active.date, active.type))) {
+                display=mergeRecords(display,active.date,active.type,active.label,today);
+            }
+        }
         JSONArray rows=new JSONArray(), receipts=new JSONArray();
         try {
             for(Record r:display){

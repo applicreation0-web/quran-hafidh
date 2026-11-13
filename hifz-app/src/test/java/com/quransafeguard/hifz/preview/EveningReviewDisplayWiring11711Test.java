@@ -20,7 +20,8 @@ public final class EveningReviewDisplayWiring11711Test {
         assertTrue(planner.contains("lessonDone,snowballActual!=null,eveningDue"));
         assertTrue(planner.contains("morningDone,snowballActual!=null,eveningDue"));
         assertFalse(planner.contains("&& !prefs.snowballEveningPending("));
-        assertTrue(planner.contains("snowball.endsWith(\"aucune nouvelle unité\")"));
+        assertTrue(planner.contains("EveningReviewDisplay.resolved(stabilizationEvening)"));
+        assertTrue(planner.contains("EveningReviewDisplay.resolved(learningEvening)"));
     }
 
     @Test public void directHifzSessionNeverInventsCompletedWithoutReceipt() throws Exception {

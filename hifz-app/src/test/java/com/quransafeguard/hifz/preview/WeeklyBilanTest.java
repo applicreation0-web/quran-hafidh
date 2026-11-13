@@ -67,4 +67,15 @@ public final class WeeklyBilanTest {
         assertEquals(0,result.lateLessons);
         assertEquals(3,result.dueToday);
     }
+
+    @Test public void sundayCountsBothActiveSlotsAndDoesNotRequirePassive() {
+        LocalDate sunday=MON.plusDays(6);
+        WeeklyBilan.Summary result=WeeklyBilan.calculate(sunday,sunday,sunday,sunday,
+            date->CadenceAction.REVISION,(date,mode)->
+                ActiveReviewSlots.Slot.MORNING.mode.equals(mode));
+        assertEquals(2,result.planned);
+        assertEquals(1,result.validated);
+        assertEquals(1,result.dueToday);
+        assertEquals(0,result.missedReviews);
+    }
 }

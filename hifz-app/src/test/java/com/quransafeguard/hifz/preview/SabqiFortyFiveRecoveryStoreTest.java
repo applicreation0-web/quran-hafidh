@@ -29,10 +29,15 @@ public final class SabqiFortyFiveRecoveryStoreTest {
         assertEquals(55,h.sabqiLessonTargetReps());
         assertFalse("Failed block must not be creditable",h.sabqiLessonReadyForCredit());
         for(int i=45;i<55;i++)
-            assertTrue("Recovery "+i,h.recordSabqiRepetition("original-token",i,false));
+            assertTrue("Recovery "+i,h.recordSabqiRepetition("original-token",i,i==54));
+        h=new HifzPrefs(d);
         assertEquals(55,h.sabqiRep());
+        assertEquals(65,h.sabqiLessonTargetReps());
+        assertFalse(h.sabqiLessonReadyForCredit());
+        for(int i=55;i<65;i++)
+            assertTrue("Second recovery "+i,h.recordSabqiRepetition("original-token",i,false));
         assertTrue("Successful recall at 100% restores eligibility",h.sabqiLessonReadyForCredit());
-        assertFalse("No phantom double tap",h.recordSabqiRepetition("original-token",54,false));
+        assertFalse("No phantom double tap",h.recordSabqiRepetition("original-token",64,false));
     }
 
     @Test public void declaredFailureKeepsOriginalRepetitionsAndFrozens() throws Exception {
@@ -73,5 +78,32 @@ public final class SabqiFortyFiveRecoveryStoreTest {
         assertEquals(-1,h.sabqiLessonTargetReps());
         assertFalse(h.sabqiLessonReadyForCredit());
         assertFalse(h.recordSabqiRepetition("original-token",0,false));
+    }
+
+    @Test public void resumedLegacyProofKeepsItsDateButTheReceiptBelongsToTheEligibleDay() {
+        InMemoryPrefs disk=lesson(1);
+        disk.disk.put("schema",6);
+        disk.disk.put("sabqiEnd","2:286");
+        for(String key : java.util.List.of("v6LearnedLineIds","v6StabilizedLineIds",
+                "v6AcquiredCreditLineIds","v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"))
+            disk.disk.put(key,"[]");
+        disk.disk.put("weeklyProgramTransitionsV1","[{\"from\":\"2026-11-01\",\"mode\":\"RECOMMENDED\"}]");
+        var geometry=MorningProtocolFixture.realGeometry();
+        var prefs=new HifzPrefs(disk,geometry);
+        var proofDate=java.time.LocalDate.parse("2026-11-12");
+        var today=java.time.LocalDate.parse("2026-11-13");
+        HifzClock.setClockForTests(java.time.Clock.fixed(today.atStartOfDay(java.time.ZoneOffset.UTC)
+            .toInstant(),java.time.ZoneOffset.UTC));
+        try {
+            assertEquals(proofDate,prefs.openSabqiLesson(geometry,today));
+            var block=prefs.frozenSabqiBlock(geometry,geometry.lineCount()-1);
+            for(int i=0;i<37;i++) assertTrue(prefs.recordSabqiRepetition("original-token",i,false));
+            assertFalse(prefs.completeCurrentSabqi(block,"stale",proofDate,today,"Sabqi"));
+            assertTrue(prefs.completeCurrentSabqi(block,"original-token",proofDate,today,"Sabqi"));
+            assertEquals(today.toString(),prefs.lastSabqiDate());
+            assertFalse(prefs.completeCurrentSabqi(block,"original-token",proofDate,today,"duplicate"));
+        } finally {
+            HifzClock.resetClockForTests();
+        }
     }
 }

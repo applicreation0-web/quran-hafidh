@@ -9,7 +9,8 @@ public final class SevenDayEtaSourceContractTest {
     Path p=Paths.get("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
     if(!Files.exists(p))p=Paths.get("..",p.toString());
     String java=new String(Files.readAllBytes(p),StandardCharsets.UTF_8);
-    assertTrue(java.contains("mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return PreviewConfig.STABILIZATION_WEEKLY_LINES;"));
+    assertTrue(java.contains("mode==HifzPrefs.WeeklyProgram.RECOMMENDED && !prefs.itqanPostNasMaintenance()"));
+    assertTrue(java.contains("* ItqanFourSessionPolicy.WEEKLY_PAGE_LINES_PER_SESSION;"));
     assertTrue(java.contains("(6-effectiveLearningDaysPerWeek())*7"));
     assertTrue(java.contains("int sabqiDays=prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED"));
     assertTrue(java.contains("if(weeklyPace==0)return remaining+"));

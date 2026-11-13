@@ -37,19 +37,19 @@ public final class ItqanBalancedMaskScheduleTest {
         ItqanRegimeStore.UnitPlan plan=ItqanRegimeStore.resolvePlan(disk,"49:1","49:13",
             AnchoringQueue.ItqanProtocol.LIGHT);
         assertEquals(AnchoringQueue.ItqanProtocol.FULL,plan.protocol);
-        assertEquals(ItqanRegimeStore.MaskProfile.BALANCED_20_5_5_5_5,plan.maskProfile);
+        assertEquals(ItqanRegimeStore.MaskProfile.THREE_STAGE_10_10_10,plan.maskProfile);
         assertTrue(ItqanRegimeStore.stampPlan(disk,"49:1","49:13",plan));
         disk.disk.put("itqanRep",16);
         disk.disk.put("itqanUnitStart","49:1");
         disk.disk.put("itqanUnitEnd","49:13");
-        assertEquals(0,ItqanBalancedMaskSchedule.maskForNextRep(
+        assertEquals(50,ItqanBalancedMaskSchedule.maskForNextRep(
             ItqanRegimeStore.resolvePlan(disk,"49:1","49:13",plan.protocol),16));
         disk.disk.put("itqanRep",0); // explicit assistance restart of same unit
         assertEquals(plan.maskProfile,ItqanRegimeStore.resolvePlan(disk,"49:1","49:13",
             plan.protocol).maskProfile);
         disk.disk.put("itqanUnitStart",""); // final commit closes session
         disk.disk.put("itqanUnitEnd","");
-        assertEquals(ItqanRegimeStore.MaskProfile.BALANCED_20_5_5_5_5,
+        assertEquals(ItqanRegimeStore.MaskProfile.THREE_STAGE_10_10_10,
             ItqanRegimeStore.resolvePlan(disk,"49:1","49:13",plan.protocol).maskProfile);
     }
 

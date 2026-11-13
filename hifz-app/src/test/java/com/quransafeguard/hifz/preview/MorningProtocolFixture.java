@@ -33,7 +33,7 @@ final class MorningProtocolFixture {
         if(p.sabqiLineCursor()<0)p.setSabqiLineCursor(start);
         assertEquals(LocalDate.parse(date),p.openSabqiLesson(realGeometry(),LocalDate.parse(date)));
         String token=p.sabqiLessonToken();
-        for(int rep=0;rep<PreviewConfig.SABQI_TOTAL_REPS;rep++)
+        for(int rep=0;rep<p.sabqiLessonTargetReps();rep++)
             assertTrue("Earned Sabqi repetition "+rep,p.recordSabqiRepetition(token,rep,false));
         return p.completeSabqiBlockV6(start,end,next,ids,date,label);
     }

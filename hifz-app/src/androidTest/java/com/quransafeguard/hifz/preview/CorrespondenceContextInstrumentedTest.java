@@ -546,7 +546,9 @@ public final class CorrespondenceContextInstrumentedTest {
             ins.addMonitor(CorrespondenceComparisonActivity.class.getName(),null,false);
         VerseRef source=new VerseRef(2,47),end=new VerseRef(2,48);
         GeometryRepository geometry=GeometryRepository.get(c);
-        String date="2026-10-29";
+        java.time.LocalDate slotDate=HifzClock.today();
+        String date=slotDate.toString();
+        ActiveReviewSlots.Slot slot=ActiveReviewSlots.Slot.EVENING;
         try{
             assertTrue(c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE)
                 .edit().clear().commit());
@@ -558,22 +560,24 @@ public final class CorrespondenceContextInstrumentedTest {
             assertNotNull(originalCredit);
             VerseRef expectedCursor=new VerseRef(2,49);
             prefs.setActiveMurajaahCursor(source);
-            prefs.setActiveMurajaahPage(geometry.pageForVerse(source));
+            ActiveReviewSlots slots=prefs.activeReviewSlots();
+            assertTrue(slots.checkpoint(slotDate,slot,source,null,geometry.pageForVerse(source),
+                ActiveReviewSlots.DURATION_MS));
             try(ActivityScenario<HifzSessionActivity> scenario=ActivityScenario.launch(
                     new Intent(c,HifzSessionActivity.class)
-                        .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE)
+                        .putExtra(HifzSessionActivity.EXTRA_MODE,slot.mode)
                         .putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,date))){
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Active Correspondances");
                 scenario.onActivity(a->{
                     a.onVerseTap(end);
                     a.onCorrespondenceTap(source);
                     assertEquals(View.GONE,((View)readField(a,"validatedCorrespondenceButton")).getVisibility());
-                    assertEquals("",prefs.lastActiveMurajaahDate());
+                    assertNull(slots.receipt(slotDate,slot));
                 });
                 assertNull("A bridge tap cannot reveal an unvalidated dossier",
                     comparison.waitForActivityWithTimeout(500L));
                 scenario.onActivity(a->{
-                    ActiveReviewCorrectionStore store=new ActiveReviewCorrectionStore(c);
+                    ActiveReviewCorrectionStore store=slots.correction(slotDate,slot);
                     int current=(Integer)readField(a,"currentPage");
                     if(!store.revealed(date,source).contains(current)){
                         android.widget.Button reveal=findAction(a,"Révéler");
@@ -609,7 +613,7 @@ public final class CorrespondenceContextInstrumentedTest {
                 // policy when exact word geometry is unavailable. This is a real
                 // revealed page, not a missed Hifz receipt. The production flow
                 // MUST require visible rereading and then fully masked recall.
-                ActiveReviewCorrectionStore correction=new ActiveReviewCorrectionStore(c);
+                ActiveReviewCorrectionStore correction=slots.correction(slotDate,slot);
                 // Android dialog dismissal and the QCF correction transition can be
                 // posted after the original button callback. A single immediate
                 // preferences read races that transition on e-ink-size emulators.
@@ -618,13 +622,13 @@ public final class CorrespondenceContextInstrumentedTest {
                 for(int wait=0;wait<120;wait++){
                     ins.waitForIdleSync();
                     pending=correction.pending();
-                    if(pending!=null||date.equals(prefs.lastActiveMurajaahDate()))break;
+                    if(pending!=null||(slots.receipt(slotDate,slot)!=null))break;
                     Thread.sleep(125L);
                 }
                 assertNotNull("A revealed page must reach persisted corrective replay before any receipt",pending);
                 assertEquals("Missing QCF anchors must never bypass the reread", "READ",pending.stage);
                 assertEquals(date,pending.date);
-                assertEquals("",prefs.lastActiveMurajaahDate());
+                assertNull(slots.receipt(slotDate,slot));
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
                     scenario,"mushaf","Correspondances · vraie relecture corrective");
                 scenario.onActivity(a->{
@@ -634,7 +638,7 @@ public final class CorrespondenceContextInstrumentedTest {
                     assertTrue("Real visible reread is mandatory",read.performClick());
                 });
                 assertEquals("RECALL",correction.pending().stage);
-                assertEquals("Reread alone never earns a receipt","",prefs.lastActiveMurajaahDate());
+                assertNull("Reread alone never earns a receipt",slots.receipt(slotDate,slot));
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(
                     scenario,"mushaf","Correspondances · vrai rappel masqué");
                 // Never fake onPageShown or set the readiness flag manually.
@@ -661,7 +665,7 @@ public final class CorrespondenceContextInstrumentedTest {
                         findAction(a,"Page récitée sans aide").performClick());
                 });
                 long deadline=android.os.SystemClock.uptimeMillis()+8000L;
-                while(!date.equals(prefs.lastActiveMurajaahDate())
+                while(!(slots.receipt(slotDate,slot)!=null)
                       &&android.os.SystemClock.uptimeMillis()<deadline)Thread.sleep(100L);
                 java.util.concurrent.atomic.AtomicReference<String> afterReplay=
                     new java.util.concurrent.atomic.AtomicReference<>("unavailable");
@@ -669,7 +673,7 @@ public final class CorrespondenceContextInstrumentedTest {
                     ActiveReviewCorrectionStore.State state=correction.pending();
                     afterReplay.set("correctionStage="+(state==null?"CLEARED":state.stage)
                         +" assisted="+(state==null?"n/a":state.assisted)
-                        +" actDate="+prefs.lastActiveMurajaahDate()
+                        +" actReceipt="+slots.receipt(slotDate,slot)
                         +" actCursor="+prefs.activeMurajaahCursor()
                         +" actualEnd="+prefs.activeMurajaahActualEnd()
                         +" sessionDate="+readField(a,"sessionDate")
@@ -680,8 +684,8 @@ public final class CorrespondenceContextInstrumentedTest {
                         +" program="+((android.widget.TextView)readField(a,"program")).getText()
                         +" progress="+((android.widget.TextView)readField(a,"progress")).getText());
                 });
-                assertEquals("Active receipt only after actual corrective replay; "+afterReplay.get(),
-                    date,prefs.lastActiveMurajaahDate());
+                assertNotNull("Active receipt only after actual corrective replay; "+afterReplay.get(),
+                    slots.receipt(slotDate,slot));
                 assertEquals(expectedCursor,prefs.activeMurajaahCursor());
                 assertEquals(originalCredit,raw.getString("v6AcquiredCreditLineIds",null));
                 assertNull("Reread/recall checkpoint must be cleared after real validation",
@@ -702,7 +706,7 @@ public final class CorrespondenceContextInstrumentedTest {
                 scenario.onActivity(a->{
                     assertEquals(1,((Integer)readField(a,"currentPage")).intValue());
                     assertFalse(clock(a).isRunning());
-                    assertEquals(date,prefs.lastActiveMurajaahDate());
+                    assertNotNull(slots.receipt(slotDate,slot));
                     assertEquals(expectedCursor,prefs.activeMurajaahCursor());
                     assertEquals(originalCredit,raw.getString("v6AcquiredCreditLineIds",null));
                 });

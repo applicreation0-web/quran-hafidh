@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import static org.junit.Assert.*;
 
-/** User contract: 05:30 active/passive; 20:00 learning/stabilisation and snowball. */
+/** Both active slots appear in the daily and weekly schedules, with Sunday finals preserved. */
 public final class MorningEveningRevisionContractTest {
     private String source(String name) throws Exception {
         String dir="hifz-app/src/main/java/com/quransafeguard/hifz/preview/";
@@ -18,12 +18,12 @@ public final class MorningEveningRevisionContractTest {
 
     @Test public void weeklyPlannerSeparatesMorningAndEveningAndPreservesSunday() throws Exception {
         String plan=source("WeeklyDashboardPlanner.java");
-        assertTrue(plan.contains("morning=active+\" + \"+passive;"));
-        assertTrue(plan.contains("evening=lesson+\" + \"+snowball;"));
-        assertTrue(plan.contains("Révision active · "));
+        assertTrue(plan.contains("morning=joinSessions(activeMorning,passive);"));
+        assertTrue(plan.contains("evening=joinSessions(evening,activeEvening);"));
+        assertTrue(plan.contains("activeReviewLabel(am,morningDone,"));
         assertTrue(plan.contains("Révision passive · "));
         assertTrue(plan.contains("if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY)"));
-        assertTrue(plan.contains("Sunday must NEVER forecast active/passive revision"));
+        assertTrue(plan.contains("morning=joinSessions(activeMorning,morning);"));
         assertFalse("No obsolete user-facing Entretien label",
             plan.contains("\"Entretien ·"));
     }
@@ -31,13 +31,12 @@ public final class MorningEveningRevisionContractTest {
     @Test public void todayActionsOfferMorningReviewsBeforeEveningLearning() throws Exception {
         String main=source("MainActivity.java");
         int begin=main.indexOf("private List<TodaySession> todaySessions(");
-        int active=main.indexOf("addToday(out,\"Révision active · matin",begin);
+        int active=main.indexOf("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING",begin);
         int passive=main.indexOf("addToday(out,\"Révision passive · matin",begin);
         int lesson=main.indexOf("case LEARNING:",begin);
         assertTrue(begin>=0&&active>begin&&passive>active&&lesson>passive);
         assertTrue(main.contains("eveningLessonDetail=todayRow!=null?stripDone(compactSession(todayRow.evening))"));
-        assertTrue(main.contains("if(!date.toString().equals(prefs.lastMurajaahDate()))"));
-        assertTrue(main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
+        assertTrue(main.indexOf("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING",lesson)>lesson);
         assertTrue(main.contains("Itqān · Maintien de la maîtrise"));
         assertTrue(main.contains("Révision passive · matin"));
     }
@@ -58,20 +57,20 @@ public final class MorningEveningRevisionContractTest {
             session.contains(" · entretien 1 hizb · "));
     }
 
-    @Test public void directShortcutCannotScheduleRevisionOnSunday() throws Exception {
+    @Test public void directShortcutOffersExplicitActiveSlot() throws Exception {
         String main=source("MainActivity.java");
-        assertTrue(main.contains("setTitle(\"Dimanche sans révision\")"));
-        assertTrue(main.contains("HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)"));
+        assertFalse(main.contains("Dimanche sans révision"));
+        assertTrue(main.contains("openActiveRevision(ActiveReviewSlots.Slot slot) { openMode(slot.mode); }"));
         assertTrue(main.contains("HifzSessionActivity.MURAJAAH.equals(mode)"));
     }
 
     @Test public void displayUsesOnlyRevisionPassiveTerminology() throws Exception {
         String settings=source("SettingsActivity.java");
         String selector=source("RevisionSelector.java");
-        assertTrue(settings.contains("Matin · Révision active "));
+        assertTrue(settings.contains("min matin et soir"));
         assertTrue(settings.contains("Vitesse · Révision passive"));
         assertTrue(settings.contains("Position Révision passive : "));
-        assertTrue(settings.contains("Soir : Apprentissage ou Stabilisation"));
+        assertTrue(settings.contains("dimanche compris. Révision passive facultative"));
         assertTrue(selector.contains("\"Révision passive · \" + maintenanceCue"));
         assertTrue(settings.contains("Bascule automatique ; séances déjà ouvertes préservées."));
         assertFalse(settings.contains("Vitesse · Entretien"));

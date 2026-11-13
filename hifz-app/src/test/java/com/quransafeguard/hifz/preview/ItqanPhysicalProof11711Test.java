@@ -83,6 +83,12 @@ public final class ItqanPhysicalProof11711Test {
             1,true,start,end,new VerseRef(114,6),"2026-11-06",
             "foreign",Collections.emptyList()));
         assertEquals(sizeBefore,d.disk.size());
+        Map<String, Object> beforeDateMismatch = new LinkedHashMap<>(d.disk);
+        assertFalse("a proof cannot close under a different lesson date",
+            h.completeStabilizationBlockV6(expected,1,isFinal,start,end,next,
+                "2026-11-07","wrong date",Collections.emptyList()));
+        assertEquals(beforeDateMismatch,d.disk);
+        assertEquals("2026-11-06",h.itqanBlockProofDateV7());
         assertTrue("a real complete physical block is accepted",
             h.completeStabilizationBlockV6(expected,1,isFinal,start,end,next,
                 "2026-11-06","canonical",Collections.emptyList()));
@@ -91,6 +97,40 @@ public final class ItqanPhysicalProof11711Test {
             h.completeStabilizationBlockV6(expected,1,isFinal,start,end,next,
                 "2026-11-06","duplicate",Collections.emptyList()));
     }
+    @Test public void verifiedLegacy39RebindsWithoutBackdating() {
+        InMemoryPrefs d=disk();
+        HifzPrefs h=new HifzPrefs(d);
+        VerseRef start=new VerseRef(52,1),end=new VerseRef(52,10);
+        AnchoringQueue.Entry entry=entry();
+        assertTrue(h.setItqanProgress(0,0,start,end));
+        ItqanRegimeStore.UnitPlan plan=new ItqanRegimeStore.UnitPlan(
+            ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS, AnchoringQueue.ItqanProtocol.FULL,
+            ItqanRegimeStore.MaskProfile.BALANCED_20_5_5_5_5);
+        assertTrue(h.stampItqanUnitPlan(entry,plan));
+        List<String> lines=blocks().get(0).lineIds;
+        String old="2026-11-10", today="2026-11-12";
+        HifzClock.setClockForTests(java.time.Clock.fixed(
+            java.time.Instant.parse(today+"T12:00:00Z"),java.time.ZoneOffset.UTC));
+        try {
+            assertTrue(h.ensureItqanBlockProofV7(geometry,lines,start,end,plan,old));
+            String token=h.itqanBlockProofTokenV7();
+            for(int n=0;n<39;n++)assertTrue(h.recordItqanRepV7(token,n,false,plan));
+            assertTrue(h.ensureItqanBlockProofV7(geometry,lines,start,end,plan,today));
+            assertEquals(39,h.itqanRep());
+            assertEquals(token,h.itqanBlockProofTokenV7());
+            assertEquals(today,h.itqanBlockProofDateV7());
+            assertTrue(h.recordItqanRepV7(token,39,false,plan));
+            VerseRef next=h.itqanWorkCorpus().nextAnchored(end,h.repairedItqanRotationStart());
+            boolean finalBlock=blocks().size()==1;
+            assertFalse(h.completeStabilizationBlockV6(lines,1,finalBlock,start,end,next,old,
+                "old",Collections.emptyList()));
+            assertTrue(h.completeStabilizationBlockV6(lines,1,finalBlock,start,end,next,today,
+                "today",Collections.emptyList()));
+        } finally {
+            HifzClock.resetClockForTests();
+        }
+    }
+
     @Test public void absentRotationStartUsesReadOnlyCanonicalFallbackAndEarnsRealBlock(){
         InMemoryPrefs d=disk();
         d.disk.remove("itqanRotationStart");

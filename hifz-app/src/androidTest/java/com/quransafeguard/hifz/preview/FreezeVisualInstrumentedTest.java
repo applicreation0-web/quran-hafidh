@@ -20,6 +20,19 @@ public final class FreezeVisualInstrumentedTest {
             return f.get(object);
         }catch(Exception e){throw new AssertionError("Missing view "+field,e);}
     }
+    /** Synthetic display-only states using the current physical-line API. */
+    private static int[] visualLevels(int learned,int stabilized,int acquired,int total){
+        if(learned<0||stabilized<0||acquired<0||total<=0
+                ||learned+stabilized+acquired>total)
+            throw new IllegalArgumentException("Invalid visual fixture");
+        int[] states=new int[total];
+        java.util.Arrays.fill(states,ProgressGridView.VIDE);
+        java.util.Arrays.fill(states,0,learned,ProgressGridView.APPRENTISSAGE);
+        java.util.Arrays.fill(states,learned,learned+stabilized,ProgressGridView.STABILISER);
+        java.util.Arrays.fill(states,learned+stabilized,learned+stabilized+acquired,ProgressGridView.ACQUIS);
+        return states;
+    }
+
     @Test public void actualJuzViewHasThirtyTouchTargetsAndTruePageNavigation(){
         try(ActivityScenario<ProgressMapActivity> s=ActivityScenario.launch(ProgressMapActivity.class)){
             s.onActivity(a->{
@@ -38,10 +51,10 @@ public final class FreezeVisualInstrumentedTest {
             // screenshot, without changing Hifz prefs, receipts or saved progression.
             s.onActivity(a->{
                 JuzProgressBar[] shapes=(JuzProgressBar[])get(a,"juzBars");
-                shapes[0].setLevels(18,9,3,100);
-                shapes[1].setLevels(0,0,75,100);
-                shapes[2].setLevels(20,30,40,100);
-                shapes[3].setLevels(0,0,100,100);
+                shapes[0].setLineStatuses(visualLevels(18,9,3,100));
+                shapes[1].setLineStatuses(visualLevels(0,0,75,100));
+                shapes[2].setLineStatuses(visualLevels(20,30,40,100));
+                shapes[3].setLineStatuses(visualLevels(0,0,100,100));
                 assertEquals(30,shapes[0].filledLines());
                 assertEquals(100,shapes[3].filledLines());
             });

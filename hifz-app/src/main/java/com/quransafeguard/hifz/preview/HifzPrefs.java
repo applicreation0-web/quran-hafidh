@@ -74,6 +74,7 @@ public final class HifzPrefs {
         ensureSchema(context);
         migrateLegacyGates(context);
         ensureSevenDayProgramme(HifzClock.today(),firstInstall);
+        activeReviewSlots().ensureProgramme(HifzClock.today());
     }
 
     /** JVM tests only: wraps an already-populated store as-is (no schema bootstrap, no legacy
@@ -1611,12 +1612,28 @@ public final class HifzPrefs {
         }
     }
 
+    GeometryRepository.FiveLineBlock frozenSabqiBlock(GeometryRepository geometry, int endLimit) {
+        int cursor=sabqiLineCursor();
+        try {
+            JSONObject frozen=new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT,""));
+            int end=frozen.getInt("end");
+            if (frozen.getInt("start")!=cursor || end<cursor || end>endLimit)
+                throw new IllegalStateException("Sabqi frozen lesson is outside its saved range");
+            GeometryRepository.FiveLineBlock block=geometry.fiveLineBlock(cursor,end);
+            if (block.endLineIndex!=end
+                    || !frozen.getJSONArray("lines").toString().equals(new JSONArray(block.lineIds).toString()))
+                throw new IllegalStateException("Sabqi frozen physical lesson mismatch");
+            return block;
+        } catch (org.json.JSONException invalid) {
+            throw new IllegalStateException("Unreadable Sabqi physical lesson",invalid);
+        }
+    }
+
     /** Freeze physical material and original date BEFORE the first repetition. */
     LocalDate openSabqiLesson(GeometryRepository geometry,LocalDate day) {
         synchronized(V6_STATE_LOCK) {
             int cursor=sabqiLineCursor();
-            GeometryRepository.FiveLineBlock block=geometry.fiveLineBlock(cursor,
-                geometry.lastLineIndex(sabqiEnd()));
+            int endLimit=geometry.lastLineIndex(sabqiEnd());
             String raw=p.getString(SABQI_LESSON_SNAPSHOT,"");
             try {
                 if(!raw.isEmpty()) {
@@ -1624,13 +1641,12 @@ public final class HifzPrefs {
                     if((saved.getInt("version")!=1 && saved.getInt("version")!=2)
                             || sabqiLessonTargetReps()<1)
                         throw new IllegalStateException("Unknown frozen Sabqi repetition protocol");
-                    if(saved.getInt("start")!=cursor || saved.getInt("end")!=block.endLineIndex
-                            || !saved.getJSONArray("lines").toString().equals(new JSONArray(block.lineIds).toString()))
-                        throw new IllegalStateException("Sabqi frozen physical lesson mismatch");
+                    frozenSabqiBlock(geometry,endLimit);
                     return LocalDate.parse(saved.getString("date"));
                 }
                 if(sabqiRep()!=0 || sabqiAssisted()!=0)
                     throw new IllegalStateException("Legacy Sabqi repetition date is unverified");
+                GeometryRepository.FiveLineBlock block=geometry.fiveLineBlock(cursor,endLimit);
                 JSONObject snapshot=new JSONObject().put("version",SabqiFortyFiveRecoveryPolicy.VERSION)
                     .put("date",day.toString()).put("sessionId",UUID.randomUUID().toString())
                     .put("reps",0).put("assisted",0).put("passReveals",0)
@@ -1661,9 +1677,27 @@ public final class HifzPrefs {
     /** Atomically closes Apprentissage and advances exactly these physical lines to Appris. */
     public boolean completeSabqiBlockV6(int startLine, int endLine, int nextLineCursor,
                                         List<String> lineIds, String date, String label) {
+        return completeSabqiBlockV6(startLine,endLine,nextLineCursor,lineIds,date,date,label);
+    }
+
+    boolean completeCurrentSabqi(GeometryRepository.FiveLineBlock block, String token,
+            LocalDate proofDate, LocalDate creditDate, String label) {
+        synchronized (V6_STATE_LOCK) {
+            if (!creditDate.equals(HifzClock.today()) || creditDate.isBefore(proofDate)
+                    || !lastSabqiDate().isEmpty() && !creditDate.isAfter(LocalDate.parse(lastSabqiDate()))
+                    || token.isEmpty() || !token.equals(sabqiLessonToken())
+                    || WeeklyProgramPolicy.actionFor(creditDate.getDayOfWeek(),weeklyProgramFor(creditDate),
+                        learningDaysPerWeek()) != com.quransafeguard.hifz.core.CadenceAction.LEARNING) return false;
+            return completeSabqiBlockV6(block.startLineIndex,block.endLineIndex,block.endLineIndex+1,
+                block.lineIds,proofDate.toString(),creditDate.toString(),label);
+        }
+    }
+
+    private boolean completeSabqiBlockV6(int startLine, int endLine, int nextLineCursor,
+            List<String> lineIds, String proofDate, String date, String label) {
         if (lineIds == null || lineIds.isEmpty()) throw new IllegalArgumentException("Apprentissage line ids required");
         synchronized (V6_STATE_LOCK) {
-            if(!matchesSabqiLesson(startLine,endLine,lineIds,date)
+            if(!matchesSabqiLesson(startLine,endLine,lineIds,proofDate)
                     || !sabqiLessonReadyForCredit()
                     || startLine!=sabqiLineCursor() || startLine<0
                     || endLine<startLine || nextLineCursor!=endLine+1
@@ -1846,9 +1880,232 @@ public final class HifzPrefs {
         return ItqanFourSessionStore.read(p,geo);
     }
 
+    private static final String WEEKLY_ITQAN_CLOSED = "itqanWeeklyPageClosuresV2";
+    private static final String ITQAN_PHYSICAL_NEXT = "itqanFourNextPhysicalLineIdV1";
+
+    boolean weeklyItqanPageClosed(LocalDate date) {
+        try {
+            JSONObject closures = new JSONObject(p.getString(WEEKLY_ITQAN_CLOSED, "{}"));
+            LocalDate closed = safeDate(closures.optString(mondayOf(date).toString()), null);
+            return closed != null && date.isAfter(closed) && mondayOf(closed).equals(mondayOf(date));
+        } catch (org.json.JSONException malformed) {
+            throw new IllegalStateException("Unreadable Itqan week closures", malformed);
+        }
+    }
+
+    private boolean weeklyItqanDay(LocalDate date) {
+        return weeklyProgramFor(date) == WeeklyProgram.RECOMMENDED
+            && WeeklyProgramPolicy.recommendedItqanTargetLines(date.getDayOfWeek()) > 0;
+    }
+
+    private boolean currentItqanDay(LocalDate date) {
+        return WeeklyProgramPolicy.actionFor(date.getDayOfWeek(), weeklyProgramFor(date),
+            learningDaysPerWeek()) == com.quransafeguard.hifz.core.CadenceAction.STABILIZATION;
+    }
+
+    ItqanFourSessionPolicy.Plan previewWeeklyItqan(GeometryRepository geo, LocalDate date) {
+        if (!weeklyItqanDay(date) || weeklyItqanPageClosed(date) || itqanPostNasMaintenance()) return null;
+        if (p.contains(ItqanPhysicalProof11711.KEY)) {
+            JSONObject proof = ItqanPhysicalProof11711.read(p);
+            if (proof == null || !ItqanPhysicalProof11711.isNajmRemainderProof(proof)
+                    || !date.isAfter(LocalDate.parse(proof.optString("date")))) return null;
+            ItqanFourSessionPolicy.Plan plan = weeklyItqanCandidate(geo, itqanRotationState());
+            verifyNajmRemainderMigration(proof, plan, date);
+            return plan;
+        }
+        if (legacyItqanCheckpoint()) return null;
+        return weeklyItqanCandidate(geo, itqanRotationState());
+    }
+
+    private boolean legacyItqanCheckpoint() {
+        return itqanRep() != 0 || itqanBlockIndex() != 0 || itqanAssisted() != 0
+            || p.getInt("itqanFinalReveals", 0) != 0
+            || !p.getString("itqanUnitStart", "").isEmpty() || !p.getString("itqanUnitEnd", "").isEmpty();
+    }
+
+    private ItqanFourSessionPolicy.Plan weeklyItqanCandidate(GeometryRepository geo,
+            ItqanRotationPolicy.State rotation) {
+        if (rotation.initialTailCompleted || rotation.leg != ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS)
+            return null;
+        String pinned = p.getString(ITQAN_PHYSICAL_NEXT, "");
+        int first = pinned.isEmpty() ? geo.firstLineIndex(rotation.cursor)
+            : geo.linesForExactIds(Collections.singletonList(pinned)).get(0).globalIndex;
+        if (first < 0 || first >= geo.lineCount() || geo.line(first).verses.get(0).getSurah() < 49)
+            throw new IllegalStateException("Missing weekly Itqan physical cursor");
+        if (!pinned.isEmpty()) {
+            if (first==0) throw new IllegalStateException("Invalid saved Itqan continuation");
+            List<VerseRef> previous = geo.line(first-1).verses;
+            VerseRef expected = QuranCanon.INSTANCE.next(previous.get(previous.size()-1));
+            if (!rotation.cursor.equals(expected))
+                throw new IllegalStateException("Itqan verse and physical continuation disagree");
+        }
+
+        ProgressionSnapshot progression = progressionSnapshotV6();
+        Set<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
+        Set<String> partial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
+        while (first < geo.lineCount()) {
+            String id = geo.line(first).id;
+            if (quarantine.contains(id) || partial.contains(id))
+                throw new IllegalStateException("Unresolved Itqan line " + id);
+            if (!progression.stabilized.contains(id) && !progression.acquired.contains(id)) break;
+            first++;
+        }
+        if (first == geo.lineCount()) return null;
+        int page = geo.line(first).page;
+        Set<String> eligible = new LinkedHashSet<>();
+        for (int i = first; i < geo.lineCount() && geo.line(i).page == page; i++) {
+            String id = geo.line(i).id;
+            if (quarantine.contains(id) || partial.contains(id))
+                throw new IllegalStateException("Unresolved Itqan line " + id);
+            if (progression.stabilized.contains(id) || progression.acquired.contains(id)) break;
+            eligible.add(id);
+        }
+        return ItqanFourSessionPolicy.weeklyPage(geo, first, eligible);
+    }
+
+    /** Open the next genuine weekly slot. Reopening on an eligible later date
+     * rebinds the receipt date, without changing the frozen lines or repetitions. */
+    ItqanFourSessionSnapshot openWeeklyItqan(GeometryRepository geo, LocalDate date) {
+        synchronized (V6_STATE_LOCK) {
+            synchronized (p) {
+                ItqanFourSessionSnapshot existing = ItqanFourSessionStore.read(p, geo);
+                if (existing != null && !existing.weeklyPage()) return existing;
+                if (!date.equals(HifzClock.today())
+                        || !(existing == null ? weeklyItqanDay(date) : currentItqanDay(date))
+                        || weeklyItqanPageClosed(date) || itqanPostNasMaintenance()
+                        || !lastItqanDate().isEmpty() && !date.isAfter(LocalDate.parse(lastItqanDate())))
+                    return null;
+                if (existing != null) {
+                    verifyWeeklyItqanPosition(existing, geo);
+                    String previous = p.getString(ItqanFourSessionStore.WEEKLY_DATE, "");
+                    if (!previous.isEmpty() && date.isBefore(LocalDate.parse(previous)))
+                        throw new IllegalStateException("Cannot reopen Itqan before its saved date");
+                    if (!date.toString().equals(previous) && !p.edit()
+                            .putString(ItqanFourSessionStore.WEEKLY_DATE, date.toString()).commit())
+                        throw new IllegalStateException("Unable to bind weekly Itqan date");
+                    return existing;
+                }
+
+                JSONObject proof = ItqanPhysicalProof11711.read(p);
+                boolean migration = p.contains(ItqanPhysicalProof11711.KEY);
+                if (migration && proof == null)
+                    throw new IllegalStateException("Unknown V7 checkpoint; preserve it for verification");
+                if (migration && !ItqanPhysicalProof11711.isNajmRemainderProof(proof)) return null;
+                if (!migration && legacyItqanCheckpoint()) return null;
+                if (!migration && anchoringDeferredToday()) return null;
+                if (!migration) ensureItqanRotationBootstrapped(geo);
+                ItqanRotationPolicy.State rotation = itqanRotationState();
+                ItqanFourSessionPolicy.Plan plan = weeklyItqanCandidate(geo, rotation);
+                if (migration) verifyNajmRemainderMigration(proof, plan, date);
+                if (plan == null) return null;
+                ItqanFourSessionSnapshot fresh = ItqanFourSessionSnapshot.freeze(plan, rotation, mondayOf(date), geo, !migration);
+                SharedPreferences.Editor e = p.edit()
+                    .putString(ItqanFourSessionStore.WEEKLY_KEY, fresh.encode())
+                    .putString(ItqanFourSessionStore.WEEKLY_DATE, date.toString());
+                if (migration) e.remove(ItqanPhysicalProof11711.KEY)
+                    .remove(ItqanRegimeStore.UNIT_PLAN)
+                    .remove("itqanBonusSnapshotV1")
+                    .putString("itqanUnitStart", "").putString("itqanUnitEnd", "")
+                    .putInt("itqanBlockIndex", 0).putLong("itqanElapsedMs", 0L);
+                if (!e.commit()) throw new IllegalStateException("Unable to save weekly Itqan");
+                return fresh;
+            }
+        }
+    }
+
+    private void verifyWeeklyItqanPosition(ItqanFourSessionSnapshot snapshot, GeometryRepository geo) {
+        ItqanRotationPolicy.State rotation = itqanRotationState();
+        ItqanFourSessionPolicy.Plan pending = weeklyItqanCandidate(geo, rotation);
+        if (!rotation.cursor.toString().equals(snapshot.originCursor)
+                || !rotation.leg.name().equals(snapshot.originLeg)
+                || pending == null || pending.firstPage != snapshot.plan.firstPage) {
+            throw new IllegalStateException("Weekly Itqan rotation changed");
+        }
+        List<String> expected = new ArrayList<>(), remaining = new ArrayList<>();
+        for (int index = snapshot.sessionIndex; index < snapshot.plan.sessions.size(); index++)
+            for (ItqanFourSessionPolicy.Block block : snapshot.plan.sessions.get(index).blocks)
+                expected.addAll(block.lineIds);
+        for (ItqanFourSessionPolicy.Session slot : pending.sessions)
+            for (ItqanFourSessionPolicy.Block block : slot.blocks) remaining.addAll(block.lineIds);
+        if (!expected.equals(remaining))
+            throw new IllegalStateException("Weekly Itqan physical continuation changed");
+    }
+
+    private void verifyNajmRemainderMigration(JSONObject proof, ItqanFourSessionPolicy.Plan plan,
+            LocalDate date) {
+        List<String> remainder = java.util.Arrays.asList("527:10", "527:11", "527:12", "527:13", "527:14");
+        List<String> legacy = new ArrayList<>(remainder);
+        legacy.add("528:0");
+        JSONArray ids = proof.optJSONArray("lines");
+        JSONArray bonus = proof.optJSONArray("bonus");
+        String originalDate = proof.optString("date");
+        boolean safe = "53:33".equals(proof.optString("start")) && "53:62".equals(proof.optString("end"))
+            && ids != null && new JSONArray(legacy).toString().equals(ids.toString())
+            && bonus != null && bonus.length() == 0 && date.isAfter(LocalDate.parse(originalDate))
+            && "2026-11-10".equals(lastItqanDate())
+            && proof.optInt("target", -1) == 40 && proof.optInt("reps", -1) == 0
+            && proof.optInt("block", -1) == itqanBlockIndex() && itqanBlockIndex() >= 0
+            && "DEEP_FIRST_PASS".equals(proof.optString("regime"))
+            && "FULL".equals(proof.optString("protocol"))
+            && "BALANCED_20_5_5_5_5".equals(proof.optString("mask"))
+            && "54:1".equals(proof.optString("cursor")) && proof.has("final")
+            && !proof.optBoolean("final", true)
+            && itqanRep() == 0 && itqanAssisted() == 0 && p.getInt("itqanFinalReveals", 0) == 0
+            // Elapsed time is not proof of repetitions: legitimate device/session timing
+            // varies. Require a valid stored counter, never a fixture-specific millisecond.
+            // Dated physical proof, receipts, geometry and zero reps remain mandatory.
+            && p.getLong("itqanElapsedMs", -1L) >= 0L
+            && ("".equals(p.getString("itqanUnitStart", "")) || "53:33".equals(p.getString("itqanUnitStart", "")))
+            && ("".equals(p.getString("itqanUnitEnd", "")) || "53:62".equals(p.getString("itqanUnitEnd", "")))
+            && itqanConsumedBonusLineIds().isEmpty()
+            && plan != null && plan.firstPage == 527 && plan.lines() == 5
+            && plan.sessions.get(0).blocks.size() == 1
+            && remainder.equals(plan.sessions.get(0).blocks.get(0).lineIds);
+        ProgressionSnapshot progression = progressionSnapshotV6();
+        safe = safe && progression.learned.containsAll(legacy) && progression.acquired.contains("527:0");
+        for (int i = 1; i <= 9; i++) safe = safe && progression.stabilized.contains("527:" + i);
+        try {
+            JSONArray receipts = new JSONArray(p.getString(DAILY_LESSON_RECEIPTS, "[]"));
+            for (int i = 0; i < receipts.length(); i++) {
+                JSONObject receipt = receipts.getJSONObject(i);
+                if ("STABILIZATION".equals(receipt.getString("family"))) {
+                    if (!LocalDate.parse(receipt.getString("date")).isBefore(LocalDate.parse(originalDate)))
+                        safe = false;
+                    JSONArray credited = receipt.getJSONArray("lines");
+                    for (int j = 0; j < credited.length(); j++)
+                        if (legacy.contains(credited.getString(j))) safe = false;
+                }
+            }
+            JSONArray history = new JSONArray(p.getString("stabilizationSnowball8WeekHistory", "[]"));
+            for (int i = 0; i < history.length(); i++) {
+                JSONArray units = history.getJSONObject(i).getJSONArray("units");
+                for (int j = 0; j < units.length(); j++)
+                    if (!Collections.disjoint(legacy,
+                            ConsolidationPhysicalUnitPolicy.decodeLineUnit(units.getString(j)))) safe = false;
+            }
+        } catch (org.json.JSONException malformed) {
+            throw new IllegalStateException("Unreadable lesson receipts; preserve V7 checkpoint", malformed);
+        }
+        if (!safe) throw new IllegalStateException("Cannot prove the unused Najm checkpoint; no migration");
+    }
+
+    boolean frozenItqanReady(ItqanFourSessionSnapshot snapshot) {
+        return ItqanFourSessionStore.ready(p,snapshot);
+    }
+
     boolean recordFrozenItqanRep(ItqanFourSessionSnapshot expected,
             GeometryRepository geo,boolean revealed) {
         return ItqanFourSessionStore.recordRep(p,expected,geo,revealed);
+    }
+
+    boolean recordFrozenItqanRep(ItqanFourSessionSnapshot expected,
+            GeometryRepository geo, boolean revealed, LocalDate sessionDate) {
+        return ItqanFourSessionStore.recordRep(p, expected, geo, revealed, sessionDate);
+    }
+
+    boolean restartFrozenItqanBlock(ItqanFourSessionSnapshot expected, GeometryRepository geo,
+            LocalDate sessionDate) {
+        return ItqanFourSessionStore.restartBlock(p, expected, geo, sessionDate);
     }
 
     boolean restartFrozenItqanBlock(ItqanFourSessionSnapshot expected,
@@ -1876,18 +2133,33 @@ public final class HifzPrefs {
                 String lastDate=p.getString("lastItqanDate","");
                 if(!lastDate.isEmpty()&&!requestedDay.isAfter(LocalDate.parse(lastDate)))
                     return false;
-                if(actual.sessionIndex>=4||actual.reps!=40||itqanPostNasMaintenance()
-                    ||p.getInt("itqanRep",-1)!=40
-                    ||!ItqanMaintenancePolicy.validationAllowed(
-                        ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS,p.getInt("itqanAssisted",0)))
+                if (!ItqanFourSessionStore.isCurrentWeeklyDate(p, actual, requestedDay)
+                        || actual.weeklyPage() && !currentItqanDay(requestedDay)) return false;
+                if(actual.sessionIndex>=actual.plan.sessions.size()||itqanPostNasMaintenance()
+                    ||p.getInt("itqanRep",-1)!=actual.targetReps() || !ItqanFourSessionStore.ready(p,actual))
                     throw new IllegalStateException("Incomplete, assisted or deprecated Itqan window");
                 ItqanRotationPolicy.State rotation=itqanRotationState();
                 if(!rotation.leg.name().equals(actual.originLeg)
                     ||!rotation.cursor.toString().equals(actual.originCursor))
                     throw new IllegalStateException("Itqan cursor moved during frozen window");
-                ItqanFourSessionPolicy.Block block=actual.plan.sessions
-                    .get(actual.sessionIndex).blocks.get(actual.blockIndex);
-                List<GeometryRepository.LineMeta> physical=geo.linesForExactIds(block.lineIds);
+                if (actual.weeklyPage()) verifyWeeklyItqanPosition(actual, geo);
+                ItqanFourSessionPolicy.Session slot = actual.plan.sessions.get(actual.sessionIndex);
+                ItqanFourSessionSnapshot next = ItqanFourSessionStore.nextAfterValidatedBlock(actual, geo);
+                boolean finishedDate = next.sessionIndex > actual.sessionIndex;
+                boolean finishedWindow = next.sessionIndex == actual.plan.sessions.size();
+                String key = ItqanFourSessionStore.keyFor(actual);
+                if (actual.weeklyPage() && !finishedDate) {
+                    // Stage every fully recited subblock in the snapshot. The
+                    // lesson credits and receipt all belong to the final slot date.
+                    return p.edit().putString(key, next.encode())
+                        .putInt("itqanRep", 0).putInt("itqanAssisted", 0)
+                        .putInt("itqanFinalReveals", 0).putLong("itqanElapsedMs", 0L).commit();
+                }
+                List<String> creditIds = new ArrayList<>();
+                if (actual.weeklyPage()) {
+                    for (ItqanFourSessionPolicy.Block part : slot.blocks) creditIds.addAll(part.lineIds);
+                } else creditIds.addAll(slot.blocks.get(actual.blockIndex).lineIds);
+                List<GeometryRepository.LineMeta> physical=geo.linesForExactIds(creditIds);
                 GeometryRepository.LineMeta first=physical.get(0),last=physical.get(physical.size()-1);
                 VerseRef firstVerse=first.verses.get(0);
                 VerseRef lastVerse=last.verses.get(last.verses.size()-1);
@@ -1898,7 +2170,7 @@ public final class HifzPrefs {
                 Set<String> quarantine=v6LineIdSet("v6QuarantineLineIds");
                 Set<String> partial=v6LineIdSet("v6LegacyPartialAcquiredLineIds");
                 ArrayList<String> newLines=new ArrayList<>();
-                for(String id:block.lineIds){
+                for(String id:creditIds){
                     if(quarantine.contains(id)||partial.contains(id))
                         throw new IllegalStateException("Unresolved V6 Itqan line: "+id);
                     ProgressState state=progressStateFromSets(id,learned,stabilized,acquired);
@@ -1906,7 +2178,9 @@ public final class HifzPrefs {
                         learned.remove(id);stabilized.add(id);newLines.add(id);
                     }
                 }
-                if(!newLines.isEmpty()&&newLines.size()!=block.lineIds.size())
+                if(actual.weeklyPage() && newLines.size()!=creditIds.size())
+                    throw new IllegalStateException("Weekly Itqan slot contains already credited lines");
+                if(!newLines.isEmpty()&&newLines.size()!=creditIds.size())
                     throw new IllegalStateException("Partial acquired subblock requires reconciled snowball ownership");
                 java.util.Map<String,String> snowball=Collections.emptyMap();
                 if(!newLines.isEmpty()){
@@ -1924,9 +2198,6 @@ public final class HifzPrefs {
                     if(afterSize!=before.length()+1)
                         throw new IllegalStateException("No free weekly Consolidation slot for composite Itqan");
                 }
-                ItqanFourSessionSnapshot next=ItqanFourSessionStore.nextAfterValidatedBlock(actual,geo);
-                boolean finishedDate=next.sessionIndex>actual.sessionIndex;
-                boolean finishedWindow=next.sessionIndex==4;
                 SharedPreferences.Editor e=p.edit()
                     .putString("v6LearnedLineIds",lineIdsJson(learned))
                     .putString("v6StabilizedLineIds",lineIdsJson(stabilized))
@@ -1939,8 +2210,20 @@ public final class HifzPrefs {
                     .putString("itqanBonusSnapshotV1","");
                 for(java.util.Map.Entry<String,String> row:snowball.entrySet())
                     e.putString(row.getKey(),row.getValue());
+                if (actual.weeklyPage()) {
+                    e.remove(ItqanFourSessionStore.WEEKLY_DATE).putLong("itqanElapsedMs", 0L);
+                    if (finishedWindow && last.globalIndex+1 < geo.lineCount()) {
+                        try {
+                            JSONObject closures = new JSONObject(p.getString(WEEKLY_ITQAN_CLOSED, "{}"));
+                            e.putString(WEEKLY_ITQAN_CLOSED, closures
+                                .put(mondayOf(requestedDay).toString(), date).toString());
+                        } catch (org.json.JSONException malformed) {
+                            throw new IllegalStateException("Unreadable Itqan week closures", malformed);
+                        }
+                    }
+                }
                 if(finishedWindow) {
-                    e.remove(ItqanFourSessionStore.KEY);
+                    e.remove(key);
                     // The legacy rotation advances by VERSE; an Itqan 2-page
                     // window advances by PHYSICAL QCF LINE. Their boundaries
                     // can differ. Pin the exact following physical line in
@@ -1950,10 +2233,10 @@ public final class HifzPrefs {
                     if(physicalNext<geo.lineCount())
                         e.putString("itqanFourNextPhysicalLineIdV1",geo.line(physicalNext).id);
                     else e.remove("itqanFourNextPhysicalLineIdV1");
-                } else e.putString(ItqanFourSessionStore.KEY,next.encode());
+                } else e.putString(key,next.encode());
                 if(finishedDate)e.putString("lastItqanDate",date).putString("lastItqanLabel",label)
                     .putString(DAILY_LESSON_RECEIPTS,appendDailyLessonReceipt(
-                        ConsolidationCycleEngine.Family.STABILIZATION,date,block.lineIds));
+                        ConsolidationCycleEngine.Family.STABILIZATION,date,creditIds));
                 if(finishedWindow)e=appendFinalItqanRotation(e,true,lastVerse);
                 return e.commit();
             }
@@ -2139,17 +2422,7 @@ public final class HifzPrefs {
                 e.putString("v6StabilizedLineIds", lineIdsJson(stabilized));
                 for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             }
-            // Collect every successfully completed hizb, including reinforcement laps
-            // that earn zero new Stabilised credits; never infer work from future plans.
-            LocalDate maintainedOn=safeDate(date,HifzClock.today());
-            JSONArray maintained=postNasMaintainedHizbs(maintainedOn);
-            String unit=ConsolidationPhysicalUnitPolicy.encodeLineUnit(lineIds);
-            boolean alreadyRecorded=false;
-            for(int i=0;i<maintained.length();i++)
-                if(unit.equals(maintained.optString(i)))alreadyRecorded=true;
-            if(!alreadyRecorded)maintained.put(unit);
-            e.putString(POST_NAS_WEEK_ANCHOR,mondayOf(maintainedOn).toString());
-            e.putString(POST_NAS_WEEK_UNITS,maintained.toString());
+            appendPostNasMaintainedUnit(p,e,safeDate(date,HifzClock.today()),lineIds);
             if (nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return appendFinalItqanRotation(e,true,unitEnd).commit();
         }
@@ -2475,6 +2748,13 @@ public final class HifzPrefs {
         return ItqanRegimeStore.postNasMaintenance(p);
     }
 
+    boolean usesJuzMaintenance() {
+        return itqanPostNasMaintenance() && !legacyItqanCheckpoint()
+            && !p.contains(ItqanPhysicalProof11711.KEY) && !ItqanFourSessionStore.hasPlan(p);
+    }
+
+    JuzMaintenanceStore juzMaintenance() { return new JuzMaintenanceStore(p); }
+
     /** A voluntary, forward-dated programme switch never overwrites old credits. */
     public String itqanProgrammeChoice() {
         String mode=p.getString("itqanProgrammeChoiceV1","AUTO");
@@ -2719,7 +2999,7 @@ public final class HifzPrefs {
         // it could flip the rotation leg before ×40/V6 completion.
         ItqanFourSessionSnapshot frozen=ItqanFourSessionStore.read(p,geometry);
         if(frozen!=null) {
-            if(frozen.sessionIndex>=4)throw new IllegalStateException("Completed Itqan snapshot not closed");
+            if(frozen.sessionIndex>=frozen.plan.sessions.size())throw new IllegalStateException("Completed Itqan snapshot not closed");
             ItqanFourSessionPolicy.Session slot=frozen.plan.sessions.get(frozen.sessionIndex);
             if(frozen.blockIndex>=slot.blocks.size())
                 throw new IllegalStateException("Frozen Itqan cursor outside current slot");
@@ -2759,6 +3039,21 @@ public final class HifzPrefs {
             }
         }
 
+        LocalDate today = HifzClock.today();
+        if (weeklyProgramFor(today) == WeeklyProgram.RECOMMENDED && !itqanPostNasMaintenance()
+                && !p.contains(ItqanPhysicalProof11711.KEY) && !legacyItqanCheckpoint()) {
+            if (weeklyItqanPageClosed(today)) return null;
+            ItqanFourSessionPolicy.Plan plan = weeklyItqanCandidate(geometry, itqanRotationState());
+            if (plan != null) {
+                List<GeometryRepository.LineMeta> physical = geometry.linesForExactIds(
+                    plan.sessions.get(0).blocks.get(0).lineIds);
+                VerseRef start = physical.get(0).verses.get(0);
+                GeometryRepository.LineMeta last = physical.get(physical.size()-1);
+                VerseRef end = last.verses.get(last.verses.size()-1);
+                return new AnchoringQueue.Entry(start.toString(), end.toString(),
+                    AnchoringQueue.Origin.PROMOTED, AnchoringQueue.ItqanProtocol.FULL, 0);
+            }
+        }
         AnchoringQueue.Entry remainder=legacyFourDateRemainder(geometry);
         if(remainder!=null)return remainder;
         ItqanRotationPolicy.State original = itqanRotationState();
@@ -3044,11 +3339,27 @@ public final class HifzPrefs {
      * count for this family (learningDaysPerWeek/itqanDaysPerWeek).
      */
 
+    /** One exact physical unit per successfully completed maintenance session. */
+    static void appendPostNasMaintainedUnit(SharedPreferences prefs, SharedPreferences.Editor editor,
+            LocalDate date, List<String> lines) {
+        JSONArray maintained=postNasMaintainedUnits(prefs,date);
+        String unit=ConsolidationPhysicalUnitPolicy.encodeLineUnit(lines);
+        for(int i=0;i<maintained.length();i++)
+            if(unit.equals(maintained.optString(i)))return;
+        maintained.put(unit);
+        editor.putString(POST_NAS_WEEK_ANCHOR,mondayOf(date).toString());
+        editor.putString(POST_NAS_WEEK_UNITS,maintained.toString());
+    }
+
     /** Completed Maintien hizbs, pinned to their actual calendar week. */
     private JSONArray postNasMaintainedHizbs(LocalDate date) {
-        if(!mondayOf(date).toString().equals(p.getString(POST_NAS_WEEK_ANCHOR,"")))
+        return postNasMaintainedUnits(p,date);
+    }
+
+    private static JSONArray postNasMaintainedUnits(SharedPreferences prefs, LocalDate date) {
+        if(!mondayOf(date).toString().equals(prefs.getString(POST_NAS_WEEK_ANCHOR,"")))
             return new JSONArray();
-        try { return new JSONArray(p.getString(POST_NAS_WEEK_UNITS,"[]")); }
+        try { return new JSONArray(prefs.getString(POST_NAS_WEEK_UNITS,"[]")); }
         catch(Exception invalid) { throw new IllegalStateException("Invalid saved Maintien history",invalid); }
     }
 
@@ -3122,7 +3433,7 @@ public final class HifzPrefs {
         // weekly plans keep their original caps while their OPEN state runs out.
         int weeklyCap = family == ConsolidationCycleEngine.Family.LEARNING
             ? learningDaysPerWeek()
-            : p.contains(ItqanFourSessionStore.KEY) ? 30 : itqanDaysPerWeek();
+            : ItqanFourSessionStore.hasPlan(p) ? 30 : itqanDaysPerWeek();
         for (List<String> unitLineIds : units) {
             if (current.length() < weeklyCap) current.put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
         }
@@ -3986,12 +4297,9 @@ public final class HifzPrefs {
             .commit();
     }
 
-    /**
-     * Closes the daily Révision active (masked recall test): advances activeMurajaahCursor, its own
-     * independent traversal position over activeMurajaahCorpus (settled material only) — no longer
-     * tied to murajaahCursor/murajaahCorpus, since active deliberately excludes "à stabiliser"
-     * material that passive still reads. Only the day's label is kept; no historical trend.
-     */
+    ActiveReviewSlots activeReviewSlots() { return new ActiveReviewSlots(p); }
+
+    /** Closes a correction that began under the historical single-review protocol. */
     public boolean completeActiveMurajaah(VerseRef nextCursor, String date, String label) {
         if (nextCursor == null) return false;
         return p.edit()

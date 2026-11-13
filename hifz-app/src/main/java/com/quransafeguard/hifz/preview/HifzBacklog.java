@@ -59,8 +59,12 @@ final class HifzBacklog {
         Set<LocalDate> itqanDone=new HashSet<>(ledger.completedDates(
             HifzSessionActivity.ITQAN,first,today));
         return calculate(start,coverage,today,sabqiDone,itqanDone,
-            date -> WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
-                prefs.weeklyProgramFor(date),learningDays));
+            date -> {
+                CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
+                    prefs.weeklyProgramFor(date),learningDays);
+                return action==CadenceAction.STABILIZATION && prefs.weeklyItqanPageClosed(date)
+                    ? CadenceAction.REVISION : action;
+            });
     }
 
     static int lateCount(List<Due> pending,LocalDate today) {

@@ -25,7 +25,7 @@ public final class CanonicalSessionRuntimeSourceContractTest {
     @Test public void learningCompletionCreatesExactlyTheLearnedState() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue(session.contains("completeSabqiBlockV6"));
+        assertTrue(session.contains("completeCurrentSabqi"));
         assertTrue(session.contains("sabqiBlock.lineIds"));
         assertTrue(prefs.contains("v6LearnedLineIds"));
     }

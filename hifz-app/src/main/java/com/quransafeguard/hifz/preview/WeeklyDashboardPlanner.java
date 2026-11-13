@@ -97,11 +97,13 @@ final class WeeklyDashboardPlanner {
             android.util.Log.e("QuranHifz","Weekly Itqan rotation projection unavailable",problem);
         }
 
-        // Legacy V1 four-date snapshots: display only frozen OPEN history.
+        // Frozen windows retain their physical slots. V2 can also be forecast
+        // read-only before its first real lesson is opened.
         ItqanFourSessionPolicy.Plan fourDates=null;
+        ItqanFourSessionSnapshot frozenItqan=null;
         int nextFourDateSlot=0;
         try {
-            ItqanFourSessionSnapshot frozenItqan=prefs.frozenItqanSnapshot(geometry);
+            frozenItqan=prefs.frozenItqanSnapshot(geometry);
             if(frozenItqan!=null){
                 fourDates=frozenItqan.plan;
                 nextFourDateSlot=frozenItqan.sessionIndex;
@@ -148,21 +150,30 @@ final class WeeklyDashboardPlanner {
                     if(actual!=null)morning="✓ "+compact(actual.label);
                     else if(alreadyValidated)morning="✓ Stabilisation · séance validée";
                     else if(date.equals(today)&&prefs.anchoringDeferredToday())morning="Stabilisation · unité reportée";
-                    else if(fourDates!=null&&nextFourDateSlot<4) {
-                        ItqanFourSessionPolicy.Session slot=fourDates.sessions.get(nextFourDateSlot);
-                        while(slot.blocks.isEmpty()&&nextFourDateSlot<3)
-                            slot=fourDates.sessions.get(++nextFourDateSlot);
-                        if(slot.blocks.isEmpty())morning="Stabilisation · fenêtre terminée";
-                        else {
-                            String where=QuranSurahNames.block(geometry,slot.blocks.get(0).lineIds,
-                                "pages "+fourDates.firstPage+"–"+fourDates.lastPage);
-                            morning="Stabilisation · séance "+(nextFourDateSlot+1)+"/4"
-                                +" · "+slot.lineCount+" lignes · "+slot.blocks.size()
-                                +" bloc(s) · "+where+" · ×40";
-                            nextFourDateSlot++;
-                        }
+                    else if(prefs.weeklyItqanPageClosed(date)) {
+                        morning="Stabilisation · page terminée";
+                        state="Aucune séance prévue";
+                        break;
                     }
-                    else if(fourDates!=null)morning="Stabilisation · prochaine fenêtre après validation";
+                    else if(date.isBefore(today))morning="Stabilisation";
+                    else if(fourDates!=null || (fourDates=prefs.previewWeeklyItqan(geometry,date))!=null) {
+                        int count = fourDates.sessions.size();
+                        while(nextFourDateSlot<count && fourDates.sessions.get(nextFourDateSlot).blocks.isEmpty())
+                            nextFourDateSlot++;
+                        if(nextFourDateSlot==count) {
+                            morning="Stabilisation · prochaine page après validation";
+                            state="Projection";
+                            break;
+                        }
+                        ItqanFourSessionPolicy.Session slot=fourDates.sessions.get(nextFourDateSlot);
+                        String where=QuranSurahNames.block(geometry,slot.blocks.get(0).lineIds,
+                            "Page "+fourDates.firstPage);
+                        int reps = frozenItqan != null && frozenItqan.plan == fourDates
+                            ? frozenItqan.targetReps() : ItqanThirtyRecoveryPolicy.BASE;
+                        morning="Stabilisation · "+slot.lineCount+" lignes · "+where+" · ×"+reps;
+                        nextFourDateSlot++;
+                    }
+                    else if(prefs.usesJuzMaintenance()) morning="Maintien · "+JuzMaintenanceStore.CUE;
                     else if(itqanForecast==null)morning="Stabilisation · projection à vérifier";
                     else if(itqanForecast.entry()==null)morning="Stabilisation · aucune unité à stabiliser";
                     else{
@@ -208,8 +219,6 @@ final class WeeklyDashboardPlanner {
                         evening=stabilizationDone?"✓ Finale Itqān":"Finale Itqān uniquement";
                         state=morningDone&&learningDone&&stabilizationDone?"Validé":
                             morningDone&&learningDone?"Soir à faire":"À faire";
-                        // Sunday must NEVER forecast active/passive revision or consume
-                        // its independent passive cursor, even during a look-ahead week.
                         break;
                     }
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
@@ -253,17 +262,19 @@ final class WeeklyDashboardPlanner {
                         :!learningDue&&!consolidationDue
                             ?(date.isAfter(today)?"Prévision":"Aucune finale à valider")
                             :"À faire";
-                    // Sunday cannot consume a passive cursor or schedule any general revisions.
                     break;
                 }
                 default:throw new IllegalStateException("Action de cadence inconnue");
             }
+            ActiveReviewSlots.Slot am=ActiveReviewSlots.Slot.MORNING;
+            ActiveReviewSlots.Slot pm=ActiveReviewSlots.Slot.EVENING;
+            boolean morningDone=ledger.find(date,am.mode)!=null;
+            boolean eveningDone=ledger.find(date,pm.mode)!=null;
+            String activeMorning=activeReviewLabel(am,morningDone,prefs.activeReviewSlots().targetMinutes(date,am,duration));
+            String activeEvening=activeReviewLabel(pm,eveningDone,prefs.activeReviewSlots().targetMinutes(date,pm,duration));
             if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY) {
-                // Contract: morning = active + passive review; evening = Hifz lesson + snowball.
-                boolean activeDone=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE)!=null;
                 boolean passiveDone=ledger.find(date,HifzSessionActivity.MURAJAAH)!=null;
                 String durationLabel=revisionMinutes>0 ? revisionMinutes+" min" : "durée à vérifier";
-                String active=(activeDone?"✓ ":"")+"Révision active · "+durationLabel;
                 String passive=(passiveDone?"✓ ":"")+"Révision passive · "+durationLabel;
                 if(!passiveDone && murajaahCursor!=null && murajaahCorpus!=null
                         && revisionMinutes>0) {
@@ -278,23 +289,21 @@ final class WeeklyDashboardPlanner {
                 } else if(!passiveDone) {
                     passive+=" · position à vérifier";
                 }
+                if(!passiveDone)passive+=" · facultative";
                 if(action==CadenceAction.LEARNING || action==CadenceAction.STABILIZATION) {
-                    String lesson=morning, snowball=evening;
-                    morning=active+" + "+passive;
-                    evening=lesson+" + "+snowball;
-                    boolean lessonDone=ledger.find(date,action==CadenceAction.LEARNING
-                        ?HifzSessionActivity.SABQI:HifzSessionActivity.ITQAN)!=null
-                        || (action==CadenceAction.STABILIZATION
-                            && date.toString().equals(prefs.lastItqanDate()));
-                    state=activeDone&&passiveDone&&lessonDone
-                        &&(snowball.startsWith("✓ ")||snowball.endsWith("aucune nouvelle unité"))?"Validé"
-                        :activeDone&&passiveDone?"Soir à faire":"À faire";
+                    evening=joinSessions(morning,evening);
                 } else {
-                    morning=active+" + "+passive;
-                    evening="—";
-                    state=activeDone&&passiveDone?"Validé":"À faire";
+                    state="Validé";
                 }
+                morning=joinSessions(activeMorning,passive);
+            } else {
+                morning=joinSessions(activeMorning,morning);
             }
+            evening=joinSessions(evening,activeEvening);
+            if(!morningDone)state="À faire";
+            else if(!eveningDone&&("Validé".equals(state)||"Aucune finale à valider".equals(state)))
+                state="Soir à faire";
+            else if(eveningDone&&"Aucune finale à valider".equals(state))state="Validé";
             out.add(new Row(date,day(date,today),morning,evening,state));
             } catch(RuntimeException invalidForecast){
                 // One problematic historical OPEN state or future unit never kills
@@ -305,6 +314,16 @@ final class WeeklyDashboardPlanner {
             }
         }
         return out;
+    }
+
+    private static String activeReviewLabel(ActiveReviewSlots.Slot slot,boolean done,int minutes){
+        return (done?"✓ ":"")+slot.title()+" · "+minutes+" min";
+    }
+
+    private static String joinSessions(String first,String second){
+        if("—".equals(first)||first.isEmpty())return second;
+        if("—".equals(second)||second.isEmpty())return first;
+        return first+" + "+second;
     }
 
     private Projection projectMurajaah(VerseRef cursor,EligibleCorpus corpus,int minutes){

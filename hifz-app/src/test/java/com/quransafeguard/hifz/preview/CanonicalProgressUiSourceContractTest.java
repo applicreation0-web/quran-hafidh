@@ -35,7 +35,7 @@ public final class CanonicalProgressUiSourceContractTest {
         assertTrue(settings.contains("· Apprentissage   ·   \""));
         assertTrue(settings.contains("· Stabilisation   ·   \""));
         assertTrue(settings.contains("\"Dim · Finales (historique uniquement)\"")
-            && settings.contains("\"Dim · Finales sans révision\""));
+            && settings.contains("\"Dim · Finales\""));
         assertTrue("Manual mode must describe Sunday as fixed, not a freely selected weekday",
             settings.contains("jours Stabilisation + finales dimanche"));
         assertTrue("Standard mode must use six weekdays and a reserved Sunday",
@@ -114,14 +114,14 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(week.contains("\"Reprise du soir ·"));
         assertFalse(week.contains("\"Ancrage ·"));
         assertFalse(week.contains("\"Ancrage fractionné ·"));
-        // The agreed split is explicit: 05:30 active/passive reviews,
-        // 20:00 Sabqi/Itqan plus Renforcement/Consolidation without duplicate revision.
-        assertTrue(week.contains("morning=active+\" + \"+passive;"));
-        assertTrue(week.contains("evening=lesson+\" + \"+snowball;"));
+        // Each half-day shows its own active slot alongside its other sessions.
+        assertTrue(week.contains("morning=joinSessions(activeMorning,passive);"));
+        assertTrue(week.contains("morning=joinSessions(activeMorning,morning);"));
+        assertTrue(week.contains("evening=joinSessions(evening,activeEvening);"));
         assertFalse("No obsolete UI Entretien label",
             week.contains("\"Entretien ·"));
-        assertTrue("Sunday final-only planning must never schedule a generic passive cursor",
-            week.contains("// Sunday cannot consume a passive cursor or schedule any general revisions."));
+        assertTrue("Passive review is optional",
+            week.contains("if(!passiveDone)passive+=\" · facultative\";"));
     }
 
     @Test public void localHusaryImportContractRemainsUntouched() throws Exception {
