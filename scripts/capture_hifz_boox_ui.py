@@ -159,7 +159,18 @@ if __name__ == "__main__":
     with apk.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
     (OUTPUT / "build.txt").write_text(f"commit={metadata}\napk={apk.name}\nsha256={digest}\n")
-    adb("install", "-r", str(apk), timeout=120)
+    try:
+        installation = adb("install", "-r", str(apk), check=False, timeout=300)
+        (OUTPUT / "install.txt").write_bytes(installation.stdout + installation.stderr)
+        if installation.returncode or b"Success" not in installation.stdout:
+            raise RuntimeError("ADB could not install the BOOX test APK")
+    except subprocess.TimeoutExpired as exc:
+        (OUTPUT / "install.txt").write_bytes((exc.stdout or b"") + (exc.stderr or b""))
+        diagnostics("install-failure")
+        raise
+    except (OSError, RuntimeError):
+        diagnostics("install-failure")
+        raise
     failures = []
     for size in ("1404x1872", "900x1200"):
         for font in (1.0, 1.25, 1.5):
