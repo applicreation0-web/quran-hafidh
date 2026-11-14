@@ -67,7 +67,7 @@ public final class CapHifzActivity extends Activity {
         root.setPadding(Ui.dp(this, 16), 0, Ui.dp(this, 16), 0);
         LinearLayout header = Ui.row(this);
         header.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
-        TextView title = Ui.notebookTitle(this, "Cap Hifz", 26);
+        TextView title = Ui.notebookTitle(this, "Cap Hifdh", 26);
         title.setGravity(Gravity.CENTER);
         header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
         header.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), 1));
