@@ -1,0 +1,68 @@
+name: Quran Haafidh 1.17.17 OFFLINE unsigned stage (no private content)
+on:
+  push:
+    branches:
+      - release-stage/haafidh-11717-v2-digest-20261114
+    paths:
+      - hifz-app/build.gradle.kts
+      - .github/workflows/haafidh-11717-public-unsigned-stage.yml
+permissions:
+  contents: read
+
+jobs:
+  unsigned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+      HIFZ_OFFLINE_UNSIGNED_STAGE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK, authentic QCF pages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Prevent accidental private input
+        run: |
+          set -euo pipefail
+          test -z "${HIFZ_KEYSTORE_PATH:-}"
+          test ! -e hifz-app/src/private114/assets/atlas_private/maududi_original.pdf
+          python3 scripts/test_build_11717_private_offline.py
+      - name: Create official-ID unsigned APK with private-feature source flags
+        run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace
+      - name: Assert unsigned official build, without any private assets
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build-private114/outputs/apk/release -name '*.apk' | head -1)"
+          test -f "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | grep -q "package: name='com.quransafeguard.hifz' versionCode='55' versionName='1.17.17'"
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk" >/dev/null 2>&1; then
+            echo 'NO-GO: public staging APK must remain unsigned'; exit 1
+          fi
+          if unzip -Z1 "$apk" | grep -Eq '^assets/(atlas_private|ayah_themes_private)/'; then
+            echo 'NO-GO: private assets were accidentally included'; exit 1
+          fi
+          mkdir -p artifacts
+          cp "$apk" artifacts/QURAN_HAAFIDH_11717_UNSIGNED_OFFLINE_STAGE.apk
+          sha256sum artifacts/*.apk > artifacts/STAGE_SHA256SUMS.txt
+          git rev-parse HEAD > artifacts/SOURCE_SHA.txt
+          echo 'PASS: no historical key or 7 private assets touched public GitHub'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-11717-unsigned-official-stage-no-private-content
+          path: artifacts/
+          retention-days: 1
+          if-no-files-found: error
