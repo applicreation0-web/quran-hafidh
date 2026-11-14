@@ -123,7 +123,7 @@ final class CapHifzPanel extends LinearLayout {
     }
 
     private void renderTrajectory() {
-        LinearLayout choices = Ui.row(this);
+        LinearLayout choices = Ui.row(context);
         for (int percent : new int[]{80, 90, 100}) {
             TextView item = button(choices, percent + " %", v -> { scenario = percent; render(); });
             item.setContentDescription("Simulation à " + percent + " pour cent" + (scenario == percent ? ", sélectionnée" : ""));
