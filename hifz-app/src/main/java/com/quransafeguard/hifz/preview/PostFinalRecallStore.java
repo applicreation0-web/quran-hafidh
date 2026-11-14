@@ -331,6 +331,45 @@ final class PostFinalRecallStore {
         return false;
     }
 
+    static final class LineDates {
+        final java.time.LocalDate acquired;
+
+        LineDates(java.time.LocalDate acquired) { this.acquired = acquired; }
+    }
+
+    /** A validated cumulative plan proves that lines were already acquired as of its date. */
+    java.util.Map<String, LineDates> lineDates(String completedSabqiDate, String completedItqanDate,
+            java.time.LocalDate today) {
+        java.util.Map<String, LineDates> result = new java.util.HashMap<>();
+        JSONArray queue = read();
+        try {
+            for (int i = 0; i < queue.length(); i++) {
+                JSONObject item = queue.getJSONObject(i);
+                if (item.optInt("familySourceVersion", 0) != 1) continue;
+                String status = item.getString("status");
+                String family = item.getString("family");
+                String rawDate = item.getString("date");
+                String finalized = SABQI.equals(family) ? completedSabqiDate : completedItqanDate;
+                if (!"READY".equals(status) && !"DONE".equals(status)
+                        && !("PREPARED".equals(status) && rawDate.equals(finalized))) continue;
+                java.time.LocalDate date = java.time.LocalDate.parse(rawDate);
+                if (date.isAfter(today)) continue;
+                JSONArray pages = item.getJSONArray("pages");
+                for (int j = 0; j < pages.length(); j++) {
+                    JSONObject page = pages.getJSONObject(j);
+                    JSONArray lines = page.getJSONArray("lines");
+                    for (int l = 0; l < lines.length(); l++) {
+                        result.merge(lines.getString(l), new LineDates(date),
+                            (first, next) -> first.acquired.isBefore(next.acquired) ? first : next);
+                    }
+                }
+            }
+        } catch (org.json.JSONException invalid) {
+            throw new IllegalStateException("Invalid final receipt", invalid);
+        }
+        return result;
+    }
+
     /** Read-only summary for the weekly recap. Never creates a new reading or credit. */
     static final class Recap {
         final String family,date;

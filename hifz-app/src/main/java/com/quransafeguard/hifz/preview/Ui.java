@@ -243,6 +243,17 @@ final class Ui {
         return view;
     }
 
+    private static Typeface notebookTypeface;
+
+    static TextView notebookTitle(Context context, String value, float sizeSp) {
+        TextView view = text(context, value, sizeSp, false);
+        if (notebookTypeface == null) {
+            notebookTypeface = Typeface.createFromAsset(context.getAssets(), "fonts/Kalam-Regular.ttf");
+        }
+        view.setTypeface(notebookTypeface);
+        return view;
+    }
+
     static void weight(View view, float weight) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight);
         int gap = dp(view.getContext(), 3);

@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - feature/boox-parcours-one-screen-itqan-frise-20261112
+      - feature/haafidh-planning-pilotage-20261114
   pull_request:
     branches:
       - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
+      - work/haafidh-final-audit-20261112
   workflow_dispatch:
 
 jobs:

@@ -90,6 +90,61 @@ public final class HifzPrefs {
         testGeometry = geometry;
     }
 
+    static HifzPrefs readOnly(Context context) {
+        return new HifzPrefs(context.getSharedPreferences(NAME, Context.MODE_PRIVATE));
+    }
+
+    String dailyLessonReceiptsJson() { return p.getString(DAILY_LESSON_RECEIPTS, "[]"); }
+
+    int forecastItqanLine(GeometryRepository geometry) {
+        String pinned = p.getString(ITQAN_PHYSICAL_NEXT, "");
+        return pinned.isEmpty() ? geometry.firstLineIndex(itqanRotationState().cursor)
+            : geometry.linesForExactIds(Collections.singletonList(pinned)).get(0).globalIndex;
+    }
+
+    ItqanFourSessionSnapshot forecastItqanSnapshot(GeometryRepository geometry) {
+        return ItqanFourSessionStore.read(p, geometry);
+    }
+
+    ItqanFourSessionPolicy.Plan forecastNajmCarryover(GeometryRepository geometry, LocalDate today) {
+        JSONObject proof = ItqanPhysicalProof11711.read(p);
+        if (proof == null || !ItqanPhysicalProof11711.isNajmRemainderProof(proof)) return null;
+        if (!today.isAfter(LocalDate.parse(proof.optString("date")))) return null;
+        ItqanFourSessionPolicy.Plan plan = weeklyItqanCandidate(geometry, itqanRotationState());
+        verifyNajmRemainderMigration(proof, plan, today);
+        return plan;
+    }
+
+    boolean hasLegacyItqanForecastCheckpoint() {
+        return legacyItqanCheckpoint() || p.contains(ItqanPhysicalProof11711.KEY);
+    }
+
+    boolean itqanClosedThisWeek(LocalDate today) {
+        return weeklyItqanPageClosed(today.plusDays(1))
+            && today.getDayOfWeek() != java.time.DayOfWeek.SUNDAY;
+    }
+
+    boolean hasItqanForecastCarryover(LocalDate today) {
+        String weekly = p.getString(ItqanFourSessionStore.WEEKLY_DATE, "");
+        if (!weekly.isEmpty()) return LocalDate.parse(weekly).isBefore(today);
+        if (p.contains(ItqanPhysicalProof11711.KEY)) {
+            JSONObject proof = ItqanPhysicalProof11711.read(p);
+            return proof != null && LocalDate.parse(proof.optString("date")).isBefore(today);
+        }
+        return false;
+    }
+
+    LocalDate sabqiReportDate(LocalDate today) {
+        String raw = p.getString(SABQI_LESSON_SNAPSHOT, "");
+        if (raw.isEmpty()) return null;
+        try {
+            LocalDate date = LocalDate.parse(new JSONObject(raw).getString("date"));
+            return date.isBefore(today) ? date : null;
+        } catch (Exception incomplete) {
+            return null;
+        }
+    }
+
     private GeometryRepository reviewGeometry() {
         return testGeometry != null ? testGeometry
             : geometryContext != null ? GeometryRepository.get(geometryContext) : null;
