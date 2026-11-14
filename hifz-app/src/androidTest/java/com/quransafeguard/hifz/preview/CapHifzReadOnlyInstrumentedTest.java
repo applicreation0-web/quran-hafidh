@@ -81,7 +81,8 @@ public final class CapHifzReadOnlyInstrumentedTest {
 
     private static boolean hasScrollView(View view) {
         if (view instanceof android.widget.ScrollView) return true;
-        if (view instanceof ViewGroup group) {
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
                 if (hasScrollView(group.getChildAt(i))) return true;
             }
