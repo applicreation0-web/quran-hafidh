@@ -81,7 +81,7 @@ public final class MainActivity extends android.app.Activity {
         appEmblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
         appEmblem.setContentDescription("Quran Haafidh");
         header.addView(appEmblem, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
-        TextView title = Ui.bookText(this, "Quran Haafidh", 24, true);
+        TextView title = Ui.notebookTitle(this, "Quran Haafidh", 24);
         if (wideBoox()) title.setTextSize(29f);
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
@@ -101,7 +101,7 @@ public final class MainActivity extends android.app.Activity {
         recentSabqiAdvisory.setVisibility(View.GONE);
         root.addView(recentSabqiAdvisory);
 
-        TextView destinationsLabel = Ui.bookText(this, "ACCÈS DIRECTS", 17f, true);
+        TextView destinationsLabel = Ui.notebookTitle(this, "Accès directs", 17f);
         if (wideBoox()) destinationsLabel.setTextSize(21f);
         destinationsLabel.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 8));
         root.addView(destinationsLabel);
@@ -122,11 +122,28 @@ public final class MainActivity extends android.app.Activity {
             v -> startActivity(new Intent(this, AtlasMapActivity.class)));
         root.addView(readingRow);
 
+        // A thin, readable direct entry, never a fifth giant tile. BOOX keeps
+        // its existing 2x2 pictogram grammar, with no extra page of scrolling.
+        TextView capHifzAccess = Ui.notebookTitle(this, "Cap Hifdh  ›", 20f);
+        if (wideBoox()) capHifzAccess.setTextSize(21f);
+        capHifzAccess.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
+        capHifzAccess.setMinimumHeight(Ui.dp(this, 48));
+        capHifzAccess.setContentDescription("Ouvrir Cap Hifdh");
+        capHifzAccess.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_haafidh_cap_hifz, 0, 0, 0);
+        capHifzAccess.setCompoundDrawablePadding(Ui.dp(this, 8));
+        capHifzAccess.setGravity(Gravity.CENTER_VERTICAL);
+        capHifzAccess.setClickable(true);
+        capHifzAccess.setFocusable(true);
+        capHifzAccess.setOnClickListener(v ->
+            startActivity(new Intent(this, CapHifzActivity.class)));
+        root.addView(capHifzAccess);
+
         // Mémorisation ponctuelle remains an optional advanced tool, not a fifth icon.
 
         geometryActions.add(study);
         geometryActions.add(semanticMap);
         geometryActions.add(progress);
+        geometryActions.add(capHifzAccess);
 
         // --- Parcours Hifz: the five paths, one line each, then this week.
         LinearLayout path = page();

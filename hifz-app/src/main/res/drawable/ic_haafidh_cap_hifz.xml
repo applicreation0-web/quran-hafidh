@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp" android:height="26dp"
+    android:viewportWidth="32" android:viewportHeight="32">
+    <!-- Cap Hifz: three successive milestones in one softly drawn ink stroke.
+         Fine stroke family, deliberately NO flag or broad Android pictogram. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#141414"
+        android:strokeWidth="1.25"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M5,26 C9.5,25 10,20 14.5,19 C18,18 19.5,18.5 22,15 C24,12 24,9.5 27,7" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#141414"
+        android:strokeWidth="1.15"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M6.8,26 A1.8,1.8 0,1 1,3.2 26 A1.8,1.8 0,1 1,6.8 26 M16.3,19 A1.8,1.8 0,1 1,12.7 19 A1.8,1.8 0,1 1,16.3 19 M29.1,7 A2.1,2.1 0,1 1,24.9 7 A2.1,2.1 0,1 1,29.1 7" />
+</vector>

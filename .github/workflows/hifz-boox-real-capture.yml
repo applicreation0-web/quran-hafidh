@@ -4,6 +4,7 @@ on:
     branches:
       - feature/boox-parcours-one-screen-itqan-frise-20261112
       - release-candidate/haafidh-11717-code-only-20261113
+      - work/haafidh-integration-cap-hifdh-20261114
   pull_request:
     branches:
       - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
@@ -65,7 +66,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
           script: |
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest --stacktrace
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest --stacktrace
             # Isolated synthetic, read-only visual fixture: same actual Android UI
             # before/after the An-Nas milestone, with no fake Hifz credits.
             adb shell wm size 1404x1872

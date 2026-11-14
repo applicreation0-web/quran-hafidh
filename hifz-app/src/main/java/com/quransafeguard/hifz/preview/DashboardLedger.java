@@ -39,7 +39,16 @@ final class DashboardLedger {
 
 
     DashboardLedger(Context context){
+        this(context, true);
+    }
+
+    static DashboardLedger readOnly(Context context) {
+        return new DashboardLedger(context, false);
+    }
+
+    private DashboardLedger(Context context, boolean initialize) {
         p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
+        if (!initialize) return;
         // Older ledgers cannot prove attendance before the first verified coverage.
         SharedPreferences.Editor init=p.edit();
         boolean dirty=false;

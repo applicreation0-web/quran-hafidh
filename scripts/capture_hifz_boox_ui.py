@@ -84,6 +84,24 @@ def find_control(root, match):
                  and any(match(label) for label in names(node))), None)
 
 
+def capture_cap_hifz(tag, home):
+    control = find_control(home, lambda label: label == "Ouvrir Cap Hifdh")
+    if control is None:
+        raise AssertionError("Missing Cap Hifdh access")
+    width = max((node_bounds[2] for n in home.iter("node")
+                 if (node_bounds := bounds(n))), default=480)
+    if not control.get("text"):
+        raise AssertionError("Cap Hifdh is missing its visible title")
+    tap(control)
+    hierarchy(f"{tag}-cap-hifz", lambda root: any(
+        "Assiduité" in names(node) for node in root.iter("node")))
+    diagnostics(f"{tag}-cap-hifz")
+    adb("shell", "input", "swipe", str(width//2), "660", str(width//2), "310", "420")
+    hierarchy(f"{tag}-cap-hifz-simulations")
+    diagnostics(f"{tag}-cap-hifz-simulations")
+    adb("shell", "input", "keyevent", "KEYCODE_BACK")
+
+
 def sunday_station(label):
     match = re.search(r"\b\d{4}-\d{2}-\d{2}\b", label)
     return bool(match and "ouvrir le détail" in label and date.fromisoformat(match[0]).weekday() == 6)
@@ -114,6 +132,11 @@ def capture(tag, size, density, font):
             raise RuntimeError("Launcher did not report a successful activity start")
         diagnostics(f"{tag}-home")
         home = hierarchy(f"{tag}-home", lambda tree: find_control(tree, lambda label: label == "Parcours") is not None)
+        cap = find_control(home, lambda label: label == "Ouvrir Cap Hifdh")
+        if cap is not None:
+            capture_cap_hifz(tag, home)
+            home = hierarchy(f"{tag}-returned", lambda tree: find_control(
+                tree, lambda label: label == "Parcours") is not None)
         parcours = find_control(home, lambda label: label == "Parcours")
         tap(parcours)
         time.sleep(2)
@@ -180,5 +203,19 @@ if __name__ == "__main__":
             except (OSError, ValueError, RuntimeError, AssertionError, subprocess.SubprocessError) as exc:
                 failures.append(f"{tag}: {exc}")
                 print(failures[-1], flush=True)
+    if b"CapHifzActivity" in subprocess.check_output(
+            ("git", "show", "HEAD:hifz-app/src/main/AndroidManifest.xml")):
+        try:
+            adb("shell", "wm", "size", "1080x2400")
+            adb("shell", "wm", "density", "440")
+            adb("shell", "settings", "put", "system", "font_scale", "1.0")
+            adb("shell", "am", "force-stop", PACKAGE)
+            adb("shell", "am", "start", "-W", "-n", ACTIVITY)
+            home = hierarchy("phone-home", lambda root: find_control(
+                root, lambda label: label == "Ouvrir Cap Hifdh") is not None)
+            diagnostics("phone-home")
+            capture_cap_hifz("phone", home)
+        except (OSError, ValueError, RuntimeError, AssertionError, subprocess.SubprocessError) as exc:
+            failures.append(f"phone: {exc}")
     if failures:
         raise SystemExit("\n".join(failures))

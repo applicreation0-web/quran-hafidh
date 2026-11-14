@@ -215,7 +215,7 @@ final class ActiveReviewSlots {
         }
     }
 
-    private boolean earlierCurrentDraftExists(LocalDate today) {
+    boolean earlierCurrentDraftExists(LocalDate today) {
         for (String key : prefs.getAll().keySet()) {
             if (!key.startsWith(DRAFT + "|")) continue;
             String[] parts = key.split("\\|", -1);
