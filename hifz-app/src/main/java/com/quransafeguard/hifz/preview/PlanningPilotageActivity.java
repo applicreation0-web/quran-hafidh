@@ -106,11 +106,16 @@ public final class PlanningPilotageActivity extends Activity {
         final boolean tail = !postNas
             && rotation.leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS;
         final int itqanPage = tail ? geometry.pageForVerse(rotation.cursor) : 604;
+        // RECOMMENDED uses the fixed 3/3; other user-chosen modes retain their
+        // configured cadence, never an invented automatic ratio.
+        final int sabqiDays = prefs.weeklyProgramMode() == HifzPrefs.WeeklyProgram.RECOMMENDED
+            ? 3 : prefs.learningDaysPerWeek();
         quarters = PlanningPilotageForecast.quarters(geometry, today, start,
-            itqanPage, !tail, 3, scenario);
+            itqanPage, !tail, sabqiDays, scenario);
 
         body.addView(label("DÉMARRAGE  " + prefs.programStartDate().format(DATE), 15, true));
-        info("Programme actuel : Sabqi lun./mer./ven. · Itqān mar./jeu./sam.");
+        info("Rythme actuel : " + sabqiDays + " jours Sabqi / "
+            + (6 - sabqiDays) + " jours Itqān.");
         info("Simulation uniquement : aucune séance ni aucun acquis n'est modifié.");
 
         LocalDate coverage = ledger.coverageStartDate();
