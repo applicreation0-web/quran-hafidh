@@ -122,11 +122,25 @@ public final class MainActivity extends android.app.Activity {
             v -> startActivity(new Intent(this, AtlasMapActivity.class)));
         root.addView(readingRow);
 
+        // A thin, readable direct entry, never a fifth giant tile. BOOX keeps
+        // its existing 2x2 pictogram grammar, with no extra page of scrolling.
+        TextView planningAccess = Ui.bookText(this, "PLANNING & PILOTAGE   ›", 18f, true);
+        if (wideBoox()) planningAccess.setTextSize(21f);
+        planningAccess.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
+        planningAccess.setMinimumHeight(Ui.dp(this, 48));
+        planningAccess.setContentDescription("Ouvrir le planning et le pilotage Hifz");
+        planningAccess.setClickable(true);
+        planningAccess.setFocusable(true);
+        planningAccess.setOnClickListener(v ->
+            startActivity(new Intent(this, PlanningPilotageActivity.class)));
+        root.addView(planningAccess);
+
         // Mémorisation ponctuelle remains an optional advanced tool, not a fifth icon.
 
         geometryActions.add(study);
         geometryActions.add(semanticMap);
         geometryActions.add(progress);
+        geometryActions.add(planningAccess);
 
         // --- Parcours Hifz: the five paths, one line each, then this week.
         LinearLayout path = page();
