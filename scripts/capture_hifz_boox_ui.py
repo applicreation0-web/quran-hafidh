@@ -104,6 +104,32 @@ def verify_boox_home_icon_sizes(home, width):
                 f"minimum height {floor}px")
 
 
+
+def verify_boox_parcours_icon_sizes(root, width):
+    """All six approved Hifdh action icons stay legible, including Stabiliser
+    with the separate (Maintien) subtitle at fontScale 150%."""
+    floor = max(44, int(width * .05))
+    for label in ("Apprentissage", "Renforcement", "Stabilisation",
+                  "Consolidation", "Révision active", "Révision passive"):
+        node = next((n for n in root.iter("node")
+                     if n.get("package") == PACKAGE
+                     and any(value == label or value.startswith(label + " · ")
+                             for value in names(n))
+                     and n.get("class") == "android.widget.LinearLayout"
+                     and bounds(n) is not None), None)
+        if node is None:
+            raise AssertionError(f"Missing Parcours activity tile: {label}")
+        icon = next((n for n in node.iter("node")
+                     if n.get("class") == "android.widget.ImageView"
+                     and bounds(n) is not None), None)
+        if icon is None:
+            raise AssertionError(f"No approved pictogram visible in {label}")
+        x1, y1, x2, y2 = bounds(icon)
+        if y2 - y1 < floor:
+            raise AssertionError(
+                f"BOOX Parcours {label} icon is {y2-y1}px high; minimum {floor}px")
+
+
 def capture_cap_hifz(tag, home, width, height, fixed):
     visible = lambda tree, label: next((
         node for node in tree.iter("node") if node.get("package") == PACKAGE
@@ -178,6 +204,7 @@ def capture(tag, size, density, font):
         diagnostics(tag)
         root = hierarchy(tag)
         width, height = map(int, size.split("x"))
+        verify_boox_parcours_icon_sizes(root, width)
         for title in TITLES:
             aliases = {"Apprendre": ("Apprendre", "Apprentissage"),
                        "Stabiliser": ("Stabiliser", "Stabilisation")}.get(title, (title,))
