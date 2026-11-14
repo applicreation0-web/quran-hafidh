@@ -119,6 +119,8 @@ def capture_cap_hifz(tag, home, width, height, fixed):
         if (visible(home, lambda value: value == "Cap Hifdh") is None
                 or visible(home, is_graph) is None):
             raise AssertionError("Cap Hifdh title and timeline must both fit on the BOOX home")
+        if visible(home, lambda value: "lignes acquises · " in value and "datées" in value) is None:
+            raise AssertionError("The Cap Hifdh history footer is clipped on the BOOX home")
         if any(node.get("scrollable") == "true" for node in home.iter("node")):
             raise AssertionError("BOOX home must not scroll")
     else:
