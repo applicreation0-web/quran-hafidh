@@ -58,10 +58,15 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("primaryTile(readingRow, \"Lecture\", \"Lecture\""));
         assertTrue(home.contains("primaryTile(readingRow, \"Atlas\", \"Atlas\""));
         // All four home destinations must be presented identically, without a visual divider.
-        int practiceEnd = home.indexOf("root.addView(practiceRow)");
-        int readingEnd = home.indexOf("root.addView(readingRow)");
+        int practiceEnd = home.indexOf("addHomeAccessRow(root, practiceRow)");
+        int readingEnd = home.indexOf("addHomeAccessRow(root, readingRow)");
         int actionsStart = home.indexOf("geometryActions.add(study)");
-        assertTrue(practiceEnd > 0 && readingEnd > practiceEnd && actionsStart > readingEnd);
+        int capStart = home.indexOf("root.addView(capHifz)");
+        assertTrue(practiceEnd > 0 && readingEnd > practiceEnd && capStart > readingEnd
+            && actionsStart > capStart);
+        assertTrue("BOOX uses a fixed viewport with two equally weighted access rows",
+            home.contains("homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root);")
+            && home.contains("root.addView(row, new LinearLayout.LayoutParams(-1, 0, 1));"));
         assertFalse("Home destination rows must not be split by a rule",
             home.substring(practiceEnd, actionsStart).contains("Ui.divider(this)"));
         assertFalse("No asymmetric footer navigation", home.contains("secondaryTile("));
