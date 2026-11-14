@@ -253,20 +253,23 @@ public final class CapHifzActivity extends Activity {
         } else {
             line("Hifz total : échéance non déterminée avec la cadence actuelle.", 15);
         }
+        int lastYear = quarters.get(quarters.size() - 1).date.getYear();
+        year = Math.max(today.getYear(), Math.min(year, lastYear));
         if (forecastSabqi || tailForecast) {
             CapHifzTimelineView graphic = new CapHifzTimelineView(this, geometry, quarters,
                 forecastSabqi, tailForecast, chosenYear -> {
                     year = chosenYear;
                     render();
-                });
+                }, year);
             float fontScale = getResources().getConfiguration().fontScale;
-            int graphHeight = Math.round(240 * Math.max(1f, fontScale));
+            // Compact roadmap replaces a tall Cartesian graph. The quarterly
+            // numerical details remain navigable immediately below.
+            int graphHeight = Math.round((forecastSabqi && tailForecast ? 200 : 130)
+                * Math.max(1f, Math.min(1.25f, fontScale)));
             body.addView(graphic, new LinearLayout.LayoutParams(
                 android.view.ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, graphHeight)));
-            line("Graphique : temps →  ·  ordre QCF Juz 1 → 30  ·  traits séparés.", 13);
+            line("Jalons Juz estimés · toucher une année pour ses trimestres.", 13);
         }
-        int lastYear = quarters.get(quarters.size() - 1).date.getYear();
-        year = Math.max(today.getYear(), Math.min(year, lastYear));
         nav(Integer.toString(year), "année", year > today.getYear(), year < lastYear,
             delta -> { year += delta; render(); });
         boolean showItqan = tail;
