@@ -53,6 +53,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
             }
             screen.onActivity(activity -> {
                 View decor = activity.getWindow().getDecorView();
+                assertNotNull("Le titre visible doit etre Cap Hifdh", find(decor, "Cap Hifdh"));
                 TextView chosen = find(decor, "90 %");
                 assertNotNull("Expected the simulation controls", chosen);
                 assertNotNull("A real drawn 30-Juz graph is required",
