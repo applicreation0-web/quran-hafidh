@@ -25,10 +25,9 @@ final class CapHifzTimelineView extends View {
     private static final int INK = Color.rgb(22, 22, 22);
     private static final int MID = Color.rgb(79, 79, 79);
     private static final int FAINT = Color.rgb(182, 179, 169);
-    private static final int[] SABQI_JUZ = {2, 5, 10, 15, 20, 25, 26};
-    private static final int[] ITQAN_JUZ = {27, 28, 29, 30};
 
     private final List<CapHifzForecast.Quarter> quarters;
+    private final LocalDate start;
     private final boolean showSabqi;
     private final boolean showTail;
     private final IntConsumer selectYear;
@@ -36,13 +35,14 @@ final class CapHifzTimelineView extends View {
     private final int selectedYear;
 
     CapHifzTimelineView(Context context, GeometryRepository geometry,
-            List<CapHifzForecast.Quarter> quarters, boolean showSabqi,
+            List<CapHifzForecast.Quarter> quarters, LocalDate start, boolean showSabqi,
             boolean showTail, IntConsumer selectYear, int selectedYear) {
         super(context);
         if (geometry == null || quarters == null || quarters.isEmpty())
             throw new IllegalArgumentException("Real QCF and dated forecast required");
         CapHifzTimelineOrder.verify(quarters);
         this.quarters = quarters;
+        this.start = start;
         this.showSabqi = showSabqi;
         this.showTail = showTail;
         this.selectYear = selectYear;
@@ -50,7 +50,7 @@ final class CapHifzTimelineView extends View {
         setBackgroundColor(Ui.PAPER);
         setContentDescription("Feuille de route prévisionnelle, de gauche à droite par année. "
             + "Deux chemins séparés : Sabqi vers Al-Fatḥ et Itqān vers An-Nās. "
-            + "Les petits jalons indiquent les Juz atteints selon les fins de trimestre. "
+            + "Les jalons indiquent les entrées estimées dans les Juz. "
             + "Touchez un point du temps pour ouvrir les trimestres de cette année. "
             + "Cette simulation n'atteste aucune mémorisation.");
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
@@ -84,19 +84,16 @@ final class CapHifzTimelineView extends View {
     }
 
     private float x(LocalDate date, float left, float width) {
-        long from = quarters.get(0).date.toEpochDay();
+        long from = start.toEpochDay();
         long to = quarters.get(quarters.size() - 1).date.toEpochDay();
         return to <= from ? left
             : left + width * (date.toEpochDay() - from) / (float) (to - from);
     }
 
-    private LocalDate firstReached(int juz, boolean sabqi) {
-        return CapHifzTimelineOrder.firstProjectedJuz(quarters, juz, sabqi);
-    }
-
     private LocalDate finish(boolean sabqi) {
         for (CapHifzForecast.Quarter quarter : quarters) {
-            if (sabqi ? quarter.sabqiComplete : quarter.firstTailComplete) return quarter.date;
+            LocalDate date = sabqi ? quarter.sabqiFinish : quarter.tailFinish;
+            if (date != null) return date;
         }
         return null;
     }
@@ -105,23 +102,23 @@ final class CapHifzTimelineView extends View {
         super.onDraw(canvas);
         final float left = dp(16), right = getWidth() - dp(16);
         final float width = right - left;
-        if (width <= dp(72) || getHeight() <= dp(95)) return;
+        if (width <= dp(72) || getHeight() <= dp(78)) return;
 
         // Separate lanes with generous whitespace; no Cartesian axes, bars,
         // grid or fake step lengths. E-Ink-friendly strokes under 2dp.
-        if (showSabqi) drawLane(canvas, true, left, right, dp(61));
-        if (showTail) drawLane(canvas, false, left, right, showSabqi ? dp(132) : dp(61));
+        if (showSabqi) drawLane(canvas, true, left, right, dp(30));
+        if (showTail) drawLane(canvas, false, left, right, showSabqi ? dp(67) : dp(30));
 
-        float yearY = getHeight() - dp(17);
+        float yearY = getHeight() - dp(8);
         stroke(FAINT, .7f);
         canvas.drawLine(left, yearY - dp(12), right, yearY - dp(12), paint);
-        int begin = quarters.get(0).date.getYear();
+        int begin = start.getYear();
         int end = quarters.get(quarters.size() - 1).date.getYear();
         int interval = end - begin <= 4 ? 1 : end - begin <= 12 ? 3 : 5;
         float lastTextRight = -10000f;
         for (int yr = begin; yr <= end; yr++) {
             if ((yr - begin) % interval != 0 && yr != end) continue;
-            LocalDate at = yr == begin ? quarters.get(0).date : LocalDate.of(yr, 1, 1);
+            LocalDate at = yr == begin ? start : LocalDate.of(yr, 1, 1);
             float xx = x(at, left, width);
             // Avoid the common Excel-style pile-up of year labels.
             if (xx - lastTextRight < dp(38) && yr != end) continue;
@@ -133,18 +130,17 @@ final class CapHifzTimelineView extends View {
         }
         // The selected year is a fine ink marker, not an intrusive hover box.
         if (selectedYear >= begin && selectedYear <= end) {
-            LocalDate chosen = selectedYear == begin ? quarters.get(0).date
+            LocalDate chosen = selectedYear == begin ? start
                 : LocalDate.of(selectedYear, 1, 1);
             float xx = x(chosen, left, width);
-            stroke(INK, 1.35f);
-            canvas.drawCircle(xx, yearY - dp(12), dp(2.25f), paint);
+            rings(canvas, xx, yearY - dp(12), 2);
         }
     }
 
     private void drawLane(Canvas canvas, boolean sabqi,
             float left, float right, float centerY) {
         float width = right - left;
-        float headerY = centerY - dp(34);
+        float headerY = centerY - dp(15);
         text(canvas, sabqi ? "SABQI" : "ITQĀN", left, headerY, 12f, INK,
             Paint.Align.LEFT, true);
         text(canvas, sabqi ? "Vers Al-Fatḥ" : "Vers An-Nās", right, headerY,
@@ -168,34 +164,37 @@ final class CapHifzTimelineView extends View {
         paint.setColor(sabqi ? INK : MID);
         canvas.drawCircle(left, centerY, dp(2.6f), paint);
         if (end != null) {
-            stroke(sabqi ? INK : MID, 1.45f);
-            canvas.drawCircle(endX, centerY, dp(5.0f), paint);
-            paint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(endX, centerY, dp(2.2f), paint);
+            rings(canvas, endX, centerY, 3);
         } else {
-            stroke(MID, 1.0f);
+            stroke(MID, 1f);
             canvas.drawCircle(endX, centerY, dp(3.4f), paint);
         }
 
-        // Sparse, meaningful, canonical Juz checkpoints rather than arbitrary
-        // equally-spaced points. Labels are suppressed when they would collide.
-        int[] milestones = sabqi ? SABQI_JUZ : ITQAN_JUZ;
-        float previousLabelX = left - dp(26);
-        for (int milestone : milestones) {
-            LocalDate at = firstReached(milestone, sabqi);
-            // Do not paint a "future milestone" at the first sampled
-            // quarter if its Juz was already reached before that sample.
-            if (at == null || at.equals(quarters.get(0).date)) continue;
-            float xx = x(at, left, width);
-            boolean finalJuz = milestone == (sabqi ? 26 : 30);
-            if (xx - previousLabelX < dp(44) || finalJuz && end != null
-                    && Math.abs(xx - endX) < dp(12)) continue;
-            stroke(sabqi ? INK : MID, 1.1f);
-            canvas.drawCircle(xx, centerY, dp(3.1f), paint);
-            text(canvas, "J" + milestone, xx, centerY - dp(12), 10.5f,
-                MID, Paint.Align.CENTER, false);
-            previousLabelX = xx;
+        float previous = left;
+        for (CapHifzForecast.Quarter quarter : quarters) {
+            List<CapHifzForecast.Milestone> points = sabqi ? quarter.sabqiMilestones : quarter.tailMilestones;
+            for (CapHifzForecast.Milestone point : points) {
+                if (point.hizb % 2 == 0 && point.date.getYear() != selectedYear) continue;
+                float xx = x(point.date, left, width);
+                if (xx - previous < dp(11) || endX - xx < dp(10)) continue;
+                stroke(MID, 1f);
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor(Ui.PAPER);
+                canvas.drawCircle(xx, centerY, dp(3), paint);
+                stroke(MID, 1f);
+                canvas.drawCircle(xx, centerY, dp(3), paint);
+                previous = xx;
+            }
         }
+    }
+
+    private void rings(Canvas canvas, float x, float y, int count) {
+        stroke(INK, 1f);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Ui.PAPER);
+        canvas.drawCircle(x, y, dp(2.7f * count), paint);
+        stroke(INK, 1f);
+        for (int i = 1; i <= count; i++) canvas.drawCircle(x, y, dp(2.7f * i), paint);
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
@@ -204,7 +203,7 @@ final class CapHifzTimelineView extends View {
         if (event.getAction() == MotionEvent.ACTION_UP) {
             float left = dp(16), width = Math.max(1, getWidth() - dp(32));
             float fraction = Math.max(0, Math.min(1, (event.getX() - left) / width));
-            long from = quarters.get(0).date.toEpochDay();
+            long from = start.toEpochDay();
             long to = quarters.get(quarters.size() - 1).date.toEpochDay();
             int tappedYear = LocalDate.ofEpochDay(from + Math.round(fraction * (to - from))).getYear();
             selectYear.accept(tappedYear);

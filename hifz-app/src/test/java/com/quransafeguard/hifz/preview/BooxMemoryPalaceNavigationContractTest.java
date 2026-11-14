@@ -62,11 +62,13 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertTrue("Only real receipts fill the validation circle",
             calendar.contains("boolean done = !future && \"Validé\".equals(row.state);")
             && calendar.contains("circle.setColor(done ? Ui.INK : Ui.PAPER);"));
-        assertTrue("Only the actual day gets the double-ring even when another day is selected",
+        assertTrue("Only the actual weekday gets its own underline",
             calendar.contains("LocalDate realToday = HifzClock.today();")
             && calendar.contains("boolean currentDay = row.date.equals(realToday);")
             && calendar.contains("if (currentDay) {")
-            && calendar.contains("selection.setStroke(Ui.dp(this,2),Ui.INK);"));
+            && calendar.contains("day.setPaintFlags(day.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);"));
+        assertTrue("Consulted date has two fine outer rings",
+            calendar.contains("if (active) {") && calendar.contains("ringSize : new int[] {30, 34}"));
         assertTrue("The selected date alone is underlined, without changing today's ring",
             calendar.contains("if (active) date.setPaintFlags(date.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);"));
         assertTrue("Today and the selected date have separate accessibility labels",

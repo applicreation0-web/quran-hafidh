@@ -61,8 +61,11 @@ public final class BooxTodaySelectedDayInstrumentedTest {
     }
     private static void check(LinearLayout station, boolean today, boolean selected, boolean validated) {
         FrameLayout marker = (FrameLayout) station.getChildAt(0);
-        assertEquals("Today ring must be independent of the selection",
-            today, marker.getBackground() != null);
+        TextView weekday = (TextView) station.getChildAt(1);
+        assertEquals("The real day marker is independent of the selection",
+            today, (weekday.getPaintFlags() & Paint.UNDERLINE_TEXT_FLAG) != 0);
+        assertEquals("The consulted day adds exactly two outer rings",
+            selected ? 3 : 1, marker.getChildCount());
         TextView node = (TextView) marker.getChildAt(0);
         assertEquals("No symbols inside any circle", "", node.getText().toString());
         GradientDrawable disk = (GradientDrawable) node.getBackground();

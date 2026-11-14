@@ -84,22 +84,35 @@ def find_control(root, match):
                  and any(match(label) for label in names(node))), None)
 
 
-def capture_cap_hifz(tag, home):
-    control = find_control(home, lambda label: label == "Ouvrir Cap Hifdh")
-    if control is None:
-        raise AssertionError("Missing Cap Hifdh access")
-    width = max((node_bounds[2] for n in home.iter("node")
-                 if (node_bounds := bounds(n))), default=480)
-    if not control.get("text"):
-        raise AssertionError("Cap Hifdh is missing its visible title")
-    tap(control)
-    hierarchy(f"{tag}-cap-hifz", lambda root: any(
-        "Assiduité" in names(node) for node in root.iter("node")))
-    diagnostics(f"{tag}-cap-hifz")
-    adb("shell", "input", "swipe", str(width//2), "660", str(width//2), "310", "420")
-    hierarchy(f"{tag}-cap-hifz-simulations")
-    diagnostics(f"{tag}-cap-hifz-simulations")
-    adb("shell", "input", "keyevent", "KEYCODE_BACK")
+def capture_cap_hifz(tag, home, width, height, fixed):
+    visible = lambda tree, label: next((
+        node for node in tree.iter("node") if node.get("package") == PACKAGE
+        and any(label(value) for value in names(node))
+        and (area := bounds(node)) and 0 <= area[0] < area[2] <= width
+        and 0 <= area[1] < area[3] <= height), None)
+
+    def is_graph(value):
+        return value.startswith("Feuille de route prévisionnelle")
+
+    if fixed:
+        home = hierarchy(f"{tag}-cap-viewport", lambda tree: visible(tree, is_graph) is not None)
+        if not visible(home, lambda value: value == "Cap Hifdh") or not visible(home, is_graph):
+            raise AssertionError("Cap Hifdh title and timeline must both fit on the BOOX home")
+        if any(node.get("scrollable") == "true" for node in home.iter("node")):
+            raise AssertionError("BOOX home must not scroll")
+    else:
+        adb("shell", "input", "swipe", str(width // 2), str(int(height * .78)),
+            str(width // 2), str(int(height * .34)), "440")
+    for scenario in (80, 90, 100):
+        screen = hierarchy(f"{tag}-cap-ready", lambda tree: visible(tree, is_graph) is not None)
+        option = find_control(screen, lambda value: value.startswith(f"Simulation à {scenario} pour cent"))
+        if option is None:
+            raise AssertionError(f"Missing simulation {scenario} on home")
+        tap(option)
+        suffix = f"{tag}-cap-hifdh-{scenario}"
+        hierarchy(suffix, lambda tree: visible(tree, is_graph) is not None and visible(
+            tree, lambda value: value == f"Simulation à {scenario} pour cent, sélectionnée") is not None)
+        diagnostics(suffix)
 
 
 def sunday_station(label):
@@ -130,13 +143,11 @@ def capture(tag, size, density, font):
         (OUTPUT / f"{tag}.launch.txt").write_bytes(launch.stdout + launch.stderr)
         if launch.returncode or b"Status: ok" not in launch.stdout:
             raise RuntimeError("Launcher did not report a successful activity start")
+        home = hierarchy(f"{tag}-home", lambda tree: find_control(
+            tree, lambda label: label == "Parcours") is not None)
         diagnostics(f"{tag}-home")
-        home = hierarchy(f"{tag}-home", lambda tree: find_control(tree, lambda label: label == "Parcours") is not None)
-        cap = find_control(home, lambda label: label == "Ouvrir Cap Hifdh")
-        if cap is not None:
-            capture_cap_hifz(tag, home)
-            home = hierarchy(f"{tag}-returned", lambda tree: find_control(
-                tree, lambda label: label == "Parcours") is not None)
+        width, height = map(int, size.split("x"))
+        capture_cap_hifz(tag, home, width, height, fixed=True)
         parcours = find_control(home, lambda label: label == "Parcours")
         tap(parcours)
         time.sleep(2)
@@ -203,19 +214,19 @@ if __name__ == "__main__":
             except (OSError, ValueError, RuntimeError, AssertionError, subprocess.SubprocessError) as exc:
                 failures.append(f"{tag}: {exc}")
                 print(failures[-1], flush=True)
-    if b"CapHifzActivity" in subprocess.check_output(
-            ("git", "show", "HEAD:hifz-app/src/main/AndroidManifest.xml")):
+    for font in (1.0, 1.25, 1.5):
+        tag = f"phone-font{int(font * 100)}"
         try:
             adb("shell", "wm", "size", "1080x2400")
             adb("shell", "wm", "density", "440")
-            adb("shell", "settings", "put", "system", "font_scale", "1.0")
+            adb("shell", "settings", "put", "system", "font_scale", str(font))
             adb("shell", "am", "force-stop", PACKAGE)
             adb("shell", "am", "start", "-W", "-n", ACTIVITY)
-            home = hierarchy("phone-home", lambda root: find_control(
-                root, lambda label: label == "Ouvrir Cap Hifdh") is not None)
-            diagnostics("phone-home")
-            capture_cap_hifz("phone", home)
+            home = hierarchy(f"{tag}-home", lambda root: find_control(
+                root, lambda label: label == "Parcours") is not None)
+            diagnostics(f"{tag}-home")
+            capture_cap_hifz(tag, home, 1080, 2400, fixed=False)
         except (OSError, ValueError, RuntimeError, AssertionError, subprocess.SubprocessError) as exc:
-            failures.append(f"phone: {exc}")
+            failures.append(f"{tag}: {exc}")
     if failures:
         raise SystemExit("\n".join(failures))

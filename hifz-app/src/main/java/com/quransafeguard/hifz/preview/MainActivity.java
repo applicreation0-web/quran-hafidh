@@ -51,7 +51,8 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout itqanCard;
     private LinearLayout consolidationCard;
     private TextView todayHeading;
-    private ScrollView homeScroll;
+    private View homeViewport;
+    private CapHifzPanel capHifz;
     private ViewGroup parcoursScroll;
     private TextView backlogHomeRow;
     private TextView backlogParcoursRow;
@@ -71,7 +72,7 @@ public final class MainActivity extends android.app.Activity {
         // Navigation-only refactor: all cadence, Hifz credits and geometry guards are unchanged.
         LinearLayout root = page();
         // BOOX portrait home: fill the viewport without a centered 720dp tablet inset.
-        homeScroll = scrollOf(root);
+        homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root);
         LinearLayout header = Ui.row(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
         // Home brand mark must match the actual installed Android launcher icon.
@@ -111,7 +112,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout parcours = primaryTile(practiceRow, "Parcours Hifz", "Parcours", v -> showParcours());
         LinearLayout progress = primaryTile(practiceRow, "Progression", "Progression",
             v -> startActivity(new Intent(this, ProgressMapActivity.class)));
-        root.addView(practiceRow);
+        addHomeAccessRow(root, practiceRow);
 
         LinearLayout readingRow = Ui.row(this);
         // Eight dp of breathing room groups the two related pairs without drawing a rule.
@@ -120,30 +121,16 @@ public final class MainActivity extends android.app.Activity {
             v -> startActivity(new Intent(this, StudyReaderActivity.class)));
         LinearLayout semanticMap = primaryTile(readingRow, "Atlas", "Atlas",
             v -> startActivity(new Intent(this, AtlasMapActivity.class)));
-        root.addView(readingRow);
+        addHomeAccessRow(root, readingRow);
 
-        // A thin, readable direct entry, never a fifth giant tile. BOOX keeps
-        // its existing 2x2 pictogram grammar, with no extra page of scrolling.
-        TextView capHifzAccess = Ui.notebookTitle(this, "Cap Hifdh  ›", 20f);
-        if (wideBoox()) capHifzAccess.setTextSize(21f);
-        capHifzAccess.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
-        capHifzAccess.setMinimumHeight(Ui.dp(this, 48));
-        capHifzAccess.setContentDescription("Ouvrir Cap Hifdh");
-        capHifzAccess.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_haafidh_cap_hifz, 0, 0, 0);
-        capHifzAccess.setCompoundDrawablePadding(Ui.dp(this, 8));
-        capHifzAccess.setGravity(Gravity.CENTER_VERTICAL);
-        capHifzAccess.setClickable(true);
-        capHifzAccess.setFocusable(true);
-        capHifzAccess.setOnClickListener(v ->
-            startActivity(new Intent(this, CapHifzActivity.class)));
-        root.addView(capHifzAccess);
+        capHifz = new CapHifzPanel(this);
+        root.addView(capHifz);
 
         // Mémorisation ponctuelle remains an optional advanced tool, not a fifth icon.
 
         geometryActions.add(study);
         geometryActions.add(semanticMap);
         geometryActions.add(progress);
-        geometryActions.add(capHifzAccess);
 
         // --- Parcours Hifz: the five paths, one line each, then this week.
         LinearLayout path = page();
@@ -273,6 +260,7 @@ public final class MainActivity extends android.app.Activity {
                     setGeometryActionsEnabled(true);
                     ledger.capture(prefs);
                     refreshAll();
+                    capHifz.refresh(loaded);
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
@@ -409,6 +397,14 @@ public final class MainActivity extends android.app.Activity {
         return Math.max(62, Math.min(responsiveCapDp, (widthDp - 48) / columns - 14));
     }
 
+    private void addHomeAccessRow(LinearLayout root, LinearLayout row) {
+        if (wideBoox()) {
+            root.addView(row, new LinearLayout.LayoutParams(-1, 0, 1));
+        } else {
+            root.addView(row);
+        }
+    }
+
     /** Four equal-size home destinations in a 2×2 BOOX grid, without cards or separators. */
     private LinearLayout primaryTile(LinearLayout parent, String role, String display,
                                     View.OnClickListener listener) {
@@ -416,7 +412,7 @@ public final class MainActivity extends android.app.Activity {
         tile.setPadding(Ui.dp(this, 3), Ui.dp(this, 12), Ui.dp(this, 3), Ui.dp(this, 12));
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(2, 112);
-        tile.setMinimumHeight(Ui.dp(this, sideDp + 22));
+        if (!wideBoox()) tile.setMinimumHeight(Ui.dp(this, sideDp + 22));
         int drawable = largeIconFor(role);
         if (drawable == 0) drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
@@ -426,7 +422,9 @@ public final class MainActivity extends android.app.Activity {
             // One accessible label belongs to the complete tile, not the decorative image.
             icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             icon.setPadding(0, 0, 0, 0);
-            tile.addView(icon, new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
+            tile.addView(icon, wideBoox()
+                ? new LinearLayout.LayoutParams(Ui.dp(this, sideDp), -1)
+                : new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
         // No labels beneath the four large home pictograms, per the BOOX
         // memory-palace interface contract. Keep the full spoken destination.
@@ -435,7 +433,7 @@ public final class MainActivity extends android.app.Activity {
         tile.setFocusable(true);
         tile.setOnClickListener(listener);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            wideBoox() ? ViewGroup.LayoutParams.MATCH_PARENT : ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.setMargins(Ui.dp(this, 3), 0, Ui.dp(this, 3), 0);
         parent.addView(tile, lp);
         return tile;
@@ -535,7 +533,7 @@ public final class MainActivity extends android.app.Activity {
 
     private void showHome() {
         showingParcours = false;
-        setContentView(homeScroll);
+        setContentView(homeViewport);
     }
 
     private void showParcours() {
@@ -560,7 +558,10 @@ public final class MainActivity extends android.app.Activity {
             && itqanCard.getChildAt(3) instanceof TextView
             ? (TextView) itqanCard.getChildAt(3) : null;
         if (itqanCue != null) itqanCue.setText(stabilizationProgramCue());
-        if (today != null && geometry != null) refreshAll();
+        if (today != null && geometry != null) {
+            refreshAll();
+            capHifz.refresh(geometry);
+        }
     }
 
     /** Only change text; retain the original fixed pictogram and click destination. */
@@ -1570,7 +1571,7 @@ public final class MainActivity extends android.app.Activity {
         weekDayPanel.removeAllViews();
         if (weekRows.isEmpty()) return;
         // Atlas is the GRAPHIC vocabulary only: one rail and seven real day targets.
-        // A double ring marks TODAY; an underlined date marks the consulted day.
+        // A separate date marker identifies today; concentric rings highlight selection.
         // Both may coexist with a genuine completed day's solid fill.
         // This read-only view never changes Hifz receipts, dates, or the weekly programme.
         String[] initials = {"L", "M", "M", "J", "V", "S", "D"};
@@ -1600,7 +1601,7 @@ public final class MainActivity extends android.app.Activity {
             station.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             station.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
             // BOOX calendar: all circles remain empty of glyphs. Only a genuinely
-            // validated day gets an ink fill. Today gets a permanent outer ring
+            // validated day gets an ink fill. Today is marked below the circle
             // even while the user consults another date in the seven-day strip.
             TextView node = Ui.text(this, "", 15f, true);
             node.setGravity(Gravity.CENTER);
@@ -1610,22 +1611,22 @@ public final class MainActivity extends android.app.Activity {
             circle.setColor(done ? Ui.INK : Ui.PAPER);
             circle.setStroke(Ui.dp(this,1),Ui.INK);
             node.setBackground(circle);
-            LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(
-                Ui.dp(this,26), Ui.dp(this,26));
-            // The double ring tracks today's real date, not the user's selection.
-            // Its white gap keeps a filled (validated) node legible on E-Ink.
             FrameLayout marker = new FrameLayout(this);
-            if (currentDay) {
-                android.graphics.drawable.GradientDrawable selection =
-                    new android.graphics.drawable.GradientDrawable();
-                selection.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-                selection.setColor(Ui.PAPER);
-                selection.setStroke(Ui.dp(this,2),Ui.INK);
-                marker.setBackground(selection);
-            }
             FrameLayout.LayoutParams inner = new FrameLayout.LayoutParams(
                 Ui.dp(this,26),Ui.dp(this,26),Gravity.CENTER);
             marker.addView(node,inner);
+            if (active) {
+                for (int ringSize : new int[] {30, 34}) {
+                    View ring = new View(this);
+                    android.graphics.drawable.GradientDrawable outline =
+                        new android.graphics.drawable.GradientDrawable();
+                    outline.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                    outline.setStroke(Ui.dp(this,1), Ui.INK);
+                    ring.setBackground(outline);
+                    marker.addView(ring, new FrameLayout.LayoutParams(
+                        Ui.dp(this,ringSize), Ui.dp(this,ringSize), Gravity.CENTER));
+                }
+            }
             station.addView(marker,new LinearLayout.LayoutParams(
                 Ui.dp(this,34),Ui.dp(this,34)));
             TextView day = Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1],wideBoox()?17f:13f,active);
@@ -1633,6 +1634,9 @@ public final class MainActivity extends android.app.Activity {
             station.addView(day);
             TextView date = Ui.text(this, Integer.toString(row.date.getDayOfMonth()),wideBoox()?16f:12f,active);
             date.setGravity(Gravity.CENTER);
+            if (currentDay) {
+                day.setPaintFlags(day.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+            }
             if (active) date.setPaintFlags(date.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             station.addView(date);
             if (row.date.getDayOfWeek() == DayOfWeek.SUNDAY && !wideBoox()) {

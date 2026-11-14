@@ -43,36 +43,50 @@ public final class CapHifzReadOnlyInstrumentedTest {
     }
 
     private void exercise(boolean postNas) throws Exception {
-        org.json.JSONObject before = HifzBackup.export(context);
-        try (ActivityScenario<CapHifzActivity> screen = ActivityScenario.launch(CapHifzActivity.class)) {
+        try (ActivityScenario<MainActivity> screen = ActivityScenario.launch(MainActivity.class)) {
             for (int i = 0; i < 100; i++) {
                 boolean[] ready = {false};
-                screen.onActivity(activity -> ready[0] = find(activity.getWindow().getDecorView(), "Simulations") != null);
+                screen.onActivity(activity -> ready[0] =
+                    findContains(activity.getWindow().getDecorView(), "Sabqi ") != null
+                        && find(activity.getWindow().getDecorView(), "90 %") != null);
                 if (ready[0]) break;
                 SystemClock.sleep(100);
             }
+            org.json.JSONObject before = HifzBackup.export(context);
             screen.onActivity(activity -> {
                 View decor = activity.getWindow().getDecorView();
-                assertNotNull("Le titre visible doit etre Cap Hifdh", find(decor, "Cap Hifdh"));
-                TextView chosen = find(decor, "90 %");
-                assertNotNull("Expected the simulation controls", chosen);
-                assertNotNull("A real drawn 30-Juz graph is required",
-                    findGraph(decor));
-                assertTrue("The forecast is not an earned 30-Juz credit",
-                    findContains(decor, "30 Juz acquis attestés") == null);
-                assertTrue(chosen.isSelected());
+                assertNotNull(find(decor, "Cap Hifdh"));
+                assertNotNull(findContains(decor, "Sabqi "));
+                assertNull(find(decor, "Trajectoire"));
+                assertNull(find(decor, "Historique"));
+                assertNotNull(findGraph(decor));
+                assertNull(findContains(decor, "30 Juz acquis attestés"));
+                assertTrue(find(decor, "90 %").isSelected());
                 assertEquals(postNas, find(decor, "Maintien après An-Nās") != null);
                 assertTrue(find(decor, "100 %").performClick());
                 assertTrue(find(decor, "100 %").isSelected());
-                assertTrue(find(decor, "Historique des acquis ›").performClick());
+                assertTrue(find(decor, "80 %").performClick());
+                assertTrue(find(decor, "80 %").isSelected());
+                assertNotNull(findContains(decor, "acquis"));
+                if (activity.getResources().getConfiguration().smallestScreenWidthDp >= 600) {
+                    assertFalse(hasScrollView(decor));
+                }
             });
+            org.json.JSONObject after = HifzBackup.export(context);
+            for (String store : new String[]{"values", "dashboard", "j10", "legacy_gates", "free_mem"}) {
+                assertEquals(store, before.getJSONObject(store).toString(), after.getJSONObject(store).toString());
+            }
         }
-        org.json.JSONObject after = HifzBackup.export(context);
-        before.remove("exportedAtEpochMs");
-        after.remove("exportedAtEpochMs");
-        for (String store : new String[]{"values", "dashboard", "j10", "legacy_gates", "free_mem"}) {
-            assertEquals(store, before.getJSONObject(store).toString(), after.getJSONObject(store).toString());
+    }
+
+    private static boolean hasScrollView(View view) {
+        if (view instanceof android.widget.ScrollView) return true;
+        if (view instanceof ViewGroup group) {
+            for (int i = 0; i < group.getChildCount(); i++) {
+                if (hasScrollView(group.getChildAt(i))) return true;
+            }
         }
+        return false;
     }
 
     private static CapHifzTimelineView findGraph(View view) {
