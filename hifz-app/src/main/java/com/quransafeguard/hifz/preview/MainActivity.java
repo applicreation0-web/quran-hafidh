@@ -124,11 +124,11 @@ public final class MainActivity extends android.app.Activity {
 
         // A thin, readable direct entry, never a fifth giant tile. BOOX keeps
         // its existing 2x2 pictogram grammar, with no extra page of scrolling.
-        TextView capHifzAccess = Ui.notebookTitle(this, "Cap Hifz  ›", 20f);
+        TextView capHifzAccess = Ui.notebookTitle(this, "Cap Hifdh  ›", 20f);
         if (wideBoox()) capHifzAccess.setTextSize(21f);
         capHifzAccess.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
         capHifzAccess.setMinimumHeight(Ui.dp(this, 48));
-        capHifzAccess.setContentDescription("Ouvrir Cap Hifz");
+        capHifzAccess.setContentDescription("Ouvrir Cap Hifdh");
         capHifzAccess.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_haafidh_cap_hifz, 0, 0, 0);
         capHifzAccess.setCompoundDrawablePadding(Ui.dp(this, 8));
         capHifzAccess.setGravity(Gravity.CENTER_VERTICAL);
