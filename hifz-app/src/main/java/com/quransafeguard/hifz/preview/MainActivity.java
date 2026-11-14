@@ -1648,10 +1648,12 @@ public final class MainActivity extends android.app.Activity {
             }
             station.addView(marker,new LinearLayout.LayoutParams(
                 Ui.dp(this,34),Ui.dp(this,34)));
-            TextView day = Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1],wideBoox()?17f:13f,active);
+            TextView day = Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1],
+                compactBooxHome() ? 13f : wideBoox() ? 17f : 13f, active);
             day.setGravity(Gravity.CENTER);
             station.addView(day);
-            TextView date = Ui.text(this, Integer.toString(row.date.getDayOfMonth()),wideBoox()?16f:12f,active);
+            TextView date = Ui.text(this, Integer.toString(row.date.getDayOfMonth()),
+                compactBooxHome() ? 13f : wideBoox() ? 16f : 12f, active);
             date.setGravity(Gravity.CENTER);
             if (currentDay) {
                 day.setPaintFlags(day.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
