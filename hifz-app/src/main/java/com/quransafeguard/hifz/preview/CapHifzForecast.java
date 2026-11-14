@@ -13,20 +13,46 @@ import java.util.Set;
  * The displayed attendance is a scenario, not an acquired-credit multiplier.
  */
 final class CapHifzForecast {
+    static final class Milestone {
+        final LocalDate date;
+        final VerseRef verse;
+        final int hizb;
+
+        Milestone(LocalDate date, VerseRef verse, int hizb) {
+            this.date = date;
+            this.verse = verse;
+            this.hizb = hizb;
+        }
+    }
+
     static final class Quarter {
         final LocalDate date;
         final VerseRef sabqi;
         final VerseRef itqan; // null after the FIRST TAIL pass or when not in TAIL
         final boolean sabqiComplete;
         final boolean firstTailComplete;
+        final List<Milestone> sabqiMilestones;
+        final List<Milestone> tailMilestones;
+        final LocalDate sabqiFinish;
+        final LocalDate tailFinish;
 
         Quarter(LocalDate date, VerseRef sabqi, VerseRef itqan,
                 boolean sabqiComplete, boolean firstTailComplete) {
+            this(date, sabqi, itqan, sabqiComplete, firstTailComplete, List.of(), List.of(), null, null);
+        }
+
+        Quarter(LocalDate date, VerseRef sabqi, VerseRef itqan, boolean sabqiComplete,
+                boolean firstTailComplete, List<Milestone> sabqiMilestones, List<Milestone> tailMilestones,
+                LocalDate sabqiFinish, LocalDate tailFinish) {
             this.date = date;
             this.sabqi = sabqi;
             this.itqan = itqan;
             this.sabqiComplete = sabqiComplete;
             this.firstTailComplete = firstTailComplete;
+            this.sabqiMilestones = List.copyOf(sabqiMilestones);
+            this.tailMilestones = List.copyOf(tailMilestones);
+            this.sabqiFinish = sabqiFinish;
+            this.tailFinish = tailFinish;
         }
     }
 
@@ -50,27 +76,69 @@ final class CapHifzForecast {
         int itqanOpportunities = 0;
         int percent = (int) Math.round(attendance * 100);
         ArrayList<Quarter> rows = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
+        List<Milestone> sabqiBoundaries = boundaries(geometry, 1, limit);
+        List<Milestone> tailBoundaries = boundaries(geometry, 49, geometry.lineCount() - 1);
+        int sabqiBoundary = firstPendingBoundary(geometry, sabqiBoundaries, sabqiCursor);
+        int tailBoundary = firstPendingBoundary(geometry, tailBoundaries, nextItqanLine);
+        // At the minimum displayed attendance, even one Sabqi slot per week covers
+        // the entire route within this bound. Unreachable routes remain open.
+        for (int i = 0; i < 240; i++) {
+            List<Milestone> sabqiMilestones = new ArrayList<>();
+            List<Milestone> tailMilestones = new ArrayList<>();
+            LocalDate sabqiFinish = null;
+            LocalDate tailFinish = null;
             while (!day.isAfter(date)) {
                 CadenceAction action = calendar.action(day);
                 if (forecastSabqi && sabqiCursor <= limit && action == CadenceAction.LEARNING
                         && attended(++sabqiOpportunities, percent)) {
                     sabqiCursor = geometry.fiveLineBlock(sabqiCursor, limit).endLineIndex + 1;
+                    sabqiBoundary = crossings(geometry, sabqiBoundaries, sabqiBoundary, sabqiCursor, day, sabqiMilestones);
+                    if (sabqiCursor > limit) sabqiFinish = day;
                 }
                 if (forecastTail && !tail.complete && action == CadenceAction.STABILIZATION
                         && tail.available(day) && attended(++itqanOpportunities, percent)) {
                     tail.advance(day);
+                    int covered = tail.position == null ? -1 : geometry.lastLineIndex(tail.position);
+                    tailBoundary = crossings(geometry, tailBoundaries, tailBoundary, covered + 1, day, tailMilestones);
+                    if (tail.complete) tailFinish = day;
                 }
                 day = day.plusDays(1);
             }
             boolean sabqiDone = sabqiCursor > limit;
             VerseRef sabqi = sabqiDone ? SabqiRoute.ROUTE_END
                 : lastCompleteVerse(geometry, sabqiCursor - 1);
-            rows.add(new Quarter(date, sabqi, tail.complete ? null : tail.position, sabqiDone, tail.complete));
+            rows.add(new Quarter(date, sabqi, tail.complete ? null : tail.position, sabqiDone, tail.complete,
+                sabqiMilestones, tailMilestones, sabqiFinish, tailFinish));
             if ((sabqiDone || !forecastSabqi) && (tail.complete || !forecastTail)) break;
             date = date.plusDays(1).plusMonths(3).minusDays(1);
         }
         return Collections.unmodifiableList(rows);
+    }
+
+    private static List<Milestone> boundaries(GeometryRepository geometry, int firstSurah, int lastLine) {
+        List<Milestone> result = new ArrayList<>();
+        for (int[] rub : QuranRubBoundaries.TABLE) {
+            if (rub[5] != 0 || rub[1] < firstSurah) continue;
+            VerseRef verse = new VerseRef(rub[1], rub[2]);
+            if (geometry.lastLineIndex(verse) > lastLine) break;
+            result.add(new Milestone(null, verse, rub[4]));
+        }
+        return result;
+    }
+
+    private static int firstPendingBoundary(GeometryRepository geometry, List<Milestone> bounds, int cursor) {
+        int index = 0;
+        while (index < bounds.size() && geometry.lastLineIndex(bounds.get(index).verse) < cursor) index++;
+        return index;
+    }
+
+    private static int crossings(GeometryRepository geometry, List<Milestone> bounds, int index,
+            int cursor, LocalDate day, List<Milestone> output) {
+        while (index < bounds.size() && geometry.lastLineIndex(bounds.get(index).verse) < cursor) {
+            Milestone point = bounds.get(index++);
+            output.add(new Milestone(day, point.verse, point.hizb));
+        }
+        return index;
     }
 
     private static boolean attended(int opportunities, int percent) {

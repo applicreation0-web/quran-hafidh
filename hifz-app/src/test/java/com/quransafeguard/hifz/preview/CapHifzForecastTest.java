@@ -100,6 +100,30 @@ public final class CapHifzForecastTest {
         assertFalse(rows.get(0).sabqiComplete);
     }
 
+    @Test public void milestonesAreDatedOnTheDayTheBoundaryIsCrossed() throws Exception {
+        GeometryRepository geo = geometry();
+        LocalDate today = LocalDate.of(2026, 11, 14);
+        List<CapHifzForecast.Quarter> rows = quarters(geo, today,
+            geo.firstLineIndex(new VerseRef(2,125)), 527, false, 3, 1);
+        LocalDate previous = today;
+        int previousHizb = 0;
+        boolean foundBeforeQuarterEnd = false;
+        for (CapHifzForecast.Quarter row : rows) {
+            for (CapHifzForecast.Milestone point : row.sabqiMilestones) {
+                assertTrue(point.hizb > previousHizb);
+                assertFalse(point.date.isBefore(previous));
+                assertTrue(point.date.isAfter(today));
+                assertFalse(point.date.isAfter(row.date));
+                assertEquals(point.hizb, CapHifzForecast.hizb(point.verse));
+                foundBeforeQuarterEnd |= point.date.isBefore(row.date);
+                previous = point.date;
+                previousHizb = point.hizb;
+            }
+        }
+        assertEquals(52, previousHizb);
+        assertTrue(foundBeforeQuarterEnd);
+    }
+
     @Test public void higherAttendanceCannotFinishLater() throws Exception {
         GeometryRepository geo=geometry();
         int cursor=geo.firstLineIndex(new VerseRef(2,125));
