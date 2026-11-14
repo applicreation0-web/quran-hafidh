@@ -239,6 +239,32 @@ public final class CapHifzActivity extends Activity {
         List<CapHifzForecast.Quarter> quarters = CapHifzForecast.quarters(geometry, today, cursor,
             nextItqan, postNas, date -> WeeklyProgramPolicy.actionFor(date.getDayOfWeek(), programme, sabqiDays),
             forecastSabqi, tailForecast, remaining, stabilized, blockedWeek, scenario / 100.0);
+        // The full horizon is drawn ONCE, independent of the year selected below.
+        // Never reuse an illustrative serpentine which can invert physical Juz order.
+        heading("Trajectoire des 30 Juz");
+        LocalDate coverageGoal = CapHifzTimelineOrder.firstFullCoverageQuarter(quarters);
+        if (CapHifzTimelineOrder.allThirtyJuzAcquired(geometry, acquired)) {
+            line("Hifz total : 30 Juz acquis attestés", 15);
+        } else if (coverageGoal != null) {
+            line("Fin estimée des deux parcours : T"
+                + ((coverageGoal.getMonthValue() - 1) / 3 + 1)
+                + " " + coverageGoal.getYear(), 15);
+            line("Objectif Hifz total : tous les acquis restent à confirmer par leurs reçus.", 13);
+        } else {
+            line("Hifz total : échéance non déterminée avec la cadence actuelle.", 15);
+        }
+        if (forecastSabqi || tailForecast) {
+            CapHifzTimelineView graphic = new CapHifzTimelineView(this, geometry, quarters,
+                forecastSabqi, tailForecast, chosenYear -> {
+                    year = chosenYear;
+                    render();
+                });
+            float fontScale = getResources().getConfiguration().fontScale;
+            int graphHeight = Math.round(240 * Math.max(1f, fontScale));
+            body.addView(graphic, new LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, graphHeight)));
+            line("Graphique : temps →  ·  ordre QCF Juz 1 → 30  ·  traits séparés.", 13);
+        }
         int lastYear = quarters.get(quarters.size() - 1).date.getYear();
         year = Math.max(today.getYear(), Math.min(year, lastYear));
         nav(Integer.toString(year), "année", year > today.getYear(), year < lastYear,
