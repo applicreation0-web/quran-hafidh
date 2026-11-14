@@ -102,10 +102,12 @@ public final class CapHifzTimelineOrderTest {
                     CapHifzForecast.juz(q.itqan)>=juz)));
             previous=reached;
         }
-        assertEquals(CapHifzTimelineOrder.firstProjectedJuz(rows,30,false),
-            rows.stream().filter(q -> q.firstTailComplete).findFirst().get().date);
-        assertEquals(CapHifzTimelineOrder.firstProjectedJuz(rows,26,true),
-            rows.stream().filter(q -> q.sabqiComplete).findFirst().get().date);
+        // Juz 30 starts long before An-Nās, and Juz 26 starts before Al-Fatḥ.
+        // Entering a Juz must NEVER be confused with completing the route.
+        assertFalse(CapHifzTimelineOrder.firstProjectedJuz(rows,30,false).isAfter(
+            rows.stream().filter(q -> q.firstTailComplete).findFirst().get().date));
+        assertFalse(CapHifzTimelineOrder.firstProjectedJuz(rows,26,true).isAfter(
+            rows.stream().filter(q -> q.sabqiComplete).findFirst().get().date));
     }
 
     @Test public void modernRoadmapDoesNotInventMissingItqanTrackOrJuzCrossings() throws Exception {
