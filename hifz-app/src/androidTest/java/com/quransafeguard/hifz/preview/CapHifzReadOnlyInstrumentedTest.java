@@ -55,6 +55,10 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 View decor = activity.getWindow().getDecorView();
                 TextView chosen = find(decor, "90 %");
                 assertNotNull("Expected the simulation controls", chosen);
+                assertNotNull("A real drawn 30-Juz graph is required",
+                    findGraph(decor));
+                assertTrue("The forecast is not an earned 30-Juz credit",
+                    findContains(decor, "30 Juz acquis attestés") == null);
                 assertTrue(chosen.isSelected());
                 assertEquals(postNas, find(decor, "Maintien après An-Nās") != null);
                 assertTrue(find(decor, "100 %").performClick());
@@ -68,6 +72,31 @@ public final class CapHifzReadOnlyInstrumentedTest {
         for (String store : new String[]{"values", "dashboard", "j10", "legacy_gates", "free_mem"}) {
             assertEquals(store, before.getJSONObject(store).toString(), after.getJSONObject(store).toString());
         }
+    }
+
+    private static CapHifzTimelineView findGraph(View view) {
+        if (view instanceof CapHifzTimelineView) return (CapHifzTimelineView) view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                CapHifzTimelineView found = findGraph(group.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private static TextView findContains(View view, String label) {
+        if (view instanceof TextView &&
+                ((TextView) view).getText().toString().contains(label)) return (TextView) view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                TextView found = findContains(group.getChildAt(i), label);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private static TextView find(View view, String label) {
