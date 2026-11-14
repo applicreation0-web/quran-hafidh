@@ -48,6 +48,24 @@ final class CapHifzTimelineOrder {
         }
     }
 
+    /**
+     * The first quarter with a real forecast position in this canonical Juz
+     * or later. No interpolation between quarter dates, and no fictitious
+     * Itqān return after the first arrival at An-Nās.
+     */
+    static LocalDate firstProjectedJuz(List<CapHifzForecast.Quarter> quarters,
+            int juz, boolean sabqi) {
+        verify(quarters);
+        if (juz < 1 || juz > 30) throw new IllegalArgumentException("Juz 1..30");
+        for (CapHifzForecast.Quarter row : quarters) {
+            VerseRef ref = sabqi ? row.sabqi
+                : row.firstTailComplete ? ItqanRotationPolicy.TAIL_END : row.itqan;
+            if (ref != null && CapHifzForecast.juz(ref) >= juz) return row.date;
+            if (!sabqi && row.firstTailComplete) break;
+        }
+        return null;
+    }
+
     /** Date means the END of the first quarter when both ROUTES are planned complete. */
     static LocalDate firstFullCoverageQuarter(List<CapHifzForecast.Quarter> quarters) {
         verify(quarters);
