@@ -183,7 +183,9 @@ final class CapHifzTimelineView extends View {
         float previousLabelX = left - dp(26);
         for (int milestone : milestones) {
             LocalDate at = firstReached(milestone, sabqi);
-            if (at == null) continue;
+            // Do not paint a "future milestone" at the first sampled
+            // quarter if its Juz was already reached before that sample.
+            if (at == null || at.equals(quarters.get(0).date)) continue;
             float xx = x(at, left, width);
             boolean finalJuz = milestone == (sabqi ? 26 : 30);
             if (xx - previousLabelX < dp(44) || finalJuz && end != null
