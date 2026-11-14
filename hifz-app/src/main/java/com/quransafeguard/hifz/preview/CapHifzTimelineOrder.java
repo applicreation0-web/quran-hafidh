@@ -57,6 +57,9 @@ final class CapHifzTimelineOrder {
             int juz, boolean sabqi) {
         verify(quarters);
         if (juz < 1 || juz > 30) throw new IllegalArgumentException("Juz 1..30");
+        // Already completed TAIL cannot acquire a new historical crossing
+        // date from future quarters. Itqan checkpoints are advisory only.
+        if (!sabqi && quarters.get(0).firstTailComplete) return null;
         for (CapHifzForecast.Quarter row : quarters) {
             VerseRef ref = sabqi ? row.sabqi
                 : row.firstTailComplete ? ItqanRotationPolicy.TAIL_END : row.itqan;
