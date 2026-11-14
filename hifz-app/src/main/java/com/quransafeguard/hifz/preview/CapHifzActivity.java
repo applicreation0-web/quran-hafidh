@@ -212,7 +212,7 @@ public final class CapHifzActivity extends Activity {
         boolean tail = !postNas && prefs.itqanRotationState().leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS;
         ItqanFourSessionSnapshot frozen = tail ? prefs.forecastItqanSnapshot(geometry) : null;
         int nextItqan = tail ? prefs.forecastItqanLine(geometry) : -1;
-        List<ItqanFourSessionPolicy.Session> remaining = List.of();
+        List<ItqanFourSessionPolicy.Session> remaining = java.util.Collections.emptyList();
         if (frozen != null && frozen.weeklyPage()) {
             remaining = new ArrayList<>(frozen.plan.sessions.subList(frozen.sessionIndex, frozen.plan.sessions.size()));
             ItqanFourSessionPolicy.Session slot = remaining.get(0);
