@@ -5,12 +5,10 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Typeface;
 import android.view.MotionEvent;
 import android.view.View;
 
-import com.quransafeguard.hifz.core.VerseRef;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.IntConsumer;
@@ -30,7 +28,6 @@ final class CapHifzTimelineView extends View {
     private static final int[] SABQI_JUZ = {2, 5, 10, 15, 20, 25, 26};
     private static final int[] ITQAN_JUZ = {27, 28, 29, 30};
 
-    private final GeometryRepository geometry;
     private final List<CapHifzForecast.Quarter> quarters;
     private final boolean showSabqi;
     private final boolean showTail;
@@ -45,7 +42,6 @@ final class CapHifzTimelineView extends View {
         if (geometry == null || quarters == null || quarters.isEmpty())
             throw new IllegalArgumentException("Real QCF and dated forecast required");
         CapHifzTimelineOrder.verify(quarters);
-        this.geometry = geometry;
         this.quarters = quarters;
         this.showSabqi = showSabqi;
         this.showTail = showTail;
@@ -94,21 +90,8 @@ final class CapHifzTimelineView extends View {
             : left + width * (date.toEpochDay() - from) / (float) (to - from);
     }
 
-    private VerseRef position(CapHifzForecast.Quarter row, boolean sabqi) {
-        return sabqi ? row.sabqi : row.firstTailComplete
-            ? ItqanRotationPolicy.TAIL_END : row.itqan;
-    }
-
     private LocalDate firstReached(int juz, boolean sabqi) {
-        // No future extrapolation is done by the view; every marker is sourced
-        // from the validated, physical-line quarter engine.
-        for (CapHifzForecast.Quarter quarter : quarters) {
-            VerseRef ref = position(quarter, sabqi);
-            if (ref == null) continue;
-            if (CapHifzForecast.juz(ref) >= juz) return quarter.date;
-            if (!sabqi && quarter.firstTailComplete) break;
-        }
-        return null;
+        return CapHifzTimelineOrder.firstProjectedJuz(quarters, juz, sabqi);
     }
 
     private LocalDate finish(boolean sabqi) {
