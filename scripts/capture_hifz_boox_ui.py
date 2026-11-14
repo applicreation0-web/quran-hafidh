@@ -84,6 +84,26 @@ def find_control(root, match):
                  and any(match(label) for label in names(node))), None)
 
 
+
+def verify_boox_home_icon_sizes(home, width):
+    """Protect the 2x2 approved BOOX icons from short-screen compression."""
+    floor = max(64, int(width * 0.075))
+    for label in ("Parcours", "Progression", "Lecture", "Atlas"):
+        tile = find_control(home, lambda value: value == label)
+        if tile is None:
+            raise AssertionError(f"Missing direct-access tile: {label}")
+        icon = next((node for node in tile.iter("node")
+                     if node.get("class") == "android.widget.ImageView"
+                     and bounds(node) is not None), None)
+        if icon is None:
+            raise AssertionError(f"No approved icon for {label}")
+        x1, y1, x2, y2 = bounds(icon)
+        if y2 - y1 < floor or x2 <= x1:
+            raise AssertionError(
+                f"BOOX {label} icon collapsed to {x2-x1}x{y2-y1}px; "
+                f"minimum height {floor}px")
+
+
 def capture_cap_hifz(tag, home, width, height, fixed):
     visible = lambda tree, label: next((
         node for node in tree.iter("node") if node.get("package") == PACKAGE
@@ -96,7 +116,8 @@ def capture_cap_hifz(tag, home, width, height, fixed):
 
     if fixed:
         home = hierarchy(f"{tag}-cap-viewport", lambda tree: visible(tree, is_graph) is not None)
-        if not visible(home, lambda value: value == "Cap Hifdh") or not visible(home, is_graph):
+        if (visible(home, lambda value: value == "Cap Hifdh") is None
+                or visible(home, is_graph) is None):
             raise AssertionError("Cap Hifdh title and timeline must both fit on the BOOX home")
         if any(node.get("scrollable") == "true" for node in home.iter("node")):
             raise AssertionError("BOOX home must not scroll")
@@ -147,6 +168,7 @@ def capture(tag, size, density, font):
             tree, lambda label: label == "Parcours") is not None)
         diagnostics(f"{tag}-home")
         width, height = map(int, size.split("x"))
+        verify_boox_home_icon_sizes(home, width)
         capture_cap_hifz(tag, home, width, height, fixed=True)
         parcours = find_control(home, lambda label: label == "Parcours")
         tap(parcours)
