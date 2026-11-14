@@ -141,7 +141,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout pathHeader = Ui.row(this);
         pathHeader.setGravity(Gravity.CENTER_VERTICAL);
         pathHeader.addView(Ui.iconButton(this, "‹", "Retour", v -> showHome()));
-        TextView pathTitle = Ui.bookText(this, "Parcours Hifz", 24, true);
+        TextView pathTitle = Ui.notebookTitle(this, "Parcours Hifdh", 24f);
         if (wideBoox()) pathTitle.setTextSize(22f);
         pathTitle.setGravity(Gravity.CENTER);
         Ui.weight(pathTitle, 1f);
@@ -385,7 +385,7 @@ public final class MainActivity extends android.app.Activity {
 
     /** BOOX-only text hierarchy for Hifz group labels; leaves modes and icons untouched. */
     private TextView pathSectionTitle(String caption) {
-        TextView heading = Ui.bookText(this, caption, 16f, true);
+        TextView heading = Ui.notebookTitle(this, caption, 16f);
         if (wideBoox()) heading.setTextSize(18f);
         heading.setPadding(Ui.dp(this, 4), Ui.dp(this, wideBoox() ? 1 : 9), 0, Ui.dp(this, 2));
         return heading;
