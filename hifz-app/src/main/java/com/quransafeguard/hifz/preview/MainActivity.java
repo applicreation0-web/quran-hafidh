@@ -81,9 +81,10 @@ public final class MainActivity extends android.app.Activity {
         appEmblem.setImageResource(R.drawable.ic_quran_hifz_header);
         appEmblem.setScaleType(ImageView.ScaleType.FIT_CENTER);
         appEmblem.setContentDescription("Quran Haafidh");
-        header.addView(appEmblem, new LinearLayout.LayoutParams(Ui.dp(this, 64), Ui.dp(this, 64)));
+        int homeBrandDp = compactBooxHome() ? 50 : 64;
+        header.addView(appEmblem, new LinearLayout.LayoutParams(Ui.dp(this, homeBrandDp), Ui.dp(this, homeBrandDp)));
         TextView title = Ui.notebookTitle(this, "Quran Haafidh", 24);
-        if (wideBoox()) title.setTextSize(29f);
+        if (wideBoox()) title.setTextSize(compactBooxHome() ? 25f : 29f);
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
         header.addView(title);
@@ -103,8 +104,9 @@ public final class MainActivity extends android.app.Activity {
         root.addView(recentSabqiAdvisory);
 
         TextView destinationsLabel = Ui.notebookTitle(this, "Accès directs", 17f);
-        if (wideBoox()) destinationsLabel.setTextSize(21f);
-        destinationsLabel.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 8));
+        if (wideBoox()) destinationsLabel.setTextSize(compactBooxHome() ? 18f : 21f);
+        destinationsLabel.setPadding(0, Ui.dp(this, compactBooxHome() ? 5 : 18),
+            0, Ui.dp(this, compactBooxHome() ? 3 : 8));
         root.addView(destinationsLabel);
         // Two rows with one visual grammar: practice + follow-up, reading + understanding.
         // No separator: Progression is an equal navigation destination, not a footer.
@@ -321,18 +323,20 @@ public final class MainActivity extends android.app.Activity {
     /** One dominant BOOX-safe action, preserving the existing openToday() routing. */
     private LinearLayout todayLine() {
         LinearLayout line = Ui.column(this);
-        line.setPadding(Ui.dp(this, 18), Ui.dp(this, 10), Ui.dp(this, 18), Ui.dp(this, 10));
+        int inset = compactBooxHome() ? 4 : 10;
+        line.setPadding(Ui.dp(this, 18), Ui.dp(this, inset), Ui.dp(this, 18), Ui.dp(this, inset));
         // Typographic reading surface, not a bordered card.
         todayHeading = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
-        if (wideBoox()) todayHeading.setTextSize(22f);
+        if (wideBoox()) todayHeading.setTextSize(compactBooxHome() ? 17f : 22f);
         line.addView(todayHeading);
         TextView value = Ui.bookText(this, "…", 23f, true);
-        if (wideBoox()) value.setTextSize(30f);
-        value.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
+        if (wideBoox()) value.setTextSize(compactBooxHome() ? 22f : 30f);
+        value.setPadding(0, Ui.dp(this, compactBooxHome() ? 1 : 5),
+            0, Ui.dp(this, compactBooxHome() ? 1 : 5));
         value.setMaxLines(2);
         line.addView(value);
         todayObjective = Ui.text(this, "", 16f, false);
-        if (wideBoox()) todayObjective.setTextSize(21f);
+        if (wideBoox()) todayObjective.setTextSize(compactBooxHome() ? 17f : 21f);
         todayObjective.setTextColor(Ui.MUTED);
         // Never truncate the authentic page/verse range on the BOOX screen.
         todayObjective.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, wideBoox() ? 3 : 6));
@@ -340,10 +344,10 @@ public final class MainActivity extends android.app.Activity {
         todayObjective.setEllipsize(android.text.TextUtils.TruncateAt.END);
         line.addView(todayObjective);
         TextView action = Ui.bookText(this, "CONTINUER  ›", 20f, true);
-        if (wideBoox()) action.setTextSize(24f);
+        if (wideBoox()) action.setTextSize(compactBooxHome() ? 19f : 24f);
         action.setGravity(Gravity.END);
         line.addView(action);
-        line.setMinimumHeight(Ui.dp(this, 120));
+        line.setMinimumHeight(Ui.dp(this, compactBooxHome() ? 98 : 120));
         line.setContentDescription("Ouvrir la séance du jour");
         line.setClickable(true);
         line.setFocusable(true);
@@ -374,6 +378,11 @@ public final class MainActivity extends android.app.Activity {
         return getResources().getConfiguration().smallestScreenWidthDp >= 600;
     }
 
+    /** A short BOOX needs bounded direct-access icon rows, not weighted collapse. */
+    private boolean compactBooxHome() {
+        return wideBoox() && getResources().getConfiguration().screenHeightDp < 1000;
+    }
+
     /** BOOX-only text hierarchy for Hifz group labels; leaves modes and icons untouched. */
     private TextView pathSectionTitle(String caption) {
         TextView heading = Ui.bookText(this, caption, 16f, true);
@@ -398,7 +407,11 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void addHomeAccessRow(LinearLayout root, LinearLayout row) {
-        if (wideBoox()) {
+        if (compactBooxHome()) {
+            // Two stable 88dp icon rows. Shrink headers / hero typography
+            // instead of starving pictograms when Cap Hifdh is present.
+            root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, 88)));
+        } else if (wideBoox()) {
             root.addView(row, new LinearLayout.LayoutParams(-1, 0, 1));
         } else {
             root.addView(row);
@@ -409,7 +422,8 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout primaryTile(LinearLayout parent, String role, String display,
                                     View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
-        tile.setPadding(Ui.dp(this, 3), Ui.dp(this, 12), Ui.dp(this, 3), Ui.dp(this, 12));
+        tile.setPadding(Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 5 : 12),
+            Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 5 : 12));
         tile.setGravity(Gravity.CENTER);
         int sideDp = booxIconDp(2, 112);
         if (!wideBoox()) tile.setMinimumHeight(Ui.dp(this, sideDp + 22));
