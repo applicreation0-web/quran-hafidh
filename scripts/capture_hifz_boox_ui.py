@@ -130,6 +130,29 @@ def verify_boox_parcours_icon_sizes(root, width):
                 f"BOOX Parcours {label} icon is {y2-y1}px high; minimum {floor}px")
 
 
+
+def verify_calendar_day_bounds(root):
+    """No cut-off date labels even with concentric selection at 150% font."""
+    stations = [n for n in root.iter("node")
+                if n.get("package") == PACKAGE
+                and "ouvrir le détail matin et soir" in n.get("content-desc", "")]
+    if len(stations) != 7:
+        raise AssertionError(f"Expected seven actual dated stations, got {len(stations)}")
+    for station in stations:
+        sx1, sy1, sx2, sy2 = bounds(station)
+        visible_dates = [n for n in station.iter("node")
+                         if n.get("class") == "android.widget.TextView"
+                         and n.get("text") and bounds(n) is not None]
+        if len(visible_dates) != 2:
+            raise AssertionError("Every day needs weekday initial and date text")
+        for child in visible_dates:
+            x1, y1, x2, y2 = bounds(child)
+            if y1 < sy1 or y2 > sy2 or x1 < sx1 or x2 > sx2:
+                raise AssertionError(
+                    f"Calendar label {child.get('text')} clips its station: "
+                    f"{(x1,y1,x2,y2)} vs {(sx1,sy1,sx2,sy2)}")
+
+
 def capture_cap_hifz(tag, home, width, height, fixed):
     visible = lambda tree, label: next((
         node for node in tree.iter("node") if node.get("package") == PACKAGE
@@ -205,6 +228,7 @@ def capture(tag, size, density, font):
         root = hierarchy(tag)
         width, height = map(int, size.split("x"))
         verify_boox_parcours_icon_sizes(root, width)
+        verify_calendar_day_bounds(root)
         for title in TITLES:
             aliases = {"Apprendre": ("Apprendre", "Apprentissage"),
                        "Stabiliser": ("Stabiliser", "Stabilisation")}.get(title, (title,))
