@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - feature/boox-parcours-one-screen-itqan-frise-20261112
+      - feature/haafidh-planning-pilotage-20261114
   pull_request:
     branches:
       - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
+      - work/haafidh-final-audit-20261112
   workflow_dispatch:
 
 jobs:
@@ -56,7 +58,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
           script: |
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest --stacktrace
+            CAP_TEST=""; if test -f hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/CapHifzReadOnlyInstrumentedTest.java; then CAP_TEST=",com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest"; fi; gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.AtTur11711RecoveryInstrumentedTest,com.quransafeguard.hifz.preview.ItqanCarryoverNavigation11711InstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest$CAP_TEST --stacktrace
             python3 scripts/capture_hifz_boox_ui.py
       - name: Upload screenshots, UI hierarchy and diagnostics
         if: always()
