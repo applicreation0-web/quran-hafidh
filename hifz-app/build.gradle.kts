@@ -410,6 +410,24 @@ val privateReleaseAssets = mapOf(
 val verifyPrivateReleaseInputs by tasks.registering {
     doLast {
         if (!privateReleaseUpgrade) return@doLast
+        // Private signing key stays in GitHub Actions secrets. This PUBLIC CI transport
+        // contains ZERO private Atlas assets and has NO signature; private staging,
+        // APK v2 digest assembly and verification happen on a trusted offline host.
+        if (System.getenv("HIFZ_OFFLINE_UNSIGNED_STAGE") == "1") {
+            check(System.getenv("GITHUB_ACTIONS") == "true") {
+                "NO-GO: unsigned public staging is restricted to Actions"
+            }
+            check(!hasReleaseSigning) {
+                "NO-GO: a staged APK cannot use any signing keystore"
+            }
+            privateReleaseAssets.keys.forEach { relative ->
+                check(!file("src/private114/assets/$relative").exists()) {
+                    "NO-GO: private Atlas content must never enter GitHub CI staging"
+                }
+            }
+            println("PASS: unsigned official-ID source staging, 0 private assets, 0 signing keys")
+            return@doLast
+        }
         check(hasReleaseSigning) { "NO-GO: official upgrade requires the official release signing keystore (never the private debug key)." }
         val storePath = file(System.getenv("HIFZ_KEYSTORE_PATH"))
         val storePassword = System.getenv("HIFZ_KEYSTORE_PASSWORD") ?: error("NO-GO: missing release keystore password")
