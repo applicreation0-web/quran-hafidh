@@ -80,6 +80,45 @@ public final class CapHifzTimelineOrderTest {
         assertEquals(30,CapHifzForecast.juz(ItqanRotationPolicy.TAIL_END));
     }
 
+    @Test public void modernRoadmapCheckpointsAreActualFirstReachedQuarterDates() throws Exception {
+        GeometryRepository geo=geometry();
+        List<CapHifzForecast.Quarter> rows=project(geo,.9,false,3);
+        LocalDate previous=LocalDate.MIN;
+        for (int juz:new int[]{2,5,10,15,20,25,26}) {
+            LocalDate reached=CapHifzTimelineOrder.firstProjectedJuz(rows,juz,true);
+            assertNotNull("Sabqi Juz "+juz+" must have a reached quarter",reached);
+            assertFalse("Juz milestones cannot go backward",reached.isBefore(previous));
+            assertTrue(rows.stream().anyMatch(q -> q.date.equals(reached) &&
+                q.sabqi!=null && CapHifzForecast.juz(q.sabqi)>=juz));
+            previous=reached;
+        }
+        previous=LocalDate.MIN;
+        for (int juz:new int[]{27,28,29,30}) {
+            LocalDate reached=CapHifzTimelineOrder.firstProjectedJuz(rows,juz,false);
+            assertNotNull("Itqan Juz "+juz+" must have a reached quarter",reached);
+            assertFalse("Itqan Juz milestones cannot go backward",reached.isBefore(previous));
+            assertTrue(rows.stream().anyMatch(q -> q.date.equals(reached) &&
+                (q.firstTailComplete || q.itqan!=null &&
+                    CapHifzForecast.juz(q.itqan)>=juz)));
+            previous=reached;
+        }
+        assertEquals(CapHifzTimelineOrder.firstProjectedJuz(rows,30,false),
+            rows.stream().filter(q -> q.firstTailComplete).findFirst().get().date);
+        assertEquals(CapHifzTimelineOrder.firstProjectedJuz(rows,26,true),
+            rows.stream().filter(q -> q.sabqiComplete).findFirst().get().date);
+    }
+
+    @Test public void modernRoadmapDoesNotInventMissingItqanTrackOrJuzCrossings() throws Exception {
+        GeometryRepository geo=geometry();
+        List<CapHifzForecast.Quarter> postNas=project(geo,.9,true,3);
+        assertNull(CapHifzTimelineOrder.firstProjectedJuz(postNas,27,false));
+        assertNotNull(CapHifzTimelineOrder.firstProjectedJuz(postNas,26,true));
+        try {
+            CapHifzTimelineOrder.firstProjectedJuz(postNas,31,true);
+            fail("Nonexistent Juz 31 accepted");
+        } catch (IllegalArgumentException expected) {}
+    }
+
     @Test public void rejectReversedSabqiOrTailAndPostNasPhantomPath() {
         LocalDate a=LocalDate.of(2027,3,31),b=LocalDate.of(2027,6,30);
         List<CapHifzForecast.Quarter> reversedSabqi=List.of(
