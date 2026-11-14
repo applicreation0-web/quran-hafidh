@@ -58,12 +58,12 @@ final class PlanningPilotageForecast {
             // Nas is not a credit for the FRONT leg or later permanent rotation.
             boolean nas = tailAlreadyComplete || itqanPage + completedPages > 604;
             VerseRef itqan = tailAlreadyComplete ? null
-                : lastVerse(geometry.line(geometry.lastLineIndex(
-                    lastVerseOnPage(geometry, itqanPageAtDate))));
+                : lastVerseOnPage(geometry, Math.max(515,
+                    completedPages > 0 ? itqanPageAtDate - 1 : itqanPage));
             if (nas) itqan = null;
             rows.add(new Quarter(date, sabqi, itqan, sabqiDone, nas));
             if (sabqiDone) break;
-            date = date.plusMonths(3).withDayOfMonth(1).plusMonths(3).minusDays(1);
+            date = date.plusDays(1).plusMonths(3).minusDays(1);
         }
         return Collections.unmodifiableList(rows);
     }
