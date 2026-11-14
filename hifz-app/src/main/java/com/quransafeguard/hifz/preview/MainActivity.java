@@ -190,7 +190,8 @@ public final class MainActivity extends android.app.Activity {
             v -> openMode(consolidationQuickAccessMode()));
         consolidationCard = consolidation; // Same action and immutable original icon.
         refreshItqanCardVocabulary(); // Correct title on first draw, not just onResume.
-        if(wideBoox())path.addView(otherModes,new LinearLayout.LayoutParams(-1,0,1f));
+        if(wideBoox())path.addView(otherModes,new LinearLayout.LayoutParams(-1,0,
+            compactBooxHome() ? 1.25f : 1f));
         else path.addView(otherModes);
 
         // Same acquired corpus, two modalities: text masked vs text visible.
@@ -1599,8 +1600,12 @@ public final class MainActivity extends android.app.Activity {
         timeline.addView(axis, lineParams);
         LinearLayout stations = Ui.row(this);
         stations.setGravity(Gravity.TOP);
-        int stationHeight=Ui.dp(this,wideBoox()
-            ? Math.max(75, Math.round(34 + 47 * getResources().getConfiguration().fontScale)) : 80);
+        int stationHeight=Ui.dp(this,compactBooxHome()
+            // The two date labels plus the marker fit in 80dp at 150%; reclaim
+            // the unused footer height for Stabiliser's second title line.
+            ? Math.max(80, Math.round(26 + 34 * getResources().getConfiguration().fontScale))
+            : wideBoox()
+                ? Math.max(75, Math.round(34 + 47 * getResources().getConfiguration().fontScale)) : 80);
         for (WeeklyDashboardPlanner.Row row : weekRows) {
             boolean active = row.date.equals(selectedWeekDate);
             boolean currentDay = row.date.equals(realToday);
