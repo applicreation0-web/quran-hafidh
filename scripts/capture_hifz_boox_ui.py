@@ -85,13 +85,13 @@ def find_control(root, match):
 
 
 def capture_cap_hifz(tag, home):
-    control = find_control(home, lambda label: label == "Ouvrir Cap Hifz")
+    control = find_control(home, lambda label: label == "Ouvrir Cap Hifdh")
     if control is None:
-        raise AssertionError("Missing Cap Hifz access")
+        raise AssertionError("Missing Cap Hifdh access")
     width = max((node_bounds[2] for n in home.iter("node")
                  if (node_bounds := bounds(n))), default=480)
     if not control.get("text"):
-        raise AssertionError("Cap Hifz is missing its visible title")
+        raise AssertionError("Cap Hifdh is missing its visible title")
     tap(control)
     hierarchy(f"{tag}-cap-hifz", lambda root: any(
         "Assiduité" in names(node) for node in root.iter("node")))
@@ -132,7 +132,7 @@ def capture(tag, size, density, font):
             raise RuntimeError("Launcher did not report a successful activity start")
         diagnostics(f"{tag}-home")
         home = hierarchy(f"{tag}-home", lambda tree: find_control(tree, lambda label: label == "Parcours") is not None)
-        cap = find_control(home, lambda label: label == "Ouvrir Cap Hifz")
+        cap = find_control(home, lambda label: label == "Ouvrir Cap Hifdh")
         if cap is not None:
             capture_cap_hifz(tag, home)
             home = hierarchy(f"{tag}-returned", lambda tree: find_control(
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             adb("shell", "am", "force-stop", PACKAGE)
             adb("shell", "am", "start", "-W", "-n", ACTIVITY)
             home = hierarchy("phone-home", lambda root: find_control(
-                root, lambda label: label == "Ouvrir Cap Hifz") is not None)
+                root, lambda label: label == "Ouvrir Cap Hifdh") is not None)
             diagnostics("phone-home")
             capture_cap_hifz("phone", home)
         except (OSError, ValueError, RuntimeError, AssertionError, subprocess.SubprocessError) as exc:
