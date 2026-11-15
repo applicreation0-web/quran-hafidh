@@ -142,7 +142,7 @@ final class CapHifzTimelineView extends View {
         int resource = isJuz(point) ? R.drawable.ic_cap_juz : R.drawable.ic_cap_hizb;
         android.graphics.drawable.Drawable icon = getContext().getDrawable(resource);
         if (icon == null) return;
-        int extent = Math.round(dp(11.5f));
+        int extent = Math.round(dp(labelScale() > 1f ? 18f : 11.5f));
         icon.setBounds(Math.round(x) - extent, Math.round(y) - extent,
             Math.round(x) + extent, Math.round(y) + extent);
         icon.draw(canvas);
@@ -216,7 +216,7 @@ final class CapHifzTimelineView extends View {
     }
 
     private void goalDiamond(Canvas canvas, float x, float y) {
-        float r = dp(6f);
+        float r = dp(labelScale() > 1f ? 10f : 6f);
         Path diamond = new Path();
         diamond.moveTo(x, y - r);
         diamond.lineTo(x + r, y);
@@ -266,12 +266,14 @@ final class CapHifzTimelineView extends View {
             for (int i = 0; i < coming.size(); i++) {
                 if (selectedDate.equals(coming.get(i).date)) {
                     stroke(INK, 1.2f, false);
-                    canvas.drawCircle(x[i + 1], y, dp(13.5f), paint);
+                    canvas.drawCircle(x[i + 1], y,
+                        dp(labelScale() > 1f ? 21.5f : 13.5f), paint);
                 }
             }
             if (targetDate != null && selectedDate.equals(targetDate)) {
                 stroke(INK, 1.2f, false);
-                canvas.drawCircle(x[3], y, dp(13.5f), paint);
+                canvas.drawCircle(x[3], y,
+                    dp(labelScale() > 1f ? 16f : 13.5f), paint);
             }
         }
         for (int i = 0; i < coming.size(); i++)
