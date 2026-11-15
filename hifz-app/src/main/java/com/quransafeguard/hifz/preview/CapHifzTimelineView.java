@@ -38,7 +38,8 @@ final class CapHifzTimelineView extends View {
     private static final int MID = Color.rgb(79, 79, 79);
     private static final int FAINT = Color.rgb(161, 158, 150);
     private static final float SECOND_ROW = 84f;
-    private static final float TRACK_Y = 42f;
+    // Keep circular nodes clear of the caption beneath them at BOOX 150%.
+    private static final float TRACK_Y = 34f;
     private static final DateTimeFormatter SHORT_DATE =
         DateTimeFormatter.ofPattern("d MMM yy", Locale.FRANCE);
     private static final DateTimeFormatter GOAL_DATE =
@@ -90,6 +91,8 @@ final class CapHifzTimelineView extends View {
 
     private float dp(float n) { return n * getResources().getDisplayMetrics().density; }
     private float sp(float n) { return n * getResources().getDisplayMetrics().scaledDensity; }
+    /** Large E-Ink screens need readable labels rather than phone-sized text. */
+    private float labelScale() { return getWidth() >= dp(720) ? 1.25f : 1f; }
 
     void setSelection(LocalDate date, boolean sabqi) {
         selectedDate = date;
@@ -161,7 +164,7 @@ final class CapHifzTimelineView extends View {
         paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(color);
-        paint.setTextSize(sp(size));
+        paint.setTextSize(sp(size * labelScale()));
         paint.setTypeface(Ui.typeface(bold ? Typeface.BOLD : Typeface.NORMAL));
         paint.setTextAlign(align);
         String shown = value;
@@ -227,7 +230,7 @@ final class CapHifzTimelineView extends View {
         String target = sabqi ? "AL-FATḤ" : "AN-NĀS";
 
         drawFitted(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE",
-            left, top + dp(14), 11.5f, INK, Paint.Align.LEFT, true, width * .46f);
+            left, top + dp(18), 11.5f, INK, Paint.Align.LEFT, true, width * .46f);
 
         // A schematic sequence rather than an invented time or completion scale.
         stroke(FAINT, 1.2f, true);
