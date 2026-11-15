@@ -342,7 +342,7 @@ final class CapHifzPanel extends LinearLayout {
         MilestoneChoice choice = shownCheckpoints.get(checkpointIndex);
         String track = choice.sabqi ? "Acquisition" : "Maîtrise";
         checkpointLabel.setText(year + " · " + choice.label + " · "
-            + track + "\\n" + choice.date.format(DAY_MONTH) + " · p."
+            + track + "\n" + choice.date.format(DAY_MONTH) + " · p."
             + geometry.pageForVerse(choice.verse) + "  ›");
         checkpointLabel.setContentDescription("Ouvrir le Mushaf depuis Cap Hifdh : "
             + track + ", " + choice.label + ", "
