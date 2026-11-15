@@ -5,6 +5,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -123,7 +124,41 @@ final class CapHifzForecast {
             if (geometry.lastLineIndex(verse) > lastLine) break;
             result.add(new Milestone(null, verse, rub[4]));
         }
+        // Juz/Hizb are not necessarily surah starts: 3:1 (Āl ʿImrān) was
+        // absent from the forecast, although canonical learning continues
+        // from Al-Baqarah 2:286. Date every actual chapter transition on
+        // the same projected QCF line-crossing day, with NO acquired credit.
+        int from = firstSurah == 1 ? 3 : firstSurah + 1;
+        int to = firstSurah == 1 ? SabqiRoute.ROUTE_END.getSurah() : 114;
+        for (int surah = from; surah <= to; surah++) {
+            VerseRef entry = new VerseRef(surah, 1);
+            if (geometry.lastLineIndex(entry) > lastLine) break;
+            boolean alreadyPresent = false;
+            for (Milestone existing : result) {
+                if (existing.verse.equals(entry)) {
+                    alreadyPresent = true;
+                    break;
+                }
+            }
+            if (!alreadyPresent) result.add(new Milestone(null, entry, hizb(entry)));
+        }
+        result.sort(Comparator.comparingInt(p -> GeometryRepository.ordinal(p.verse)));
         return result;
+    }
+
+    /** Keep the near-term step, then the next DIFFERENT surah.
+     *  Otherwise two consecutive Hizb in Al-Baqarah hide Āl ʿImrān.
+     *  Stops are actual forecast events, never evenly-spaced invented dates. */
+    static List<Milestone> visibleMilestones(List<Milestone> chronological) {
+        if (chronological.size() <= 2)
+            return List.copyOf(chronological);
+        Milestone nearest = chronological.get(0);
+        for (int i = 1; i < chronological.size(); i++) {
+            Milestone next = chronological.get(i);
+            if (next.verse.getSurah() != nearest.verse.getSurah())
+                return List.of(nearest, next);
+        }
+        return List.of(nearest, chronological.get(1));
     }
 
     private static int firstPendingBoundary(GeometryRepository geometry, List<Milestone> bounds, int cursor) {
