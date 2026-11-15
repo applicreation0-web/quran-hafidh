@@ -436,8 +436,8 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout primaryTile(LinearLayout parent, String role, String display,
                                     View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
-        tile.setPadding(Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 5 : 12),
-            Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 5 : 12));
+        tile.setPadding(Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 0 : 12),
+            Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 0 : 12));
         tile.setGravity(Gravity.CENTER);
         int sideDp = wideBoox()
             ? Math.min(booxIconDp(2, 112), spaciousBooxHome() ? 112 : 52)
