@@ -121,7 +121,7 @@ public final class BooxPortraitHomeSourceContractTest {
         String panel = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzPanel.java");
         String timeline = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzTimelineView.java");
         assertTrue("The two group headings are French and do not repeat icon labels",
-            home.contains("pathSectionTitle(\"NOUVEAUX VERSETS\")")
+            home.contains("pathSectionTitle(\"ACQUISITION\")")
             && home.contains("pathSectionTitle(\"MAÎTRISE\")"));
         assertFalse(home.contains("pathSectionTitle(\"SABQI\")"));
         assertFalse(home.contains("pathSectionTitle(\"ITQĀN\")"));
@@ -132,10 +132,14 @@ public final class BooxPortraitHomeSourceContractTest {
             timeline.contains("openMilestone.accept(true, hit)")
             && timeline.contains("openMilestone.accept(false, hit)")
             && timeline.contains("exploreYear.accept(selectedYear)"));
-        assertTrue("Every projected Juz and Hizb in the dialog must be actionable",
-            panel.contains("point.hizb % 2 == 1")
-            && panel.contains("showMilestonesForYear(quarters, chosenYear)")
-            && panel.contains("openMushaf(choices.get(index).verse)"));
+        assertTrue("No modal for Cap Hifdh roadmap: all markers are selected inline",
+            panel.contains("shownCheckpoints = checkpointsForYear(quarters, year)")
+            && panel.contains("ignoredYear -> nextCheckpoint()")
+            && panel.contains("openMushaf(shownCheckpoints.get(checkpointIndex).verse)")
+            && panel.contains("checkpointLabel.setContentDescription(\"Ouvrir le Mushaf depuis Cap Hifdh")); 
+        assertFalse("No milestone pop-up or list must block the BOOX home",
+            panel.contains("showMilestonesForYear(")
+            || panel.contains("new AlertDialog.Builder(context)\n            .setTitle(\"Juz et Hizb"));
         assertTrue("Reader entry point must use the actual QCF page and verse",
             panel.contains("geometry.pageForVerse(verse)")
             && panel.contains("new Intent(context, StudyReaderActivity.class)")
