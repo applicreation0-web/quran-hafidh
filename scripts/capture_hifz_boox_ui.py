@@ -281,11 +281,19 @@ def verify_direct_cap_milestone_taps(tag, density):
                 break
         else:
             raise AssertionError(f"Direct Juz/Hizb or goal tap {lane}/{station} did not open Mushaf")
-        if station == 1:
+        # A foreground Reader initially paints its blank WebView shell.
+        # Fail closed until the authentic QCF page has visibly rendered.
+        rendered = False
+        for _ in range(10):
+            time.sleep(2)
+            shot = adb("exec-out", "screencap", "-p").stdout
+            if shot[:4] == bytes((137, 80, 78, 71)) and len(shot) >= 45000:
+                rendered = True
+                break
+        if not rendered:
+            raise AssertionError(f"Direct milestone {lane}/{station} opened a blank Mushaf page")
+        if station in (1, 3):
             diagnostics(f"{tag}-cap-direct-{lane}-{station}-mushaf")
-            png = (OUTPUT / f"{tag}-cap-direct-{lane}-{station}-mushaf.png").read_bytes()
-            if len(png) < 40000:
-                raise AssertionError("Direct milestone opened a blank Mushaf page")
         adb("shell", "input", "keyevent", "4")
         hierarchy(f"{tag}-cap-direct-{lane}-{station}-return",
             lambda tree: find_control(tree, lambda label: label == "Parcours") is not None)

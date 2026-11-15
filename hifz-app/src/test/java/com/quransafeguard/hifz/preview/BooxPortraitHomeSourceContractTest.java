@@ -69,7 +69,7 @@ public final class BooxPortraitHomeSourceContractTest {
             && actionsStart > capStart);
         assertTrue("BOOX uses a fixed viewport with two bounded direct-access rows",
             home.contains("homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root);")
-            && home.contains("int rowDp = spaciousBooxHome() ? 148 : 102;")
+            && home.contains("int rowDp = spaciousBooxHome() ? 148 : 94;")
             && home.contains("root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, rowDp)));"));
         assertFalse("Home destination rows must not be split by a rule",
             home.substring(practiceEnd, actionsStart).contains("Ui.divider(this)"));
@@ -130,7 +130,7 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse(home.contains("pathSectionTitle(\"SABQI\")"));
         assertFalse(home.contains("pathSectionTitle(\"ITQĀN\")"));
         assertTrue("Large BOOX home must reserve space for the roadmap and show four concise captions",
-            home.contains("int rowDp = spaciousBooxHome() ? 148 : 102;")
+            home.contains("int rowDp = spaciousBooxHome() ? 148 : 94;")
             && home.contains("TextView caption = Ui.bookText(this, display")
             && home.contains("tile.addView(caption)")
             && home.contains("spaciousBooxHome() ? 112 : 70"));

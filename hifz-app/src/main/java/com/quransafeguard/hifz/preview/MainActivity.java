@@ -417,7 +417,7 @@ public final class MainActivity extends android.app.Activity {
             // Never consume the entire remaining viewport: on 1404px screens
             // the four symbols previously monopolised 47% of the display.
             // A bounded row reserves real legible space for Cap Hifdh.
-            int rowDp = spaciousBooxHome() ? 148 : 102;
+            int rowDp = spaciousBooxHome() ? 148 : 94;
             root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, rowDp)));
         } else {
             root.addView(row);
