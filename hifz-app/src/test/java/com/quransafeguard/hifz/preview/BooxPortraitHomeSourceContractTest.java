@@ -137,9 +137,13 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("ignoredYear -> nextCheckpoint()")
             && panel.contains("openMushaf(shownCheckpoints.get(checkpointIndex).verse)")
             && panel.contains("checkpointLabel.setContentDescription(\"Ouvrir le Mushaf depuis Cap Hifdh")); 
-        assertFalse("No milestone pop-up or list must block the BOOX home",
-            panel.contains("showMilestonesForYear(")
-            || panel.contains("new AlertDialog.Builder(context)\n            .setTitle(\"Juz et Hizb"));
+        assertFalse("Cap Hifdh itself must never create an Android dialog",
+            panel.contains("new AlertDialog.Builder("));
+        assertTrue("Acquired lines are browsed inline using the same controls",
+            panel.contains("private List<AcquiredChoice> acquiredChoices()")
+            && panel.contains("historyMode = !historyMode")
+            && panel.contains("history.setText(\"Acquis · revenir à la projection")
+            && panel.contains("Ouvrir un acquis dans le Mushaf depuis Cap Hifdh"));
         assertTrue("Reader entry point must use the actual QCF page and verse",
             panel.contains("geometry.pageForVerse(verse)")
             && panel.contains("new Intent(context, StudyReaderActivity.class)")
