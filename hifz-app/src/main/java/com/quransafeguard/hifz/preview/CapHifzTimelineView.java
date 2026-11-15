@@ -22,8 +22,8 @@ import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
 /**
- * Concise BOOX journey: authentic current cursor, TWO dated projected Juz/Hizb
- * crossings, then the canonical terminal objective, for each active discipline.
+ * Concise BOOX journey: authentic current cursor, a dated near-term milestone
+ * and the next surah transition, then the canonical terminal objective.
  *
  * Stations have equal spacing ON PURPOSE. They represent ordered steps, not
  * proportional time, acquisition percentage, or earned credits. All dates
@@ -142,8 +142,8 @@ final class CapHifzTimelineView extends View {
             }
         }
         upcoming.sort(Comparator.comparing((CapHifzForecast.Milestone p) -> p.date)
-            .thenComparingInt(p -> p.hizb));
-        return upcoming.subList(0, Math.min(2, upcoming.size()));
+            .thenComparingInt(p -> GeometryRepository.ordinal(p.verse)));
+        return CapHifzForecast.visibleMilestones(upcoming);
     }
 
     private static String spokenVerse(VerseRef verse) {
@@ -294,7 +294,7 @@ final class CapHifzTimelineView extends View {
         // The authentic current position is a surah and ayah, never a page.
         drawFitted(canvas, current == null ? "Sourate —"
                 : QuranSurahNames.rawName(current.getSurah()),
-            x[0], top + dp(numberBaseline()), 10.5f, INK, Paint.Align.LEFT, true, w);
+            x[0], top + dp(numberBaseline()), 12f, INK, Paint.Align.LEFT, true, w);
         drawFitted(canvas, current == null ? "verset —" : "verset " + current.getAyah(),
             x[0], top + dp(dateBaseline()), 9.5f, MID, Paint.Align.LEFT, false, w);
 
@@ -305,14 +305,14 @@ final class CapHifzTimelineView extends View {
             String detail = i < coming.size()
                 ? "v." + coming.get(i).verse.getAyah() + " · "
                     + coming.get(i).date.format(SHORT_DATE) : "à déterminer";
-            drawFitted(canvas, name, xx, top + dp(numberBaseline()), 11f,
+            drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12.5f,
                 i == 0 ? INK : MID, Paint.Align.CENTER, true, w);
             drawFitted(canvas, detail, xx, top + dp(dateBaseline()), 9.5f, MID,
                 Paint.Align.CENTER, false, w);
         }
 
         float lastW = (x[3] - x[2]) * .94f;
-        drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 11f, INK,
+        drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 12.5f, INK,
             Paint.Align.RIGHT, true, lastW);
         drawFitted(canvas, targetDate != null ? targetDate.format(GOAL_DATE) : "date —",
             x[3], top + dp(dateBaseline()), 9.5f, MID, Paint.Align.RIGHT, false, lastW);
@@ -337,12 +337,12 @@ final class CapHifzTimelineView extends View {
         ring(canvas, x[3], y, 7f, 1.5f);
         float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
         drawFitted(canvas, "AN-NĀS", x[0], top + dp(numberBaseline()),
-            10.5f, INK, Paint.Align.LEFT, true, w);
+            12f, INK, Paint.Align.LEFT, true, w);
         drawFitted(canvas, "verset 6", x[0], top + dp(dateBaseline()),
             9.5f, MID, Paint.Align.LEFT, false, w);
         drawFitted(canvas, maintenanceVerse == null ? "À ouvrir"
                 : QuranSurahNames.rawName(maintenanceVerse.getSurah()),
-            x[1], top + dp(numberBaseline()), 10.5f, INK,
+            x[1], top + dp(numberBaseline()), 12f, INK,
             Paint.Align.CENTER, true, w);
         drawFitted(canvas, maintenanceVerse == null ? "séance" :
                 "verset " + maintenanceVerse.getAyah(), x[1],
