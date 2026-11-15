@@ -2,7 +2,7 @@ name: Quran Haafidh 1.17.20 private source-only gate (NO APK)
 on:
   push:
     branches:
-      - release-candidate/haafidh-11720-private-code-only-20261115
+      - release-candidate/haafidh-11720-private-20261115
   workflow_dispatch:
 
 permissions:
