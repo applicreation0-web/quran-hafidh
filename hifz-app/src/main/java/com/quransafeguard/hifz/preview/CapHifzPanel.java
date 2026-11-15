@@ -44,6 +44,10 @@ final class CapHifzPanel extends LinearLayout {
     private final Context context;
     private int year;
     private int scenario = 90;
+    private int checkpointIndex = 0;
+    private List<MilestoneChoice> shownCheckpoints = new ArrayList<>();
+    private TextView checkpointLabel;
+    private CapHifzTimelineView timeline;
 
     CapHifzPanel(Context context) {
         super(context);
@@ -111,7 +115,7 @@ final class CapHifzPanel extends LinearLayout {
     private void renderWeek() {
         LocalDate end = today;
         Map<Track, CapHifzEvidence.Count> weekly = counts(monday, end);
-        line("Sabqi " + weekly.get(Track.SABQI).fraction() + "  ·  Itqān " + weekly.get(Track.ITQAN).fraction()
+        line("Acquisition " + weekly.get(Track.SABQI).fraction() + "  ·  Maîtrise " + weekly.get(Track.ITQAN).fraction()
             + "  ·  Active " + weekly.get(Track.MORNING).fraction() + " matin / "
             + weekly.get(Track.EVENING).fraction() + " soir", 15);
         long earned = finalDates.entrySet().stream().filter(row -> {
@@ -127,7 +131,11 @@ final class CapHifzPanel extends LinearLayout {
     private void renderTrajectory() {
         LinearLayout choices = Ui.row(context);
         for (int percent : new int[]{80, 90, 100}) {
-            TextView item = button(choices, percent + " %", v -> { scenario = percent; render(); });
+            TextView item = button(choices, percent + " %", v -> {
+                scenario = percent;
+                checkpointIndex = 0;
+                render();
+            });
             item.setContentDescription("Simulation à " + percent + " pour cent" + (scenario == percent ? ", sélectionnée" : ""));
             item.setSelected(scenario == percent);
             if (scenario == percent) item.setPaintFlags(item.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
@@ -154,8 +162,8 @@ final class CapHifzPanel extends LinearLayout {
 
     private String carryovers() {
         List<String> open = new ArrayList<>();
-        if (prefs.sabqiReportDate(today) != null) open.add("Sabqi");
-        if (prefs.hasItqanForecastCarryover(today)) open.add("Itqān");
+        if (prefs.sabqiReportDate(today) != null) open.add("Acquisition");
+        if (prefs.hasItqanForecastCarryover(today)) open.add("Maîtrise");
         if (prefs.activeReviewSlots().earlierCurrentDraftExists(today)) open.add("Révision active");
         return open.isEmpty() ? "" : " · Reprise " + String.join(", ", open);
     }
@@ -213,112 +221,136 @@ final class CapHifzPanel extends LinearLayout {
 
         int lastYear = quarters.get(quarters.size() - 1).date.getYear();
         year = Math.max(today.getYear(), Math.min(year, lastYear));
+        shownCheckpoints = checkpointsForYear(quarters, year);
+        checkpointIndex = Math.max(0, Math.min(checkpointIndex,
+            Math.max(0, shownCheckpoints.size() - 1)));
+        timeline = null;
         if (forecastSabqi || tailForecast) {
-            // One whole year is shown at a time, not twenty years squeezed
-            // between two endpoints. Direct tap of a milestone opens its
-            // canonical QCF verse; a tap elsewhere opens the accessible list.
-            CapHifzTimelineView graphic = new CapHifzTimelineView(context, geometry, quarters, today,
+            // The original one-screen BOOX home stays completely fixed.
+            // Tap a real Juz/Hizb to open the QCF Mushaf immediately; tapping
+            // empty ink cycles the next checkpoint inline, never a dialog.
+            timeline = new CapHifzTimelineView(context, geometry, quarters, today,
                 forecastSabqi, tailForecast,
-                chosenYear -> showMilestonesForYear(quarters, chosenYear),
+                ignoredYear -> nextCheckpoint(),
                 (sabqi, milestone) -> openMushaf(milestone.verse), year);
-            body.addView(graphic, new LinearLayout.LayoutParams(-1,
+            body.addView(timeline, new LinearLayout.LayoutParams(-1,
                 Ui.dp(context, forecastSabqi && tailForecast ? 110 : 85)));
         }
-        List<CapHifzForecast.Quarter> displayed = new ArrayList<>();
-        for (CapHifzForecast.Quarter row : quarters) {
-            if (row.date.getYear() == year) displayed.add(row);
-        }
-        LinearLayout details = Ui.row(context);
-        TextView previous = button(details, "‹", v -> { year--; render(); });
-        previous.setContentDescription("Année précédente");
+        LinearLayout navigator = Ui.row(context);
+        TextView previous = button(navigator, "‹", v -> {
+            year--;
+            checkpointIndex = 0;
+            render();
+        });
+        previous.setContentDescription("Année précédente de Cap Hifdh");
         previous.setEnabled(year > today.getYear());
-        TextView selectedYear = button(details, year + " · Juz / Hizb", v -> showMilestones(displayed));
-        selectedYear.setContentDescription("Explorer les Juz et Hizb de " + year
-            + " : chaque jalon ouvre la page exacte du Mushaf");
-        selectedYear.setGravity(Gravity.CENTER);
-        selectedYear.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-        TextView next = button(details, "›", v -> { year++; render(); });
-        next.setContentDescription("Année suivante");
+
+        checkpointLabel = button(navigator, "", v -> {
+            if (!shownCheckpoints.isEmpty())
+                openMushaf(shownCheckpoints.get(checkpointIndex).verse);
+            else if (year < lastYear) {
+                year++;
+                checkpointIndex = 0;
+                render();
+            }
+        });
+        checkpointLabel.setTextSize(12f);
+        checkpointLabel.setMaxLines(2);
+        checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
+            Ui.dp(context, 48), 1f));
+        updateCheckpointLabel();
+
+        TextView next = button(navigator, "›", v -> {
+            year++;
+            checkpointIndex = 0;
+            render();
+        });
+        next.setContentDescription("Année suivante de Cap Hifdh");
         next.setEnabled(year < lastYear);
-        body.addView(details);
+        body.addView(navigator);
         if (postNas) line("Maintien après An-Nās", 12);
     }
 
     private static final class MilestoneChoice {
         final LocalDate date;
         final VerseRef verse;
-        final String title;
+        final String label;
+        final boolean sabqi;
 
-        MilestoneChoice(LocalDate date, VerseRef verse, String title) {
+        MilestoneChoice(LocalDate date, VerseRef verse, String label, boolean sabqi) {
             this.date = date;
             this.verse = verse;
-            this.title = title;
+            this.label = label;
+            this.sabqi = sabqi;
         }
-    }
-
-    private void showMilestonesForYear(List<CapHifzForecast.Quarter> quarters, int chosenYear) {
-        List<CapHifzForecast.Quarter> rows = new ArrayList<>();
-        for (CapHifzForecast.Quarter row : quarters)
-            if (row.date.getYear() == chosenYear) rows.add(row);
-        showMilestones(rows);
     }
 
     /**
-     * Detailed drill-down lives in a scrollable Android dialog; the BOOX home
-     * itself never scrolls. Milestone dates are forecasts, NOT earned receipts.
-     * Every real QCF marker and quarter position opens the corresponding
-     * exact verse/page in the original Mushaf, without touching Hifdh state.
+     * Every entry is an actual dated projected boundary or quarter position.
+     * These are read-only hypothetical future positions, not Hifdh receipts.
+     * No horizontal overflow, modal dialog, invented Juz or extra home row.
      */
-    private void showMilestones(List<CapHifzForecast.Quarter> rows) {
+    private List<MilestoneChoice> checkpointsForYear(
+            List<CapHifzForecast.Quarter> quarters, int selectedYear) {
         List<MilestoneChoice> choices = new ArrayList<>();
-        for (CapHifzForecast.Quarter row : rows) {
-            for (CapHifzForecast.Milestone point : row.sabqiMilestones) {
-                String marker = point.hizb % 2 == 1
-                    ? "Juz " + ((point.hizb + 1) / 2) + " · Hizb " + point.hizb
-                    : "Hizb " + point.hizb;
-                choices.add(new MilestoneChoice(point.date, point.verse,
-                    "Nouveaux versets · " + marker));
-            }
-            for (CapHifzForecast.Milestone point : row.tailMilestones) {
-                String marker = point.hizb % 2 == 1
-                    ? "Juz " + ((point.hizb + 1) / 2) + " · Hizb " + point.hizb
-                    : "Hizb " + point.hizb;
-                choices.add(new MilestoneChoice(point.date, point.verse,
-                    "Maîtrise · " + marker));
-            }
+        for (CapHifzForecast.Quarter row : quarters) {
+            if (row.date.getYear() != selectedYear) continue;
+            for (CapHifzForecast.Milestone p : row.sabqiMilestones)
+                choices.add(new MilestoneChoice(p.date, p.verse,
+                    p.hizb % 2 == 1 ? "J" + ((p.hizb + 1) / 2)
+                        : "H" + p.hizb, true));
+            for (CapHifzForecast.Milestone p : row.tailMilestones)
+                choices.add(new MilestoneChoice(p.date, p.verse,
+                    p.hizb % 2 == 1 ? "J" + ((p.hizb + 1) / 2)
+                        : "H" + p.hizb, false));
             if (row.sabqiFinish != null)
-                choices.add(new MilestoneChoice(row.sabqiFinish, SabqiRoute.ROUTE_END,
-                    "Objectif nouveaux versets · Al-Fatḥ"));
+                choices.add(new MilestoneChoice(row.sabqiFinish,
+                    SabqiRoute.ROUTE_END, "Al-Fatḥ · cible", true));
             if (row.tailFinish != null)
-                choices.add(new MilestoneChoice(row.tailFinish, ItqanRotationPolicy.TAIL_END,
-                    "Objectif maîtrise · An-Nās"));
+                choices.add(new MilestoneChoice(row.tailFinish,
+                    ItqanRotationPolicy.TAIL_END, "An-Nās · cible", false));
+            // At low cadence, no Juz may be crossed within this calendar
+            // year. A real quarter cursor remains directly browsable instead.
             if (row.sabqi != null)
-                choices.add(new MilestoneChoice(row.date, row.sabqi,
-                    "Position de fin de trimestre · Nouveaux versets"));
+                choices.add(new MilestoneChoice(row.date, row.sabqi, "T"
+                    + ((row.date.getMonthValue() - 1) / 3 + 1), true));
             if (row.itqan != null)
-                choices.add(new MilestoneChoice(row.date, row.itqan,
-                    "Position de fin de trimestre · Maîtrise"));
+                choices.add(new MilestoneChoice(row.date, row.itqan, "T"
+                    + ((row.date.getMonthValue() - 1) / 3 + 1), false));
         }
-        choices.sort(Comparator.comparing((MilestoneChoice c) -> c.date));
-        if (choices.isEmpty()) {
-            new AlertDialog.Builder(context)
-                .setTitle("Juz et Hizb · " + year)
-                .setMessage("Aucun nouveau jalon projeté pour cette année selon la cadence actuelle.")
-                .setPositiveButton("Fermer", null).show();
+        choices.sort(Comparator.comparing((MilestoneChoice c) -> c.date)
+            .thenComparing(c -> c.sabqi ? 0 : 1));
+        return choices;
+    }
+
+    private void nextCheckpoint() {
+        if (shownCheckpoints.isEmpty()) return;
+        checkpointIndex = (checkpointIndex + 1) % shownCheckpoints.size();
+        updateCheckpointLabel();
+    }
+
+    private void updateCheckpointLabel() {
+        if (checkpointLabel == null) return;
+        if (shownCheckpoints.isEmpty()) {
+            checkpointLabel.setText(year + " · Aucun jalon\n‹ › : autre année");
+            checkpointLabel.setContentDescription(
+                "Cap Hifdh " + year + " : aucun jalon prévisionnel, changer d'année");
+            if (timeline != null) timeline.setSelection(null, true);
             return;
         }
-        List<String> labels = new ArrayList<>();
-        for (MilestoneChoice entry : choices) {
-            labels.add(entry.date.format(FULL_DATE) + " · Prévision"
-                + "\n" + entry.title + " · " + QuranSurahNames.name(entry.verse.getSurah())
-                + " " + entry.verse.getAyah() + " · p. " + geometry.pageForVerse(entry.verse)
-                + "  ›  Mushaf");
-        }
-        new AlertDialog.Builder(context)
-            .setTitle("Juz et Hizb · " + year + " · ouvrir le Mushaf")
-            .setItems(labels.toArray(new String[0]), (dialog, index) ->
-                openMushaf(choices.get(index).verse))
-            .setPositiveButton("Fermer", null).show();
+        MilestoneChoice choice = shownCheckpoints.get(checkpointIndex);
+        String track = choice.sabqi ? "Acquisition" : "Maîtrise";
+        checkpointLabel.setText(year + " · " + choice.label + " · "
+            + track + "\\n" + choice.date.format(DAY_MONTH) + " · p."
+            + geometry.pageForVerse(choice.verse) + "  ›");
+        checkpointLabel.setContentDescription("Ouvrir le Mushaf depuis Cap Hifdh : "
+            + track + ", " + choice.label + ", "
+            + choice.date.format(FULL_DATE) + ", "
+            + QuranSurahNames.name(choice.verse.getSurah())
+            + " " + choice.verse.getAyah() + ". Prévision, pas acquis.");
+        if (timeline != null)
+            timeline.setSelection(choice.date, choice.sabqi);
     }
 
     private void openMushaf(VerseRef verse) {
