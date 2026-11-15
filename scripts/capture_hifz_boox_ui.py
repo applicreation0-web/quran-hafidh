@@ -185,6 +185,41 @@ def capture_cap_hifz(tag, home, width, height, fixed):
         hierarchy(suffix, lambda tree: visible(tree, is_graph) is not None and visible(
             tree, lambda value: value == f"Simulation à {scenario} pour cent, sélectionnée") is not None)
         diagnostics(suffix)
+    if tag.endswith("font150"):
+        verify_cap_milestone_opens_mushaf(tag)
+
+
+
+def verify_cap_milestone_opens_mushaf(tag):
+    """Follow a genuine, dated Cap Hifdh milestone from the home dialog
+    into the original QCF Mushaf; then return without modifying Hifdh."""
+    home = hierarchy(f"{tag}-cap-nav-ready")
+    entry = find_control(home, lambda value:
+                         "Juz / Hizb" in value or "Explorer les Juz et Hizb" in value)
+    if entry is None:
+        raise AssertionError("Cap Hifdh year milestone explorer is not clickable")
+    tap(entry)
+    listing = hierarchy(f"{tag}-cap-milestone-list", lambda tree: any(
+        "ouvrir le Mushaf" in value for node in tree.iter("node")
+        for value in names(node)))
+    diagnostics(f"{tag}-cap-milestone-list")
+    first = next((node for node in listing.iter("node")
+                  if node.get("package") == PACKAGE
+                  and "Prévision" in node.get("text", "")
+                  and "Mushaf" in node.get("text", "")
+                  and bounds(node) is not None), None)
+    if first is None:
+        raise AssertionError("No dated actionable Juz/Hizb or quarter milestone")
+    tap(first)
+    time.sleep(2)
+    state = adb("shell", "dumpsys", "activity", "activities").stdout.decode(
+        "utf-8", errors="replace")
+    if not re.search(r"(?:topResumedActivity|mResumedActivity).*StudyReaderActivity", state):
+        raise AssertionError("Cap Hifdh milestone did not open the real Mushaf")
+    diagnostics(f"{tag}-cap-mushaf-from-milestone")
+    adb("shell", "input", "keyevent", "4")
+    hierarchy(f"{tag}-cap-home-return", lambda tree:
+              find_control(tree, lambda label: label == "Parcours") is not None)
 
 
 def sunday_station(label):
