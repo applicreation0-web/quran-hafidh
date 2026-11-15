@@ -270,7 +270,7 @@ def verify_direct_cap_milestone_taps(tag, density):
         spacious = (gx2 - gx1) >= 720 * scale
         available_dp = (gy2 - gy1) / scale
         lane_separation = max(160 if spacious else 88,
-                              available_dp - (147 if spacious else 86))
+                              available_dp - (154 if spacious else 92))
         row = lane_separation if lane else 0
         px = int(gx1 + stations[station])
         py = int(gy1 + (row + (60 if spacious else 34)) * scale)
