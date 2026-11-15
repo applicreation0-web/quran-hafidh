@@ -135,7 +135,7 @@ public final class BooxPortraitHomeSourceContractTest {
             && home.contains("tile.addView(caption)")
             && home.contains("spaciousBooxHome() ? 112 : 70"));
         assertTrue("Cap Hifdh needs legible large BOOX text and full-size touch controls",
-            panel.contains("forecastSabqi && tailForecast ? 326 : 166")
+            panel.contains("forecastSabqi && (tailForecast || postNas) ? 326 : 166")
             && panel.contains("history.setMinHeight(Ui.dp(context, 48))")
             && timeline.contains("1.55f")
             && timeline.contains("laneSeparation()"));
