@@ -261,7 +261,7 @@ final class CapHifzPanel extends LinearLayout {
             body.addView(timeline, new LinearLayout.LayoutParams(-1,
                 Ui.dp(context, spaciousBoox()
                     ? (forecastSabqi && (tailForecast || postNas) ? 326 : 166)
-                    : (forecastSabqi && (tailForecast || postNas) ? 172 : 90))));
+                    : (forecastSabqi && (tailForecast || postNas) ? 184 : 90))));
         }
         LinearLayout navigator = Ui.row(context);
         TextView previous = button(navigator, "‹", v -> {
