@@ -1,12 +1,10 @@
 package com.quransafeguard.hifz.preview;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.quransafeguard.hifz.core.VerseRef;
@@ -43,11 +41,17 @@ final class CapHifzPanel extends LinearLayout {
     private BiPredicate<Track, LocalDate> received;
     private final Context context;
     private int year;
+    private int lastForecastYear;
     private int scenario = 90;
     private int checkpointIndex = 0;
     private List<MilestoneChoice> shownCheckpoints = new ArrayList<>();
     private TextView checkpointLabel;
     private CapHifzTimelineView timeline;
+    private TextView previousNavigator;
+    private TextView nextNavigator;
+    private boolean historyMode = false;
+    private int acquiredIndex = 0;
+    private List<AcquiredChoice> acquiredLines = new ArrayList<>();
 
     CapHifzPanel(Context context) {
         super(context);
@@ -66,6 +70,8 @@ final class CapHifzPanel extends LinearLayout {
         ledger = DashboardLedger.readOnly(context);
         finals = new PostFinalRecallStore(context);
         today = HifzClock.today();
+        historyMode = false;
+        acquiredLines = new ArrayList<>();
         monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
         if (year == 0) year = today.getYear();
         try {
@@ -133,6 +139,7 @@ final class CapHifzPanel extends LinearLayout {
         for (int percent : new int[]{80, 90, 100}) {
             TextView item = button(choices, percent + " %", v -> {
                 scenario = percent;
+                historyMode = false;
                 checkpointIndex = 0;
                 render();
             });
@@ -220,6 +227,7 @@ final class CapHifzPanel extends LinearLayout {
         }
 
         int lastYear = quarters.get(quarters.size() - 1).date.getYear();
+        lastForecastYear = lastYear;
         year = Math.max(today.getYear(), Math.min(year, lastYear));
         shownCheckpoints = checkpointsForYear(quarters, year);
         checkpointIndex = Math.max(0, Math.min(checkpointIndex,
@@ -238,15 +246,22 @@ final class CapHifzPanel extends LinearLayout {
         }
         LinearLayout navigator = Ui.row(context);
         TextView previous = button(navigator, "‹", v -> {
-            year--;
-            checkpointIndex = 0;
-            render();
+            if (historyMode) {
+                acquiredIndex = Math.min(acquiredIndex + 1, acquiredLines.size() - 1);
+                updateCheckpointLabel();
+            } else {
+                year--;
+                checkpointIndex = 0;
+                render();
+            }
         });
-        previous.setContentDescription("Année précédente de Cap Hifdh");
-        previous.setEnabled(year > today.getYear());
+        previousNavigator = previous;
 
         checkpointLabel = button(navigator, "", v -> {
-            if (!shownCheckpoints.isEmpty())
+            if (historyMode) {
+                if (!acquiredLines.isEmpty())
+                    openMushaf(acquiredLines.get(acquiredIndex).verse);
+            } else if (!shownCheckpoints.isEmpty())
                 openMushaf(shownCheckpoints.get(checkpointIndex).verse);
             else if (year < lastYear) {
                 year++;
@@ -259,16 +274,19 @@ final class CapHifzPanel extends LinearLayout {
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
             Ui.dp(context, 48), 1f));
-        updateCheckpointLabel();
-
         TextView next = button(navigator, "›", v -> {
-            year++;
-            checkpointIndex = 0;
-            render();
+            if (historyMode) {
+                acquiredIndex = Math.max(0, acquiredIndex - 1);
+                updateCheckpointLabel();
+            } else {
+                year++;
+                checkpointIndex = 0;
+                render();
+            }
         });
-        next.setContentDescription("Année suivante de Cap Hifdh");
-        next.setEnabled(year < lastYear);
+        nextNavigator = next;
         body.addView(navigator);
+        updateCheckpointLabel();
         if (postNas) line("Maintien après An-Nās", 12);
     }
 
@@ -325,6 +343,12 @@ final class CapHifzPanel extends LinearLayout {
     }
 
     private void nextCheckpoint() {
+        if (historyMode) {
+            if (acquiredLines.isEmpty()) return;
+            acquiredIndex = (acquiredIndex + 1) % acquiredLines.size();
+            updateCheckpointLabel();
+            return;
+        }
         if (shownCheckpoints.isEmpty()) return;
         checkpointIndex = (checkpointIndex + 1) % shownCheckpoints.size();
         updateCheckpointLabel();
@@ -332,6 +356,38 @@ final class CapHifzPanel extends LinearLayout {
 
     private void updateCheckpointLabel() {
         if (checkpointLabel == null) return;
+        if (previousNavigator != null) {
+            previousNavigator.setEnabled(historyMode
+                ? acquiredIndex + 1 < acquiredLines.size() : year > today.getYear());
+            previousNavigator.setContentDescription(historyMode
+                ? "Acquis plus ancien" : "Année précédente de Cap Hifdh");
+        }
+        if (nextNavigator != null) {
+            nextNavigator.setEnabled(historyMode
+                ? acquiredIndex > 0 : year < lastForecastYear);
+            nextNavigator.setContentDescription(historyMode
+                ? "Acquis plus récent" : "Année suivante de Cap Hifdh");
+        }
+        if (historyMode) {
+            if (timeline != null) timeline.setSelection(null, true);
+            if (acquiredLines.isEmpty()) {
+                checkpointLabel.setText("Aucun acquis enregistré");
+                checkpointLabel.setContentDescription(
+                    "Aucun acquis enregistré : toucher l'historique pour revenir à la projection");
+                return;
+            }
+            AcquiredChoice choice = acquiredLines.get(acquiredIndex);
+            String date = choice.date == null ? "Sans date" : choice.date.format(DAY_MONTH);
+            checkpointLabel.setText("Acquis " + (acquiredIndex + 1) + "/"
+                + acquiredLines.size() + " · p." + choice.page + "\n"
+                + date + " · " + QuranSurahNames.name(choice.verse.getSurah())
+                + " " + choice.verse.getAyah() + "  ›");
+            checkpointLabel.setContentDescription(
+                "Ouvrir un acquis dans le Mushaf depuis Cap Hifdh : page "
+                + choice.page + ", " + position(choice.verse)
+                + ", " + date + ". Attesté dans la progression V6.");
+            return;
+        }
         if (shownCheckpoints.isEmpty()) {
             checkpointLabel.setText(year + " · Aucun jalon\n‹ › : autre année");
             checkpointLabel.setContentDescription(
@@ -363,32 +419,55 @@ final class CapHifzPanel extends LinearLayout {
         context.startActivity(intent);
     }
 
+    private static final class AcquiredChoice {
+        final VerseRef verse;
+        final int page;
+        final LocalDate date;
+
+        AcquiredChoice(VerseRef verse, int page, LocalDate date) {
+            this.verse = verse;
+            this.page = page;
+            this.date = date;
+        }
+    }
+
+    /** Browse the genuinely acquired QCF lines using the SAME home controls.
+     *  No AlertDialog, huge modal list, fake receipt or viewport scroll. */
+    private List<AcquiredChoice> acquiredChoices() {
+        List<AcquiredChoice> choices = new ArrayList<>();
+        for (int i = 0; i < geometry.lineCount(); i++) {
+            GeometryRepository.LineMeta row = geometry.line(i);
+            if (!acquired.contains(row.id) || row.verses.isEmpty()) continue;
+            PostFinalRecallStore.LineDates proof = finalDates.get(row.id);
+            choices.add(new AcquiredChoice(row.verses.get(0), row.page,
+                proof == null ? null : proof.acquired));
+        }
+        choices.sort(Comparator.comparing((AcquiredChoice c) -> c.date,
+            Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(c -> -c.page));
+        return choices;
+    }
+
     private void showHistorySummary() {
         long dated = acquired.stream().filter(id -> finalDates.containsKey(id)
             && finalDates.get(id).acquired != null).count();
-        TextView history = line(acquired.size() + " lignes acquises · " + dated + " datées", 12);
-        history.setContentDescription(history.getText() + " · Consulter les dates des acquis");
+        String summary = acquired.size() + " lignes acquises · " + dated + " datées";
+        TextView history = line(summary, 12);
+        history.setContentDescription(summary + " · Parcourir ici les acquis, sans fenêtre");
         history.setFocusable(true);
         history.setOnClickListener(v -> {
-            List<String> labels = new ArrayList<>();
-            List<VerseRef> targets = new ArrayList<>();
-            for (int i = geometry.lineCount() - 1; i >= 0; i--) {
-                GeometryRepository.LineMeta row = geometry.line(i);
-                if (!acquired.contains(row.id)) continue;
-                if (row.verses.isEmpty()) continue;
-                targets.add(row.verses.get(0));
-                PostFinalRecallStore.LineDates proof = finalDates.get(row.id);
-                LocalDate first = earlier(learningDates.get(row.id), stabilizationDates.get(row.id));
-                labels.add("p. " + row.page + " · l. " + geometry.printedLineNumber(row)
-                    + " · " + position(row.verses.get(0))
-                    + "\nAcquis " + formatDate(proof == null ? null : proof.acquired)
-                    + " · Premier reçu " + formatDate(first));
+            historyMode = !historyMode;
+            if (historyMode) {
+                acquiredLines = acquiredChoices();
+                acquiredIndex = 0;
+                history.setText("Acquis · revenir à la projection  ›");
+                history.setContentDescription("Quitter la consultation des acquis");
+            } else {
+                history.setText(summary);
+                history.setContentDescription(summary
+                    + " · Parcourir ici les acquis, sans fenêtre");
             }
-            if (labels.isEmpty()) labels.add("Aucun acquis enregistré");
-            new AlertDialog.Builder(context).setTitle("Historique des acquis · Mushaf")
-                .setItems(labels.toArray(new String[0]), (dialog, index) -> {
-                    if (index < targets.size()) openMushaf(targets.get(index));
-                }).setPositiveButton("Fermer", null).show();
+            updateCheckpointLabel();
         });
     }
 
