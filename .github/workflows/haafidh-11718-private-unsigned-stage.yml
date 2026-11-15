@@ -1,0 +1,78 @@
+name: Haafidh 1.17.18 offline private unsigned release stage
+on:
+  push:
+    branches: [release/1.17.18-private-offline-sign]
+    paths:
+      - .github/workflows/haafidh-11718-private-unsigned-stage.yml
+      - hifz-app/build.gradle.kts
+permissions:
+  contents: read
+jobs:
+  private-unsigned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install SDK and canonical QCF SVG pages
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          bash scripts/fetch_mushaf_pages.sh
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Assert correct version and NO source assets, keys or private material on GitHub
+        run: |
+          set -euo pipefail
+          grep -q 'versionCode = 56' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.18"' hifz-app/build.gradle.kts
+          grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
+          test -z "${HIFZ_KEYSTORE_PATH:-}"
+          test ! -d hifz-app/src/private114/assets || test -z "$(find hifz-app/src/private114/assets -type f -print -quit)"
+          echo 'UNSIGNED_ONLY_PUBLIC_SOURCE_CHECK_PASS'
+      - name: Run JVM and Hifz source contracts
+        run: |
+          gradle --no-daemon --max-workers=2 :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
+      - name: Build isolated PRIVATE-MODE unsigned release APK for off-GitHub packaging only
+        run: |
+          set -euo pipefail
+          # Explicitly skip ONLY the private-resource/signing input gate.
+          # The resulting APK is unsigned, unusable, and lacks private assets;
+          # original official packaging validation is NOT disabled in any source file.
+          gradle --no-daemon --max-workers=2 :hifz-app:assembleRelease \
+            -x :hifz-app:verifyPrivateReleaseInputs --stacktrace
+      - name: Verify unsigned identity / asset absence and stage portable tool kit
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          BT="$SDK_ROOT/build-tools/36.0.0"
+          apk="$(find hifz-app/build-private114/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          test -s "$apk"
+          "$BT/aapt" dump badging "$apk" | grep "package: name='com.quransafeguard.hifz' versionCode='56' versionName='1.17.18'"
+          if "$BT/apksigner" verify "$apk" 2>/dev/null; then
+            echo 'ERROR: staging APK unexpectedly signed'; exit 1
+          fi
+          ! unzip -Z1 "$apk" | grep -Eq '^assets/(atlas_private|ayah_themes_private)/'
+          mkdir -p unsigned-stage
+          cp "$apk" unsigned-stage/Quran_Haafidh_11718_PRIVATE_MODE_UNSIGNED_STAGING.apk
+          cp "$BT/zipalign" unsigned-stage/zipalign
+          cp "$BT/lib/apksigner.jar" unsigned-stage/apksigner.jar
+          sha256sum unsigned-stage/*.apk > unsigned-stage/SHA256SUMS.txt
+          echo 'VERIFIED_UNSIGNED_OFFLINE_STAGE_NO_PRIVATE_ASSETS'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-11718-private-mode-unsigned-no-private-data
+          path: unsigned-stage/
+          if-no-files-found: error
+          retention-days: 2
