@@ -243,14 +243,16 @@ final class Ui {
         return view;
     }
 
-    private static Typeface notebookTypeface;
-
+    /**
+     * Legible editorial BOOX headings. The former Kalam-Regular handwriting
+     * was never an approved design reference and looked overly casual.
+     * Keep this asset-free typeface until a specific handwriting sample is
+     * approved; never change Arabic, QCF glyphs or Mushaf typography.
+     */
     static TextView notebookTitle(Context context, String value, float sizeSp) {
         TextView view = text(context, value, sizeSp, false);
-        if (notebookTypeface == null) {
-            notebookTypeface = Typeface.createFromAsset(context.getAssets(), "fonts/Kalam-Regular.ttf");
-        }
-        view.setTypeface(notebookTypeface);
+        view.setTypeface(Typeface.create("serif", Typeface.ITALIC));
+        view.setLetterSpacing(0.005f);
         return view;
     }
 
