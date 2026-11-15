@@ -62,6 +62,14 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNotNull(findGraph(decor));
                 assertNotNull("A dated milestone is selected inline, not in a popup",
                     findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
+                TextView history = findContains(decor, " lignes acquises · ");
+                assertNotNull("Cap Hifdh history must remain visible on the home", history);
+                assertTrue(history.performClick());
+                assertNotNull("Acquired lines use the same fixed row, not a modal",
+                    findContains(decor, "Acquis · revenir à la projection"));
+                assertTrue(history.performClick());
+                assertNotNull("Returning to the forecast must restore the QCF marker",
+                    findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
                 assertNull(findContains(decor, "30 Juz acquis attestés"));
                 assertTrue(find(decor, "90 %").isSelected());
                 assertEquals(postNas, find(decor, "Maintien après An-Nās") != null);
