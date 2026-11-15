@@ -7,6 +7,7 @@ on:
       - work/haafidh-integration-cap-hifdh-20261114
       - release-candidate/haafidh-11719-private-code-only-20261115
       - work/haafidh-11720-boox-cap-hifdh-spacing-20261115
+      - release-candidate/haafidh-11720-private-20261115
   pull_request:
     branches:
       - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
@@ -47,14 +48,14 @@ jobs:
         run: python3 scripts/test_build_11714_private_offline.py
       - name: Verify fail-closed 1.17.17 private offline release guard (synthetic only)
         run: python3 scripts/test_build_11717_private_offline.py
-      - name: Confirm 1.17.19 code57 identity and no private release artifact
+      - name: Confirm 1.17.20 code58 identity and no private release artifact
         run: |
           set -euo pipefail
           grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
-          grep -q 'versionCode = 57' hifz-app/build.gradle.kts
-          grep -q 'versionName = "1.17.19"' hifz-app/build.gradle.kts
+          grep -q 'versionCode = 58' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.20"' hifz-app/build.gradle.kts
           test ! -e hifz-app/build-private114/outputs/apk/release/hifz-app-release.apk
-          python3 scripts/test_build_11719_private_offline.py
+          python3 scripts/test_build_11720_private_offline.py
       - name: Enable hardware acceleration for the Android emulator
         run: |
           test -c /dev/kvm
