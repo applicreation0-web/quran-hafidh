@@ -1,0 +1,31 @@
+name: Haafidh 1.17.19 — Android build-tools verification utility ONLY
+on:
+  push:
+    branches: [release-candidate/haafidh-11719-private-code-only-20261115]
+    paths: [.github/workflows/haafidh-11719-apksigner-tooling-audit.yml]
+permissions:
+  contents: read
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect official Android apksigner verifier only (no app, no private input)
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "build-tools;36.0.0"
+          mkdir -p verification-tools
+          cp "$SDK_ROOT/build-tools/36.0.0/lib/apksigner.jar" verification-tools/apksigner.jar
+          test -s verification-tools/apksigner.jar
+          sha256sum verification-tools/apksigner.jar > verification-tools/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-build-tools-36-apksigner-verifier-only
+          path: verification-tools/
+          if-no-files-found: error
+          retention-days: 1
