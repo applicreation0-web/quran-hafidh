@@ -425,7 +425,7 @@ public final class MainActivity extends android.app.Activity {
             // Never consume the entire remaining viewport: on 1404px screens
             // the four symbols previously monopolised 47% of the display.
             // A bounded row reserves real legible space for Cap Hifdh.
-            int rowDp = spaciousBooxHome() ? 148 : 98;
+            int rowDp = spaciousBooxHome() ? 148 : 82;
             root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, rowDp)));
         } else {
             root.addView(row);
@@ -440,7 +440,7 @@ public final class MainActivity extends android.app.Activity {
             Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 5 : 12));
         tile.setGravity(Gravity.CENTER);
         int sideDp = wideBoox()
-            ? Math.min(booxIconDp(2, 112), spaciousBooxHome() ? 112 : 70)
+            ? Math.min(booxIconDp(2, 112), spaciousBooxHome() ? 112 : 52)
             : booxIconDp(2, 112);
         if (!wideBoox()) tile.setMinimumHeight(Ui.dp(this, sideDp + 36));
         int drawable = largeIconFor(role);
