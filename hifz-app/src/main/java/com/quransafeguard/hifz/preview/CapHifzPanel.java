@@ -237,10 +237,17 @@ final class CapHifzPanel extends LinearLayout {
             // The original one-screen BOOX home stays completely fixed.
             // Tap a real Juz/Hizb to open the QCF Mushaf immediately; tapping
             // empty ink cycles the next checkpoint inline, never a dialog.
+            // The real positions below come ONLY from persisted next-line
+            // cursors. They are NOT incorrectly labelled "acquired Juz".
+            int sabqiCurrentPage = cursor >= 0 && cursor < geometry.lineCount()
+                ? geometry.line(cursor).page : -1;
+            int tailCurrentPage = nextItqan >= 0 && nextItqan < geometry.lineCount()
+                ? geometry.line(nextItqan).page : -1;
             timeline = new CapHifzTimelineView(context, geometry, quarters, today,
                 forecastSabqi, tailForecast,
                 ignoredYear -> nextCheckpoint(),
-                (sabqi, milestone) -> openMushaf(milestone.verse), year);
+                (sabqi, milestone) -> openMushaf(milestone.verse), year,
+                sabqiCurrentPage, tailCurrentPage);
             body.addView(timeline, new LinearLayout.LayoutParams(-1,
                 Ui.dp(context, forecastSabqi && tailForecast ? 110 : 85)));
         }
