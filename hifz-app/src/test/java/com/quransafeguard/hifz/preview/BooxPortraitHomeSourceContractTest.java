@@ -146,10 +146,10 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("Stations have equal spacing ON PURPOSE"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
         assertTrue("Real next-line cursors must be kept distinct from acquired receipts",
-            panel.contains("geometry.line(cursor).page")
-            && panel.contains("geometry.line(nextItqan).page")
-            && timeline.contains("actualSabqiPage")
-            && timeline.contains("actualTailPage")
+            panel.contains("geometry.line(cursor).verses.get(0)")
+            && panel.contains("geometry.line(nextItqan).verses.get(0)")
+            && timeline.contains("actualSabqiVerse")
+            && timeline.contains("actualTailVerse")
             && timeline.contains("AL-FATḤ")
             && timeline.contains("AN-NĀS")
             && timeline.contains("targetDate.format(GOAL_DATE)"));
@@ -164,8 +164,11 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("No old caption under an adjacent rail",
             timeline.contains("lastLabelX") || timeline.contains("yearY")
             || timeline.contains("text(canvas, \"ICI\""));
-        assertTrue("The real position remains dated while exploring a future year",
-            timeline.contains("start.format(SHORT_DATE)"));
+        assertTrue("The actual cursor is displayed as surah and verse, not a page number",
+            timeline.contains("QuranSurahNames.rawName(current.getSurah())")
+            && timeline.contains("\"verset \" + current.getAyah()")
+            && !timeline.contains("\"p.\" + page")
+            && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
         assertTrue("Every stage caption has a width budget at large BOOX text sizes",
             timeline.contains("drawFitted(") && timeline.contains("paint.measureText(shown) > width"));
         assertTrue("Future boundaries come from the shown year and real start date",

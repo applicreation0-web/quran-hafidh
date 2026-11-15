@@ -9,6 +9,7 @@ import android.graphics.Path;
 import android.graphics.Typeface;
 import android.view.MotionEvent;
 import android.view.View;
+import com.quransafeguard.hifz.core.VerseRef;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -53,8 +54,8 @@ final class CapHifzTimelineView extends View {
     private final BiConsumer<Boolean, CapHifzForecast.Milestone> openMilestone;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final int selectedYear;
-    private final int actualSabqiPage;
-    private final int actualTailPage;
+    private final VerseRef actualSabqiVerse;
+    private final VerseRef actualTailVerse;
     private LocalDate selectedDate;
     private boolean selectedSabqi;
 
@@ -62,7 +63,7 @@ final class CapHifzTimelineView extends View {
             List<CapHifzForecast.Quarter> quarters, LocalDate start, boolean showSabqi,
             boolean showTail, IntConsumer exploreYear,
             BiConsumer<Boolean, CapHifzForecast.Milestone> openMilestone, int selectedYear,
-            int actualSabqiPage, int actualTailPage) {
+            VerseRef actualSabqiVerse, VerseRef actualTailVerse) {
         super(context);
         if (geometry == null || quarters == null || quarters.isEmpty() || start == null)
             throw new IllegalArgumentException("Real QCF and dated forecast required");
@@ -74,8 +75,8 @@ final class CapHifzTimelineView extends View {
         this.exploreYear = exploreYear;
         this.openMilestone = openMilestone;
         this.selectedYear = selectedYear;
-        this.actualSabqiPage = actualSabqiPage;
-        this.actualTailPage = actualTailPage;
+        this.actualSabqiVerse = actualSabqiVerse;
+        this.actualTailVerse = actualTailVerse;
         setBackgroundColor(Ui.PAPER);
         StringBuilder spoken = new StringBuilder("Feuille de route prévisionnelle interactive ")
             .append(selectedYear).append(". Projection à 90 pour cent, pas des acquis. ");
@@ -137,6 +138,11 @@ final class CapHifzTimelineView extends View {
         return (isJuz(point) ? "Juz " : "Hizb ") + milestoneNumber(point);
     }
 
+    private static String spokenVerse(VerseRef verse) {
+        return verse == null ? "non déterminée"
+            : QuranSurahNames.name(verse.getSurah()) + ", verset " + verse.getAyah();
+    }
+
     /** One offline vector pictogram per type, reused in the inline navigator. */
     private void symbol(Canvas canvas, CapHifzForecast.Milestone point, float x, float y) {
         int resource = isJuz(point) ? R.drawable.ic_cap_juz : R.drawable.ic_cap_hizb;
@@ -158,8 +164,8 @@ final class CapHifzTimelineView extends View {
 
     private void appendSpoken(StringBuilder spoken, boolean sabqi) {
         spoken.append(sabqi ? "Acquisition" : "Maîtrise")
-            .append(", curseur de travail page ")
-            .append(sabqi ? actualSabqiPage : actualTailPage).append(". ");
+            .append(", position de travail ")
+            .append(spokenVerse(sabqi ? actualSabqiVerse : actualTailVerse)).append(". ");
         List<CapHifzForecast.Milestone> upcoming = nextMilestones(sabqi);
         for (CapHifzForecast.Milestone point : upcoming)
             spoken.append("Jalon ").append(spokenMilestone(point)).append(" le ")
@@ -248,10 +254,10 @@ final class CapHifzTimelineView extends View {
         float top = dp(row);
         float[] x = stations(left, width);
         float y = top + dp(trackCenter());
-        int page = sabqi ? actualSabqiPage : actualTailPage;
+        VerseRef current = sabqi ? actualSabqiVerse : actualTailVerse;
         List<CapHifzForecast.Milestone> coming = nextMilestones(sabqi);
         LocalDate targetDate = finish(sabqi);
-        String target = sabqi ? "AL-FATḤ" : "AN-NĀS";
+        String target = sabqi ? "AL-FATḤ 29" : "AN-NĀS 6";
 
         drawFitted(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE",
             left, top + dp(titleBaseline()), 11.5f, INK, Paint.Align.LEFT, true, width * .46f);
@@ -282,12 +288,12 @@ final class CapHifzTimelineView extends View {
         goalDiamond(canvas, x[3], y);
 
         float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
-        drawFitted(canvas, page > 0 ? "p." + page : "position —",
+        // The authentic current position is a surah and ayah, never a page.
+        drawFitted(canvas, current == null ? "Sourate —"
+                : QuranSurahNames.rawName(current.getSurah()),
             x[0], top + dp(numberBaseline()), 10.5f, INK, Paint.Align.LEFT, true, w);
-        // The physical cursor is TODAY's position even while a later
-        // forecast year is explored. Its authentic date remains visible.
-        drawFitted(canvas, start.format(SHORT_DATE), x[0], top + dp(dateBaseline()),
-            9.5f, MID, Paint.Align.LEFT, false, w);
+        drawFitted(canvas, current == null ? "verset —" : "verset " + current.getAyah(),
+            x[0], top + dp(dateBaseline()), 9.5f, MID, Paint.Align.LEFT, false, w);
 
         for (int i = 0; i < 2; i++) {
             float xx = x[i + 1];

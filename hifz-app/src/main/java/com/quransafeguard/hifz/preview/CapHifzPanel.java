@@ -225,15 +225,17 @@ final class CapHifzPanel extends LinearLayout {
             // empty ink cycles the next checkpoint inline, never a dialog.
             // The real positions below come ONLY from persisted next-line
             // cursors. They are NOT incorrectly labelled "acquired Juz".
-            int sabqiCurrentPage = cursor >= 0 && cursor < geometry.lineCount()
-                ? geometry.line(cursor).page : -1;
-            int tailCurrentPage = nextItqan >= 0 && nextItqan < geometry.lineCount()
-                ? geometry.line(nextItqan).page : -1;
+            VerseRef sabqiCurrentVerse = cursor >= 0 && cursor < geometry.lineCount()
+                && !geometry.line(cursor).verses.isEmpty()
+                ? geometry.line(cursor).verses.get(0) : null;
+            VerseRef tailCurrentVerse = nextItqan >= 0 && nextItqan < geometry.lineCount()
+                && !geometry.line(nextItqan).verses.isEmpty()
+                ? geometry.line(nextItqan).verses.get(0) : null;
             timeline = new CapHifzTimelineView(context, geometry, quarters, today,
                 forecastSabqi, tailForecast,
                 ignoredYear -> nextCheckpoint(),
                 (sabqi, milestone) -> openMushaf(milestone.verse), year,
-                sabqiCurrentPage, tailCurrentPage);
+                sabqiCurrentVerse, tailCurrentVerse);
             body.addView(timeline, new LinearLayout.LayoutParams(-1,
                 Ui.dp(context, spaciousBoox()
                     ? (forecastSabqi && tailForecast ? 326 : 166)
@@ -380,12 +382,12 @@ final class CapHifzPanel extends LinearLayout {
             AcquiredChoice choice = acquiredLines.get(acquiredIndex);
             String date = choice.date == null ? "Sans date" : choice.date.format(DAY_MONTH);
             checkpointLabel.setText("Acquis " + (acquiredIndex + 1) + "/"
-                + acquiredLines.size() + " · p." + choice.page + "\n"
-                + date + " · " + QuranSurahNames.name(choice.verse.getSurah())
-                + " " + choice.verse.getAyah() + "  ›");
+                + acquiredLines.size() + " · "
+                + QuranSurahNames.name(choice.verse.getSurah()) + " "
+                + choice.verse.getAyah() + " · " + date + "  ›");
             checkpointLabel.setContentDescription(
-                "Ouvrir un acquis dans le Mushaf depuis Cap Hifdh : page "
-                + choice.page + ", " + position(choice.verse)
+                "Ouvrir un acquis dans le Mushaf depuis Cap Hifdh : "
+                + position(choice.verse)
                 + ", " + date + ". Attesté dans la progression V6.");
             return;
         }
