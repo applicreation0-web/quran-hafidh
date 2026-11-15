@@ -164,7 +164,7 @@ public final class MainActivity extends android.app.Activity {
         if(!wideBoox())path.addView(jumpToWeek);
         // Hifz semantic grammar: paired by the real corpus and operation.
         // Sabqi: introduce one set, then cumulatively revisit it.
-        path.addView(pathSectionTitle("SABQI"));
+        path.addView(pathSectionTitle("NOUVEAUX VERSETS"));
         LinearLayout learningModes = Ui.row(this);
         LinearLayout sabqi = pathTile(learningModes, "Apprentissage", "1 page/semaine",
             v -> openMode(HifzSessionActivity.SABQI));
@@ -174,7 +174,7 @@ public final class MainActivity extends android.app.Activity {
         else path.addView(learningModes);
 
         // Itqan: one bounded memorization unit, then its accumulated units.
-        path.addView(pathSectionTitle("ITQĀN"));
+        path.addView(pathSectionTitle("MAÎTRISE"));
         LinearLayout otherModes = Ui.row(this);
         itqanCard = pathTile(otherModes, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
