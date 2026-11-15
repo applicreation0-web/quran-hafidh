@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -13,6 +14,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -212,11 +214,13 @@ final class CapHifzPanel extends LinearLayout {
         int lastYear = quarters.get(quarters.size() - 1).date.getYear();
         year = Math.max(today.getYear(), Math.min(year, lastYear));
         if (forecastSabqi || tailForecast) {
+            // One whole year is shown at a time, not twenty years squeezed
+            // between two endpoints. Direct tap of a milestone opens its
+            // canonical QCF verse; a tap elsewhere opens the accessible list.
             CapHifzTimelineView graphic = new CapHifzTimelineView(context, geometry, quarters, today,
-                forecastSabqi, tailForecast, chosenYear -> {
-                    year = chosenYear;
-                    render();
-                }, year);
+                forecastSabqi, tailForecast,
+                chosenYear -> showMilestonesForYear(quarters, chosenYear),
+                (sabqi, milestone) -> openMushaf(milestone.verse), year);
             body.addView(graphic, new LinearLayout.LayoutParams(-1,
                 Ui.dp(context, forecastSabqi && tailForecast ? 110 : 85)));
         }
@@ -228,7 +232,9 @@ final class CapHifzPanel extends LinearLayout {
         TextView previous = button(details, "‹", v -> { year--; render(); });
         previous.setContentDescription("Année précédente");
         previous.setEnabled(year > today.getYear());
-        TextView selectedYear = button(details, year + " · Jalons", v -> showMilestones(displayed));
+        TextView selectedYear = button(details, year + " · Juz / Hizb", v -> showMilestones(displayed));
+        selectedYear.setContentDescription("Explorer les Juz et Hizb de " + year
+            + " : chaque jalon ouvre la page exacte du Mushaf");
         selectedYear.setGravity(Gravity.CENTER);
         selectedYear.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
         TextView next = button(details, "›", v -> { year++; render(); });
@@ -238,20 +244,91 @@ final class CapHifzPanel extends LinearLayout {
         if (postNas) line("Maintien après An-Nās", 12);
     }
 
-    private void showMilestones(List<CapHifzForecast.Quarter> rows) {
-        List<String> labels = new ArrayList<>();
-        for (CapHifzForecast.Quarter row : rows) {
-            for (CapHifzForecast.Milestone point : row.sabqiMilestones)
-                labels.add(point.date.format(DAY_MONTH) + " · Sabqi · " + position(point.verse));
-            for (CapHifzForecast.Milestone point : row.tailMilestones)
-                labels.add(point.date.format(DAY_MONTH) + " · Itqān · " + position(point.verse));
-            if (row.sabqiFinish != null) labels.add(row.sabqiFinish.format(DAY_MONTH) + " · Fin Sabqi · Al-Fatḥ");
-            if (row.tailFinish != null) labels.add(row.tailFinish.format(DAY_MONTH) + " · Fin Itqān · An-Nās");
-            labels.add(row.date.format(DAY_MONTH) + " · Sabqi · " + position(row.sabqi)
-                + (row.itqan == null ? "" : "\nItqān · " + position(row.itqan)));
+    private static final class MilestoneChoice {
+        final LocalDate date;
+        final VerseRef verse;
+        final String title;
+
+        MilestoneChoice(LocalDate date, VerseRef verse, String title) {
+            this.date = date;
+            this.verse = verse;
+            this.title = title;
         }
-        new AlertDialog.Builder(context).setTitle("Jalons " + year)
-            .setItems(labels.toArray(new String[0]), null).setPositiveButton("Fermer", null).show();
+    }
+
+    private void showMilestonesForYear(List<CapHifzForecast.Quarter> quarters, int chosenYear) {
+        List<CapHifzForecast.Quarter> rows = new ArrayList<>();
+        for (CapHifzForecast.Quarter row : quarters)
+            if (row.date.getYear() == chosenYear) rows.add(row);
+        showMilestones(rows);
+    }
+
+    /**
+     * Detailed drill-down lives in a scrollable Android dialog; the BOOX home
+     * itself never scrolls. Milestone dates are forecasts, NOT earned receipts.
+     * Every real QCF marker and quarter position opens the corresponding
+     * exact verse/page in the original Mushaf, without touching Hifdh state.
+     */
+    private void showMilestones(List<CapHifzForecast.Quarter> rows) {
+        List<MilestoneChoice> choices = new ArrayList<>();
+        for (CapHifzForecast.Quarter row : rows) {
+            for (CapHifzForecast.Milestone point : row.sabqiMilestones) {
+                String marker = point.hizb % 2 == 1
+                    ? "Juz " + ((point.hizb + 1) / 2) + " · Hizb " + point.hizb
+                    : "Hizb " + point.hizb;
+                choices.add(new MilestoneChoice(point.date, point.verse,
+                    "Nouveaux versets · " + marker));
+            }
+            for (CapHifzForecast.Milestone point : row.tailMilestones) {
+                String marker = point.hizb % 2 == 1
+                    ? "Juz " + ((point.hizb + 1) / 2) + " · Hizb " + point.hizb
+                    : "Hizb " + point.hizb;
+                choices.add(new MilestoneChoice(point.date, point.verse,
+                    "Maîtrise · " + marker));
+            }
+            if (row.sabqiFinish != null)
+                choices.add(new MilestoneChoice(row.sabqiFinish, SabqiRoute.ROUTE_END,
+                    "Objectif nouveaux versets · Al-Fatḥ"));
+            if (row.tailFinish != null)
+                choices.add(new MilestoneChoice(row.tailFinish, ItqanRotationPolicy.TAIL_END,
+                    "Objectif maîtrise · An-Nās"));
+            if (row.sabqi != null)
+                choices.add(new MilestoneChoice(row.date, row.sabqi,
+                    "Position de fin de trimestre · Nouveaux versets"));
+            if (row.itqan != null)
+                choices.add(new MilestoneChoice(row.date, row.itqan,
+                    "Position de fin de trimestre · Maîtrise"));
+        }
+        choices.sort(Comparator.comparing((MilestoneChoice c) -> c.date));
+        if (choices.isEmpty()) {
+            new AlertDialog.Builder(context)
+                .setTitle("Juz et Hizb · " + year)
+                .setMessage("Aucun nouveau jalon projeté pour cette année selon la cadence actuelle.")
+                .setPositiveButton("Fermer", null).show();
+            return;
+        }
+        List<String> labels = new ArrayList<>();
+        for (MilestoneChoice entry : choices) {
+            labels.add(entry.date.format(FULL_DATE) + " · Prévision"
+                + "\n" + entry.title + " · " + QuranSurahNames.name(entry.verse.getSurah())
+                + " " + entry.verse.getAyah() + " · p. " + geometry.pageForVerse(entry.verse)
+                + "  ›  Mushaf");
+        }
+        new AlertDialog.Builder(context)
+            .setTitle("Juz et Hizb · " + year + " · ouvrir le Mushaf")
+            .setItems(labels.toArray(new String[0]), (dialog, index) ->
+                openMushaf(choices.get(index).verse))
+            .setPositiveButton("Fermer", null).show();
+    }
+
+    private void openMushaf(VerseRef verse) {
+        if (verse == null || geometry == null) return;
+        int page = geometry.pageForVerse(verse);
+        Intent intent = new Intent(context, StudyReaderActivity.class)
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE, page)
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,
+                verse.getSurah() + ":" + verse.getAyah());
+        context.startActivity(intent);
     }
 
     private void showHistorySummary() {
@@ -262,9 +339,12 @@ final class CapHifzPanel extends LinearLayout {
         history.setFocusable(true);
         history.setOnClickListener(v -> {
             List<String> labels = new ArrayList<>();
+            List<VerseRef> targets = new ArrayList<>();
             for (int i = geometry.lineCount() - 1; i >= 0; i--) {
                 GeometryRepository.LineMeta row = geometry.line(i);
                 if (!acquired.contains(row.id)) continue;
+                if (row.verses.isEmpty()) continue;
+                targets.add(row.verses.get(0));
                 PostFinalRecallStore.LineDates proof = finalDates.get(row.id);
                 LocalDate first = earlier(learningDates.get(row.id), stabilizationDates.get(row.id));
                 labels.add("p. " + row.page + " · l. " + geometry.printedLineNumber(row)
@@ -273,8 +353,10 @@ final class CapHifzPanel extends LinearLayout {
                     + " · Premier reçu " + formatDate(first));
             }
             if (labels.isEmpty()) labels.add("Aucun acquis enregistré");
-            new AlertDialog.Builder(context).setTitle("Historique des acquis")
-                .setItems(labels.toArray(new String[0]), null).setPositiveButton("Fermer", null).show();
+            new AlertDialog.Builder(context).setTitle("Historique des acquis · Mushaf")
+                .setItems(labels.toArray(new String[0]), (dialog, index) -> {
+                    if (index < targets.size()) openMushaf(targets.get(index));
+                }).setPositiveButton("Fermer", null).show();
         });
     }
 
