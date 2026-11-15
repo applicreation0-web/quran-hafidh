@@ -1,0 +1,58 @@
+name: Quran Haafidh 1.17.20 private source-only gate (NO APK)
+on:
+  push:
+    branches:
+      - release-candidate/haafidh-11720-private-code-only-20261115
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android 37 SDK and pinned build tools
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Audit identity and never stage private assets in CI
+        run: |
+          set -euo pipefail
+          grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
+          grep -q 'versionCode = 58' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.20"' hifz-app/build.gradle.kts
+          test ! -d hifz-app/src/private114/assets
+          test -f scripts/build_11720_private_offline.py
+          test -f scripts/test_build_11720_private_offline.py
+      - name: Run 1.17.20 private gate synthetic tests (no secrets)
+        run: |
+          set -euo pipefail
+          python3 scripts/test_build_11720_private_offline.py
+          python3 scripts/test_build_11718_private_offline.py
+      - name: Run Hifz regression suites and source contracts without APK
+        run: gradle --no-daemon --init-script scripts/no_apk.init.gradle :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
+      - name: Compile release variant with private flags, NO packaging
+        env:
+          AYAH_THEMES_PRIVATE_114: '1'
+          HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+        run: gradle --no-daemon --init-script scripts/no_apk.init.gradle :hifz-app:compileReleaseJavaWithJavac --stacktrace
+      - name: Confirm NO signed APK, no archive, no key and no public upload
+        run: |
+          set -euo pipefail
+          test -z "$(find hifz-app -name '*.apk' -type f -print -quit)"
+          test ! -d hifz-app/src/private114/assets
+          echo "CODE ONLY — private offline signing still required"
