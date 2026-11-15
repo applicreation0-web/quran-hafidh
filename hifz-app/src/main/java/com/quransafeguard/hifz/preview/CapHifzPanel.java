@@ -29,6 +29,10 @@ final class CapHifzPanel extends LinearLayout {
     /** Single read-only attendance assumption for Cap Hifdh; not a completion credit. */
     private static final int PROJECTION_ATTENDANCE_PERCENT = 90;
 
+    private boolean spaciousBoox() {
+        return context.getResources().getConfiguration().smallestScreenWidthDp >= 800;
+    }
+
     private HifzPrefs prefs;
     private DashboardLedger ledger;
     private PostFinalRecallStore finals;
@@ -231,7 +235,9 @@ final class CapHifzPanel extends LinearLayout {
                 (sabqi, milestone) -> openMushaf(milestone.verse), year,
                 sabqiCurrentPage, tailCurrentPage);
             body.addView(timeline, new LinearLayout.LayoutParams(-1,
-                Ui.dp(context, forecastSabqi && tailForecast ? 166 : 82)));
+                Ui.dp(context, spaciousBoox()
+                    ? (forecastSabqi && tailForecast ? 250 : 116)
+                    : (forecastSabqi && tailForecast ? 172 : 90))));
         }
         LinearLayout navigator = Ui.row(context);
         TextView previous = button(navigator, "‹", v -> {
@@ -258,7 +264,7 @@ final class CapHifzPanel extends LinearLayout {
                 render();
             }
         });
-        checkpointLabel.setTextSize(12f);
+        checkpointLabel.setTextSize(spaciousBoox() ? 17f : 12f);
         checkpointLabel.setMaxLines(1);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
@@ -468,7 +474,10 @@ final class CapHifzPanel extends LinearLayout {
             && finalDates.get(id).acquired != null).count();
         String summary = "Acquis ›";
         String spokenSummary = acquired.size() + " lignes acquises, " + dated + " datées";
-        TextView history = line(summary, 12);
+        TextView history = line(summary, spaciousBoox() ? 16 : 12);
+        history.setMinHeight(Ui.dp(context, 48));
+        history.setGravity(Gravity.CENTER_VERTICAL);
+        history.setPadding(Ui.dp(context, 8), 0, Ui.dp(context, 8), 0);
         history.setContentDescription("Parcourir les acquis. " + spokenSummary + ". Sans fenêtre");
         history.setFocusable(true);
         history.setOnClickListener(v -> {

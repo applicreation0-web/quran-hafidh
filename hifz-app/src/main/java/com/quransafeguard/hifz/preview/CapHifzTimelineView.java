@@ -92,7 +92,10 @@ final class CapHifzTimelineView extends View {
     private float dp(float n) { return n * getResources().getDisplayMetrics().density; }
     private float sp(float n) { return n * getResources().getDisplayMetrics().scaledDensity; }
     /** Large E-Ink screens need readable labels rather than phone-sized text. */
-    private float labelScale() { return getWidth() >= dp(720) ? 1.25f : 1f; }
+    private float labelScale() { return getWidth() >= dp(720) ? 1.55f : 1f; }
+    private float laneSeparation() { return labelScale() > 1f ? 124f : SECOND_ROW; }
+    private float numberBaseline() { return labelScale() > 1f ? 76f : 64f; }
+    private float dateBaseline() { return labelScale() > 1f ? 107f : 83f; }
 
     void setSelection(LocalDate date, boolean sabqi) {
         selectedDate = date;
@@ -236,7 +239,7 @@ final class CapHifzTimelineView extends View {
         float width = getWidth() - dp(32);
         if (width <= dp(140) || getHeight() < dp(78)) return;
         if (showSabqi) drawLane(canvas, true, 0f, left, width);
-        if (showTail) drawLane(canvas, false, showSabqi ? SECOND_ROW : 0f, left, width);
+        if (showTail) drawLane(canvas, false, showSabqi ? laneSeparation() : 0f, left, width);
     }
 
     private void drawLane(Canvas canvas, boolean sabqi, float row, float left, float width) {
@@ -276,8 +279,8 @@ final class CapHifzTimelineView extends View {
 
         float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
         drawFitted(canvas, page > 0 ? "p." + page : "position —",
-            x[0], top + dp(62), 10.5f, INK, Paint.Align.LEFT, true, w);
-        drawFitted(canvas, "actuel", x[0], top + dp(77),
+            x[0], top + dp(numberBaseline()), 10.5f, INK, Paint.Align.LEFT, true, w);
+        drawFitted(canvas, "actuel", x[0], top + dp(dateBaseline()),
             9.5f, MID, Paint.Align.LEFT, false, w);
 
         for (int i = 0; i < 2; i++) {
@@ -285,22 +288,22 @@ final class CapHifzTimelineView extends View {
             String name = i < coming.size() ? milestoneNumber(coming.get(i)) : "—";
             String date = i < coming.size()
                 ? coming.get(i).date.format(SHORT_DATE) : "à déterminer";
-            drawFitted(canvas, name, xx, top + dp(62), 12f,
+            drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12f,
                 i == 0 ? INK : MID, Paint.Align.CENTER, true, w);
-            drawFitted(canvas, date, xx, top + dp(77), 9.5f, MID,
+            drawFitted(canvas, date, xx, top + dp(dateBaseline()), 9.5f, MID,
                 Paint.Align.CENTER, false, w);
         }
 
         float lastW = (x[3] - x[2]) * .94f;
-        drawFitted(canvas, target, x[3], top + dp(62), 11f, INK,
+        drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 11f, INK,
             Paint.Align.RIGHT, true, lastW);
         drawFitted(canvas, targetDate != null ? targetDate.format(GOAL_DATE) : "date —",
-            x[3], top + dp(77), 9.5f, MID, Paint.Align.RIGHT, false, lastW);
+            x[3], top + dp(dateBaseline()), 9.5f, MID, Paint.Align.RIGHT, false, lastW);
     }
 
     private CapHifzForecast.Milestone touchedMilestone(boolean sabqi,
             float px, float py, float left, float width) {
-        float row = showSabqi && !sabqi ? SECOND_ROW : 0f;
+        float row = showSabqi && !sabqi ? laneSeparation() : 0f;
         if (Math.abs(py - dp(row + TRACK_Y)) > dp(38)) return null;
         float[] x = stations(left, width);
         List<CapHifzForecast.Milestone> coming = nextMilestones(sabqi);

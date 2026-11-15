@@ -384,6 +384,11 @@ public final class MainActivity extends android.app.Activity {
         return wideBoox() && getResources().getConfiguration().screenHeightDp < 1000;
     }
 
+    /** Distinguishes the genuinely large 1404px BOOX geometry from the 900px compact screen. */
+    private boolean spaciousBooxHome() {
+        return wideBoox() && getResources().getConfiguration().smallestScreenWidthDp >= 800;
+    }
+
     /** BOOX-only text hierarchy for Hifz group labels; leaves modes and icons untouched. */
     private TextView pathSectionTitle(String caption) {
         TextView heading = Ui.notebookTitle(this, caption, 16f);
@@ -408,12 +413,12 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void addHomeAccessRow(LinearLayout root, LinearLayout row) {
-        if (compactBooxHome()) {
-            // Two stable 88dp icon rows. Shrink headers / hero typography
-            // instead of starving pictograms when Cap Hifdh is present.
-            root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, 88)));
-        } else if (wideBoox()) {
-            root.addView(row, new LinearLayout.LayoutParams(-1, 0, 1));
+        if (wideBoox()) {
+            // Never consume the entire remaining viewport: on 1404px screens
+            // the four symbols previously monopolised 47% of the display.
+            // A bounded row reserves real legible space for Cap Hifdh.
+            int rowDp = spaciousBooxHome() ? 148 : 102;
+            root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, rowDp)));
         } else {
             root.addView(row);
         }
@@ -426,8 +431,10 @@ public final class MainActivity extends android.app.Activity {
         tile.setPadding(Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 5 : 12),
             Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 5 : 12));
         tile.setGravity(Gravity.CENTER);
-        int sideDp = booxIconDp(2, 112);
-        if (!wideBoox()) tile.setMinimumHeight(Ui.dp(this, sideDp + 22));
+        int sideDp = wideBoox()
+            ? Math.min(booxIconDp(2, 112), spaciousBooxHome() ? 112 : 70)
+            : booxIconDp(2, 112);
+        if (!wideBoox()) tile.setMinimumHeight(Ui.dp(this, sideDp + 36));
         int drawable = largeIconFor(role);
         if (drawable == 0) drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
@@ -438,11 +445,18 @@ public final class MainActivity extends android.app.Activity {
             icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             icon.setPadding(0, 0, 0, 0);
             tile.addView(icon, wideBoox()
-                ? new LinearLayout.LayoutParams(Ui.dp(this, sideDp), -1)
+                ? new LinearLayout.LayoutParams(Ui.dp(this, sideDp), 0, 1f)
                 : new LinearLayout.LayoutParams(Ui.dp(this, sideDp), Ui.dp(this, sideDp)));
         }
-        // No labels beneath the four large home pictograms, per the BOOX
-        // memory-palace interface contract. Keep the full spoken destination.
+        // Four short visible names: a screen reader must not be the only way
+        // to distinguish Parcours / Progression / Lecture / Atlas.
+        TextView caption = Ui.bookText(this, display, spaciousBooxHome() ? 16f : 13f, true);
+        caption.setGravity(Gravity.CENTER);
+        caption.setSingleLine(true);
+        caption.setIncludeFontPadding(false);
+        caption.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        caption.setPadding(0, Ui.dp(this, 2), 0, 0);
+        tile.addView(caption);
         tile.setContentDescription(display);
         tile.setClickable(true);
         tile.setFocusable(true);

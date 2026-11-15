@@ -34,6 +34,10 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertTrue(main.contains("booxIconDp(2, 112)"));
         assertTrue(main.contains("booxIconDp(2, 124)"));
         assertTrue(main.contains("primaryTile(practiceRow, \"Progression\""));
+        assertTrue("Four compact visible captions, still no boxed cards",
+            main.contains("TextView caption = Ui.bookText(this, display")
+            && main.contains("tile.addView(caption)")
+            && main.contains("tile.setContentDescription(display)"));
         assertTrue(main.contains("architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp))"));
         assertFalse(main.contains("new BooxFlowStroke(this)"));
     }

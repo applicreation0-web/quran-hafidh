@@ -125,6 +125,16 @@ public final class BooxPortraitHomeSourceContractTest {
             && home.contains("pathSectionTitle(\"MAÎTRISE\")"));
         assertFalse(home.contains("pathSectionTitle(\"SABQI\")"));
         assertFalse(home.contains("pathSectionTitle(\"ITQĀN\")"));
+        assertTrue("Large BOOX home must reserve space for the roadmap and show four concise captions",
+            home.contains("int rowDp = spaciousBooxHome() ? 148 : 102;")
+            && home.contains("TextView caption = Ui.bookText(this, display")
+            && home.contains("tile.addView(caption)")
+            && home.contains("spaciousBooxHome() ? 112 : 70"));
+        assertTrue("Cap Hifdh needs legible large BOOX text and full-size touch controls",
+            panel.contains("forecastSabqi && tailForecast ? 250 : 116")
+            && panel.contains("history.setMinHeight(Ui.dp(context, 48))")
+            && timeline.contains("1.55f")
+            && timeline.contains("laneSeparation()"));
         assertTrue("A schematic short-term view must not compress decades into a time scale",
             timeline.contains("private List<CapHifzForecast.Milestone> nextMilestones")
             && timeline.contains("Math.min(2, upcoming.size())")
