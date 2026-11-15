@@ -194,6 +194,20 @@ def verify_cap_milestone_opens_mushaf(tag):
     """Check the all-inline Cap Hifdh navigator then open the real QCF
     Mushaf from its selected marker, never using an Android AlertDialog."""
     home = hierarchy(f"{tag}-cap-nav-ready")
+    history = find_control(home, lambda value: " lignes acquises · " in value)
+    if history is None:
+        raise AssertionError("Real acquired-line history should be inline on BOOX home")
+    tap(history)
+    home = hierarchy(f"{tag}-cap-inline-history", lambda tree:
+        find_control(tree, lambda value: value == "Quitter la consultation des acquis") is not None)
+    diagnostics(f"{tag}-cap-inline-history")
+    if not any("Acquis · revenir à la projection" in label
+               for node in home.iter("node") for label in names(node)):
+        raise AssertionError("History must reuse the existing inline row, not open a dialog")
+    tap(find_control(home, lambda value: value == "Quitter la consultation des acquis"))
+    home = hierarchy(f"{tag}-cap-inline-return", lambda tree:
+        find_control(tree, lambda value:
+            value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :")) is not None)
     selected = find_control(home, lambda value:
         value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
     if selected is None:
