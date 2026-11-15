@@ -116,6 +116,34 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse(home.contains("compactScheduleLine("));
     }
 
+    @Test public void capHifdhYearZoomAndRealJuzMilestonesNavigateToOriginalMushaf() throws Exception {
+        String home = read(MAIN);
+        String panel = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzPanel.java");
+        String timeline = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzTimelineView.java");
+        assertTrue("The two group headings are French and do not repeat icon labels",
+            home.contains("pathSectionTitle(\"NOUVEAUX VERSETS\")")
+            && home.contains("pathSectionTitle(\"MAÎTRISE\")"));
+        assertFalse(home.contains("pathSectionTitle(\"SABQI\")"));
+        assertFalse(home.contains("pathSectionTitle(\"ITQĀN\")"));
+        assertTrue("A year zoom prevents decades from flattening into endpoints",
+            timeline.contains("LocalDate.of(selectedYear, 12, 31)")
+            && timeline.contains("p.date.getYear() != selectedYear"));
+        assertTrue("Touch must open a canonical Juz or Hizb milestone",
+            timeline.contains("openMilestone.accept(true, hit)")
+            && timeline.contains("openMilestone.accept(false, hit)")
+            && timeline.contains("exploreYear.accept(selectedYear)"));
+        assertTrue("Every projected Juz and Hizb in the dialog must be actionable",
+            panel.contains("point.hizb % 2 == 1")
+            && panel.contains("showMilestonesForYear(quarters, chosenYear)")
+            && panel.contains("openMushaf(choices.get(index).verse)"));
+        assertTrue("Reader entry point must use the actual QCF page and verse",
+            panel.contains("geometry.pageForVerse(verse)")
+            && panel.contains("new Intent(context, StudyReaderActivity.class)")
+            && panel.contains("StudyReaderActivity.EXTRA_JUMP_PAGE")
+            && panel.contains("StudyReaderActivity.EXTRA_JUMP_VERSE"));
+        assertFalse("Forecast does not write Hifdh credits",panel.contains("completeDailyLesson("));
+    }
+
     @Test public void todayAndHifzNavigationKeepCanonicalRouting() throws Exception {
         String home=read(MAIN);
         assertTrue(home.contains("line.setOnClickListener(v -> openToday())"));
