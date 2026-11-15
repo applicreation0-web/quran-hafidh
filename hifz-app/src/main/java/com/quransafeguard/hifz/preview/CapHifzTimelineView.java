@@ -121,6 +121,14 @@ final class CapHifzTimelineView extends View {
         canvas.drawText(value, x, y, paint);
     }
 
+    private float labelWidth(String label, float size, boolean bold) {
+        paint.reset();
+        paint.setTypeface(Typeface.create("sans-serif",
+            bold ? Typeface.BOLD : Typeface.NORMAL));
+        paint.setTextSize(sp(size));
+        return paint.measureText(label);
+    }
+
     private void rings(Canvas canvas, float x, float y, int count) {
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Ui.PAPER);
@@ -189,10 +197,29 @@ final class CapHifzTimelineView extends View {
         float width = right - left;
         int actualPage = sabqi ? actualSabqiPage : actualTailPage;
         String state = actualPage > 0 ? " · p." + actualPage : " · à vérifier";
-        text(canvas, (sabqi ? "ACQUISITION" : "MAÎTRISE") + state, left,
-            centerY - dp(15), 10.5f, INK, Paint.Align.LEFT, true);
-        text(canvas, sabqi ? "CIBLE AL-FATḤ" : "CIBLE AN-NĀS", right,
-            centerY - dp(15), 10f, MID, Paint.Align.RIGHT, false);
+        String realPosition = (sabqi ? "ACQUISITION" : "MAÎTRISE") + state;
+        String objective = sabqi ? "CIBLE AL-FATḤ" : "CIBLE AN-NĀS";
+        text(canvas, realPosition, left, centerY - dp(15),
+            10.5f, INK, Paint.Align.LEFT, true);
+        text(canvas, objective, right, centerY - dp(15),
+            10f, MID, Paint.Align.RIGHT, false);
+        CapHifzForecast.Milestone next = nextCrossing(sabqi);
+        if (next != null) {
+            // A year of sparse Juz can otherwise look empty. The NEXT exact
+            // forecast crossing is legible even when it is in a later year.
+            // Measure all three captions; suppress this middle caption rather
+            // than overlap at large BOOX accessibility font scales.
+            String near = "PROCHAIN " + milestoneName(next) + " "
+                + next.date.getMonthValue() + "/" + next.date.getYear();
+            float middle = (left + right) / 2f;
+            float leftEnd = left + labelWidth(realPosition, 10.5f, true);
+            float rightStart = right - labelWidth(objective, 10f, false);
+            float middleHalf = labelWidth(near, 9f, false) / 2f;
+            if (middle - middleHalf >= leftEnd + dp(6)
+                    && middle + middleHalf <= rightStart - dp(6))
+                text(canvas, near, middle, centerY - dp(15), 9f,
+                    MID, Paint.Align.CENTER, false);
+        }
 
         stroke(FAINT, 1.0f);
         canvas.drawLine(left, centerY, right, centerY, paint);
@@ -211,7 +238,6 @@ final class CapHifzTimelineView extends View {
                 rings(canvas, endX, centerY, 3);
         }
 
-        CapHifzForecast.Milestone next = nextCrossing(sabqi);
         boolean nextInThisYear = next != null && next.date.getYear() == selectedYear;
         boolean hasCrossingInYear = false;
         // The REAL program position is the next cursor page, not a claimed
