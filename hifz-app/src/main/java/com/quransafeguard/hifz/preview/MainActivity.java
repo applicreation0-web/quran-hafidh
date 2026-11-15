@@ -71,6 +71,10 @@ public final class MainActivity extends android.app.Activity {
         // 1.17.5 CP1: BOOX-first home, one dominant session and four equally sized destinations.
         // Navigation-only refactor: all cadence, Hifz credits and geometry guards are unchanged.
         LinearLayout root = page();
+        // The fixed BOOX viewport already respects the system navigation bar.
+        // Reduce redundant internal bottom padding to show both forecast dates.
+        if (wideBoox()) root.setPadding(root.getPaddingLeft(), root.getPaddingTop(),
+            root.getPaddingRight(), Ui.dp(this, 2));
         // BOOX portrait home: fill the viewport without a centered 720dp tablet inset.
         homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root);
         LinearLayout header = Ui.row(this);
