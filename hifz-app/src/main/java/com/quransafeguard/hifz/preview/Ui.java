@@ -29,8 +29,9 @@ final class Ui {
     static final int LINE = 0xff88847d; // visible on greyscale E-Ink, no subtle web hairline
 
     /** One offline interface family; canonical Arabic/QCF pages keep their own glyphs. */
-    private static final Typeface INTERFACE_FONT = Typeface.create("sans-serif", Typeface.NORMAL);
-    static Typeface typeface(int style) { return Typeface.create(INTERFACE_FONT, style); }
+    // Lazy on Android: JVM source/icon-contract tests must not initialise
+    // framework Typeface when merely loading the non-visual Ui class.
+    static Typeface typeface(int style) { return Typeface.create("sans-serif", style); }
 
     private Ui() {}
 
