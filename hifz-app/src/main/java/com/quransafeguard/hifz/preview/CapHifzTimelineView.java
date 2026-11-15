@@ -37,7 +37,7 @@ final class CapHifzTimelineView extends View {
     private static final int INK = Color.rgb(22, 22, 22);
     private static final int MID = Color.rgb(79, 79, 79);
     private static final int FAINT = Color.rgb(161, 158, 150);
-    private static final float SECOND_ROW = 84f;
+    private static final float SECOND_ROW = 96f;
     // Keep circular nodes clear of the caption beneath them at BOOX 150%.
     private static final float TRACK_Y = 34f;
     private static final DateTimeFormatter SHORT_DATE =
