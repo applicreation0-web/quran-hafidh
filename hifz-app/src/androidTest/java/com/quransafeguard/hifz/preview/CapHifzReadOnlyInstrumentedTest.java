@@ -79,9 +79,11 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNull(find(decor, "90 %"));
                 CapHifzTimelineView graph = findGraph(decor);
                 assertNotNull(graph);
-                assertEquals("Maintien must become a real second roadmap lane",
-                    postNas, String.valueOf(graph.getContentDescription())
-                        .contains("Maintien : cycle sans échéance"));
+                String spoken = String.valueOf(graph.getContentDescription());
+                assertEquals("After An-Nās, a compact Entretien replaces the old Maîtrise rail",
+                    postNas, spoken.contains("Entretien : cycle sans échéance"));
+                assertFalse("No old Maintien progress rail or invented completion",
+                    spoken.contains("Maintien : cycle sans échéance"));
                 assertNotNull(find(decor, "Acquis ›"));
                 if (activity.getResources().getConfiguration().smallestScreenWidthDp >= 600) {
                     assertFalse(hasScrollView(decor));
