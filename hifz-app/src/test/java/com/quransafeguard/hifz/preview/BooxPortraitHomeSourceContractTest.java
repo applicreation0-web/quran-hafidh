@@ -64,7 +64,7 @@ public final class BooxPortraitHomeSourceContractTest {
         int practiceEnd = home.indexOf("addHomeAccessRow(root, practiceRow)");
         int readingEnd = home.indexOf("addHomeAccessRow(root, readingRow)");
         int actionsStart = home.indexOf("geometryActions.add(study)");
-        int capStart = home.indexOf("root.addView(capHifz)");
+        int capStart = home.indexOf("root.addView(capHifz,");
         assertTrue(practiceEnd > 0 && readingEnd > practiceEnd && capStart > readingEnd
             && actionsStart > capStart);
         assertTrue("BOOX uses a fixed viewport with two bounded direct-access rows",
@@ -129,19 +129,24 @@ public final class BooxPortraitHomeSourceContractTest {
             && home.contains("pathSectionTitle(\"MAÎTRISE\")"));
         assertFalse(home.contains("pathSectionTitle(\"SABQI\")"));
         assertFalse(home.contains("pathSectionTitle(\"ITQĀN\")"));
+        assertTrue("BOOX must fill the unused footer without any ScrollView",
+            home.contains("if (wideBoox()) root.addView(capHifz,")
+            && home.contains("new LinearLayout.LayoutParams(-1, 0, 1f)")
+            && home.contains("homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root)"));
         assertTrue("Large BOOX home must reserve space for the roadmap and show four concise captions",
             home.contains("int rowDp = spaciousBooxHome() ? 148 : 98;")
             && home.contains("TextView caption = Ui.bookText(this, display")
             && home.contains("tile.addView(caption)")
             && home.contains("spaciousBooxHome() ? 112 : 70"));
         assertTrue("Cap Hifdh needs legible large BOOX text and full-size touch controls",
-            panel.contains("forecastSabqi && (tailForecast || postNas) ? 326 : 166")
-            && panel.contains("forecastSabqi && (tailForecast || postNas) ? 184 : 90")
+            panel.contains("LinearLayout.LayoutParams graphLayout = boox")
+            && panel.contains("new LinearLayout.LayoutParams(-1, 0, 1f)")
             && panel.contains("history.setMinHeight(Ui.dp(context, 64))")
             && panel.contains("history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, 64)))")
             && timeline.contains("1.55f")
             && timeline.contains("laneSeparation()")
-            && timeline.contains("SECOND_ROW = 96f"));
+            && timeline.contains("SECOND_ROW = 96f")
+            && timeline.contains("availableDp - below"));
         assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
             panel.contains("forecastSabqi || tailForecast || postNas")
             && panel.contains("prefs.juzMaintenance().read()")
@@ -161,7 +166,8 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue("Surah names and arrow glyphs must be readable on BOOX without extra rows",
             timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12.5f")
             && panel.contains("previous.setTextSize(spaciousBoox() ? 22f : 20f)")
-            && panel.contains("next.setTextSize(spaciousBoox() ? 22f : 20f)"));
+            && panel.contains("next.setTextSize(spaciousBoox() ? 22f : 20f)")
+            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 12.5f"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
         assertTrue("A future checkpoint must be strictly after the authentic cursor",
             timeline.contains("GeometryRepository.ordinal(point.verse) > cursorOrdinal")
@@ -171,9 +177,9 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("geometry.line(nextItqan).verses.get(0)")
             && timeline.contains("actualSabqiVerse")
             && timeline.contains("actualTailVerse")
-            && timeline.contains("AL-FATḤ")
-            && timeline.contains("AN-NĀS")
-            && timeline.contains("targetDate.format(GOAL_DATE)"));
+            && timeline.contains("SabqiRoute.ROUTE_END.getSurah()")
+            && timeline.contains("ItqanRotationPolicy.TAIL_END.getSurah()")
+            && timeline.contains("targetDate.format(SHORT_DATE)"));
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         assertFalse("Unapproved Kalam titles must not be rendered on BOOX",
             ui.contains("createFromAsset(context.getAssets(), \"fonts/Kalam-Regular.ttf\")"));
