@@ -28,6 +28,23 @@ final class Ui {
     static final int MUTED = 0xff524f49;
     static final int LINE = 0xff88847d; // visible on greyscale E-Ink, no subtle web hairline
 
+    /** Patrick Hand (SIL OFL 1.1), bundled offline; QCF Mushaf glyphs are untouched.
+     * Context-lazy initialization avoids JVM source-contract regressions. */
+    private static volatile Typeface interfaceFont;
+    static Typeface typeface(Context context, int style) {
+        Typeface base = interfaceFont;
+        if (base == null) {
+            synchronized (Ui.class) {
+                base = interfaceFont;
+                if (base == null) {
+                    base = context.getResources().getFont(R.font.patrick_hand);
+                    interfaceFont = base;
+                }
+            }
+        }
+        return style == Typeface.NORMAL ? base : Typeface.create(base, style);
+    }
+
     private Ui() {}
 
     static Button button(Context context, String label, View.OnClickListener listener) {
@@ -134,14 +151,14 @@ final class Ui {
             : PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine";
     }
 
-    /** Shared BOOX menu hierarchy: bold sans title, concise serif secondary line.
+    /** Shared BOOX menu hierarchy: one family for headings, values and actions.
      * Values remain live TextViews (settings and progress summaries still update in-place). */
     static TextView menuSubline(Context context, String value) {
         TextView secondary = text(context, value == null ? "" : value, 15f, false);
         // 10-inch BOOX typography must remain readable at arm's length.
         if (context.getResources().getConfiguration().smallestScreenWidthDp >= 600)
             secondary.setTextSize(18f);
-        secondary.setTypeface(Typeface.create("serif", Typeface.NORMAL));
+        secondary.setTypeface(typeface(context, Typeface.NORMAL));
         secondary.setTextColor(MUTED);
         secondary.setLineSpacing(0f, 1.0f);
         secondary.setMaxLines(2);
@@ -233,13 +250,18 @@ final class Ui {
         view.setTextSize(sizeSp);
         view.setTextColor(INK);
         view.setLineSpacing(0f, 1.08f);
-        if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        view.setTypeface(typeface(context, bold ? Typeface.BOLD : Typeface.NORMAL));
         return view;
     }
 
     static TextView bookText(Context context, String value, float sizeSp, boolean bold) {
-        TextView view = text(context, value, sizeSp, false);
-        view.setTypeface(Typeface.create("sans-serif",bold ? Typeface.BOLD : Typeface.NORMAL));
+        return text(context, value, sizeSp, bold);
+    }
+
+    /** Headings share the exact interface family; hierarchy comes from weight only. */
+    static TextView notebookTitle(Context context, String value, float sizeSp) {
+        TextView view = text(context, value, sizeSp, true);
+        view.setLetterSpacing(0.01f);
         return view;
     }
 
@@ -294,6 +316,7 @@ final class Ui {
     private static Button styled(Button button, Context context, float sizeSp, int radius) {
         button.setAllCaps(false);
         button.setTextSize(sizeSp);
+        button.setTypeface(typeface(context, Typeface.NORMAL));
         button.setStateListAnimator(null);
         button.setElevation(0f);
         int stroke = Math.max(1, dp(context, 1));

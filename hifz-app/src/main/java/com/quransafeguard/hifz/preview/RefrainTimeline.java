@@ -162,8 +162,8 @@ final class RefrainTimeline {
             detail.setContentDescription("Lire "+n[5]+" dans le Mushaf. Before "+
                 n[8]+" "+n[15]+". After "+n[11]+" "+n[16]);
             for(int i=0;i<labels.size();i++)
-                labels.get(i).setTypeface(null,i==current[0]?
-                    android.graphics.Typeface.BOLD:android.graphics.Typeface.NORMAL);
+                labels.get(i).setTypeface(Ui.typeface(a, i==current[0]?
+                    android.graphics.Typeface.BOLD:android.graphics.Typeface.NORMAL));
             int left=Math.max(0,(current[0]-visible+1)*slotPx);
             int right=(current[0]+1)*slotPx;
             int x=scroll.getScrollX();

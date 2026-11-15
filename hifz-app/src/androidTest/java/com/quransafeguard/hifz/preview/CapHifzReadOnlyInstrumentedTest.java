@@ -1,0 +1,157 @@
+package com.quransafeguard.hifz.preview;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.SystemClock;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import androidx.test.core.app.ActivityScenario;
+import androidx.test.core.app.ApplicationProvider;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
+
+public final class CapHifzReadOnlyInstrumentedTest {
+    private Context context;
+    private SharedPreferences raw;
+    private SharedPreferences ledger;
+
+    @Before public void setUp() {
+        context = ApplicationProvider.getApplicationContext();
+        raw = context.getSharedPreferences("quran_hifz_preview_v1", Context.MODE_PRIVATE);
+        ledger = context.getSharedPreferences("quran_hifz_dashboard_ledger_v1", Context.MODE_PRIVATE);
+        assertTrue(raw.edit().clear().commit());
+        assertTrue(ledger.edit().clear().commit());
+        new HifzPrefs(context);
+    }
+
+    @After public void tearDown() {
+        raw.edit().clear().commit();
+        ledger.edit().clear().commit();
+    }
+
+    @Test public void fixedNinetyPercentProjectionAndEmptyHistoryLeaveAllFiveBackupStoresUntouched() throws Exception {
+        exercise(false);
+    }
+
+    @Test public void maintenanceScreenKeepsTheRealAnNasLatch() throws Exception {
+        assertTrue(raw.edit().putBoolean(ItqanRegimeStore.INITIAL_TAIL_COMPLETED, true).commit());
+        exercise(true);
+    }
+
+    private void exercise(boolean postNas) throws Exception {
+        try (ActivityScenario<MainActivity> screen = ActivityScenario.launch(MainActivity.class)) {
+            for (int i = 0; i < 100; i++) {
+                boolean[] ready = {false};
+                screen.onActivity(activity -> ready[0] =
+                    findContains(activity.getWindow().getDecorView(), "Prévision · 90 %") != null
+                        && find(activity.getWindow().getDecorView(), "Prévision · 90 % d’assiduité") != null);
+                if (ready[0]) break;
+                SystemClock.sleep(100);
+            }
+            org.json.JSONObject before = HifzBackup.export(context);
+            screen.onActivity(activity -> {
+                View decor = activity.getWindow().getDecorView();
+                assertNotNull(find(decor, "Cap Hifdh"));
+                assertNotNull(findContains(decor, "Prévision · 90 %"));
+                assertNull(find(decor, "Trajectoire"));
+                assertNull(find(decor, "Historique"));
+                assertNotNull(findGraph(decor));
+                assertNotNull("A dated milestone is selected inline, not in a popup",
+                    findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
+                TextView history = find(decor, "Acquis ›");
+                assertNotNull("Cap Hifdh history must remain visible on the home", history);
+                assertTrue(history.performClick());
+                assertNotNull("Acquired lines use the same fixed row, not a modal",
+                    findContains(decor, "Acquis · revenir à la projection"));
+                assertTrue(history.performClick());
+                assertNotNull("Returning to the forecast must restore the QCF marker",
+                    findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
+                assertNull(findContains(decor, "30 Juz acquis attestés"));
+                TextView target = find(decor, "Prévision · 90 % d’assiduité");
+                assertNotNull("A single non-interactive 90% target must be visible", target);
+                assertFalse("The fixed projection is not a toggle", target.isClickable());
+                assertNull(find(decor, "100 %"));
+                assertNull(find(decor, "80 %"));
+                assertNull(find(decor, "90 %"));
+                CapHifzTimelineView graph = findGraph(decor);
+                assertNotNull(graph);
+                assertEquals("Maintien must become a real second roadmap lane",
+                    postNas, String.valueOf(graph.getContentDescription())
+                        .contains("Maintien : cycle sans échéance"));
+                assertNotNull(find(decor, "Acquis ›"));
+                if (activity.getResources().getConfiguration().smallestScreenWidthDp >= 600) {
+                    assertFalse(hasScrollView(decor));
+                }
+            });
+            org.json.JSONObject after = HifzBackup.export(context);
+            for (String store : new String[]{"values", "dashboard", "j10", "legacy_gates", "free_mem"}) {
+                assertEquals(store, before.getJSONObject(store).toString(), after.getJSONObject(store).toString());
+            }
+        }
+    }
+
+    private static View findDescription(View view, String prefix) {
+        CharSequence spoken = view.getContentDescription();
+        if (spoken != null && spoken.toString().startsWith(prefix)) return view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View found = findDescription(group.getChildAt(i), prefix);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private static boolean hasScrollView(View view) {
+        if (view instanceof android.widget.ScrollView) return true;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                if (hasScrollView(group.getChildAt(i))) return true;
+            }
+        }
+        return false;
+    }
+
+    private static CapHifzTimelineView findGraph(View view) {
+        if (view instanceof CapHifzTimelineView) return (CapHifzTimelineView) view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                CapHifzTimelineView found = findGraph(group.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private static TextView findContains(View view, String label) {
+        if (view instanceof TextView &&
+                ((TextView) view).getText().toString().contains(label)) return (TextView) view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                TextView found = findContains(group.getChildAt(i), label);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private static TextView find(View view, String label) {
+        if (view instanceof TextView && label.contentEquals(((TextView) view).getText())) return (TextView) view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                TextView found = find(group.getChildAt(i), label);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+}

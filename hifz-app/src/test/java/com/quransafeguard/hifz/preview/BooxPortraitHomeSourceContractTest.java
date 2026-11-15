@@ -48,9 +48,12 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("Ui.bookText(this, \"AUJOURD’HUI\", 17f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"…\", 23f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)"));
-        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 22))"));
-        assertTrue("Labels are available to accessibility without captions under the icons",
-            home.contains("tile.setContentDescription(display);"));
+        assertTrue("Captions require bounded icon row and sufficient text height",
+            home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 36))")
+            && home.contains("TextView caption = Ui.bookText(this, display"));
+        assertTrue("Four destinations have both concise visible captions and accessible descriptions",
+            home.contains("tile.setContentDescription(display);")
+            && home.contains("tile.addView(caption);"));
         assertFalse(home.contains("tile.addView(title);"));
         assertTrue(home.contains("booxIconDp(2, 112)"));
         assertTrue(home.contains("primaryTile(practiceRow, \"Parcours Hifz\", \"Parcours\""));
@@ -58,10 +61,16 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("primaryTile(readingRow, \"Lecture\", \"Lecture\""));
         assertTrue(home.contains("primaryTile(readingRow, \"Atlas\", \"Atlas\""));
         // All four home destinations must be presented identically, without a visual divider.
-        int practiceEnd = home.indexOf("root.addView(practiceRow)");
-        int readingEnd = home.indexOf("root.addView(readingRow)");
+        int practiceEnd = home.indexOf("addHomeAccessRow(root, practiceRow)");
+        int readingEnd = home.indexOf("addHomeAccessRow(root, readingRow)");
         int actionsStart = home.indexOf("geometryActions.add(study)");
-        assertTrue(practiceEnd > 0 && readingEnd > practiceEnd && actionsStart > readingEnd);
+        int capStart = home.indexOf("root.addView(capHifz,");
+        assertTrue(practiceEnd > 0 && readingEnd > practiceEnd && capStart > readingEnd
+            && actionsStart > capStart);
+        assertTrue("BOOX uses a fixed viewport with two bounded direct-access rows",
+            home.contains("homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root);")
+            && home.contains("int rowDp = spaciousBooxHome() ? 148 : 98;")
+            && home.contains("root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, rowDp)));"));
         assertFalse("Home destination rows must not be split by a rule",
             home.substring(practiceEnd, actionsStart).contains("Ui.divider(this)"));
         assertFalse("No asymmetric footer navigation", home.contains("secondaryTile("));
@@ -109,6 +118,139 @@ public final class BooxPortraitHomeSourceContractTest {
                 && home.contains("scheduleDetail(chosen.evening)")
                 && home.contains("return raw.replace(\" · \", "));
         assertFalse(home.contains("compactScheduleLine("));
+    }
+
+    @Test public void capHifdhShowsTwoDatedNextStepsAndFinalGoalWithoutClutter() throws Exception {
+        String home = read(MAIN);
+        String panel = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzPanel.java");
+        String timeline = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzTimelineView.java");
+        assertTrue("The two group headings are French and do not repeat icon labels",
+            home.contains("pathSectionTitle(\"ACQUISITION\")")
+            && home.contains("pathSectionTitle(\"MAÎTRISE\")"));
+        assertFalse(home.contains("pathSectionTitle(\"SABQI\")"));
+        assertFalse(home.contains("pathSectionTitle(\"ITQĀN\")"));
+        assertTrue("BOOX must fill the unused footer without any ScrollView",
+            home.contains("if (wideBoox()) root.addView(capHifz,")
+            && home.contains("new LinearLayout.LayoutParams(-1, 0, 1f)")
+            && home.contains("homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root)"));
+        assertTrue("Large BOOX home must reserve space for the roadmap and show four concise captions",
+            home.contains("int rowDp = spaciousBooxHome() ? 148 : 98;")
+            && home.contains("TextView caption = Ui.bookText(this, display")
+            && home.contains("tile.addView(caption)")
+            && home.contains("spaciousBooxHome() ? 112 : 70"));
+        assertTrue("Cap Hifdh needs legible large BOOX text and full-size touch controls",
+            panel.contains("LinearLayout.LayoutParams graphLayout = boox")
+            && panel.contains("new LinearLayout.LayoutParams(-1, 0, 1f)")
+            && panel.contains("historyDp = context.getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 48 : 64")
+            && panel.contains("history.setMinHeight(Ui.dp(context, historyDp))")
+            && panel.contains("history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, historyDp)))")
+            && timeline.contains("1.55f")
+            && timeline.contains("laneSeparation()")
+            && timeline.contains("SECOND_ROW = 96f")
+            && timeline.contains("availableDp - below")
+            && timeline.contains("float below = spacious ? 154f : 92f"));
+        assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
+            panel.contains("forecastSabqi || tailForecast || postNas")
+            && panel.contains("prefs.juzMaintenance().read()")
+            && timeline.contains("drawMaintenanceLane(")
+            && timeline.contains("cycle sans échéance")
+            && !panel.contains("if (postNas) line(\"Maintien après An-Nās\""));
+        assertTrue("A schematic short-term view must not compress decades into a time scale",
+            timeline.contains("private List<CapHifzForecast.Milestone> nextMilestones")
+            && timeline.contains("CapHifzForecast.visibleMilestones(upcoming)")
+            && timeline.contains("nextMilestones(sabqi)")
+            && timeline.contains("Stations have equal spacing ON PURPOSE"));
+        String forecast = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzForecast.java");
+        assertTrue("Chapter starts must be projected from real QCF crossings, notably Āl ʿImrān 3:1",
+            forecast.contains("new VerseRef(surah, 1)")
+            && forecast.contains("SabqiRoute.ROUTE_END.getSurah()")
+            && forecast.contains("crossings(geometry, sabqiBoundaries"));
+        assertTrue("Surah names and arrow glyphs must be readable on BOOX without extra rows",
+            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12.5f")
+            && panel.contains("previous.setTextSize(spaciousBoox() ? 22f : 20f)")
+            && panel.contains("next.setTextSize(spaciousBoox() ? 22f : 20f)")
+            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 12.5f"));
+        assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
+        assertTrue("A future checkpoint must be strictly after the authentic cursor",
+            timeline.contains("GeometryRepository.ordinal(point.verse) > cursorOrdinal")
+            && timeline.contains("sabqi ? actualSabqiVerse : actualTailVerse"));
+        assertTrue("Real next-line cursors must be kept distinct from acquired receipts",
+            panel.contains("geometry.line(cursor).verses.get(0)")
+            && panel.contains("geometry.line(nextItqan).verses.get(0)")
+            && timeline.contains("actualSabqiVerse")
+            && timeline.contains("actualTailVerse")
+            && timeline.contains("SabqiRoute.ROUTE_END.getSurah()")
+            && timeline.contains("ItqanRotationPolicy.TAIL_END.getSurah()")
+            && timeline.contains("targetDate.format(SHORT_DATE)"));
+        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
+        assertFalse("Unapproved Kalam titles must not be rendered on BOOX",
+            ui.contains("createFromAsset(context.getAssets(), \"fonts/Kalam-Regular.ttf\")"));
+        assertTrue("All French interface text must use one offline font family",
+            ui.contains("context.getResources().getFont(R.font.patrick_hand)")
+            && ui.contains("view.setTypeface(typeface(context, bold ? Typeface.BOLD : Typeface.NORMAL))")
+            && timeline.contains("Ui.typeface(getContext(), bold ? Typeface.BOLD : Typeface.NORMAL)"));
+        assertFalse("No stray serif headings or sublines", ui.contains("Typeface.create(\"serif\""));
+        assertFalse("No old caption under an adjacent rail",
+            timeline.contains("lastLabelX") || timeline.contains("yearY")
+            || timeline.contains("text(canvas, \"ICI\""));
+        assertTrue("The actual cursor is displayed as surah and verse, not a page number",
+            timeline.contains("QuranSurahNames.rawName(current.getSurah())")
+            && timeline.contains("\"verset \" + current.getAyah()")
+            && !timeline.contains("\"p.\" + page")
+            && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
+        assertTrue("Every stage caption has a width budget at large BOOX text sizes",
+            timeline.contains("drawFitted(") && timeline.contains("paint.measureText(shown) > width"));
+        assertTrue("Future boundaries come from the shown year and real start date",
+            timeline.contains("!point.date.isBefore(windowStart())")
+            && timeline.contains("!point.date.isBefore(start)"));
+        assertTrue("Projected stations present an actual sourate and ayah with forecast date",
+            timeline.contains("QuranSurahNames.rawName(coming.get(i).verse.getSurah())")
+            && timeline.contains("coming.get(i).verse.getAyah()")
+            && timeline.contains("coming.get(i).date.format(SHORT_DATE)")
+            && panel.contains("checkpointDisplay(choice)")
+            && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
+        assertTrue("Accessibility uses complete Quran positions, not Juz/Hizb numbers",
+            timeline.contains("spokenVerse(point.verse)")
+            && timeline.contains("QuranSurahNames.name(verse.getSurah())"));
+        assertFalse("Juz/Hizb glyphs and number labels are removed from Cap Hifdh",
+            timeline.contains("R.drawable.ic_cap_juz")
+            || timeline.contains("R.drawable.ic_cap_hizb")
+            || timeline.contains("milestoneNumber(")
+            || panel.contains("new android.text.style.ImageSpan(icon"));
+        assertTrue("Post-Nas maintenance does not invent an ongoing Juz session",
+            timeline.contains("maintenanceVerse == null ? \"aucune ouverte\" : \"en cours\"")
+            && panel.contains("prefs.juzMaintenance().read()"));
+        assertTrue("Touch must open a canonical Juz or Hizb milestone",
+            timeline.contains("openMilestone.accept(true, hit)")
+            && timeline.contains("openMilestone.accept(false, hit)")
+            && timeline.contains("exploreYear.accept(selectedYear)"));
+        assertTrue("No modal for Cap Hifdh roadmap: all markers are selected inline",
+            panel.contains("shownCheckpoints = checkpointsForYear(quarters, year)")
+            && panel.contains("ignoredYear -> nextCheckpoint()")
+            && panel.contains("openMushaf(shownCheckpoints.get(checkpointIndex).verse)")
+            && panel.contains("checkpointLabel.setContentDescription(\"Ouvrir le Mushaf depuis Cap Hifdh")); 
+        assertFalse("Cap Hifdh itself must never create an Android dialog",
+            panel.contains("new AlertDialog.Builder("));
+        assertTrue("Only one fixed 90% target; no choice row and no mutable scenario",
+            panel.contains("PROJECTION_ATTENDANCE_PERCENT = 90")
+            && panel.contains("Prévision · 90 % d’assiduité")
+            && !panel.contains("new int[]{80, 90, 100}")
+            && !panel.contains("private int scenario"));
+        assertTrue("Single 90% target always passed to read-only forecast",
+            panel.contains("PROJECTION_ATTENDANCE_PERCENT / 100.0"));
+        assertFalse("The weekly attendance summary must not obscure the roadmap",
+            panel.contains("renderWeek();"));
+        assertTrue("Acquired lines are browsed inline using the same controls",
+            panel.contains("private List<AcquiredChoice> acquiredChoices()")
+            && panel.contains("historyMode = !historyMode")
+            && panel.contains("history.setText(\"Acquis · revenir à la projection")
+            && panel.contains("Ouvrir un acquis dans le Mushaf depuis Cap Hifdh"));
+        assertTrue("Reader entry point must use the actual QCF page and verse",
+            panel.contains("geometry.pageForVerse(verse)")
+            && panel.contains("new Intent(context, StudyReaderActivity.class)")
+            && panel.contains("StudyReaderActivity.EXTRA_JUMP_PAGE")
+            && panel.contains("StudyReaderActivity.EXTRA_JUMP_VERSE"));
+        assertFalse("Forecast does not write Hifdh credits",panel.contains("completeDailyLesson("));
     }
 
     @Test public void todayAndHifzNavigationKeepCanonicalRouting() throws Exception {

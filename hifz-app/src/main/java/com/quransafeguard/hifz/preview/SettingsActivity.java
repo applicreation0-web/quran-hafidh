@@ -71,9 +71,15 @@ public final class SettingsActivity extends android.app.Activity {
         protocol=Ui.text(this,weeklyCadenceSummary(),16f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4));parcours.addView(protocol);
         LinearLayout roadmapModeRow=Ui.row(this);roadmapModeRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));roadmapModeRow.setMinimumHeight(Ui.dp(this,48));
-        TextView roadmapModeLabel=Ui.text(this,"Pilotage Roadmap · Automatique",16f,false);Ui.weight(roadmapModeLabel,1);roadmapModeRow.addView(roadmapModeLabel);
-        Switch roadmapModeSwitch=new Switch(this);roadmapModeSwitch.setChecked(prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO);roadmapModeSwitch.setContentDescription("Pilotage Roadmap automatique");
+        TextView roadmapModeLabel=Ui.text(this,"Cadence pré-Al-Baqara · 3/3",16f,false);Ui.weight(roadmapModeLabel,1);roadmapModeRow.addView(roadmapModeLabel);
+        Switch roadmapModeSwitch=new Switch(this);roadmapModeSwitch.setChecked(prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO);roadmapModeSwitch.setContentDescription("Cadence 3/3 avant la fin d’Al-Baqara");
         roadmapModeRow.addView(roadmapModeSwitch);parcours.addView(roadmapModeRow);parcours.addView(Ui.divider(this));
+        TextView roadmapLimit=Ui.text(this,
+            "Cadence évolutive après Al-Baqara indisponible.",
+            13f,false);
+        roadmapLimit.setTextColor(Ui.MUTED);
+        parcours.addView(roadmapLimit);
+
         weeklyProgramSetting=Ui.settingRow(this,"Programme",
             weeklyProgramSummary(),v->chooseWeeklyProgram());
         parcours.addView(weeklyProgramSetting);parcours.addView(Ui.divider(this));
@@ -328,7 +334,7 @@ public final class SettingsActivity extends android.app.Activity {
             ? "3 jours Apprentissage · 3 jours Stabilisation"
             : days+" jours Apprentissage · "+(6-days)
                 +" jours Stabilisation + finales dimanche";
-        return prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO ? base+"   ·   Automatique" : base;
+        return prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO ? base+"   ·   3/3 avant la fin d’Al-Baqara" : base;
     }
 
     private void refreshWeeklyCadence(){

@@ -10,6 +10,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import static org.junit.Assert.*;
 
 /** Actual emulator views of both Itqan titles; no durable Hifz state is touched. */
@@ -65,6 +68,29 @@ public final class BooxPostNasVisualInstrumentedTest {
         );
         return new HifzPrefs(preview);
     }
+    /** Full seven-day visual fixture; deliberately unsaved and uncredited. */
+    private static void showFullWeek(MainActivity activity) {
+        LocalDate today = HifzClock.today();
+        List<WeeklyDashboardPlanner.Row> days = new ArrayList<>();
+        for (int day = 0; day < 7; day++) {
+            LocalDate date = today.plusDays(day);
+            days.add(new WeeklyDashboardPlanner.Row(date,
+                WeeklyDashboardPlanner.day(date, today), "Matin", "Soir", "À faire"));
+        }
+        set(activity, "weekRows", days);
+        set(activity, "selectedWeekDate", today);
+        call(activity, "renderSelectedWeekDay");
+        LinearLayout week = (LinearLayout) field(activity, "weekStrip");
+        assertEquals("Seven-day timeline must exist before and after An-Nās", 1, week.getChildCount());
+        android.widget.FrameLayout frame = (android.widget.FrameLayout) week.getChildAt(0);
+        boolean sevenFound = false;
+        for (int i = 0; i < frame.getChildCount(); i++)
+            if (frame.getChildAt(i) instanceof LinearLayout
+                    && ((LinearLayout)frame.getChildAt(i)).getChildCount() == 7)
+                sevenFound = true;
+        assertTrue("All seven stations must be available in the visual state", sevenFound);
+    }
+
     private static void check(LinearLayout card, boolean postNas) {
         assertNotNull(card);
         assertTrue(card.getChildAt(0) instanceof TextView);
@@ -92,6 +118,7 @@ public final class BooxPostNasVisualInstrumentedTest {
                 call(a, "refreshItqanCardVocabulary");
                 call(a, "refreshStabilizationPosition");
                 check((LinearLayout) field(a, "itqanCard"), false);
+                showFullWeek(a);
             });
             Independent11710ScreensInstrumentedTest.capture("itqan-before-nas");
             scenario.onActivity(a -> {
@@ -99,6 +126,7 @@ public final class BooxPostNasVisualInstrumentedTest {
                 call(a, "refreshItqanCardVocabulary");
                 call(a, "refreshStabilizationPosition");
                 check((LinearLayout) field(a, "itqanCard"), true);
+                showFullWeek(a);
             });
             Independent11710ScreensInstrumentedTest.capture("itqan-after-nas");
             scenario.onActivity(a -> {
