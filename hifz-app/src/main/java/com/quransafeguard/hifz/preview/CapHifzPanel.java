@@ -197,6 +197,26 @@ final class CapHifzPanel extends LinearLayout {
                 nextItqan = geometry.linesForExactIds(remaining.get(0).blocks.get(0).lineIds).get(0).globalIndex;
             }
         }
+        // After the first authentic completion of An-Nas, the fixed destination
+        // becomes ongoing Maintien. Read only an existing maintenance draft:
+        // never predict a Juz not actually allocated by the session engine.
+        int maintenanceJuz = -1;
+        VerseRef maintenanceVerse = null;
+        if (postNas && prefs.usesJuzMaintenance()) {
+            try {
+                JuzMaintenanceStore.Draft draft = prefs.juzMaintenance().read();
+                if (draft != null && draft.juz >= 1 && draft.juz <= 30) {
+                    maintenanceJuz = draft.juz;
+                    maintenanceVerse = QuranCanon.INSTANCE.fromOrdinal(
+                        JuzProgressSummary.boundaries()[draft.juz - 1]);
+                }
+            } catch (RuntimeException incompleteProof) {
+                // Corrupt/open legacy state must not claim a future Juz or
+                // disable the owner's read-only Cap Hifdh.
+                maintenanceJuz = -1;
+                maintenanceVerse = null;
+            }
+        }
         boolean tailForecast = tail && programme == HifzPrefs.WeeklyProgram.RECOMMENDED
             && (!remaining.isEmpty() || frozen == null && !prefs.hasLegacyItqanForecastCheckpoint());
         Set<String> stabilized = new HashSet<>(prefs.progressionSnapshotV6().stabilized);
@@ -219,7 +239,7 @@ final class CapHifzPanel extends LinearLayout {
         checkpointIndex = Math.max(0, Math.min(checkpointIndex,
             Math.max(0, shownCheckpoints.size() - 1)));
         timeline = null;
-        if (forecastSabqi || tailForecast) {
+        if (forecastSabqi || tailForecast || postNas) {
             // The original one-screen BOOX home stays completely fixed.
             // Tap a real Juz/Hizb to open the QCF Mushaf immediately; tapping
             // empty ink cycles the next checkpoint inline, never a dialog.
@@ -235,11 +255,12 @@ final class CapHifzPanel extends LinearLayout {
                 forecastSabqi, tailForecast,
                 ignoredYear -> nextCheckpoint(),
                 (sabqi, milestone) -> openMushaf(milestone.verse), year,
-                sabqiCurrentVerse, tailCurrentVerse);
+                sabqiCurrentVerse, tailCurrentVerse, postNas,
+                maintenanceVerse, maintenanceJuz);
             body.addView(timeline, new LinearLayout.LayoutParams(-1,
                 Ui.dp(context, spaciousBoox()
-                    ? (forecastSabqi && tailForecast ? 326 : 166)
-                    : (forecastSabqi && tailForecast ? 172 : 90))));
+                    ? (forecastSabqi && (tailForecast || postNas) ? 326 : 166)
+                    : (forecastSabqi && (tailForecast || postNas) ? 172 : 90))));
         }
         LinearLayout navigator = Ui.row(context);
         TextView previous = button(navigator, "‹", v -> {
@@ -284,7 +305,7 @@ final class CapHifzPanel extends LinearLayout {
         nextNavigator = next;
         body.addView(navigator);
         updateCheckpointLabel();
-        if (postNas) line("Maintien après An-Nās", 12);
+        // Maintien is now the second roadmap lane, not a stray footer sentence.
     }
 
     private static final class MilestoneChoice {

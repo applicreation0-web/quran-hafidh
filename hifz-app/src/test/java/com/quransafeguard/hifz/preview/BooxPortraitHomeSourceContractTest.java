@@ -139,6 +139,12 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("history.setMinHeight(Ui.dp(context, 48))")
             && timeline.contains("1.55f")
             && timeline.contains("laneSeparation()"));
+        assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
+            panel.contains("forecastSabqi || tailForecast || postNas")
+            && panel.contains("prefs.juzMaintenance().read()")
+            && timeline.contains("drawMaintenanceLane(")
+            && timeline.contains("cycle sans échéance")
+            && !panel.contains("if (postNas) line(\"Maintien après An-Nās\""));
         assertTrue("A schematic short-term view must not compress decades into a time scale",
             timeline.contains("private List<CapHifzForecast.Milestone> nextMilestones")
             && timeline.contains("Math.min(2, upcoming.size())")

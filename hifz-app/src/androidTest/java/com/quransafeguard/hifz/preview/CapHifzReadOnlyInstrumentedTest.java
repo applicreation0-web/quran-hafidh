@@ -77,7 +77,11 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNull(find(decor, "100 %"));
                 assertNull(find(decor, "80 %"));
                 assertNull(find(decor, "90 %"));
-                assertEquals(postNas, find(decor, "Maintien après An-Nās") != null);
+                CapHifzTimelineView graph = findGraph(decor);
+                assertNotNull(graph);
+                assertEquals("Maintien must become a real second roadmap lane",
+                    postNas, String.valueOf(graph.getContentDescription())
+                        .contains("Maintien : cycle sans échéance"));
                 assertNotNull(find(decor, "Acquis ›"));
                 if (activity.getResources().getConfiguration().smallestScreenWidthDp >= 600) {
                     assertFalse(hasScrollView(decor));
