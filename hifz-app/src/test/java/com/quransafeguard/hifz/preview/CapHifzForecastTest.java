@@ -224,6 +224,66 @@ public final class CapHifzForecastTest {
             List.of(baqarah203, baqarah253)));
     }
 
+    /** Independent calendar oracle: 90% means exactly 9 of every 10
+     * eligible Mon/Wed/Fri sessions, never nine arbitrary elapsed days.
+     * Cross-check the actual date of Āl ʿImrān 3:1 against a manual
+     * day-by-day traversal of canonical 5-line lessons. */
+    @Test public void ninetyPercentImranDateMatchesIndependentDailyCalendar() throws Exception {
+        GeometryRepository geo = geometry();
+        LocalDate today = LocalDate.of(2026, 11, 15);
+        int cursor = geo.firstLineIndex(new VerseRef(2, 125));
+        int limit = geo.lastLineIndex(SabqiRoute.ROUTE_END);
+        int imranEnd = geo.lastLineIndex(new VerseRef(3, 1));
+        LocalDate expected = null;
+        int opportunity = 0;
+        int attended = 0;
+        int skipped = 0;
+        int firstQuarterSlots = -1;
+        int firstQuarterAttended = -1;
+        for (LocalDate day = today.plusDays(1);
+                !day.isAfter(today.plusYears(4)) && cursor <= imranEnd;
+                day = day.plusDays(1)) {
+            java.time.DayOfWeek weekday = day.getDayOfWeek();
+            if (weekday != java.time.DayOfWeek.MONDAY
+                    && weekday != java.time.DayOfWeek.WEDNESDAY
+                    && weekday != java.time.DayOfWeek.FRIDAY) continue;
+            opportunity++;
+            if (opportunity % 10 == 0) {
+                skipped++;
+            } else {
+                attended++;
+                cursor = geo.fiveLineBlock(cursor, limit).endLineIndex + 1;
+                if (cursor > imranEnd) expected = day;
+            }
+            if (day.equals(LocalDate.of(2026, 12, 30))) {
+                firstQuarterSlots = opportunity;
+                firstQuarterAttended = attended;
+            }
+        }
+        assertEquals("20 eligible lesson slots through Dec 2026", 20, firstQuarterSlots);
+        assertEquals("90% schedules exactly 18 earned hypothetical lessons", 18,
+            firstQuarterAttended);
+        assertTrue("Ten-session cadence must skip at least one future slot",
+            skipped >= 2);
+        assertNotNull("Manual calendar must reach Āl ʿImrān", expected);
+
+        List<CapHifzForecast.Quarter> projected = CapHifzForecast.quarters(
+            geo, today, geo.firstLineIndex(new VerseRef(2, 125)),
+            geo.firstLineIndex(ItqanRotationPolicy.TAIL_START), false,
+            day -> WeeklyProgramPolicy.actionFor(
+                day.getDayOfWeek(), HifzPrefs.WeeklyProgram.RECOMMENDED, 3),
+            true, false, List.of(), Set.of(), null, .9);
+        LocalDate actual = null;
+        for (CapHifzForecast.Quarter q : projected)
+            for (CapHifzForecast.Milestone marker : q.sabqiMilestones)
+                if (marker.verse.equals(new VerseRef(3, 1))) {
+                    assertNull("A surah milestone must be dated only once", actual);
+                    actual = marker.date;
+                }
+        assertEquals("Projected Āl ʿImrān date must match independent 90% calendar",
+            expected, actual);
+    }
+
     @Test public void higherAttendanceCannotFinishLater() throws Exception {
         GeometryRepository geo=geometry();
         int cursor=geo.firstLineIndex(new VerseRef(2,125));
