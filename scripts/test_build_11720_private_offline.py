@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic, public-safe tests of the 1.17.19 offline private delivery guard.
+"""Synthetic, public-safe tests of the 1.17.20 offline private delivery guard.
 
 No original Quran private assets, keystore, signed APK or user data are needed.
 """
@@ -144,6 +144,19 @@ class PrivateCandidateDeliveryGuardTest(unittest.TestCase):
                 Path("/aapt"), Path("/apksigner"), self.original)["versionCode"], 56)
         with patch.object(builder, "package_identity",
                           return_value=(builder.PACKAGE, 56, "1.17.18")), \
+             patch.object(builder, "package_certificate", return_value="0" * 64):
+            with self.assertRaisesRegex(SystemExit, "signature"):
+                builder.check_reference(Path("/aapt"), Path("/apksigner"), self.original)
+
+    def test_11719_reference_needs_historical_certificate(self):
+        with patch.object(builder, "package_identity",
+                          return_value=(builder.PACKAGE, 57, "1.17.19")), \
+             patch.object(builder, "package_certificate",
+                          return_value=builder.HISTORICAL_CERT):
+            self.assertEqual(builder.check_reference(
+                Path("/aapt"), Path("/apksigner"), self.original)["versionCode"], 57)
+        with patch.object(builder, "package_identity",
+                          return_value=(builder.PACKAGE, 57, "1.17.19")), \
              patch.object(builder, "package_certificate", return_value="0" * 64):
             with self.assertRaisesRegex(SystemExit, "signature"):
                 builder.check_reference(Path("/aapt"), Path("/apksigner"), self.original)
