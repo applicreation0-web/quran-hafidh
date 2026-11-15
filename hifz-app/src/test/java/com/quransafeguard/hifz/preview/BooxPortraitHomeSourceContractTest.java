@@ -48,9 +48,12 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("Ui.bookText(this, \"AUJOURD’HUI\", 17f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"…\", 23f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)"));
-        assertTrue(home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 22))"));
-        assertTrue("Labels are available to accessibility without captions under the icons",
-            home.contains("tile.setContentDescription(display);"));
+        assertTrue("Captions require bounded icon row and sufficient text height",
+            home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 36))")
+            && home.contains("TextView caption = Ui.bookText(this, display"));
+        assertTrue("Four destinations have both concise visible captions and accessible descriptions",
+            home.contains("tile.setContentDescription(display);")
+            && home.contains("tile.addView(caption);"));
         assertFalse(home.contains("tile.addView(title);"));
         assertTrue(home.contains("booxIconDp(2, 112)"));
         assertTrue(home.contains("primaryTile(practiceRow, \"Parcours Hifz\", \"Parcours\""));
@@ -64,9 +67,10 @@ public final class BooxPortraitHomeSourceContractTest {
         int capStart = home.indexOf("root.addView(capHifz)");
         assertTrue(practiceEnd > 0 && readingEnd > practiceEnd && capStart > readingEnd
             && actionsStart > capStart);
-        assertTrue("BOOX uses a fixed viewport with two equally weighted access rows",
+        assertTrue("BOOX uses a fixed viewport with two bounded direct-access rows",
             home.contains("homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root);")
-            && home.contains("root.addView(row, new LinearLayout.LayoutParams(-1, 0, 1));"));
+            && home.contains("int rowDp = spaciousBooxHome() ? 148 : 102;")
+            && home.contains("root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, rowDp)));"));
         assertFalse("Home destination rows must not be split by a rule",
             home.substring(practiceEnd, actionsStart).contains("Ui.divider(this)"));
         assertFalse("No asymmetric footer navigation", home.contains("secondaryTile("));
