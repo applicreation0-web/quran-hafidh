@@ -107,7 +107,15 @@ final class CapHifzTimelineView extends View {
     private float sp(float n) { return n * getResources().getDisplayMetrics().scaledDensity; }
     /** Large E-Ink screens need readable labels rather than phone-sized text. */
     private float labelScale() { return getWidth() >= dp(720) ? 1.55f : 1f; }
-    private float laneSeparation() { return labelScale() > 1f ? 160f : SECOND_ROW; }
+    private float laneSeparation() {
+        // Spread two real rails into the free BOOX height, never adding a
+        // scrolling panel or making dates/credits from an artificial scale.
+        float availableDp = getHeight() / getResources().getDisplayMetrics().density;
+        boolean spacious = labelScale() > 1f;
+        float floor = spacious ? 160f : 88f;
+        float below = spacious ? 147f : 86f;
+        return Math.max(floor, availableDp - below);
+    }
     private float trackCenter() { return labelScale() > 1f ? 60f : TRACK_Y; }
     private float titleBaseline() { return labelScale() > 1f ? 28f : 18f; }
     private float numberBaseline() { return labelScale() > 1f ? 110f : 64f; }
@@ -256,7 +264,13 @@ final class CapHifzTimelineView extends View {
         VerseRef current = sabqi ? actualSabqiVerse : actualTailVerse;
         List<CapHifzForecast.Milestone> coming = nextMilestones(sabqi);
         LocalDate targetDate = finish(sabqi);
-        String target = sabqi ? "AL-FATḤ 29" : "AN-NĀS 6";
+        // Final surah uses exactly the same Arabic title and typography as
+        // every previous stop. Ayah appears in the second line with the date.
+        String target = QuranSurahNames.rawName(sabqi
+            ? SabqiRoute.ROUTE_END.getSurah()
+            : ItqanRotationPolicy.TAIL_END.getSurah());
+        int finalAyah = sabqi ? SabqiRoute.ROUTE_END.getAyah()
+            : ItqanRotationPolicy.TAIL_END.getAyah();
 
         drawFitted(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE",
             left, top + dp(titleBaseline()), 11.5f, INK, Paint.Align.LEFT, true, width * .46f);
@@ -314,7 +328,8 @@ final class CapHifzTimelineView extends View {
         float lastW = (x[3] - x[2]) * .94f;
         drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 12.5f, INK,
             Paint.Align.RIGHT, true, lastW);
-        drawFitted(canvas, targetDate != null ? targetDate.format(GOAL_DATE) : "date —",
+        drawFitted(canvas, "v." + finalAyah + " · "
+                + (targetDate != null ? targetDate.format(SHORT_DATE) : "date —"),
             x[3], top + dp(dateBaseline()), 9.5f, MID, Paint.Align.RIGHT, false, lastW);
     }
 
@@ -336,9 +351,10 @@ final class CapHifzTimelineView extends View {
         } else ring(canvas, x[1], y, 5.2f, 1.0f);
         ring(canvas, x[3], y, 7f, 1.5f);
         float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
-        drawFitted(canvas, "AN-NĀS", x[0], top + dp(numberBaseline()),
+        drawFitted(canvas, QuranSurahNames.rawName(ItqanRotationPolicy.TAIL_END.getSurah()),
+            x[0], top + dp(numberBaseline()),
             12f, INK, Paint.Align.LEFT, true, w);
-        drawFitted(canvas, "verset 6", x[0], top + dp(dateBaseline()),
+        drawFitted(canvas, "v.6", x[0], top + dp(dateBaseline()),
             9.5f, MID, Paint.Align.LEFT, false, w);
         drawFitted(canvas, maintenanceVerse == null ? "À ouvrir"
                 : QuranSurahNames.rawName(maintenanceVerse.getSurah()),
