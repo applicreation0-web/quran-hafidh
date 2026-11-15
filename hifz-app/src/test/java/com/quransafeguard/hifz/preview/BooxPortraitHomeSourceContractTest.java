@@ -155,6 +155,21 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue("Future boundaries come from the shown year and real start date",
             timeline.contains("!point.date.isBefore(windowStart())")
             && timeline.contains("!point.date.isBefore(start)"));
+        assertTrue("Juz/Hizb markers use stable offline vector drawables, not letter prefixes",
+            timeline.contains("R.drawable.ic_cap_juz")
+                && timeline.contains("R.drawable.ic_cap_hizb")
+                && timeline.contains("milestoneNumber(coming.get(i))")
+                && !timeline.contains("return point.hizb % 2 == 1 ? \"J\"")
+                && panel.contains("checkpointDisplay(choice)")
+                && panel.contains("new android.text.style.ImageSpan(icon"));
+        assertTrue("Accessibility still names the complete Juz and Hizb",
+            timeline.contains("isJuz(point) ? \"Juz \" : \"Hizb \""));
+        String juzIcon = read("hifz-app/src/main/res/drawable/ic_cap_juz.xml");
+        String hizbIcon = read("hifz-app/src/main/res/drawable/ic_cap_hizb.xml");
+        assertTrue("Both glyphs are vector, offline, and high-contrast",
+            juzIcon.contains("<vector") && hizbIcon.contains("<vector")
+                && juzIcon.contains("strokeWidth") && hizbIcon.contains("strokeWidth")
+                && juzIcon.contains("A10,10") && hizbIcon.contains("L22.6,12"));
         assertTrue("Touch must open a canonical Juz or Hizb milestone",
             timeline.contains("openMilestone.accept(true, hit)")
             && timeline.contains("openMilestone.accept(false, hit)")

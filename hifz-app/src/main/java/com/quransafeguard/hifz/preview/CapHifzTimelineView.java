@@ -119,9 +119,28 @@ final class CapHifzTimelineView extends View {
         return upcoming.subList(0, Math.min(2, upcoming.size()));
     }
 
-    private static String milestoneName(CapHifzForecast.Milestone point) {
-        return point.hizb % 2 == 1 ? "J" + ((point.hizb + 1) / 2)
-            : "H" + point.hizb;
+    /** Spoken names are complete; visible stages show an icon and number only. */
+    private static boolean isJuz(CapHifzForecast.Milestone point) {
+        return point.hizb % 2 == 1;
+    }
+
+    private static String milestoneNumber(CapHifzForecast.Milestone point) {
+        return Integer.toString(isJuz(point) ? (point.hizb + 1) / 2 : point.hizb);
+    }
+
+    private static String spokenMilestone(CapHifzForecast.Milestone point) {
+        return (isJuz(point) ? "Juz " : "Hizb ") + milestoneNumber(point);
+    }
+
+    /** One offline vector pictogram per type, reused in the inline navigator. */
+    private void symbol(Canvas canvas, CapHifzForecast.Milestone point, float x, float y) {
+        int resource = isJuz(point) ? R.drawable.ic_cap_juz : R.drawable.ic_cap_hizb;
+        android.graphics.drawable.Drawable icon = getContext().getDrawable(resource);
+        if (icon == null) return;
+        int extent = Math.round(dp(11.5f));
+        icon.setBounds(Math.round(x) - extent, Math.round(y) - extent,
+            Math.round(x) + extent, Math.round(y) + extent);
+        icon.draw(canvas);
     }
 
     private LocalDate finish(boolean sabqi) {
@@ -138,7 +157,7 @@ final class CapHifzTimelineView extends View {
             .append(sabqi ? actualSabqiPage : actualTailPage).append(". ");
         List<CapHifzForecast.Milestone> upcoming = nextMilestones(sabqi);
         for (CapHifzForecast.Milestone point : upcoming)
-            spoken.append("Jalon ").append(milestoneName(point)).append(" le ")
+            spoken.append("Jalon ").append(spokenMilestone(point)).append(" le ")
                 .append(point.date.format(SHORT_DATE)).append(". ");
         spoken.append("Objectif final ").append(sabqi ? "Al-Fatḥ" : "An-Nās");
         LocalDate end = finish(sabqi);
@@ -237,22 +256,23 @@ final class CapHifzTimelineView extends View {
         canvas.drawLine(x[0], y, x[3], y, paint);
         paint.setPathEffect(null);
         filled(canvas, x[0], y, 3.6f);
-        if (!coming.isEmpty()) {
-            ring(canvas, x[1], y, 7.2f, 1.5f);
-            filled(canvas, x[1], y, 2.6f);
-        } else ring(canvas, x[1], y, 4f, 1f);
-        if (coming.size() > 1) ring(canvas, x[2], y, 5f, 1.2f);
-        else ring(canvas, x[2], y, 3.4f, .8f);
-        goalDiamond(canvas, x[3], y);
-
+        // Selection halo stays OUTSIDE the icon: no white eraser over the glyph.
         if (selectedDate != null && selectedSabqi == sabqi) {
             for (int i = 0; i < coming.size(); i++) {
-                if (selectedDate.equals(coming.get(i).date))
-                    ring(canvas, x[i + 1], y, i == 0 ? 11f : 9f, 1f);
+                if (selectedDate.equals(coming.get(i).date)) {
+                    stroke(INK, 1.2f, false);
+                    canvas.drawCircle(x[i + 1], y, dp(13.5f), paint);
+                }
             }
-            if (targetDate != null && selectedDate.equals(targetDate))
-                ring(canvas, x[3], y, 10f, 1f);
+            if (targetDate != null && selectedDate.equals(targetDate)) {
+                stroke(INK, 1.2f, false);
+                canvas.drawCircle(x[3], y, dp(13.5f), paint);
+            }
         }
+        for (int i = 0; i < coming.size(); i++)
+            symbol(canvas, coming.get(i), x[i + 1], y);
+        for (int i = coming.size(); i < 2; i++) ring(canvas, x[i + 1], y, 3.5f, .8f);
+        goalDiamond(canvas, x[3], y);
 
         float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
         drawFitted(canvas, page > 0 ? "p." + page : "position —",
@@ -262,7 +282,7 @@ final class CapHifzTimelineView extends View {
 
         for (int i = 0; i < 2; i++) {
             float xx = x[i + 1];
-            String name = i < coming.size() ? milestoneName(coming.get(i)) : "—";
+            String name = i < coming.size() ? milestoneNumber(coming.get(i)) : "—";
             String date = i < coming.size()
                 ? coming.get(i).date.format(SHORT_DATE) : "à déterminer";
             drawFitted(canvas, name, xx, top + dp(62), 12f,

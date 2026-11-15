@@ -284,12 +284,18 @@ final class CapHifzPanel extends LinearLayout {
         final VerseRef verse;
         final String label;
         final boolean sabqi;
+        final int iconRes;
 
         MilestoneChoice(LocalDate date, VerseRef verse, String label, boolean sabqi) {
+            this(date, verse, label, sabqi, 0);
+        }
+
+        MilestoneChoice(LocalDate date, VerseRef verse, String label, boolean sabqi, int iconRes) {
             this.date = date;
             this.verse = verse;
             this.label = label;
             this.sabqi = sabqi;
+            this.iconRes = iconRes;
         }
     }
 
@@ -305,12 +311,12 @@ final class CapHifzPanel extends LinearLayout {
             if (row.date.getYear() != selectedYear) continue;
             for (CapHifzForecast.Milestone p : row.sabqiMilestones)
                 choices.add(new MilestoneChoice(p.date, p.verse,
-                    p.hizb % 2 == 1 ? "J" + ((p.hizb + 1) / 2)
-                        : "H" + p.hizb, true));
+                    Integer.toString(p.hizb % 2 == 1 ? (p.hizb + 1) / 2 : p.hizb),
+                    true, p.hizb % 2 == 1 ? R.drawable.ic_cap_juz : R.drawable.ic_cap_hizb));
             for (CapHifzForecast.Milestone p : row.tailMilestones)
                 choices.add(new MilestoneChoice(p.date, p.verse,
-                    p.hizb % 2 == 1 ? "J" + ((p.hizb + 1) / 2)
-                        : "H" + p.hizb, false));
+                    Integer.toString(p.hizb % 2 == 1 ? (p.hizb + 1) / 2 : p.hizb),
+                    false, p.hizb % 2 == 1 ? R.drawable.ic_cap_juz : R.drawable.ic_cap_hizb));
             if (row.sabqiFinish != null)
                 choices.add(new MilestoneChoice(row.sabqiFinish,
                     SabqiRoute.ROUTE_END, "Al-Fatḥ · cible", true));
@@ -386,15 +392,36 @@ final class CapHifzPanel extends LinearLayout {
         }
         MilestoneChoice choice = shownCheckpoints.get(checkpointIndex);
         String track = choice.sabqi ? "Acquisition" : "Maîtrise";
-        checkpointLabel.setText(year + " · " + choice.label + " · "
-            + choice.date.format(DAY_MONTH) + "  ›");
+        checkpointLabel.setText(checkpointDisplay(choice));
+        String spokenKind = choice.iconRes == R.drawable.ic_cap_juz ? "Juz "
+            : choice.iconRes == R.drawable.ic_cap_hizb ? "Hizb " : "";
         checkpointLabel.setContentDescription("Ouvrir le Mushaf depuis Cap Hifdh : "
-            + track + ", " + choice.label + ", "
+            + track + ", " + spokenKind + choice.label + ", "
             + choice.date.format(FULL_DATE) + ", "
             + QuranSurahNames.name(choice.verse.getSurah())
             + " " + choice.verse.getAyah() + ". Prévision, pas acquis.");
         if (timeline != null)
             timeline.setSelection(choice.date, choice.sabqi);
+    }
+
+    /** Compact navigator shares the same Juz/Hizb pictograms, never prefixes J/H. */
+    private CharSequence checkpointDisplay(MilestoneChoice choice) {
+        String prefix = year + " · ";
+        String suffix = " · " + choice.date.format(DAY_MONTH) + "  ›";
+        if (choice.iconRes == 0) return prefix + choice.label + suffix;
+        android.text.SpannableStringBuilder visible = new android.text.SpannableStringBuilder(prefix);
+        int position = visible.length();
+        visible.append("\uFFFC");
+        android.graphics.drawable.Drawable icon = context.getDrawable(choice.iconRes);
+        if (icon != null) {
+            int size = Ui.dp(context, 16);
+            icon.setBounds(0, 0, size, size);
+            visible.setSpan(new android.text.style.ImageSpan(icon,
+                android.text.style.ImageSpan.ALIGN_BASELINE), position, position + 1,
+                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        visible.append(" ").append(choice.label).append(suffix);
+        return visible;
     }
 
     private void openMushaf(VerseRef verse) {
