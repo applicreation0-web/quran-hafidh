@@ -79,9 +79,9 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNull(find(decor, "90 %"));
                 CapHifzTimelineView graph = findGraph(decor);
                 assertNotNull(graph);
-                assertEquals("Maintien must become a real second roadmap lane",
+                assertEquals("After An-Nas only the compact read-only Entretien status remains",
                     postNas, String.valueOf(graph.getContentDescription())
-                        .contains("Maintien : cycle sans échéance"));
+                        .contains("Entretien : cycle sans échéance"));
                 assertNotNull(find(decor, "Acquis ›"));
                 if (activity.getResources().getConfiguration().smallestScreenWidthDp >= 600) {
                     assertFalse(hasScrollView(decor));
