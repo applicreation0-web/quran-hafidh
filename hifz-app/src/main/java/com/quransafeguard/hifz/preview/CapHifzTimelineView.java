@@ -359,7 +359,8 @@ final class CapHifzTimelineView extends View {
             top + dp(dateBaseline()), 9.5f, MID, Paint.Align.CENTER, false, w);
         drawFitted(canvas, maintenanceJuz < 1 ? "—" : Integer.toString(maintenanceJuz),
             x[2], top + dp(numberBaseline()), 11f, INK, Paint.Align.CENTER, true, w);
-        drawFitted(canvas, "Juz en cours", x[2], top + dp(dateBaseline()),
+        drawFitted(canvas, maintenanceJuz < 1 ? "aucun Juz ouvert" : "Juz en cours",
+            x[2], top + dp(dateBaseline()),
             9.5f, MID, Paint.Align.CENTER, false, w);
         float goalW = (x[3] - x[2]) * .94f;
         drawFitted(canvas, "ROTATION", x[3], top + dp(numberBaseline()),
