@@ -126,7 +126,11 @@ public final class MainActivity extends android.app.Activity {
         addHomeAccessRow(root, readingRow);
 
         capHifz = new CapHifzPanel(this);
-        root.addView(capHifz);
+        // Assign remaining BOOX space to Cap Hifdh rather than a blank footer.
+        // The viewport itself remains fixed; this does not enable scrolling.
+        if (wideBoox()) root.addView(capHifz,
+            new LinearLayout.LayoutParams(-1, 0, 1f));
+        else root.addView(capHifz);
 
         // Mémorisation ponctuelle remains an optional advanced tool, not a fifth icon.
 
