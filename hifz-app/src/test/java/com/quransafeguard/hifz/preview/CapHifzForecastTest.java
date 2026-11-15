@@ -4,7 +4,10 @@ import com.quransafeguard.hifz.core.VerseRef;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -129,6 +132,48 @@ public final class CapHifzForecastTest {
         assertEquals(52, previousHizb);
         assertTrue("Āl ʿImrān 3:1 must appear as a dated canonical transition", foundImran);
         assertTrue(foundBeforeQuarterEnd);
+    }
+
+    @Test public void everyCanonicalSurahTransitionIsProjectedWithoutSkipsOnBothRoutes() throws Exception {
+        GeometryRepository geo = geometry();
+        LocalDate today = LocalDate.of(2026, 11, 15);
+        List<CapHifzForecast.Quarter> rows = CapHifzForecast.quarters(
+            geo, today, geo.firstLineIndex(new VerseRef(2, 125)),
+            geo.firstLineIndex(new VerseRef(49, 1)), false,
+            day -> WeeklyProgramPolicy.actionFor(
+                day.getDayOfWeek(), HifzPrefs.WeeklyProgram.MANUAL_SEVEN, 3),
+            true, true, List.of(), Set.of(), null, .9);
+        assertTrue("Acquisition must reach Al-Fatḥ", rows.get(rows.size() - 1).sabqiComplete);
+        assertTrue("Maîtrise must reach An-Nās", rows.get(rows.size() - 1).firstTailComplete);
+
+        Set<Integer> acquisitionSurahs = new LinkedHashSet<>();
+        Set<Integer> masterySurahs = new LinkedHashSet<>();
+        int lastAcquisition = -1, lastMastery = -1;
+        for (CapHifzForecast.Quarter row : rows) {
+            for (CapHifzForecast.Milestone milestone : row.sabqiMilestones) {
+                int order = GeometryRepository.ordinal(milestone.verse);
+                assertTrue("Acquisition must be strictly canonical", order > lastAcquisition);
+                lastAcquisition = order;
+                if (milestone.verse.getAyah() == 1)
+                    acquisitionSurahs.add(milestone.verse.getSurah());
+            }
+            for (CapHifzForecast.Milestone milestone : row.tailMilestones) {
+                int order = GeometryRepository.ordinal(milestone.verse);
+                assertTrue("Maîtrise must be strictly canonical", order > lastMastery);
+                lastMastery = order;
+                if (milestone.verse.getAyah() == 1)
+                    masterySurahs.add(milestone.verse.getSurah());
+            }
+        }
+
+        List<Integer> expectedAcquisition = new ArrayList<>();
+        for (int surah = 3; surah <= 48; surah++) expectedAcquisition.add(surah);
+        List<Integer> expectedMastery = new ArrayList<>();
+        for (int surah = 50; surah <= 114; surah++) expectedMastery.add(surah);
+        assertEquals("No surah start may be skipped between Al-Baqarah and Al-Fatḥ",
+            new LinkedHashSet<>(expectedAcquisition), acquisitionSurahs);
+        assertEquals("No surah start may be skipped between Al-Ḥujurāt and An-Nās",
+            new LinkedHashSet<>(expectedMastery), masterySurahs);
     }
 
     @Test public void timelineKeepsOneNearbyStepAndNextSurahTransition() {
