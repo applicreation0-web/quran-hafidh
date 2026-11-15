@@ -66,7 +66,11 @@ final class CapHifzPanel extends LinearLayout {
         setPadding(0, Ui.dp(context, 3), 0, 0);
         addView(Ui.notebookTitle(context, "Cap Hifdh", 19));
         body = Ui.column(context);
-        addView(body);
+        // History and navigator keep their reserved height on any BOOX font size.
+        // The forecast graph alone expands into leftover height.
+        if (context.getResources().getConfiguration().smallestScreenWidthDp >= 600)
+            addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
+        else addView(body);
         line("Chargement…", 13);
     }
 
@@ -258,10 +262,12 @@ final class CapHifzPanel extends LinearLayout {
                 (sabqi, milestone) -> openMushaf(milestone.verse), year,
                 sabqiCurrentVerse, tailCurrentVerse, postNas,
                 maintenanceVerse, maintenanceJuz);
-            body.addView(timeline, new LinearLayout.LayoutParams(-1,
-                Ui.dp(context, spaciousBoox()
-                    ? (forecastSabqi && (tailForecast || postNas) ? 326 : 166)
-                    : (forecastSabqi && (tailForecast || postNas) ? 184 : 90))));
+            boolean boox = context.getResources().getConfiguration().smallestScreenWidthDp >= 600;
+            LinearLayout.LayoutParams graphLayout = boox
+                ? new LinearLayout.LayoutParams(-1, 0, 1f)
+                : new LinearLayout.LayoutParams(-1, Ui.dp(context,
+                    forecastSabqi && (tailForecast || postNas) ? 184 : 90));
+            body.addView(timeline, graphLayout);
         }
         LinearLayout navigator = Ui.row(context);
         TextView previous = button(navigator, "‹", v -> {
