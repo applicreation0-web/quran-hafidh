@@ -9,7 +9,6 @@ import android.graphics.Path;
 import android.graphics.Typeface;
 import android.view.MotionEvent;
 import android.view.View;
-import com.quransafeguard.hifz.core.VerseRef;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
