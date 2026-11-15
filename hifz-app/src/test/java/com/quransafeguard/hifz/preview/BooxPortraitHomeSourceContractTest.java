@@ -151,6 +151,9 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("nextMilestones(sabqi)")
             && timeline.contains("Stations have equal spacing ON PURPOSE"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
+        assertTrue("A future checkpoint must be strictly after the authentic cursor",
+            timeline.contains("GeometryRepository.ordinal(point.verse) > cursorOrdinal")
+            && timeline.contains("sabqi ? actualSabqiVerse : actualTailVerse"));
         assertTrue("Real next-line cursors must be kept distinct from acquired receipts",
             panel.contains("geometry.line(cursor).verses.get(0)")
             && panel.contains("geometry.line(nextItqan).verses.get(0)")

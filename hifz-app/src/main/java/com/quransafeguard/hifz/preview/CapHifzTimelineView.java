@@ -125,11 +125,19 @@ final class CapHifzTimelineView extends View {
 
     private List<CapHifzForecast.Milestone> nextMilestones(boolean sabqi) {
         ArrayList<CapHifzForecast.Milestone> upcoming = new ArrayList<>();
+        // The first predicted boundary may be exactly today's working verse.
+        // That is not the NEXT milestone. Filter physical positions first,
+        // without misclassifying a forecast as an attested acquisition.
+        VerseRef physicalCursor = sabqi ? actualSabqiVerse : actualTailVerse;
+        int cursorOrdinal = physicalCursor == null ? -1
+            : GeometryRepository.ordinal(physicalCursor);
         for (CapHifzForecast.Quarter q : quarters) {
             List<CapHifzForecast.Milestone> candidates =
                 sabqi ? q.sabqiMilestones : q.tailMilestones;
             for (CapHifzForecast.Milestone point : candidates) {
-                if (point.date != null && !point.date.isBefore(windowStart())
+                if (point.date != null && point.verse != null
+                        && GeometryRepository.ordinal(point.verse) > cursorOrdinal
+                        && !point.date.isBefore(windowStart())
                         && !point.date.isBefore(start)) upcoming.add(point);
             }
         }
