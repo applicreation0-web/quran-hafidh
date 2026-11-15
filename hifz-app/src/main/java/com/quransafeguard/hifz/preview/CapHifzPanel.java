@@ -64,7 +64,7 @@ final class CapHifzPanel extends LinearLayout {
         this.context = context;
         setOrientation(VERTICAL);
         setPadding(0, Ui.dp(context, 3), 0, 0);
-        addView(Ui.notebookTitle(context, "Cap Hifdh", 19));
+        addView(Ui.notebookTitle(context, "Cap Hifdh", spaciousBoox() ? 22 : 19));
         body = Ui.column(context);
         // History and navigator keep their reserved height on any BOOX font size.
         // The forecast graph alone expands into leftover height.
@@ -147,7 +147,7 @@ final class CapHifzPanel extends LinearLayout {
 
     private void renderTrajectory() {
         // One fixed target, never three competing simulations or a mutable UI setting.
-        line("Prévision · 90 % d’assiduité", 12);
+        line("Prévision · 90 % d’assiduité", spaciousBoox() ? 14 : 12);
         renderForecast();
     }
 
@@ -296,7 +296,7 @@ final class CapHifzPanel extends LinearLayout {
                 render();
             }
         });
-        checkpointLabel.setTextSize(spaciousBoox() ? 18f : 13f);
+        checkpointLabel.setTextSize(spaciousBoox() ? 19f : 13f);
         checkpointLabel.setMaxLines(1);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
@@ -492,7 +492,7 @@ final class CapHifzPanel extends LinearLayout {
             && finalDates.get(id).acquired != null).count();
         String summary = "Acquis ›";
         String spokenSummary = acquired.size() + " lignes acquises, " + dated + " datées";
-        TextView history = line(summary, spaciousBoox() ? 16 : 12);
+        TextView history = line(summary, spaciousBoox() ? 18 : 12);
         // 48dp is the accessible minimum. The weighted BOOX graph needs the
         // freed height to render both full sourah/date rows at font 150%.
         int historyDp = context.getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 48 : 64;
