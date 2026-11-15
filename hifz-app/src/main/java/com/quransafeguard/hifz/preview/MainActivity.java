@@ -164,7 +164,7 @@ public final class MainActivity extends android.app.Activity {
         if(!wideBoox())path.addView(jumpToWeek);
         // Hifz semantic grammar: paired by the real corpus and operation.
         // Sabqi: introduce one set, then cumulatively revisit it.
-        path.addView(pathSectionTitle("NOUVEAUX VERSETS"));
+        path.addView(pathSectionTitle("ACQUISITION"));
         LinearLayout learningModes = Ui.row(this);
         LinearLayout sabqi = pathTile(learningModes, "Apprentissage", "1 page/semaine",
             v -> openMode(HifzSessionActivity.SABQI));
