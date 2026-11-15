@@ -37,13 +37,16 @@ final class CapHifzTimelineView extends View {
     private final BiConsumer<Boolean, CapHifzForecast.Milestone> openMilestone;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final int selectedYear;
+    private final int actualSabqiPage;
+    private final int actualTailPage;
     private LocalDate selectedDate;
     private boolean selectedSabqi;
 
     CapHifzTimelineView(Context context, GeometryRepository geometry,
             List<CapHifzForecast.Quarter> quarters, LocalDate start, boolean showSabqi,
             boolean showTail, IntConsumer exploreYear,
-            BiConsumer<Boolean, CapHifzForecast.Milestone> openMilestone, int selectedYear) {
+            BiConsumer<Boolean, CapHifzForecast.Milestone> openMilestone, int selectedYear,
+            int actualSabqiPage, int actualTailPage) {
         super(context);
         if (geometry == null || quarters == null || quarters.isEmpty() || start == null)
             throw new IllegalArgumentException("Real QCF and dated forecast required");
@@ -55,9 +58,13 @@ final class CapHifzTimelineView extends View {
         this.exploreYear = exploreYear;
         this.openMilestone = openMilestone;
         this.selectedYear = selectedYear;
+        this.actualSabqiPage = actualSabqiPage;
+        this.actualTailPage = actualTailPage;
         setBackgroundColor(Ui.PAPER);
         setContentDescription("Feuille de route prévisionnelle interactive " + selectedYear
-            + ". Les cercles signalent les entrées dans les Juz, les petits points les Hizb. "
+            + ". Position en cours prise des curseurs réels du programme, "
+            + "prochains Juz et Hizb issus des prévisions, objectifs Al-Fatḥ et An-Nās. "
+            + "Les cercles signalent les entrées dans les Juz, les petits points les Hizb. "
             + "Toucher un jalon ouvre sa page exacte du Mushaf. "
             + "Toucher ailleurs sélectionne le jalon suivant sous la frise. "
             + "Les échéances simulées ne sont pas des acquis.");
@@ -122,6 +129,21 @@ final class CapHifzTimelineView extends View {
         for (int i = 1; i <= count; i++) canvas.drawCircle(x, y, dp(2.7f * i), paint);
     }
 
+    private CapHifzForecast.Milestone nextCrossing(boolean sabqi) {
+        for (CapHifzForecast.Quarter quarter : quarters) {
+            List<CapHifzForecast.Milestone> entries =
+                sabqi ? quarter.sabqiMilestones : quarter.tailMilestones;
+            for (CapHifzForecast.Milestone point : entries)
+                if (point.date != null && !point.date.isBefore(start)) return point;
+        }
+        return null;
+    }
+
+    private static String milestoneName(CapHifzForecast.Milestone point) {
+        return point.hizb % 2 == 1 ? "J" + ((point.hizb + 1) / 2)
+            : "H" + point.hizb;
+    }
+
     private LocalDate finish(boolean sabqi) {
         for (CapHifzForecast.Quarter quarter : quarters) {
             LocalDate date = sabqi ? quarter.sabqiFinish : quarter.tailFinish;
@@ -165,10 +187,12 @@ final class CapHifzTimelineView extends View {
     private void drawLane(Canvas canvas, boolean sabqi,
             float left, float right, float centerY) {
         float width = right - left;
-        text(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE", left,
+        int actualPage = sabqi ? actualSabqiPage : actualTailPage;
+        String state = actualPage > 0 ? " · p." + actualPage : " · à vérifier";
+        text(canvas, (sabqi ? "ACQUISITION" : "MAÎTRISE") + state, left,
             centerY - dp(15), 10.5f, INK, Paint.Align.LEFT, true);
-        text(canvas, sabqi ? "Vers Al-Fatḥ" : "Vers An-Nās", right,
-            centerY - dp(15), 10.5f, MID, Paint.Align.RIGHT, false);
+        text(canvas, sabqi ? "CIBLE AL-FATḤ" : "CIBLE AN-NĀS", right,
+            centerY - dp(15), 10f, MID, Paint.Align.RIGHT, false);
 
         stroke(FAINT, 1.0f);
         canvas.drawLine(left, centerY, right, centerY, paint);
@@ -187,6 +211,17 @@ final class CapHifzTimelineView extends View {
                 rings(canvas, endX, centerY, 3);
         }
 
+        CapHifzForecast.Milestone next = nextCrossing(sabqi);
+        boolean nextInThisYear = next != null && next.date.getYear() == selectedYear;
+        boolean hasCrossingInYear = false;
+        // The REAL program position is the next cursor page, not a claimed
+        // memorized Juz. It is only marked on the current year's timeline.
+        if (selectedYear == start.getYear()) {
+            float nowX = x(start, left, width);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(INK);
+            canvas.drawCircle(nowX, centerY, dp(3.8f), paint);
+        }
         // Show all usable crossings at year scale; Juz entrances are two
         // concentric rings, other Hizb are tiny outlined dots. A dense day's
         // markers may overlap visually, but tapping blank ink cycles every
@@ -199,6 +234,7 @@ final class CapHifzTimelineView extends View {
                 if (point.date == null || point.date.getYear() != selectedYear
                     || point.date.isBefore(windowStart())) continue;
                 float xx = x(point.date, left, width);
+                hasCrossingInYear = true;
                 boolean juzStart = point.hizb % 2 == 1;
                 if (juzStart) rings(canvas, xx, centerY, 2);
                 else {
@@ -208,13 +244,27 @@ final class CapHifzTimelineView extends View {
                     stroke(MID, 1f);
                     canvas.drawCircle(xx, centerY, dp(3f), paint);
                 }
-                if (juzStart && xx - lastLabelX >= dp(34)
-                        && right - xx >= dp(14)) {
-                    text(canvas, "J" + ((point.hizb + 1) / 2), xx,
-                        centerY + dp(14), 9.5f, MID, Paint.Align.CENTER, false);
+                if ((point == next || juzStart) && xx - lastLabelX >= dp(33)
+                        && right - xx >= dp(12)) {
+                    text(canvas, milestoneName(point), xx,
+                        centerY + dp(14), 9.5f,
+                        point == next ? INK : MID, Paint.Align.CENTER, point == next);
                     lastLabelX = xx;
                 }
             }
+        }
+        // Without a crossing inside the selected year, the old drawing was
+        // an empty pair of lines. Show the ACTUAL next calculated boundary,
+        // or state clearly that the projection cannot establish one.
+        if (!hasCrossingInYear) {
+            String label = next == null ? "Prochain jalon : indéterminé"
+                : "Prochain " + milestoneName(next) + " · " + next.date.getYear();
+            text(canvas, label, left + dp(8), centerY + dp(14),
+                9.6f, MID, Paint.Align.LEFT, false);
+        } else if (nextInThisYear && selectedYear == start.getYear()) {
+            // Distinguish the present recorded cursor from a simulated event.
+            text(canvas, "ICI", left + dp(4), centerY + dp(14),
+                9f, MID, Paint.Align.LEFT, false);
         }
     }
 
