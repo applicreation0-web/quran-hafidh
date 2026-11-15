@@ -18,3 +18,14 @@ Le programme recommandé ouvre Sabqi le lundi, mercredi et vendredi, puis Itqān
 - Vérifier sur Android les changements de dimanche à lundi, les absences de 1 à 8 semaines, les transitions de mois et d'année, les doubles tentatives de clôture, anciens OPEN, finales partielles, An-Nās et Al-Fatḥ, puis l'import et la mise à jour in-place.
 
 La présentation de Cap Hifz et la qualification de la cadence sont suivies sur des branches distinctes. Les réglages de cadence existants continuent d'être lus par les parcours actuels.
+
+
+## Décision finale du 15 novembre 2026 — ne pas raccorder Roadmap
+
+L'objectif prioritaire confirmé est la **continuité des leçons Sabqi après Al-Baqara**, sans changement automatique de cadence. Les raccordements `RoadmapPolicy` → retard/rotation Itqān et `RoadmapPolicy` → calendrier des séances sont **abandonnés** dans le périmètre de cette release, et ne doivent pas être activés par une modification cosmétique de Cap Hifdh.
+
+- Le programme recommandé reste fixe : Acquisition lundi/mercredi/vendredi ; Maîtrise mardi/jeudi/samedi ; dimanche finales éligibles. Les reportements et reçus authentiques sont conservés.
+- La succession canonique `2:286 → 3:1` suit directement la géométrie QCF et le curseur physique. Le parcours Sabqi demeure continu jusqu'à `48:29`, sans dépendance à une bascule `BRIDGE/CATCHUP/CRUISE`.
+- Les nouvelles installations utilisent `sabqiEnd=48:29`. L'ancienne limite **par défaut** `2:286` est étendue de manière unique, sauf si elle a été explicitement conservée/personnalisée après le verrou de migration. Dans ce dernier cas, la plage manuelle doit être adaptée pour franchir la frontière ; ne jamais écraser une préférence intentionnelle.
+- Cap Hifdh demeure une prévision en lecture seule, avec une seule hypothèse d'assiduité à **90 %**. Elle ne modifie ni le calendrier réel, ni les acquis.
+- Bloquer toute future activation automatique des ratios variables sans nouveau mandat et audit complet des semaines datées, finales, rattrapages et sauvegardes.
