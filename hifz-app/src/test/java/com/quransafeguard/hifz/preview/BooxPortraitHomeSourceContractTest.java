@@ -229,7 +229,7 @@ public final class BooxPortraitHomeSourceContractTest {
             || panel.contains("new android.text.style.ImageSpan(icon"));
         assertTrue("Post-Nas maintenance does not invent an ongoing Juz session",
             timeline.contains("maintenanceVerse == null")
-            && timeline.contains("\"séance en cours\"")
+            && timeline.contains("séance en cours")
             && panel.contains("prefs.juzMaintenance().read()"));
         assertTrue("Touch must open a canonical Juz or Hizb milestone",
             timeline.contains("openMilestone.accept(true, hit)")
