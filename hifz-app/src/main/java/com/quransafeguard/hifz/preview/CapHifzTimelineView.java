@@ -165,7 +165,7 @@ final class CapHifzTimelineView extends View {
     private void drawLane(Canvas canvas, boolean sabqi,
             float left, float right, float centerY) {
         float width = right - left;
-        text(canvas, sabqi ? "NOUVEAUX" : "MAÎTRISE", left,
+        text(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE", left,
             centerY - dp(15), 10.5f, INK, Paint.Align.LEFT, true);
         text(canvas, sabqi ? "Vers Al-Fatḥ" : "Vers An-Nās", right,
             centerY - dp(15), 10.5f, MID, Paint.Align.RIGHT, false);
