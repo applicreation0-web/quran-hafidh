@@ -5,6 +5,7 @@ on:
       - feature/boox-parcours-one-screen-itqan-frise-20261112
       - release-candidate/haafidh-11717-code-only-20261113
       - work/haafidh-integration-cap-hifdh-20261114
+      - release-candidate/haafidh-11719-private-code-only-20261115
   pull_request:
     branches:
       - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
@@ -45,12 +46,14 @@ jobs:
         run: python3 scripts/test_build_11714_private_offline.py
       - name: Verify fail-closed 1.17.17 private offline release guard (synthetic only)
         run: python3 scripts/test_build_11717_private_offline.py
-      - name: Confirm isolated 1.17.17 version identity and no release artifact
+      - name: Confirm 1.17.19 code57 identity and no private release artifact
         run: |
+          set -euo pipefail
           grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
-          grep -q 'versionCode = 55' hifz-app/build.gradle.kts
-          grep -q 'versionName = "1.17.17"' hifz-app/build.gradle.kts
+          grep -q 'versionCode = 57' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.19"' hifz-app/build.gradle.kts
           test ! -e hifz-app/build-private114/outputs/apk/release/hifz-app-release.apk
+          python3 scripts/test_build_11719_private_offline.py
       - name: Enable hardware acceleration for the Android emulator
         run: |
           test -c /dev/kvm
