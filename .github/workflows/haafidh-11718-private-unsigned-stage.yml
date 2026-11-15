@@ -5,6 +5,8 @@ on:
     paths:
       - .github/workflows/haafidh-11718-private-unsigned-stage.yml
       - hifz-app/build.gradle.kts
+      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/Haafidh11715VisualSourceContractTest.java
+      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/OfficialReleaseContractTest.java
 permissions:
   contents: read
 jobs:
