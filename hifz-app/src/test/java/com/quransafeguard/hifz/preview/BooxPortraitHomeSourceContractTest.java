@@ -128,6 +128,19 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue("A year zoom prevents decades from flattening into endpoints",
             timeline.contains("LocalDate.of(selectedYear, 12, 31)")
             && timeline.contains("p.date.getYear() != selectedYear"));
+        assertTrue("Real next-line cursors must be kept distinct from acquired receipts",
+            panel.contains("geometry.line(cursor).page")
+            && panel.contains("geometry.line(nextItqan).page")
+            && timeline.contains("actualSabqiPage")
+            && timeline.contains("actualTailPage")
+            && timeline.contains("Prochain jalon : indéterminé")
+            && timeline.contains("CIBLE AL-FATḤ")
+            && timeline.contains("CIBLE AN-NĀS"));
+        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
+        assertFalse("Unapproved Kalam titles must not be rendered on BOOX",
+            ui.contains("createFromAsset(context.getAssets(), \"fonts/Kalam-Regular.ttf\")"));
+        assertTrue("Typography fallback must not load remote fonts or touch Mushaf",
+            ui.contains("Typeface.create(\"serif\", Typeface.ITALIC)"));
         assertTrue("Touch must open a canonical Juz or Hizb milestone",
             timeline.contains("openMilestone.accept(true, hit)")
             && timeline.contains("openMilestone.accept(false, hit)")
