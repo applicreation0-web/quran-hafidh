@@ -141,12 +141,14 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue("Cap Hifdh needs legible large BOOX text and full-size touch controls",
             panel.contains("LinearLayout.LayoutParams graphLayout = boox")
             && panel.contains("new LinearLayout.LayoutParams(-1, 0, 1f)")
-            && panel.contains("history.setMinHeight(Ui.dp(context, 64))")
-            && panel.contains("history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, 64)))")
+            && panel.contains("historyDp = context.getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 48 : 64")
+            && panel.contains("history.setMinHeight(Ui.dp(context, historyDp))")
+            && panel.contains("history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, historyDp)))")
             && timeline.contains("1.55f")
             && timeline.contains("laneSeparation()")
             && timeline.contains("SECOND_ROW = 96f")
-            && timeline.contains("availableDp - below"));
+            && timeline.contains("availableDp - below")
+            && timeline.contains("float below = spacious ? 154f : 92f"));
         assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
             panel.contains("forecastSabqi || tailForecast || postNas")
             && panel.contains("prefs.juzMaintenance().read()")
