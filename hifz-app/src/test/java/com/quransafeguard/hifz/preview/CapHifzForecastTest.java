@@ -107,10 +107,15 @@ public final class CapHifzForecastTest {
             geo.firstLineIndex(new VerseRef(2,125)), 527, false, 3, 1);
         LocalDate previous = today;
         int previousHizb = 0;
+        int previousOrdinal = -1;
+        boolean foundImran = false;
         boolean foundBeforeQuarterEnd = false;
         for (CapHifzForecast.Quarter row : rows) {
             for (CapHifzForecast.Milestone point : row.sabqiMilestones) {
-                assertTrue(point.hizb > previousHizb);
+                assertTrue(point.hizb >= previousHizb);
+                int ordinal = GeometryRepository.ordinal(point.verse);
+                assertTrue("Projected Quran milestones must never reverse or duplicate", ordinal > previousOrdinal);
+                foundImran |= point.verse.equals(new VerseRef(3, 1));
                 assertFalse(point.date.isBefore(previous));
                 assertTrue(point.date.isAfter(today));
                 assertFalse(point.date.isAfter(row.date));
@@ -118,10 +123,26 @@ public final class CapHifzForecastTest {
                 foundBeforeQuarterEnd |= point.date.isBefore(row.date);
                 previous = point.date;
                 previousHizb = point.hizb;
+                previousOrdinal = ordinal;
             }
         }
         assertEquals(52, previousHizb);
+        assertTrue("Āl ʿImrān 3:1 must appear as a dated canonical transition", foundImran);
         assertTrue(foundBeforeQuarterEnd);
+    }
+
+    @Test public void timelineKeepsOneNearbyStepAndNextSurahTransition() {
+        LocalDate d = LocalDate.of(2027, 2, 19);
+        CapHifzForecast.Milestone baqarah203 =
+            new CapHifzForecast.Milestone(d, new VerseRef(2, 203), 4);
+        CapHifzForecast.Milestone baqarah253 =
+            new CapHifzForecast.Milestone(d.plusMonths(4), new VerseRef(2, 253), 5);
+        CapHifzForecast.Milestone imran =
+            new CapHifzForecast.Milestone(d.plusMonths(9), new VerseRef(3, 1), 5);
+        assertEquals(List.of(baqarah203, imran), CapHifzForecast.visibleMilestones(
+            List.of(baqarah203, baqarah253, imran)));
+        assertEquals(List.of(baqarah203, baqarah253), CapHifzForecast.visibleMilestones(
+            List.of(baqarah203, baqarah253)));
     }
 
     @Test public void higherAttendanceCannotFinishLater() throws Exception {
