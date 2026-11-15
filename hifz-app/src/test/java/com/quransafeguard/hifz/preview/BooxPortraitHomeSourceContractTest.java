@@ -137,6 +137,7 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue("Cap Hifdh needs legible large BOOX text and full-size touch controls",
             panel.contains("forecastSabqi && (tailForecast || postNas) ? 326 : 166")
             && panel.contains("history.setMinHeight(Ui.dp(context, 64))")
+            && panel.contains("history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, 64)))")
             && timeline.contains("1.55f")
             && timeline.contains("laneSeparation()"));
         assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
