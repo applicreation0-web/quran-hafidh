@@ -116,15 +116,14 @@ final class CapHifzTimelineView extends View {
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(color);
         paint.setTextSize(sp(size));
-        paint.setTypeface(Typeface.create("sans-serif", bold ? Typeface.BOLD : Typeface.NORMAL));
+        paint.setTypeface(Ui.typeface(bold ? Typeface.BOLD : Typeface.NORMAL));
         paint.setTextAlign(align);
         canvas.drawText(value, x, y, paint);
     }
 
     private float labelWidth(String label, float size, boolean bold) {
         paint.reset();
-        paint.setTypeface(Typeface.create("sans-serif",
-            bold ? Typeface.BOLD : Typeface.NORMAL));
+        paint.setTypeface(Ui.typeface(bold ? Typeface.BOLD : Typeface.NORMAL));
         paint.setTextSize(sp(size));
         return paint.measureText(label);
     }
@@ -142,7 +141,7 @@ final class CapHifzTimelineView extends View {
             List<CapHifzForecast.Milestone> entries =
                 sabqi ? quarter.sabqiMilestones : quarter.tailMilestones;
             for (CapHifzForecast.Milestone point : entries)
-                if (point.date != null && !point.date.isBefore(start)) return point;
+                if (point.date != null && !point.date.isBefore(windowStart())) return point;
         }
         return null;
     }
@@ -204,13 +203,13 @@ final class CapHifzTimelineView extends View {
         text(canvas, objective, right, centerY - dp(15),
             10f, MID, Paint.Align.RIGHT, false);
         CapHifzForecast.Milestone next = nextCrossing(sabqi);
-        if (next != null) {
-            // A year of sparse Juz can otherwise look empty. The NEXT exact
-            // forecast crossing is legible even when it is in a later year.
-            // Measure all three captions; suppress this middle caption rather
-            // than overlap at large BOOX accessibility font scales.
-            String near = "PROCHAIN " + milestoneName(next) + " "
-                + next.date.getMonthValue() + "/" + next.date.getYear();
+        {
+            // With sparse crossings the next FUTURE boundary stays legible.
+            // Never print text under the first rail: that collided with Maîtrise
+            // at BOOX fontScale 150%. Every caption now lives above its rail.
+            String near = next == null ? "Prochain jalon : indéterminé"
+                : "PROCHAIN " + milestoneName(next) + " "
+                    + next.date.getMonthValue() + "/" + next.date.getYear();
             float middle = (left + right) / 2f;
             float leftEnd = left + labelWidth(realPosition, 10.5f, true);
             float rightStart = right - labelWidth(objective, 10f, false);
@@ -238,31 +237,23 @@ final class CapHifzTimelineView extends View {
                 rings(canvas, endX, centerY, 3);
         }
 
-        boolean nextInThisYear = next != null && next.date.getYear() == selectedYear;
-        boolean hasCrossingInYear = false;
-        // The REAL program position is the next cursor page, not a claimed
-        // memorized Juz. It is only marked on the current year's timeline.
+        // Real cursor is a filled dot; forecasts are outlined Juz/Hizb.
+        // No text below the line: the inline navigator already describes each
+        // dated marker and opens its exact QCF verse without any dialog.
         if (selectedYear == start.getYear()) {
             float nowX = x(start, left, width);
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(INK);
             canvas.drawCircle(nowX, centerY, dp(3.8f), paint);
         }
-        // Show all usable crossings at year scale; Juz entrances are two
-        // concentric rings, other Hizb are tiny outlined dots. A dense day's
-        // markers may overlap visually, but tapping blank ink cycles every
-        // authentic dated checkpoint in the compact inline navigator.
-        float lastLabelX = left - dp(32);
         for (CapHifzForecast.Quarter quarter : quarters) {
             List<CapHifzForecast.Milestone> points =
                 sabqi ? quarter.sabqiMilestones : quarter.tailMilestones;
             for (CapHifzForecast.Milestone point : points) {
                 if (point.date == null || point.date.getYear() != selectedYear
-                    || point.date.isBefore(windowStart())) continue;
+                        || point.date.isBefore(windowStart())) continue;
                 float xx = x(point.date, left, width);
-                hasCrossingInYear = true;
-                boolean juzStart = point.hizb % 2 == 1;
-                if (juzStart) rings(canvas, xx, centerY, 2);
+                if (point.hizb % 2 == 1) rings(canvas, xx, centerY, 2);
                 else {
                     paint.setStyle(Paint.Style.FILL);
                     paint.setColor(Ui.PAPER);
@@ -270,27 +261,7 @@ final class CapHifzTimelineView extends View {
                     stroke(MID, 1f);
                     canvas.drawCircle(xx, centerY, dp(3f), paint);
                 }
-                if ((point == next || juzStart) && xx - lastLabelX >= dp(33)
-                        && right - xx >= dp(12)) {
-                    text(canvas, milestoneName(point), xx,
-                        centerY + dp(14), 9.5f,
-                        point == next ? INK : MID, Paint.Align.CENTER, point == next);
-                    lastLabelX = xx;
-                }
             }
-        }
-        // Without a crossing inside the selected year, the old drawing was
-        // an empty pair of lines. Show the ACTUAL next calculated boundary,
-        // or state clearly that the projection cannot establish one.
-        if (!hasCrossingInYear) {
-            String label = next == null ? "Prochain jalon : indéterminé"
-                : "Prochain " + milestoneName(next) + " · " + next.date.getYear();
-            text(canvas, label, left + dp(8), centerY + dp(14),
-                9.6f, MID, Paint.Align.LEFT, false);
-        } else if (nextInThisYear && selectedYear == start.getYear()) {
-            // Distinguish the present recorded cursor from a simulated event.
-            text(canvas, "ICI", left + dp(4), centerY + dp(14),
-                9f, MID, Paint.Align.LEFT, false);
         }
     }
 

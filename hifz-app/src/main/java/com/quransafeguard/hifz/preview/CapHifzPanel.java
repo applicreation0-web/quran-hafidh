@@ -220,7 +220,7 @@ final class CapHifzPanel extends LinearLayout {
         if (CapHifzTimelineOrder.allThirtyJuzAcquired(geometry, acquired)) {
             line("30 Juz acquis attestés", 13);
         } else if (coverageGoal != null) {
-            line("Fin estimée à cadence supposée · T"
+            line("Projection " + scenario + " % · fin estimée T"
                 + ((coverageGoal.getMonthValue() - 1) / 3 + 1) + " " + coverageGoal.getYear(), 13);
         } else {
             line("Échéance indéterminée · cadence, borne ou reprise à vérifier", 13);

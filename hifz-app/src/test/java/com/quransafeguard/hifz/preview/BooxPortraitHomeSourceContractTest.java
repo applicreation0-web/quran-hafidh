@@ -139,8 +139,16 @@ public final class BooxPortraitHomeSourceContractTest {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         assertFalse("Unapproved Kalam titles must not be rendered on BOOX",
             ui.contains("createFromAsset(context.getAssets(), \"fonts/Kalam-Regular.ttf\")"));
-        assertTrue("Typography fallback must not load remote fonts or touch Mushaf",
-            ui.contains("Typeface.create(\"serif\", Typeface.ITALIC)"));
+        assertTrue("All French interface text must use one offline font family",
+            ui.contains("INTERFACE_FONT = Typeface.create(\"sans-serif\", Typeface.NORMAL)")
+            && ui.contains("view.setTypeface(typeface(bold ? Typeface.BOLD : Typeface.NORMAL))")
+            && timeline.contains("Ui.typeface(bold ? Typeface.BOLD : Typeface.NORMAL)"));
+        assertFalse("No stray serif headings or sublines", ui.contains("Typeface.create(\"serif\""));
+        assertFalse("Rail captions must never collide with the following rail at 150% scale",
+            timeline.contains("centerY + dp(14)") || timeline.contains("lastLabelX")
+            || timeline.contains("text(canvas, \"ICI\""));
+        assertTrue("Next boundary is searched from the visible year, not from the first year",
+            timeline.contains("!point.date.isBefore(windowStart())"));
         assertTrue("Touch must open a canonical Juz or Hizb milestone",
             timeline.contains("openMilestone.accept(true, hit)")
             && timeline.contains("openMilestone.accept(false, hit)")
