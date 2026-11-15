@@ -93,9 +93,11 @@ final class CapHifzTimelineView extends View {
     private float sp(float n) { return n * getResources().getDisplayMetrics().scaledDensity; }
     /** Large E-Ink screens need readable labels rather than phone-sized text. */
     private float labelScale() { return getWidth() >= dp(720) ? 1.55f : 1f; }
-    private float laneSeparation() { return labelScale() > 1f ? 124f : SECOND_ROW; }
-    private float numberBaseline() { return labelScale() > 1f ? 76f : 64f; }
-    private float dateBaseline() { return labelScale() > 1f ? 107f : 83f; }
+    private float laneSeparation() { return labelScale() > 1f ? 160f : SECOND_ROW; }
+    private float trackCenter() { return labelScale() > 1f ? 60f : TRACK_Y; }
+    private float titleBaseline() { return labelScale() > 1f ? 28f : 18f; }
+    private float numberBaseline() { return labelScale() > 1f ? 110f : 64f; }
+    private float dateBaseline() { return labelScale() > 1f ? 143f : 83f; }
 
     void setSelection(LocalDate date, boolean sabqi) {
         selectedDate = date;
@@ -245,14 +247,14 @@ final class CapHifzTimelineView extends View {
     private void drawLane(Canvas canvas, boolean sabqi, float row, float left, float width) {
         float top = dp(row);
         float[] x = stations(left, width);
-        float y = top + dp(TRACK_Y);
+        float y = top + dp(trackCenter());
         int page = sabqi ? actualSabqiPage : actualTailPage;
         List<CapHifzForecast.Milestone> coming = nextMilestones(sabqi);
         LocalDate targetDate = finish(sabqi);
         String target = sabqi ? "AL-FATḤ" : "AN-NĀS";
 
         drawFitted(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE",
-            left, top + dp(18), 11.5f, INK, Paint.Align.LEFT, true, width * .46f);
+            left, top + dp(titleBaseline()), 11.5f, INK, Paint.Align.LEFT, true, width * .46f);
 
         // A schematic sequence rather than an invented time or completion scale.
         stroke(FAINT, 1.2f, true);
@@ -306,7 +308,7 @@ final class CapHifzTimelineView extends View {
     private CapHifzForecast.Milestone touchedMilestone(boolean sabqi,
             float px, float py, float left, float width) {
         float row = showSabqi && !sabqi ? laneSeparation() : 0f;
-        if (Math.abs(py - dp(row + TRACK_Y)) > dp(38)) return null;
+        if (Math.abs(py - dp(row + trackCenter())) > dp(38)) return null;
         float[] x = stations(left, width);
         List<CapHifzForecast.Milestone> coming = nextMilestones(sabqi);
         for (int i = 0; i < coming.size(); i++) {

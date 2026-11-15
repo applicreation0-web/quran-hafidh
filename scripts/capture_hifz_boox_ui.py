@@ -267,9 +267,9 @@ def verify_direct_cap_milestone_taps(tag, density):
         # Main drawable uses 124dp between tracks on spacious BOOX,
         # and 84dp on the compact 900x1200 E-Ink portrait.
         spacious = (gx2 - gx1) >= 720 * scale
-        row = (124 if spacious else 84) if lane else 0
+        row = (160 if spacious else 84) if lane else 0
         px = int(gx1 + stations[station])
-        py = int(gy1 + (row + 34) * scale)
+        py = int(gy1 + (row + (60 if spacious else 34)) * scale)
         if not (gx1 < px < gx2 and gy1 < py < gy2):
             raise AssertionError(f"Direct icon {lane}/{station} outside BOOX viewport")
         adb("shell", "input", "tap", str(px), str(py))
