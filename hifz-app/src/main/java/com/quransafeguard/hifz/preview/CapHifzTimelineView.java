@@ -208,7 +208,7 @@ final class CapHifzTimelineView extends View {
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(color);
         paint.setTextSize(sp(size * labelScale()));
-        paint.setTypeface(Ui.typeface(bold ? Typeface.BOLD : Typeface.NORMAL));
+        paint.setTypeface(Ui.typeface(getContext(), bold ? Typeface.BOLD : Typeface.NORMAL));
         paint.setTextAlign(align);
         String shown = value;
         while (shown.length() > 2 && paint.measureText(shown) > width)

@@ -156,7 +156,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   });
   boolean compact=activity.getResources().getDisplayMetrics().heightPixels<Ui.dp(activity,700);
   passageTitle=Ui.text(activity,"",16f,true);
-  passageTitle.setTypeface(Ui.typeface(android.graphics.Typeface.BOLD));
+  passageTitle.setTypeface(Ui.typeface(activity, android.graphics.Typeface.BOLD));
   passageTitle.setGravity(Gravity.CENTER);
   passageTitle.setMaxLines(3);passageTitle.setEllipsize(TextUtils.TruncateAt.END);
   passageTitle.setOnClickListener(v->showCurrentTitle());
@@ -167,7 +167,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   root.addView(titlePanel,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?48:56)));
   // Original 17 October subordinate Ayah Themes caption, same private catalogue.
   passageSubtitle=Ui.text(activity,"",12.5f,false);
-  passageSubtitle.setTypeface(Ui.typeface(android.graphics.Typeface.ITALIC));
+  passageSubtitle.setTypeface(Ui.typeface(activity, android.graphics.Typeface.ITALIC));
   passageSubtitle.setGravity(Gravity.CENTER);
   passageSubtitle.setMaxLines(2);
   passageSubtitle.setPadding(Ui.dp(activity,8),0,Ui.dp(activity,8),Ui.dp(activity,2));

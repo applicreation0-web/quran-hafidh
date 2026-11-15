@@ -157,7 +157,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
             boolean chosen = hasSelection && value == mask;
             button.setEnabled(hasSelection);
             button.setTextColor(!hasSelection ? Ui.LINE : chosen ? Ui.INK : Ui.MUTED);
-            button.setTypeface(Ui.typeface(chosen ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
+            button.setTypeface(Ui.typeface(this, chosen ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
             button.setPaintFlags(chosen ? (button.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG)
                 : (button.getPaintFlags() & ~android.graphics.Paint.UNDERLINE_TEXT_FLAG));
         }

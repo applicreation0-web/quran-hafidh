@@ -28,10 +28,22 @@ final class Ui {
     static final int MUTED = 0xff524f49;
     static final int LINE = 0xff88847d; // visible on greyscale E-Ink, no subtle web hairline
 
-    /** One offline interface family; canonical Arabic/QCF pages keep their own glyphs. */
-    // Lazy on Android: JVM source/icon-contract tests must not initialise
-    // framework Typeface when merely loading the non-visual Ui class.
-    static Typeface typeface(int style) { return Typeface.create("sans-serif", style); }
+    /** Patrick Hand (SIL OFL 1.1), bundled offline; QCF Mushaf glyphs are untouched.
+     * Context-lazy initialization avoids JVM source-contract regressions. */
+    private static volatile Typeface interfaceFont;
+    static Typeface typeface(Context context, int style) {
+        Typeface base = interfaceFont;
+        if (base == null) {
+            synchronized (Ui.class) {
+                base = interfaceFont;
+                if (base == null) {
+                    base = context.getResources().getFont(R.font.patrick_hand);
+                    interfaceFont = base;
+                }
+            }
+        }
+        return style == Typeface.NORMAL ? base : Typeface.create(base, style);
+    }
 
     private Ui() {}
 
@@ -146,7 +158,7 @@ final class Ui {
         // 10-inch BOOX typography must remain readable at arm's length.
         if (context.getResources().getConfiguration().smallestScreenWidthDp >= 600)
             secondary.setTextSize(18f);
-        secondary.setTypeface(typeface(Typeface.NORMAL));
+        secondary.setTypeface(typeface(context, Typeface.NORMAL));
         secondary.setTextColor(MUTED);
         secondary.setLineSpacing(0f, 1.0f);
         secondary.setMaxLines(2);
@@ -238,7 +250,7 @@ final class Ui {
         view.setTextSize(sizeSp);
         view.setTextColor(INK);
         view.setLineSpacing(0f, 1.08f);
-        view.setTypeface(typeface(bold ? Typeface.BOLD : Typeface.NORMAL));
+        view.setTypeface(typeface(context, bold ? Typeface.BOLD : Typeface.NORMAL));
         return view;
     }
 
@@ -304,7 +316,7 @@ final class Ui {
     private static Button styled(Button button, Context context, float sizeSp, int radius) {
         button.setAllCaps(false);
         button.setTextSize(sizeSp);
-        button.setTypeface(typeface(Typeface.NORMAL));
+        button.setTypeface(typeface(context, Typeface.NORMAL));
         button.setStateListAnimator(null);
         button.setElevation(0f);
         int stroke = Math.max(1, dp(context, 1));

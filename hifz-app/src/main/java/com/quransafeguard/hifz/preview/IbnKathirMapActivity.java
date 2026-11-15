@@ -467,7 +467,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
 
             TextView marker = Ui.text(this, Integer.toString(i + 1), 12f, true);
             marker.setGravity(Gravity.CENTER);
-            marker.setTypeface(Ui.typeface(Typeface.BOLD));
+            marker.setTypeface(Ui.typeface(this, Typeface.BOLD));
             marker.setTextColor(i == selectedGroupIndex ? Ui.PAPER : Ui.INK);
             marker.setBackground(nodeMarker(i == selectedGroupIndex));
             node.addView(marker, new LinearLayout.LayoutParams(Ui.dp(this, 38), Ui.dp(this, 38)));

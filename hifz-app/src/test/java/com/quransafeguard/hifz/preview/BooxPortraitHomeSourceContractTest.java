@@ -163,9 +163,9 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("Unapproved Kalam titles must not be rendered on BOOX",
             ui.contains("createFromAsset(context.getAssets(), \"fonts/Kalam-Regular.ttf\")"));
         assertTrue("All French interface text must use one offline font family",
-            ui.contains("return Typeface.create(\"sans-serif\", style)")
-            && ui.contains("view.setTypeface(typeface(bold ? Typeface.BOLD : Typeface.NORMAL))")
-            && timeline.contains("Ui.typeface(bold ? Typeface.BOLD : Typeface.NORMAL)"));
+            ui.contains("context.getResources().getFont(R.font.patrick_hand)")
+            && ui.contains("view.setTypeface(typeface(context, bold ? Typeface.BOLD : Typeface.NORMAL))")
+            && timeline.contains("Ui.typeface(getContext(), bold ? Typeface.BOLD : Typeface.NORMAL)"));
         assertFalse("No stray serif headings or sublines", ui.contains("Typeface.create(\"serif\""));
         assertFalse("No old caption under an adjacent rail",
             timeline.contains("lastLabelX") || timeline.contains("yearY")
