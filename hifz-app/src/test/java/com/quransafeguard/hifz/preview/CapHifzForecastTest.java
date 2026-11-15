@@ -1,5 +1,6 @@
 package com.quransafeguard.hifz.preview;
 
+import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRef;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,6 +26,30 @@ public final class CapHifzForecastTest {
         return CapHifzForecast.quarters(geometry, date, sabqi, itqan, complete,
             day -> WeeklyProgramPolicy.actionFor(day.getDayOfWeek(), HifzPrefs.WeeklyProgram.MANUAL_SEVEN, days),
             days > 0, !complete, List.of(), java.util.Set.of(), null, attendance);
+    }
+
+    @Test public void all114SurahsAnd113CanonicalTransitionsExistInTheRealMushaf() throws Exception {
+        GeometryRepository geo = geometry();
+        int checkedTransitions = 0;
+        for (int surah = 1; surah <= 114; surah++) {
+            VerseRef start = new VerseRef(surah, 1);
+            assertTrue("Missing Quran surah " + surah + " in QCF geometry",
+                geo.firstLineIndex(start) >= 0);
+            assertTrue("Missing opening verse navigation for surah " + surah,
+                geo.pageForVerse(start) >= 1);
+            if (surah < 114) {
+                VerseRef nextStart = new VerseRef(surah + 1, 1);
+                assertTrue("Surah order must remain canonical at " + surah,
+                    GeometryRepository.ordinal(nextStart) > GeometryRepository.ordinal(start));
+                checkedTransitions++;
+            }
+        }
+        assertEquals("114 surahs have exactly 113 canonical inter-surah transitions",
+            113, checkedTransitions);
+        assertEquals("Al-Fātiḥah to Al-Baqarah must remain navigable",
+            new VerseRef(2, 1), QuranCanon.INSTANCE.next(new VerseRef(1, 7)));
+        assertEquals("Route split from Al-Fatḥ to Al-Ḥujurāt must remain canonical",
+            new VerseRef(49, 1), QuranCanon.INSTANCE.next(new VerseRef(48, 29)));
     }
 
     @Test public void canonicalJuzAndHizbBoundariesMatchMushaf() {
