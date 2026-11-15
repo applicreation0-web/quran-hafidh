@@ -89,6 +89,10 @@ public final class CapHifzReadOnlyInstrumentedTest {
                     assertFalse(hasScrollView(decor));
                 }
             });
+            // Actual UI screenshot for the owner: the compact Entretien block
+            // must replace the post-Nās Maîtrise rail without any fake credit.
+            Independent11710ScreensInstrumentedTest.capture(
+                postNas ? "cap-hifdh-entretien-after-nas" : "cap-hifdh-before-nas");
             org.json.JSONObject after = HifzBackup.export(context);
             for (String store : new String[]{"values", "dashboard", "j10", "legacy_gates", "free_mem"}) {
                 assertEquals(store, before.getJSONObject(store).toString(), after.getJSONObject(store).toString());
