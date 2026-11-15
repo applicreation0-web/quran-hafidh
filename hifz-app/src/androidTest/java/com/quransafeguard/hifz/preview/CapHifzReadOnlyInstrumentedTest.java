@@ -47,7 +47,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
             for (int i = 0; i < 100; i++) {
                 boolean[] ready = {false};
                 screen.onActivity(activity -> ready[0] =
-                    findContains(activity.getWindow().getDecorView(), "Sabqi ") != null
+                    findContains(activity.getWindow().getDecorView(), "Acquisition ") != null
                         && find(activity.getWindow().getDecorView(), "90 %") != null);
                 if (ready[0]) break;
                 SystemClock.sleep(100);
@@ -56,10 +56,12 @@ public final class CapHifzReadOnlyInstrumentedTest {
             screen.onActivity(activity -> {
                 View decor = activity.getWindow().getDecorView();
                 assertNotNull(find(decor, "Cap Hifdh"));
-                assertNotNull(findContains(decor, "Sabqi "));
+                assertNotNull(findContains(decor, "Acquisition "));
                 assertNull(find(decor, "Trajectoire"));
                 assertNull(find(decor, "Historique"));
                 assertNotNull(findGraph(decor));
+                assertNotNull("A dated milestone is selected inline, not in a popup",
+                    findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
                 assertNull(findContains(decor, "30 Juz acquis attestés"));
                 assertTrue(find(decor, "90 %").isSelected());
                 assertEquals(postNas, find(decor, "Maintien après An-Nās") != null);
@@ -77,6 +79,19 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertEquals(store, before.getJSONObject(store).toString(), after.getJSONObject(store).toString());
             }
         }
+    }
+
+    private static View findDescription(View view, String prefix) {
+        CharSequence spoken = view.getContentDescription();
+        if (spoken != null && spoken.toString().startsWith(prefix)) return view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View found = findDescription(group.getChildAt(i), prefix);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private static boolean hasScrollView(View view) {
