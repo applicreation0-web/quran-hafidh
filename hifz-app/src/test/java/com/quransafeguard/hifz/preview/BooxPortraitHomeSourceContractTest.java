@@ -147,12 +147,14 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("1.55f")
             && timeline.contains("laneSeparation()")
             && timeline.contains("SECOND_ROW = 96f")
-            && timeline.contains("availableDp - below")
-            && timeline.contains("float below = spacious ? 154f : 92f"));
+            && timeline.contains("verticalOffset()")
+            && timeline.contains("Math.min(wanted, Math.max(0f, heightDp - dateBaseline() - 24f))")
+            && timeline.contains("float wanted = labelScale() > 1f ? 190f : 126f"));
         assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
             panel.contains("forecastSabqi || tailForecast || postNas")
             && panel.contains("prefs.juzMaintenance().read()")
             && timeline.contains("drawMaintenanceLane(")
+            && timeline.contains("ENTRETIEN")
             && timeline.contains("cycle sans échéance")
             && !panel.contains("if (postNas) line(\"Maintien après An-Nās\""));
         assertTrue("A schematic short-term view must not compress decades into a time scale",
@@ -166,11 +168,19 @@ public final class BooxPortraitHomeSourceContractTest {
             && forecast.contains("SabqiRoute.ROUTE_END.getSurah()")
             && forecast.contains("crossings(geometry, sabqiBoundaries"));
         assertTrue("Surah names and arrow glyphs must be readable on BOOX without extra rows",
-            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12.5f")
+            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline()), 15f")
             && panel.contains("previous.setTextSize(spaciousBoox() ? 22f : 20f)")
             && panel.contains("next.setTextSize(spaciousBoox() ? 22f : 20f)")
-            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 12.5f"));
+            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 15f"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
+        assertTrue("Empty years must not render invented milestones",
+            timeline.contains("for (int i = 0; i < Math.min(2, coming.size()); i++)")
+            && !timeline.contains("à déterminer")
+            && !timeline.contains("for (int i = coming.size(); i < 2; i++) ring"));
+        assertTrue("Post-Nas Entretien is one compact truthful status, not a second fake four-stop rail",
+            timeline.contains("Cycle continu après الناس · v.6")
+            && !timeline.contains("drawFitted(canvas, \"ROTATION\"")
+            && !timeline.contains("drawFitted(canvas, \"MAINTIEN\""));
         assertTrue("A future checkpoint must be strictly after the authentic cursor",
             timeline.contains("GeometryRepository.ordinal(point.verse) > cursorOrdinal")
             && timeline.contains("sabqi ? actualSabqiVerse : actualTailVerse"));
@@ -218,7 +228,8 @@ public final class BooxPortraitHomeSourceContractTest {
             || timeline.contains("milestoneNumber(")
             || panel.contains("new android.text.style.ImageSpan(icon"));
         assertTrue("Post-Nas maintenance does not invent an ongoing Juz session",
-            timeline.contains("maintenanceVerse == null ? \"aucune ouverte\" : \"en cours\"")
+            timeline.contains("maintenanceVerse == null")
+            && timeline.contains("\"séance en cours\"")
             && panel.contains("prefs.juzMaintenance().read()"));
         assertTrue("Touch must open a canonical Juz or Hizb milestone",
             timeline.contains("openMilestone.accept(true, hit)")
