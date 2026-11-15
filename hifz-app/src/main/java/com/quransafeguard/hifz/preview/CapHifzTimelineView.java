@@ -113,7 +113,8 @@ final class CapHifzTimelineView extends View {
         float availableDp = getHeight() / getResources().getDisplayMetrics().density;
         boolean spacious = labelScale() > 1f;
         float floor = spacious ? 160f : 88f;
-        float below = spacious ? 147f : 86f;
+        // Reserve enough pixels below the final detail text for descenders.
+        float below = spacious ? 154f : 92f;
         return Math.max(floor, availableDp - below);
     }
     private float trackCenter() { return labelScale() > 1f ? 60f : TRACK_Y; }
