@@ -284,6 +284,75 @@ public final class CapHifzForecastTest {
             expected, actual);
     }
 
+    /** Independently reconstruct the real three-slot weekly Itqan page.
+     * A missed tenth slot does not lose the uncompleted page, and closing
+     * that page must block another page until the following ISO week. */
+    @Test public void ninetyPercentItqanQafToNajmDateMatchesIndependentWeeklyPages() throws Exception {
+        GeometryRepository geo = geometry();
+        LocalDate today = LocalDate.of(2026, 11, 15);
+        int cursor = geo.firstLineIndex(new VerseRef(49, 1));
+        int targetLast = geo.lastLineIndex(new VerseRef(53, 1));
+        int opportunities = 0;
+        int skipped = 0;
+        int slot = 0;
+        List<ItqanFourSessionPolicy.Session> slots = List.of();
+        LocalDate closedWeek = null;
+        LocalDate expected = null;
+        for (LocalDate day = today.plusDays(1);
+                !day.isAfter(today.plusYears(4)) && cursor <= targetLast;
+                day = day.plusDays(1)) {
+            java.time.DayOfWeek dow = day.getDayOfWeek();
+            if (dow != java.time.DayOfWeek.TUESDAY
+                    && dow != java.time.DayOfWeek.THURSDAY
+                    && dow != java.time.DayOfWeek.SATURDAY) continue;
+            LocalDate monday = day.minusDays(dow.getValue() - 1);
+            if (monday.equals(closedWeek)) continue;
+            opportunities++;
+            if (opportunities % 10 == 0) {
+                skipped++;
+                continue;
+            }
+            if (slots.isEmpty()) {
+                int page = geo.line(cursor).page;
+                Set<String> eligible = new LinkedHashSet<>();
+                for (int index = cursor; index < geo.lineCount()
+                        && geo.line(index).page == page; index++)
+                    eligible.add(geo.line(index).id);
+                slots = ItqanFourSessionPolicy.weeklyPage(geo, cursor, eligible).sessions;
+                slot = 0;
+            }
+            ItqanFourSessionPolicy.Session session = slots.get(slot++);
+            assertFalse("Itqan must not project an empty date-slot",
+                session.blocks.isEmpty());
+            List<String> lastIds = session.blocks.get(session.blocks.size() - 1).lineIds;
+            cursor = geo.linesForExactIds(lastIds).get(lastIds.size() - 1).globalIndex + 1;
+            if (cursor > targetLast) expected = day;
+            if (slot == slots.size() || slots.get(slot).blocks.isEmpty()) {
+                closedWeek = monday;
+                slots = List.of();
+                slot = 0;
+            }
+        }
+        assertNotNull("Independent weekly Itqan must reach An-Najm", expected);
+        assertTrue("The route must include actual deferred Itqan slots", skipped >= 1);
+
+        List<CapHifzForecast.Quarter> projected = CapHifzForecast.quarters(
+            geo, today, geo.firstLineIndex(new VerseRef(2, 125)),
+            geo.firstLineIndex(new VerseRef(49, 1)), false,
+            date -> WeeklyProgramPolicy.actionFor(
+                date.getDayOfWeek(), HifzPrefs.WeeklyProgram.RECOMMENDED, 3),
+            false, true, List.of(), Set.of(), null, .9);
+        LocalDate actual = null;
+        for (CapHifzForecast.Quarter quarter : projected)
+            for (CapHifzForecast.Milestone point : quarter.tailMilestones)
+                if (point.verse.equals(new VerseRef(53, 1))) {
+                    assertNull("Maîtrise must never repeat one surah-start date", actual);
+                    actual = point.date;
+                }
+        assertEquals("An-Najm 53:1 forecast must match real three-slot page cadence",
+            expected, actual);
+    }
+
     @Test public void higherAttendanceCannotFinishLater() throws Exception {
         GeometryRepository geo=geometry();
         int cursor=geo.firstLineIndex(new VerseRef(2,125));
