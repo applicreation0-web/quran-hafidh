@@ -242,7 +242,7 @@ final class CapHifzPanel extends LinearLayout {
         timeline = null;
         if (forecastSabqi || tailForecast || postNas) {
             // The original one-screen BOOX home stays completely fixed.
-            // Tap a real Juz/Hizb to open the QCF Mushaf immediately; tapping
+            // Tap a real projected sourate/verset to open the QCF Mushaf; tapping
             // empty ink cycles the next checkpoint inline, never a dialog.
             // The real positions below come ONLY from persisted next-line
             // cursors. They are NOT incorrectly labelled "acquired Juz".
@@ -341,12 +341,12 @@ final class CapHifzPanel extends LinearLayout {
             if (row.date.getYear() != selectedYear) continue;
             for (CapHifzForecast.Milestone p : row.sabqiMilestones)
                 choices.add(new MilestoneChoice(p.date, p.verse,
-                    Integer.toString(p.hizb % 2 == 1 ? (p.hizb + 1) / 2 : p.hizb),
-                    true, p.hizb % 2 == 1 ? R.drawable.ic_cap_juz : R.drawable.ic_cap_hizb));
+                    QuranSurahNames.rawName(p.verse.getSurah()) + " " + p.verse.getAyah(),
+                    true));
             for (CapHifzForecast.Milestone p : row.tailMilestones)
                 choices.add(new MilestoneChoice(p.date, p.verse,
-                    Integer.toString(p.hizb % 2 == 1 ? (p.hizb + 1) / 2 : p.hizb),
-                    false, p.hizb % 2 == 1 ? R.drawable.ic_cap_juz : R.drawable.ic_cap_hizb));
+                    QuranSurahNames.rawName(p.verse.getSurah()) + " " + p.verse.getAyah(),
+                    false));
             if (row.sabqiFinish != null)
                 choices.add(new MilestoneChoice(row.sabqiFinish,
                     SabqiRoute.ROUTE_END, "Al-Fatḥ · cible", true));
@@ -423,10 +423,8 @@ final class CapHifzPanel extends LinearLayout {
         MilestoneChoice choice = shownCheckpoints.get(checkpointIndex);
         String track = choice.sabqi ? "Acquisition" : "Maîtrise";
         checkpointLabel.setText(checkpointDisplay(choice));
-        String spokenKind = choice.iconRes == R.drawable.ic_cap_juz ? "Juz "
-            : choice.iconRes == R.drawable.ic_cap_hizb ? "Hizb " : "";
         checkpointLabel.setContentDescription("Ouvrir le Mushaf depuis Cap Hifdh : "
-            + track + ", " + spokenKind + choice.label + ", "
+            + track + ", "
             + choice.date.format(FULL_DATE) + ", "
             + QuranSurahNames.name(choice.verse.getSurah())
             + " " + choice.verse.getAyah() + ". Prévision, pas acquis.");
@@ -434,24 +432,11 @@ final class CapHifzPanel extends LinearLayout {
             timeline.setSelection(choice.date, choice.sabqi);
     }
 
-    /** Compact navigator shares the same Juz/Hizb pictograms, never prefixes J/H. */
+    /** Compact Quranic landmark: one true sourate and ayah, with forecast date. */
     private CharSequence checkpointDisplay(MilestoneChoice choice) {
-        String prefix = year + " · ";
-        String suffix = " · " + choice.date.format(DAY_MONTH) + "  ›";
-        if (choice.iconRes == 0) return prefix + choice.label + suffix;
-        android.text.SpannableStringBuilder visible = new android.text.SpannableStringBuilder(prefix);
-        int position = visible.length();
-        visible.append("\uFFFC");
-        android.graphics.drawable.Drawable icon = context.getDrawable(choice.iconRes);
-        if (icon != null) {
-            int size = Ui.dp(context, 16);
-            icon.setBounds(0, 0, size, size);
-            visible.setSpan(new android.text.style.ImageSpan(icon,
-                android.text.style.ImageSpan.ALIGN_BASELINE), position, position + 1,
-                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-        visible.append(" ").append(choice.label).append(suffix);
-        return visible;
+        return year + " · " + QuranSurahNames.name(choice.verse.getSurah())
+            + " · " + choice.verse.getAyah() + " · "
+            + choice.date.format(DAY_MONTH) + "  ›";
     }
 
     private void openMushaf(VerseRef verse) {

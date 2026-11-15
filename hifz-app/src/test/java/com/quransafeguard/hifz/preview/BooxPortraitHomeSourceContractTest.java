@@ -69,7 +69,7 @@ public final class BooxPortraitHomeSourceContractTest {
             && actionsStart > capStart);
         assertTrue("BOOX uses a fixed viewport with two bounded direct-access rows",
             home.contains("homeViewport = wideBoox() ? fixedBooxParcours(root) : scrollOf(root);")
-            && home.contains("int rowDp = spaciousBooxHome() ? 148 : 94;")
+            && home.contains("int rowDp = spaciousBooxHome() ? 148 : 98;")
             && home.contains("root.addView(row, new LinearLayout.LayoutParams(-1, Ui.dp(this, rowDp)));"));
         assertFalse("Home destination rows must not be split by a rule",
             home.substring(practiceEnd, actionsStart).contains("Ui.divider(this)"));
@@ -130,7 +130,7 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse(home.contains("pathSectionTitle(\"SABQI\")"));
         assertFalse(home.contains("pathSectionTitle(\"ITQĀN\")"));
         assertTrue("Large BOOX home must reserve space for the roadmap and show four concise captions",
-            home.contains("int rowDp = spaciousBooxHome() ? 148 : 94;")
+            home.contains("int rowDp = spaciousBooxHome() ? 148 : 98;")
             && home.contains("TextView caption = Ui.bookText(this, display")
             && home.contains("tile.addView(caption)")
             && home.contains("spaciousBooxHome() ? 112 : 70"));
@@ -180,21 +180,23 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue("Future boundaries come from the shown year and real start date",
             timeline.contains("!point.date.isBefore(windowStart())")
             && timeline.contains("!point.date.isBefore(start)"));
-        assertTrue("Juz/Hizb markers use stable offline vector drawables, not letter prefixes",
+        assertTrue("Projected stations present an actual sourate and ayah with forecast date",
+            timeline.contains("QuranSurahNames.rawName(coming.get(i).verse.getSurah())")
+            && timeline.contains("coming.get(i).verse.getAyah()")
+            && timeline.contains("coming.get(i).date.format(SHORT_DATE)")
+            && panel.contains("checkpointDisplay(choice)")
+            && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
+        assertTrue("Accessibility uses complete Quran positions, not Juz/Hizb numbers",
+            timeline.contains("spokenVerse(point.verse)")
+            && timeline.contains("QuranSurahNames.name(verse.getSurah())"));
+        assertFalse("Juz/Hizb glyphs and number labels are removed from Cap Hifdh",
             timeline.contains("R.drawable.ic_cap_juz")
-                && timeline.contains("R.drawable.ic_cap_hizb")
-                && timeline.contains("milestoneNumber(coming.get(i))")
-                && !timeline.contains("return point.hizb % 2 == 1 ? \"J\"")
-                && panel.contains("checkpointDisplay(choice)")
-                && panel.contains("new android.text.style.ImageSpan(icon"));
-        assertTrue("Accessibility still names the complete Juz and Hizb",
-            timeline.contains("isJuz(point) ? \"Juz \" : \"Hizb \""));
-        String juzIcon = read("hifz-app/src/main/res/drawable/ic_cap_juz.xml");
-        String hizbIcon = read("hifz-app/src/main/res/drawable/ic_cap_hizb.xml");
-        assertTrue("Both glyphs are vector, offline, and high-contrast",
-            juzIcon.contains("<vector") && hizbIcon.contains("<vector")
-                && juzIcon.contains("strokeWidth") && hizbIcon.contains("strokeWidth")
-                && juzIcon.contains("A10,10") && hizbIcon.contains("L22.6,12"));
+            || timeline.contains("R.drawable.ic_cap_hizb")
+            || timeline.contains("milestoneNumber(")
+            || panel.contains("new android.text.style.ImageSpan(icon"));
+        assertTrue("Post-Nas maintenance does not invent an ongoing Juz session",
+            timeline.contains("maintenanceVerse == null ? \"aucune ouverte\" : \"en cours\"")
+            && panel.contains("prefs.juzMaintenance().read()"));
         assertTrue("Touch must open a canonical Juz or Hizb milestone",
             timeline.contains("openMilestone.accept(true, hit)")
             && timeline.contains("openMilestone.accept(false, hit)")

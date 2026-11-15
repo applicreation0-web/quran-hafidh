@@ -138,33 +138,9 @@ final class CapHifzTimelineView extends View {
         return upcoming.subList(0, Math.min(2, upcoming.size()));
     }
 
-    /** Spoken names are complete; visible stages show an icon and number only. */
-    private static boolean isJuz(CapHifzForecast.Milestone point) {
-        return point.hizb % 2 == 1;
-    }
-
-    private static String milestoneNumber(CapHifzForecast.Milestone point) {
-        return Integer.toString(isJuz(point) ? (point.hizb + 1) / 2 : point.hizb);
-    }
-
-    private static String spokenMilestone(CapHifzForecast.Milestone point) {
-        return (isJuz(point) ? "Juz " : "Hizb ") + milestoneNumber(point);
-    }
-
     private static String spokenVerse(VerseRef verse) {
         return verse == null ? "non déterminée"
             : QuranSurahNames.name(verse.getSurah()) + ", verset " + verse.getAyah();
-    }
-
-    /** One offline vector pictogram per type, reused in the inline navigator. */
-    private void symbol(Canvas canvas, CapHifzForecast.Milestone point, float x, float y) {
-        int resource = isJuz(point) ? R.drawable.ic_cap_juz : R.drawable.ic_cap_hizb;
-        android.graphics.drawable.Drawable icon = getContext().getDrawable(resource);
-        if (icon == null) return;
-        int extent = Math.round(dp(labelScale() > 1f ? 18f : 11.5f));
-        icon.setBounds(Math.round(x) - extent, Math.round(y) - extent,
-            Math.round(x) + extent, Math.round(y) + extent);
-        icon.draw(canvas);
     }
 
     private LocalDate finish(boolean sabqi) {
@@ -181,7 +157,7 @@ final class CapHifzTimelineView extends View {
             .append(spokenVerse(sabqi ? actualSabqiVerse : actualTailVerse)).append(". ");
         List<CapHifzForecast.Milestone> upcoming = nextMilestones(sabqi);
         for (CapHifzForecast.Milestone point : upcoming)
-            spoken.append("Jalon ").append(spokenMilestone(point)).append(" le ")
+            spoken.append("Jalon ").append(spokenVerse(point.verse)).append(" le ")
                 .append(point.date.format(SHORT_DATE)).append(". ");
         spoken.append("Objectif final ").append(sabqi ? "Al-Fatḥ" : "An-Nās");
         LocalDate end = finish(sabqi);
@@ -297,8 +273,12 @@ final class CapHifzTimelineView extends View {
                     dp(labelScale() > 1f ? 16f : 13.5f), paint);
             }
         }
-        for (int i = 0; i < coming.size(); i++)
-            symbol(canvas, coming.get(i), x[i + 1], y);
+        // The touch targets remain the same, but stage identity is now Quranic
+        // (sourate + ayah) rather than Juz/Hizb numbering or type pictograms.
+        for (int i = 0; i < coming.size(); i++) {
+            ring(canvas, x[i + 1], y, i == 0 ? 8f : 6f, 1.5f);
+            filled(canvas, x[i + 1], y, 2f);
+        }
         for (int i = coming.size(); i < 2; i++) ring(canvas, x[i + 1], y, 3.5f, .8f);
         goalDiamond(canvas, x[3], y);
 
@@ -312,12 +292,14 @@ final class CapHifzTimelineView extends View {
 
         for (int i = 0; i < 2; i++) {
             float xx = x[i + 1];
-            String name = i < coming.size() ? milestoneNumber(coming.get(i)) : "—";
-            String date = i < coming.size()
-                ? coming.get(i).date.format(SHORT_DATE) : "à déterminer";
-            drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12f,
+            String name = i < coming.size()
+                ? QuranSurahNames.rawName(coming.get(i).verse.getSurah()) : "—";
+            String detail = i < coming.size()
+                ? "v." + coming.get(i).verse.getAyah() + " · "
+                    + coming.get(i).date.format(SHORT_DATE) : "à déterminer";
+            drawFitted(canvas, name, xx, top + dp(numberBaseline()), 11f,
                 i == 0 ? INK : MID, Paint.Align.CENTER, true, w);
-            drawFitted(canvas, date, xx, top + dp(dateBaseline()), 9.5f, MID,
+            drawFitted(canvas, detail, xx, top + dp(dateBaseline()), 9.5f, MID,
                 Paint.Align.CENTER, false, w);
         }
 
@@ -329,7 +311,7 @@ final class CapHifzTimelineView extends View {
     }
 
     /** No fictitious date or permanent completion goal after An-Nās.
-     *  Only the currently opened Juz, if any, receives a navigable marker. */
+     * Only an authentically opened maintenance session receives a navigable marker. */
     private void drawMaintenanceLane(Canvas canvas, float row, float left, float width) {
         float top = dp(row);
         float[] x = stations(left, width);
@@ -357,9 +339,9 @@ final class CapHifzTimelineView extends View {
         drawFitted(canvas, maintenanceVerse == null ? "séance" :
                 "verset " + maintenanceVerse.getAyah(), x[1],
             top + dp(dateBaseline()), 9.5f, MID, Paint.Align.CENTER, false, w);
-        drawFitted(canvas, maintenanceJuz < 1 ? "—" : Integer.toString(maintenanceJuz),
+        drawFitted(canvas, maintenanceVerse == null ? "—" : "SÉANCE",
             x[2], top + dp(numberBaseline()), 11f, INK, Paint.Align.CENTER, true, w);
-        drawFitted(canvas, maintenanceJuz < 1 ? "aucun Juz ouvert" : "Juz en cours",
+        drawFitted(canvas, maintenanceVerse == null ? "aucune ouverte" : "en cours",
             x[2], top + dp(dateBaseline()),
             9.5f, MID, Paint.Align.CENTER, false, w);
         float goalW = (x[3] - x[2]) * .94f;
