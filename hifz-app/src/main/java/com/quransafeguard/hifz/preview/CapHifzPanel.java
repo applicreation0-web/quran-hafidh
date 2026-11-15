@@ -274,6 +274,8 @@ final class CapHifzPanel extends LinearLayout {
                 render();
             }
         });
+        // Larger navigation glyphs without a new row or extra screen height.
+        previous.setTextSize(spaciousBoox() ? 22f : 20f);
         previousNavigator = previous;
 
         checkpointLabel = button(navigator, "", v -> {
@@ -288,7 +290,7 @@ final class CapHifzPanel extends LinearLayout {
                 render();
             }
         });
-        checkpointLabel.setTextSize(spaciousBoox() ? 17f : 12f);
+        checkpointLabel.setTextSize(spaciousBoox() ? 18f : 13f);
         checkpointLabel.setMaxLines(1);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
@@ -303,6 +305,7 @@ final class CapHifzPanel extends LinearLayout {
                 render();
             }
         });
+        next.setTextSize(spaciousBoox() ? 22f : 20f);
         nextNavigator = next;
         body.addView(navigator);
         updateCheckpointLabel();
