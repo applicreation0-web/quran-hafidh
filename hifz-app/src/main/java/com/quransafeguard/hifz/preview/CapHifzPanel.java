@@ -26,6 +26,8 @@ import static com.quransafeguard.hifz.preview.CapHifzEvidence.Track;
 final class CapHifzPanel extends LinearLayout {
     private static final DateTimeFormatter FULL_DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRANCE);
     private static final DateTimeFormatter DAY_MONTH = DateTimeFormatter.ofPattern("d MMM", Locale.FRANCE);
+    /** Single read-only attendance assumption for Cap Hifdh; not a completion credit. */
+    private static final int PROJECTION_ATTENDANCE_PERCENT = 90;
 
     private HifzPrefs prefs;
     private DashboardLedger ledger;
@@ -42,7 +44,6 @@ final class CapHifzPanel extends LinearLayout {
     private final Context context;
     private int year;
     private int lastForecastYear;
-    private int scenario = 90;
     private int checkpointIndex = 0;
     private List<MilestoneChoice> shownCheckpoints = new ArrayList<>();
     private TextView checkpointLabel;
@@ -135,21 +136,8 @@ final class CapHifzPanel extends LinearLayout {
     }
 
     private void renderTrajectory() {
-        LinearLayout choices = Ui.row(context);
-        for (int percent : new int[]{80, 90, 100}) {
-            TextView item = button(choices, percent + " %", v -> {
-                scenario = percent;
-                historyMode = false;
-                checkpointIndex = 0;
-                render();
-            });
-            item.setContentDescription("Simulation à " + percent + " pour cent" + (scenario == percent ? ", sélectionnée" : ""));
-            item.setSelected(scenario == percent);
-            if (scenario == percent) item.setPaintFlags(item.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            item.setGravity(Gravity.CENTER);
-            item.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-        }
-        body.addView(choices);
+        // One fixed target, never three competing simulations or a mutable UI setting.
+        line("Cible 90 % · assiduité estimée", 12);
         renderForecast();
     }
 
@@ -213,14 +201,14 @@ final class CapHifzPanel extends LinearLayout {
         LocalDate blockedWeek = prefs.itqanClosedThisWeek(today) ? monday : null;
         List<CapHifzForecast.Quarter> quarters = CapHifzForecast.quarters(geometry, today, cursor,
             nextItqan, postNas, date -> WeeklyProgramPolicy.actionFor(date.getDayOfWeek(), programme, sabqiDays),
-            forecastSabqi, tailForecast, remaining, stabilized, blockedWeek, scenario / 100.0);
+            forecastSabqi, tailForecast, remaining, stabilized, blockedWeek, PROJECTION_ATTENDANCE_PERCENT / 100.0);
         // The full horizon is drawn ONCE, independent of the year selected below.
         // Never reuse an illustrative serpentine which can invert physical Juz order.
         LocalDate coverageGoal = CapHifzTimelineOrder.firstFullCoverageQuarter(quarters);
         if (CapHifzTimelineOrder.allThirtyJuzAcquired(geometry, acquired)) {
             line("30 Juz acquis attestés", 13);
         } else if (coverageGoal != null) {
-            line("Projection " + scenario + " % · fin estimée T"
+            line("Fin estimée · T"
                 + ((coverageGoal.getMonthValue() - 1) / 3 + 1) + " " + coverageGoal.getYear(), 13);
         } else {
             line("Échéance indéterminée · cadence, borne ou reprise à vérifier", 13);

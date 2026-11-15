@@ -33,7 +33,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
         ledger.edit().clear().commit();
     }
 
-    @Test public void simulationsAndEmptyHistoryLeaveAllFiveBackupStoresUntouched() throws Exception {
+    @Test public void fixedNinetyPercentProjectionAndEmptyHistoryLeaveAllFiveBackupStoresUntouched() throws Exception {
         exercise(false);
     }
 
@@ -48,7 +48,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 boolean[] ready = {false};
                 screen.onActivity(activity -> ready[0] =
                     findContains(activity.getWindow().getDecorView(), "Acquisition ") != null
-                        && find(activity.getWindow().getDecorView(), "90 %") != null);
+                        && find(activity.getWindow().getDecorView(), "Cible 90 % · assiduité estimée") != null);
                 if (ready[0]) break;
                 SystemClock.sleep(100);
             }
@@ -71,12 +71,13 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNotNull("Returning to the forecast must restore the QCF marker",
                     findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
                 assertNull(findContains(decor, "30 Juz acquis attestés"));
-                assertTrue(find(decor, "90 %").isSelected());
+                TextView target = find(decor, "Cible 90 % · assiduité estimée");
+                assertNotNull("A single non-interactive 90% target must be visible", target);
+                assertFalse("The fixed projection is not a toggle", target.isClickable());
+                assertNull(find(decor, "100 %"));
+                assertNull(find(decor, "80 %"));
+                assertNull(find(decor, "90 %"));
                 assertEquals(postNas, find(decor, "Maintien après An-Nās") != null);
-                assertTrue(find(decor, "100 %").performClick());
-                assertTrue(find(decor, "100 %").isSelected());
-                assertTrue(find(decor, "80 %").performClick());
-                assertTrue(find(decor, "80 %").isSelected());
                 assertNotNull(findContains(decor, "acquis"));
                 if (activity.getResources().getConfiguration().smallestScreenWidthDp >= 600) {
                     assertFalse(hasScrollView(decor));

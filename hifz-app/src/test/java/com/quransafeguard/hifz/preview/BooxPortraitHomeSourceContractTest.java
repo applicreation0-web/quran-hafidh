@@ -160,6 +160,13 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("checkpointLabel.setContentDescription(\"Ouvrir le Mushaf depuis Cap Hifdh")); 
         assertFalse("Cap Hifdh itself must never create an Android dialog",
             panel.contains("new AlertDialog.Builder("));
+        assertTrue("Only one fixed 90% target; no choice row and no mutable scenario",
+            panel.contains("PROJECTION_ATTENDANCE_PERCENT = 90")
+            && panel.contains("Cible 90 % · assiduité estimée")
+            && !panel.contains("new int[]{80, 90, 100}")
+            && !panel.contains("private int scenario"));
+        assertTrue("Single 90% target always passed to read-only forecast",
+            panel.contains("PROJECTION_ATTENDANCE_PERCENT / 100.0"));
         assertTrue("Acquired lines are browsed inline using the same controls",
             panel.contains("private List<AcquiredChoice> acquiredChoices()")
             && panel.contains("historyMode = !historyMode")

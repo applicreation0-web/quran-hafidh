@@ -175,16 +175,14 @@ def capture_cap_hifz(tag, home, width, height, fixed):
     else:
         adb("shell", "input", "swipe", str(width // 2), str(int(height * .78)),
             str(width // 2), str(int(height * .34)), "440")
-    for scenario in (80, 90, 100):
-        screen = hierarchy(f"{tag}-cap-ready", lambda tree: visible(tree, is_graph) is not None)
-        option = find_control(screen, lambda value: value.startswith(f"Simulation à {scenario} pour cent"))
-        if option is None:
-            raise AssertionError(f"Missing simulation {scenario} on home")
-        tap(option)
-        suffix = f"{tag}-cap-hifdh-{scenario}"
-        hierarchy(suffix, lambda tree: visible(tree, is_graph) is not None and visible(
-            tree, lambda value: value == f"Simulation à {scenario} pour cent, sélectionnée") is not None)
-        diagnostics(suffix)
+    suffix = f"{tag}-cap-hifdh-90"
+    screen = hierarchy(suffix, lambda tree:
+        visible(tree, is_graph) is not None and visible(
+            tree, lambda value: value == "Cible 90 % · assiduité estimée") is not None)
+    if any("Simulation à " in label for node in screen.iter("node")
+           for label in names(node)):
+        raise AssertionError("Legacy 80/90/100 selector is still present")
+    diagnostics(suffix)
     if tag.endswith("font150"):
         verify_cap_milestone_opens_mushaf(tag)
 
