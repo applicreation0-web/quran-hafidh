@@ -177,7 +177,13 @@ final class CapHifzForecast {
     }
 
     private static boolean attended(int opportunities, int percent) {
-        return opportunities * percent / 100 > (opportunities - 1) * percent / 100;
+        // Round missed opportunities DOWN, not attended opportunities DOWN.
+        // At 90%, opportunities 1..9 are attended and the 10th is skipped.
+        // The previous floor(attended) expression incorrectly skipped the
+        // very first future lesson, shifting early surah dates.
+        int skippedRate = 100 - percent;
+        return opportunities * skippedRate / 100
+            == (opportunities - 1) * skippedRate / 100;
     }
 
     private static VerseRef lastCompleteVerse(GeometryRepository geometry, int index) {
