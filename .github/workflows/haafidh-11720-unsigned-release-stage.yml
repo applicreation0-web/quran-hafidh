@@ -2,7 +2,7 @@ name: Haafidh 1.17.20 — unsigned release staging, NO PRIVATE ASSETS
 on:
   push:
     branches:
-      - release-candidate/haafidh-11720-private-code-only-20261115
+      - release-candidate/haafidh-11720-private-20261115
     paths:
       - .github/workflows/haafidh-11720-unsigned-release-stage.yml
 permissions:
