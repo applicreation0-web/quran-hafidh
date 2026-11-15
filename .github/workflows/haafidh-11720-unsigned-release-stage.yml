@@ -5,6 +5,8 @@ on:
       - release-candidate/haafidh-11720-private-20261115
     paths:
       - .github/workflows/haafidh-11720-unsigned-release-stage.yml
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzTimelineView.java
 permissions:
   contents: read
 jobs:
