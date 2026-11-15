@@ -21,7 +21,8 @@ import java.util.function.IntConsumer;
  * The arrows beneath this view navigate actual calendar years. Juz entrance
  * rings and Hizb markers retain their exact projected crossing dates. A tap
  * on a marker opens its canonical QCF Mushaf verse, while tapping elsewhere
- * opens the accessible detailed milestone explorer. No credits are written.
+ * advances to the next inline checkpoint, without dialogs or scrolling.
+ * No credits are written.
  */
 final class CapHifzTimelineView extends View {
     private static final int INK = Color.rgb(22, 22, 22);
@@ -36,6 +37,8 @@ final class CapHifzTimelineView extends View {
     private final BiConsumer<Boolean, CapHifzForecast.Milestone> openMilestone;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final int selectedYear;
+    private LocalDate selectedDate;
+    private boolean selectedSabqi;
 
     CapHifzTimelineView(Context context, GeometryRepository geometry,
             List<CapHifzForecast.Quarter> quarters, LocalDate start, boolean showSabqi,
@@ -56,7 +59,7 @@ final class CapHifzTimelineView extends View {
         setContentDescription("Feuille de route prévisionnelle interactive " + selectedYear
             + ". Les cercles signalent les entrées dans les Juz, les petits points les Hizb. "
             + "Toucher un jalon ouvre sa page exacte du Mushaf. "
-            + "Toucher ailleurs ouvre la liste des étapes de cette année. "
+            + "Toucher ailleurs sélectionne le jalon suivant sous la frise. "
             + "Les échéances simulées ne sont pas des acquis.");
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
         setClickable(true);
@@ -65,6 +68,13 @@ final class CapHifzTimelineView extends View {
 
     private float dp(float n) { return n * getResources().getDisplayMetrics().density; }
     private float sp(float n) { return n * getResources().getDisplayMetrics().scaledDensity; }
+
+    /** Inline selection is independent of the authentic, read-only forecast. */
+    void setSelection(LocalDate date, boolean sabqi) {
+        selectedDate = date;
+        selectedSabqi = sabqi;
+        invalidate();
+    }
 
     private LocalDate windowStart() {
         return selectedYear == start.getYear() ? start : LocalDate.of(selectedYear, 1, 1);
@@ -129,6 +139,13 @@ final class CapHifzTimelineView extends View {
         if (showSabqi) drawLane(canvas, true, left, right, dp(30));
         if (showTail) drawLane(canvas, false, left, right,
             showSabqi ? dp(67) : dp(30));
+        if (selectedDate != null && selectedDate.getYear() == selectedYear
+                && !selectedDate.isBefore(windowStart())) {
+            float y = selectedSabqi ? dp(30) : showSabqi ? dp(67) : dp(30);
+            // Triple concentric rings are reserved for the SELECTED checkpoint;
+            // the same actual QCF forecast date determines its x-position.
+            rings(canvas, x(selectedDate, left, width), y, 3);
+        }
 
         float yearY = getHeight() - dp(8);
         stroke(FAINT, .7f);
@@ -172,7 +189,8 @@ final class CapHifzTimelineView extends View {
 
         // Show all usable crossings at year scale; Juz entrances are two
         // concentric rings, other Hizb are tiny outlined dots. A dense day's
-        // markers can overlap visually but remain all accessible in the list.
+        // markers may overlap visually, but tapping blank ink cycles every
+        // authentic dated checkpoint in the compact inline navigator.
         float lastLabelX = left - dp(32);
         for (CapHifzForecast.Quarter quarter : quarters) {
             List<CapHifzForecast.Milestone> points =
