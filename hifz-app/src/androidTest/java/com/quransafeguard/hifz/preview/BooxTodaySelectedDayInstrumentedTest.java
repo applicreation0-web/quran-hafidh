@@ -82,16 +82,20 @@ public final class BooxTodaySelectedDayInstrumentedTest {
     }
     @Test public void todayRingPersistsWhenAFutureDayIsConsulted() {
         final LocalDate today = HifzClock.today();
+        // Freeze the same in-memory fixture across both screenshots. The
+        // legitimate async dashboard loader can refresh actual ledger rows
+        // between ActivityScenario callbacks; it must not replace the fake
+        // "today validated" case this isolated visual contract is asserting.
+        final List<WeeklyDashboardPlanner.Row> rows = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            LocalDate day = today.plusDays(i);
+            rows.add(new WeeklyDashboardPlanner.Row(day,
+                WeeklyDashboardPlanner.day(day, today), "Matin", "Soir",
+                i == 0 || i == 2 ? "Validé" : "À faire")); // Future cannot count as validated.
+        }
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a -> {
                 call(a, "showParcours");
-                List<WeeklyDashboardPlanner.Row> rows = new ArrayList<>();
-                for (int i = 0; i < 7; i++) {
-                    LocalDate day = today.plusDays(i);
-                    rows.add(new WeeklyDashboardPlanner.Row(day,
-                        WeeklyDashboardPlanner.day(day, today), "Matin", "Soir",
-                        i == 0 || i == 2 ? "Validé" : "À faire")); // Future cannot count as validated.
-                }
                 set(a, "weekRows", rows);
                 set(a, "selectedWeekDate", today);
                 call(a, "renderSelectedWeekDay");
@@ -101,6 +105,9 @@ public final class BooxTodaySelectedDayInstrumentedTest {
             });
             Independent11710ScreensInstrumentedTest.capture("calendar-today-selected-and-validated");
             scenario.onActivity(a -> {
+                // Assert the same explicit synthetic rows, not a ledger
+                // refresh asynchronously installed since the first capture.
+                set(a, "weekRows", rows);
                 set(a, "selectedWeekDate", today.plusDays(2));
                 call(a, "renderSelectedWeekDay");
                 check(station(a, 0), true, false, true);
