@@ -47,7 +47,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
             for (int i = 0; i < 100; i++) {
                 boolean[] ready = {false};
                 screen.onActivity(activity -> ready[0] =
-                    findContains(activity.getWindow().getDecorView(), "Acquisition ") != null
+                    findContains(activity.getWindow().getDecorView(), "Prévision · 90 %") != null
                         && find(activity.getWindow().getDecorView(), "Prévision · 90 % d’assiduité") != null);
                 if (ready[0]) break;
                 SystemClock.sleep(100);
@@ -78,7 +78,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNull(find(decor, "80 %"));
                 assertNull(find(decor, "90 %"));
                 assertEquals(postNas, find(decor, "Maintien après An-Nās") != null);
-                assertNotNull(findContains(decor, "acquis"));
+                assertNotNull(find(decor, "Acquis ›"));
                 if (activity.getResources().getConfiguration().smallestScreenWidthDp >= 600) {
                     assertFalse(hasScrollView(decor));
                 }
