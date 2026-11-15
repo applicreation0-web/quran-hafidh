@@ -28,27 +28,36 @@ public final class CapHifzForecastTest {
             days > 0, !complete, List.of(), java.util.Set.of(), null, attendance);
     }
 
-    @Test public void all114SurahsAnd113CanonicalTransitionsExistInTheRealMushaf() throws Exception {
+    /** Cap Hifdh intentionally excludes Al-Fātiḥah: 113 surahs (2–114),
+     * with 112 inter-surah transitions across its two canonical route legs.
+     * The 2 and 49 start positions are physical cursors, not extra credits. */
+    @Test public void capHifdhCovers113SurahsAnd112TransitionsWithoutAlFatiha() throws Exception {
         GeometryRepository geo = geometry();
-        int checkedTransitions = 0;
-        for (int surah = 1; surah <= 114; surah++) {
+        int surahs = 0;
+        int transitions = 0;
+        for (int surah = 2; surah <= 114; surah++) {
             VerseRef start = new VerseRef(surah, 1);
-            assertTrue("Missing Quran surah " + surah + " in QCF geometry",
+            assertTrue("Cap Hifdh source has no opening line for surah " + surah,
                 geo.firstLineIndex(start) >= 0);
-            assertTrue("Missing opening verse navigation for surah " + surah,
+            assertTrue("Surah " + surah + " cannot be opened in the Mushaf",
                 geo.pageForVerse(start) >= 1);
+            assertFalse("Surah " + surah + " is missing its canonical Arabic title",
+                QuranSurahNames.rawName(surah).isEmpty());
+            surahs++;
             if (surah < 114) {
-                VerseRef nextStart = new VerseRef(surah + 1, 1);
-                assertTrue("Surah order must remain canonical at " + surah,
-                    GeometryRepository.ordinal(nextStart) > GeometryRepository.ordinal(start));
-                checkedTransitions++;
+                assertTrue("A Quran surah transition is reversed at " + surah,
+                    GeometryRepository.ordinal(new VerseRef(surah + 1, 1))
+                        > GeometryRepository.ordinal(start));
+                transitions++;
             }
         }
-        assertEquals("114 surahs have exactly 113 canonical inter-surah transitions",
-            113, checkedTransitions);
-        assertEquals("Al-Fātiḥah to Al-Baqarah must remain navigable",
-            new VerseRef(2, 1), QuranCanon.INSTANCE.next(new VerseRef(1, 7)));
-        assertEquals("Route split from Al-Fatḥ to Al-Ḥujurāt must remain canonical",
+        assertEquals("Cap Hifdh covers 113 canonical surahs, excluding Al-Fātiḥah",
+            113, surahs);
+        assertEquals("113 Cap Hifdh surahs imply 112 inter-surah transitions",
+            112, transitions);
+        assertEquals("Al-Baqarah must flow directly into Āl ʿImrān",
+            new VerseRef(3, 1), QuranCanon.INSTANCE.next(new VerseRef(2, 286)));
+        assertEquals("Acquisition to Maîtrise route junction must stay canonical",
             new VerseRef(49, 1), QuranCanon.INSTANCE.next(new VerseRef(48, 29)));
     }
 
