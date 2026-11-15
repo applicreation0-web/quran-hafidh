@@ -1096,7 +1096,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         button.setText(label);
         button.setTextSize(12f);
         button.setTextColor(Ui.INK);
-        button.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
+        button.setTypeface(Ui.typeface(Typeface.NORMAL));
         button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         button.setStateListAnimator(null);
         button.setElevation(0f);
