@@ -2,7 +2,7 @@ name: Quran Haafidh 1.17.20 — official APK v2 signature metadata ONLY
 on:
   push:
     branches:
-      - release-candidate/haafidh-11720-private-code-only-20261115
+      - release-candidate/haafidh-11720-private-20261115
     paths:
       - signing-input/signed_data_11720.b64
 permissions:
