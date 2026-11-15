@@ -148,9 +148,18 @@ public final class BooxPortraitHomeSourceContractTest {
             && !panel.contains("if (postNas) line(\"Maintien après An-Nās\""));
         assertTrue("A schematic short-term view must not compress decades into a time scale",
             timeline.contains("private List<CapHifzForecast.Milestone> nextMilestones")
-            && timeline.contains("Math.min(2, upcoming.size())")
+            && timeline.contains("CapHifzForecast.visibleMilestones(upcoming)")
             && timeline.contains("nextMilestones(sabqi)")
             && timeline.contains("Stations have equal spacing ON PURPOSE"));
+        String forecast = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzForecast.java");
+        assertTrue("Chapter starts must be projected from real QCF crossings, notably Āl ʿImrān 3:1",
+            forecast.contains("new VerseRef(surah, 1)")
+            && forecast.contains("SabqiRoute.ROUTE_END.getSurah()")
+            && forecast.contains("crossings(geometry, sabqiBoundaries"));
+        assertTrue("Surah names and arrow glyphs must be readable on BOOX without extra rows",
+            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12.5f")
+            && panel.contains("previous.setTextSize(spaciousBoox() ? 22f : 20f)")
+            && panel.contains("next.setTextSize(spaciousBoox() ? 22f : 20f)"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
         assertTrue("A future checkpoint must be strictly after the authentic cursor",
             timeline.contains("GeometryRepository.ordinal(point.verse) > cursorOrdinal")
