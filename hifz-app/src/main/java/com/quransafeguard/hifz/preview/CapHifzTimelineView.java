@@ -203,7 +203,16 @@ final class CapHifzTimelineView extends View {
     private CapHifzForecast.Milestone touchedMilestone(boolean sabqi,
             float tapX, float tapY, float left, float width) {
         float centerY = sabqi ? dp(30) : showSabqi ? dp(67) : dp(30);
-        if (Math.abs(tapY - centerY) > dp(15)) return null;
+        if (Math.abs(tapY - centerY) > dp(17)) return null;
+        // The large concentric destination is a real touch target as well:
+        // Al-Fatḥ / An-Nās open at the exact last verse of the route.
+        LocalDate goal = finish(sabqi);
+        if (goal != null && goal.getYear() == selectedYear
+                && Math.abs(x(goal, left, width) - tapX) <= dp(19)) {
+            com.quransafeguard.hifz.core.VerseRef verse = sabqi
+                ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
+            return new CapHifzForecast.Milestone(goal, verse, CapHifzForecast.hizb(verse));
+        }
         CapHifzForecast.Milestone nearest = null;
         float distance = dp(17);
         for (CapHifzForecast.Quarter q : quarters) {
