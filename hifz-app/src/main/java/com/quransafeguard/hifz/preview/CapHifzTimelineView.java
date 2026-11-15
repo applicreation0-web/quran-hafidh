@@ -280,7 +280,9 @@ final class CapHifzTimelineView extends View {
         float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
         drawFitted(canvas, page > 0 ? "p." + page : "position —",
             x[0], top + dp(numberBaseline()), 10.5f, INK, Paint.Align.LEFT, true, w);
-        drawFitted(canvas, "actuel", x[0], top + dp(dateBaseline()),
+        // The physical cursor is TODAY's position even while a later
+        // forecast year is explored. Its authentic date remains visible.
+        drawFitted(canvas, start.format(SHORT_DATE), x[0], top + dp(dateBaseline()),
             9.5f, MID, Paint.Align.LEFT, false, w);
 
         for (int i = 0; i < 2; i++) {

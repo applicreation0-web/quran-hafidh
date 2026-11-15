@@ -160,6 +160,8 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("No old caption under an adjacent rail",
             timeline.contains("lastLabelX") || timeline.contains("yearY")
             || timeline.contains("text(canvas, \"ICI\""));
+        assertTrue("The real position remains dated while exploring a future year",
+            timeline.contains("start.format(SHORT_DATE)"));
         assertTrue("Every stage caption has a width budget at large BOOX text sizes",
             timeline.contains("drawFitted(") && timeline.contains("paint.measureText(shown) > width"));
         assertTrue("Future boundaries come from the shown year and real start date",

@@ -153,7 +153,7 @@ def verify_calendar_day_bounds(root):
                     f"{(x1,y1,x2,y2)} vs {(sx1,sy1,sx2,sy2)}")
 
 
-def capture_cap_hifz(tag, home, width, height, fixed):
+def capture_cap_hifz(tag, home, width, height, fixed, density=None):
     visible = lambda tree, label: next((
         node for node in tree.iter("node") if node.get("package") == PACKAGE
         and any(label(value) for value in names(node))
@@ -183,8 +183,9 @@ def capture_cap_hifz(tag, home, width, height, fixed):
            for label in names(node)):
         raise AssertionError("Legacy 80/90/100 selector is still present")
     diagnostics(suffix)
-    if tag.endswith("font150"):
+    if tag.endswith("font150") and fixed:
         verify_cap_milestone_opens_mushaf(tag)
+        verify_direct_cap_milestone_taps(tag, density)
 
 
 
@@ -246,6 +247,84 @@ def verify_cap_milestone_opens_mushaf(tag):
               find_control(tree, lambda label: label == "Parcours") is not None)
 
 
+
+def verify_direct_cap_milestone_taps(tag, density):
+    """Tap EVERY future Juz/Hizb icon plus both terminal diamonds on the
+    actual Canvas surface. Validate Activity navigation and a nonblank QCF page.
+    No optimistic credit, mocked timeline click, or selector fallback."""
+    scale = density / 160.0
+    for lane, station in ((0, 1), (0, 2), (1, 1), (1, 2), (0, 3), (1, 3)):
+        home = hierarchy(f"{tag}-cap-direct-{lane}-{station}-ready",
+            lambda tree: find_control(tree, lambda label:
+                label.startswith("Feuille de route prévisionnelle interactive")) is not None)
+        graph = find_control(home, lambda label:
+            label.startswith("Feuille de route prévisionnelle interactive"))
+        gx1, gy1, gx2, gy2 = bounds(graph)
+        margin = 16 * scale
+        span = (gx2 - gx1) - 2 * margin
+        stations = (margin + 6 * scale, margin + span * .34,
+                    margin + span * .64, margin + span - 6 * scale)
+        # Main drawable uses 124dp between tracks on spacious BOOX,
+        # and 84dp on the compact 900x1200 E-Ink portrait.
+        spacious = (gx2 - gx1) >= 720 * scale
+        row = (124 if spacious else 84) if lane else 0
+        px = int(gx1 + stations[station])
+        py = int(gy1 + (row + 34) * scale)
+        if not (gx1 < px < gx2 and gy1 < py < gy2):
+            raise AssertionError(f"Direct icon {lane}/{station} outside BOOX viewport")
+        adb("shell", "input", "tap", str(px), str(py))
+        for _ in range(8):
+            time.sleep(1)
+            state = adb("shell", "dumpsys", "activity", "activities").stdout.decode(
+                "utf-8", errors="replace")
+            if re.search(r"(?:topResumedActivity|mResumedActivity).*StudyReaderActivity", state):
+                break
+        else:
+            raise AssertionError(f"Direct Juz/Hizb or goal tap {lane}/{station} did not open Mushaf")
+        if station == 1:
+            diagnostics(f"{tag}-cap-direct-{lane}-{station}-mushaf")
+            png = (OUTPUT / f"{tag}-cap-direct-{lane}-{station}-mushaf.png").read_bytes()
+            if len(png) < 40000:
+                raise AssertionError("Direct milestone opened a blank Mushaf page")
+        adb("shell", "input", "keyevent", "4")
+        hierarchy(f"{tag}-cap-direct-{lane}-{station}-return",
+            lambda tree: find_control(tree, lambda label: label == "Parcours") is not None)
+
+
+def verify_home_balance(home, width, height, density):
+    """Use actual Android node rectangles, not source-only layout assertions."""
+    scale = density / 160.0
+    tiles = [find_control(home, lambda value, label=label: value == label)
+             for label in ("Parcours", "Progression", "Lecture", "Atlas")]
+    if any(tile is None for tile in tiles):
+        raise AssertionError("Missing one of the four BOOX destinations")
+    first, third = bounds(tiles[0]), bounds(tiles[2])
+    vertical = bounds(tiles[2])[3] - bounds(tiles[0])[1]
+    if vertical > height * .34:
+        raise AssertionError(f"Home icons still monopolize {vertical / height:.0%} of BOOX")
+    for tile, label in zip(tiles, ("Parcours", "Progression", "Lecture", "Atlas")):
+        caption = next((n for n in tile.iter("node")
+                        if n.get("class") == "android.widget.TextView"
+                        and n.get("text") == label and bounds(n)), None)
+        if caption is None:
+            raise AssertionError(f"{label} has no visible, one-word caption")
+        tx1,ty1,tx2,ty2=bounds(tile)
+        x1,y1,x2,y2=bounds(caption)
+        if not(tx1<=x1<x2<=tx2 and ty1<=y1<y2<=ty2):
+            raise AssertionError(f"Caption {label} is clipped")
+    history = find_control(home, lambda value:
+        value.startswith("Parcourir les acquis."))
+    if history is None:
+        raise AssertionError("Missing directly reachable authentic Acquis history")
+    bx=bounds(history)
+    if bx[3]-bx[1] < 47 * scale:
+        raise AssertionError("Acquis history tap area is smaller than 48dp")
+    graph = find_control(home, lambda value:
+        value.startswith("Feuille de route prévisionnelle interactive"))
+    if graph is None or bounds(graph)[3] > height - 30:
+        raise AssertionError("Cap Hifdh is clipped by the BOOX viewport")
+
+
 def sunday_station(label):
     match = re.search(r"\b\d{4}-\d{2}-\d{2}\b", label)
     return bool(match and "ouvrir le détail" in label and date.fromisoformat(match[0]).weekday() == 6)
@@ -279,7 +358,8 @@ def capture(tag, size, density, font):
         diagnostics(f"{tag}-home")
         width, height = map(int, size.split("x"))
         verify_boox_home_icon_sizes(home, width)
-        capture_cap_hifz(tag, home, width, height, fixed=True)
+        verify_home_balance(home, width, height, density)
+        capture_cap_hifz(tag, home, width, height, fixed=True, density=density)
         parcours = find_control(home, lambda label: label == "Parcours")
         tap(parcours)
         time.sleep(2)
