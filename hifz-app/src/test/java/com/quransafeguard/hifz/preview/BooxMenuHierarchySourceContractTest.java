@@ -32,9 +32,13 @@ public final class BooxMenuHierarchySourceContractTest {
             home.contains("cue.setVisibility(View.GONE);") && home.contains("tile.addView(cue);"));
     }
 
-    @Test public void menuLabelsAndValuesHaveSeparateTypefacesAndKeepLiveUpdates() throws Exception {
+    @Test public void menuLabelsAndValuesShareTypefaceAndKeepLiveUpdates() throws Exception {
         String ui = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        assertTrue(ui.contains("Typeface.create(\"serif\", Typeface.NORMAL)"));
+        assertTrue("One shared offline UI font, with separate weights for labels and values",
+            ui.contains("return Typeface.create(\"sans-serif\", style)")
+            && ui.contains("secondary.setTypeface(typeface(Typeface.NORMAL))")
+            && ui.contains("TextView name = bookText(context, label, 17f, true)"));
+        assertFalse("No legacy serif-only menu subline", ui.contains("Typeface.create(\"serif\""));
         assertTrue(ui.contains("secondary.setMaxLines(2)"));
         assertTrue(ui.contains("TextView name = bookText(context, label, 17f, true)"));
         assertTrue(ui.contains("copy.addView(name)") && ui.contains("copy.addView(current)"));
