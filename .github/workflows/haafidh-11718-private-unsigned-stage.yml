@@ -68,6 +68,9 @@ jobs:
           cp "$apk" unsigned-stage/Quran_Haafidh_11718_PRIVATE_MODE_UNSIGNED_STAGING.apk
           cp "$BT/zipalign" unsigned-stage/zipalign
           cp "$BT/lib/apksigner.jar" unsigned-stage/apksigner.jar
+          # Public historical signer certificate, already present in repository
+          # as a signedData metadata document. This contains NO private key.
+          cp signing-input/signed_data_11716.b64 unsigned-stage/official-public-signed-data-11716.b64
           sha256sum unsigned-stage/*.apk > unsigned-stage/SHA256SUMS.txt
           echo 'VERIFIED_UNSIGNED_OFFLINE_STAGE_NO_PRIVATE_ASSETS'
       - uses: actions/upload-artifact@v4
