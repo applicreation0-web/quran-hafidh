@@ -191,29 +191,30 @@ def capture_cap_hifz(tag, home, width, height, fixed):
 
 
 def verify_cap_milestone_opens_mushaf(tag):
-    """Follow a genuine, dated Cap Hifdh milestone from the home dialog
-    into the original QCF Mushaf; then return without modifying Hifdh."""
+    """Check the all-inline Cap Hifdh navigator then open the real QCF
+    Mushaf from its selected marker, never using an Android AlertDialog."""
     home = hierarchy(f"{tag}-cap-nav-ready")
-    entry = find_control(home, lambda value:
-                         "Juz / Hizb" in value or "Explorer les Juz et Hizb" in value)
-    if entry is None:
-        raise AssertionError("Cap Hifdh year milestone explorer is not clickable")
-    tap(entry)
-    listing = hierarchy(f"{tag}-cap-milestone-list", lambda tree: any(
-        "ouvrir le Mushaf" in value for node in tree.iter("node")
-        for value in names(node)))
-    diagnostics(f"{tag}-cap-milestone-list")
-    first = next((node for node in listing.iter("node")
-                  if node.get("package") == PACKAGE
-                  and "Prévision" in node.get("text", "")
-                  and "Mushaf" in node.get("text", "")
-                  and bounds(node) is not None), None)
-    if first is None:
-        raise AssertionError("No dated actionable Juz/Hizb or quarter milestone")
-    tap(first)
-    # Fresh WebView/QCF renderer cold-start is asynchronous on BOOX emulators.
-    # A 2-second screenshot only captured the empty loading paper despite the
-    # correct reader Activity being resumed. Wait for actual glyph painting.
+    selected = find_control(home, lambda value:
+        value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
+    if selected is None:
+        raise AssertionError("Missing inline, directly clickable checkpoint")
+    graph = find_control(home, lambda value:
+        value.startswith("Feuille de route prévisionnelle interactive"))
+    if graph is None:
+        raise AssertionError("Missing interactive Cap Hifdh annual ribbon")
+    # Touch empty lower timeline space to advance a checkpoint in place.
+    # Date/Juz details appear in the SAME fixed-height home row.
+    x1, y1, x2, y2 = bounds(graph)
+    adb("shell", "input", "tap", str((x1 + x2) // 2), str(y2 - 5))
+    home = hierarchy(f"{tag}-cap-inline-step", lambda tree:
+        find_control(tree, lambda value:
+            value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :")) is not None)
+    diagnostics(f"{tag}-cap-inline-step")
+    if any(node.get("text", "").startswith("Juz et Hizb ·") for node in home.iter("node")):
+        raise AssertionError("Modal Juz / Hizb explorer regressed into the BOOX home")
+    selected = find_control(home, lambda value:
+        value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
+    tap(selected)
     state = ""
     for _ in range(6):
         time.sleep(2)
@@ -222,12 +223,12 @@ def verify_cap_milestone_opens_mushaf(tag):
         if re.search(r"(?:topResumedActivity|mResumedActivity).*StudyReaderActivity", state):
             break
     if not re.search(r"(?:topResumedActivity|mResumedActivity).*StudyReaderActivity", state):
-        raise AssertionError("Cap Hifdh milestone did not open the real Mushaf")
+        raise AssertionError("Inline Cap Hifdh marker did not open the real Mushaf")
     time.sleep(6)
     diagnostics(f"{tag}-cap-mushaf-from-milestone")
     screenshot = (OUTPUT / f"{tag}-cap-mushaf-from-milestone.png").read_bytes()
     if len(screenshot) < 40000:
-        raise AssertionError("Mushaf is still blank after rendering; reader page must be verified")
+        raise AssertionError("Mushaf is still blank after rendering; page must be verified")
     adb("shell", "input", "keyevent", "4")
     hierarchy(f"{tag}-cap-home-return", lambda tree:
               find_control(tree, lambda label: label == "Parcours") is not None)
