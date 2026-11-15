@@ -484,7 +484,7 @@ final class CapHifzPanel extends LinearLayout {
         String summary = "Acquis ›";
         String spokenSummary = acquired.size() + " lignes acquises, " + dated + " datées";
         TextView history = line(summary, spaciousBoox() ? 16 : 12);
-        history.setMinHeight(Ui.dp(context, 48));
+        history.setMinHeight(Ui.dp(context, 64));
         history.setGravity(Gravity.CENTER_VERTICAL);
         history.setPadding(Ui.dp(context, 8), 0, Ui.dp(context, 8), 0);
         history.setContentDescription("Parcourir les acquis. " + spokenSummary + ". Sans fenêtre");
