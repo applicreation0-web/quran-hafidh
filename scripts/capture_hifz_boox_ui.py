@@ -211,12 +211,23 @@ def verify_cap_milestone_opens_mushaf(tag):
     if first is None:
         raise AssertionError("No dated actionable Juz/Hizb or quarter milestone")
     tap(first)
-    time.sleep(2)
-    state = adb("shell", "dumpsys", "activity", "activities").stdout.decode(
-        "utf-8", errors="replace")
+    # Fresh WebView/QCF renderer cold-start is asynchronous on BOOX emulators.
+    # A 2-second screenshot only captured the empty loading paper despite the
+    # correct reader Activity being resumed. Wait for actual glyph painting.
+    state = ""
+    for _ in range(6):
+        time.sleep(2)
+        state = adb("shell", "dumpsys", "activity", "activities").stdout.decode(
+            "utf-8", errors="replace")
+        if re.search(r"(?:topResumedActivity|mResumedActivity).*StudyReaderActivity", state):
+            break
     if not re.search(r"(?:topResumedActivity|mResumedActivity).*StudyReaderActivity", state):
         raise AssertionError("Cap Hifdh milestone did not open the real Mushaf")
+    time.sleep(6)
     diagnostics(f"{tag}-cap-mushaf-from-milestone")
+    screenshot = (OUTPUT / f"{tag}-cap-mushaf-from-milestone.png").read_bytes()
+    if len(screenshot) < 40000:
+        raise AssertionError("Mushaf is still blank after rendering; reader page must be verified")
     adb("shell", "input", "keyevent", "4")
     hierarchy(f"{tag}-cap-home-return", lambda tree:
               find_control(tree, lambda label: label == "Parcours") is not None)
