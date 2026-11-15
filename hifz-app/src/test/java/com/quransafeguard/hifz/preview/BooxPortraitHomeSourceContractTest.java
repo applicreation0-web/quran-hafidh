@@ -116,7 +116,7 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse(home.contains("compactScheduleLine("));
     }
 
-    @Test public void capHifdhYearZoomAndRealJuzMilestonesNavigateToOriginalMushaf() throws Exception {
+    @Test public void capHifdhShowsTwoDatedNextStepsAndFinalGoalWithoutClutter() throws Exception {
         String home = read(MAIN);
         String panel = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzPanel.java");
         String timeline = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzTimelineView.java");
@@ -125,17 +125,20 @@ public final class BooxPortraitHomeSourceContractTest {
             && home.contains("pathSectionTitle(\"MAÎTRISE\")"));
         assertFalse(home.contains("pathSectionTitle(\"SABQI\")"));
         assertFalse(home.contains("pathSectionTitle(\"ITQĀN\")"));
-        assertTrue("A year zoom prevents decades from flattening into endpoints",
-            timeline.contains("LocalDate.of(selectedYear, 12, 31)")
-            && timeline.contains("p.date.getYear() != selectedYear"));
+        assertTrue("A schematic short-term view must not compress decades into a time scale",
+            timeline.contains("private List<CapHifzForecast.Milestone> nextMilestones")
+            && timeline.contains("Math.min(2, upcoming.size())")
+            && timeline.contains("nextMilestones(sabqi)")
+            && timeline.contains("Stations have equal spacing ON PURPOSE"));
+        assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
         assertTrue("Real next-line cursors must be kept distinct from acquired receipts",
             panel.contains("geometry.line(cursor).page")
             && panel.contains("geometry.line(nextItqan).page")
             && timeline.contains("actualSabqiPage")
             && timeline.contains("actualTailPage")
-            && timeline.contains("Prochain jalon : indéterminé")
-            && timeline.contains("CIBLE AL-FATḤ")
-            && timeline.contains("CIBLE AN-NĀS"));
+            && timeline.contains("AL-FATḤ")
+            && timeline.contains("AN-NĀS")
+            && timeline.contains("targetDate.format(GOAL_DATE)"));
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         assertFalse("Unapproved Kalam titles must not be rendered on BOOX",
             ui.contains("createFromAsset(context.getAssets(), \"fonts/Kalam-Regular.ttf\")"));
@@ -144,11 +147,14 @@ public final class BooxPortraitHomeSourceContractTest {
             && ui.contains("view.setTypeface(typeface(bold ? Typeface.BOLD : Typeface.NORMAL))")
             && timeline.contains("Ui.typeface(bold ? Typeface.BOLD : Typeface.NORMAL)"));
         assertFalse("No stray serif headings or sublines", ui.contains("Typeface.create(\"serif\""));
-        assertFalse("Rail captions must never collide with the following rail at 150% scale",
-            timeline.contains("centerY + dp(14)") || timeline.contains("lastLabelX")
+        assertFalse("No old caption under an adjacent rail",
+            timeline.contains("lastLabelX") || timeline.contains("yearY")
             || timeline.contains("text(canvas, \"ICI\""));
-        assertTrue("Next boundary is searched from the visible year, not from the first year",
-            timeline.contains("!point.date.isBefore(windowStart())"));
+        assertTrue("Every stage caption has a width budget at large BOOX text sizes",
+            timeline.contains("drawFitted(") && timeline.contains("paint.measureText(shown) > width"));
+        assertTrue("Future boundaries come from the shown year and real start date",
+            timeline.contains("!point.date.isBefore(windowStart())")
+            && timeline.contains("!point.date.isBefore(start)"));
         assertTrue("Touch must open a canonical Juz or Hizb milestone",
             timeline.contains("openMilestone.accept(true, hit)")
             && timeline.contains("openMilestone.accept(false, hit)")
@@ -162,11 +168,13 @@ public final class BooxPortraitHomeSourceContractTest {
             panel.contains("new AlertDialog.Builder("));
         assertTrue("Only one fixed 90% target; no choice row and no mutable scenario",
             panel.contains("PROJECTION_ATTENDANCE_PERCENT = 90")
-            && panel.contains("Cible 90 % · assiduité estimée")
+            && panel.contains("Prévision · 90 % d’assiduité")
             && !panel.contains("new int[]{80, 90, 100}")
             && !panel.contains("private int scenario"));
         assertTrue("Single 90% target always passed to read-only forecast",
             panel.contains("PROJECTION_ATTENDANCE_PERCENT / 100.0"));
+        assertFalse("The weekly attendance summary must not obscure the roadmap",
+            panel.contains("renderWeek();"));
         assertTrue("Acquired lines are browsed inline using the same controls",
             panel.contains("private List<AcquiredChoice> acquiredChoices()")
             && panel.contains("historyMode = !historyMode")

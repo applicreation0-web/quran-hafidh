@@ -168,7 +168,7 @@ def capture_cap_hifz(tag, home, width, height, fixed):
         if (visible(home, lambda value: value == "Cap Hifdh") is None
                 or visible(home, is_graph) is None):
             raise AssertionError("Cap Hifdh title and timeline must both fit on the BOOX home")
-        if visible(home, lambda value: "lignes acquises · " in value and "datées" in value) is None:
+        if visible(home, lambda value: value == "Acquis ›") is None:
             raise AssertionError("The Cap Hifdh history footer is clipped on the BOOX home")
         if any(node.get("scrollable") == "true" for node in home.iter("node")):
             raise AssertionError("BOOX home must not scroll")
@@ -178,7 +178,7 @@ def capture_cap_hifz(tag, home, width, height, fixed):
     suffix = f"{tag}-cap-hifdh-90"
     screen = hierarchy(suffix, lambda tree:
         visible(tree, is_graph) is not None and visible(
-            tree, lambda value: value == "Cible 90 % · assiduité estimée") is not None)
+            tree, lambda value: value == "Prévision · 90 % d’assiduité") is not None)
     if any("Simulation à " in label for node in screen.iter("node")
            for label in names(node)):
         raise AssertionError("Legacy 80/90/100 selector is still present")
@@ -192,7 +192,7 @@ def verify_cap_milestone_opens_mushaf(tag):
     """Check the all-inline Cap Hifdh navigator then open the real QCF
     Mushaf from its selected marker, never using an Android AlertDialog."""
     home = hierarchy(f"{tag}-cap-nav-ready")
-    history = find_control(home, lambda value: " lignes acquises · " in value)
+    history = find_control(home, lambda value: value.startswith("Parcourir les acquis."))
     if history is None:
         raise AssertionError("Real acquired-line history should be inline on BOOX home")
     tap(history)

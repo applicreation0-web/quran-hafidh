@@ -114,7 +114,8 @@ final class CapHifzPanel extends LinearLayout {
 
     private void render() {
         body.removeAllViews();
-        renderWeek();
+        // Focus the home on short-term checkpoints, not dashboard attendance
+        // or line-count accounting which already exists elsewhere in the app.
         renderTrajectory();
         showHistorySummary();
     }
@@ -137,7 +138,7 @@ final class CapHifzPanel extends LinearLayout {
 
     private void renderTrajectory() {
         // One fixed target, never three competing simulations or a mutable UI setting.
-        line("Cible 90 % · assiduité estimée", 12);
+        line("Prévision · 90 % d’assiduité", 12);
         renderForecast();
     }
 
@@ -204,15 +205,8 @@ final class CapHifzPanel extends LinearLayout {
             forecastSabqi, tailForecast, remaining, stabilized, blockedWeek, PROJECTION_ATTENDANCE_PERCENT / 100.0);
         // The full horizon is drawn ONCE, independent of the year selected below.
         // Never reuse an illustrative serpentine which can invert physical Juz order.
-        LocalDate coverageGoal = CapHifzTimelineOrder.firstFullCoverageQuarter(quarters);
-        if (CapHifzTimelineOrder.allThirtyJuzAcquired(geometry, acquired)) {
-            line("30 Juz acquis attestés", 13);
-        } else if (coverageGoal != null) {
-            line("Fin estimée · T"
-                + ((coverageGoal.getMonthValue() - 1) / 3 + 1) + " " + coverageGoal.getYear(), 13);
-        } else {
-            line("Échéance indéterminée · cadence, borne ou reprise à vérifier", 13);
-        }
+        // Each lane owns its genuine terminal date; do not repeat a large,
+        // ambiguous overall-finish sentence above the roadmap.
 
         int lastYear = quarters.get(quarters.size() - 1).date.getYear();
         lastForecastYear = lastYear;
@@ -237,7 +231,7 @@ final class CapHifzPanel extends LinearLayout {
                 (sabqi, milestone) -> openMushaf(milestone.verse), year,
                 sabqiCurrentPage, tailCurrentPage);
             body.addView(timeline, new LinearLayout.LayoutParams(-1,
-                Ui.dp(context, forecastSabqi && tailForecast ? 110 : 85)));
+                Ui.dp(context, forecastSabqi && tailForecast ? 166 : 82)));
         }
         LinearLayout navigator = Ui.row(context);
         TextView previous = button(navigator, "‹", v -> {
@@ -265,7 +259,7 @@ final class CapHifzPanel extends LinearLayout {
             }
         });
         checkpointLabel.setTextSize(12f);
-        checkpointLabel.setMaxLines(2);
+        checkpointLabel.setMaxLines(1);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
             Ui.dp(context, 48), 1f));
@@ -393,8 +387,7 @@ final class CapHifzPanel extends LinearLayout {
         MilestoneChoice choice = shownCheckpoints.get(checkpointIndex);
         String track = choice.sabqi ? "Acquisition" : "Maîtrise";
         checkpointLabel.setText(year + " · " + choice.label + " · "
-            + track + "\n" + choice.date.format(DAY_MONTH) + " · p."
-            + geometry.pageForVerse(choice.verse) + "  ›");
+            + choice.date.format(DAY_MONTH) + "  ›");
         checkpointLabel.setContentDescription("Ouvrir le Mushaf depuis Cap Hifdh : "
             + track + ", " + choice.label + ", "
             + choice.date.format(FULL_DATE) + ", "
@@ -446,9 +439,10 @@ final class CapHifzPanel extends LinearLayout {
     private void showHistorySummary() {
         long dated = acquired.stream().filter(id -> finalDates.containsKey(id)
             && finalDates.get(id).acquired != null).count();
-        String summary = acquired.size() + " lignes acquises · " + dated + " datées";
+        String summary = "Acquis ›";
+        String spokenSummary = acquired.size() + " lignes acquises, " + dated + " datées";
         TextView history = line(summary, 12);
-        history.setContentDescription(summary + " · Parcourir ici les acquis, sans fenêtre");
+        history.setContentDescription("Parcourir les acquis. " + spokenSummary + ". Sans fenêtre");
         history.setFocusable(true);
         history.setOnClickListener(v -> {
             historyMode = !historyMode;
@@ -459,8 +453,7 @@ final class CapHifzPanel extends LinearLayout {
                 history.setContentDescription("Quitter la consultation des acquis");
             } else {
                 history.setText(summary);
-                history.setContentDescription(summary
-                    + " · Parcourir ici les acquis, sans fenêtre");
+                history.setContentDescription("Parcourir les acquis. " + spokenSummary + ". Sans fenêtre");
             }
             updateCheckpointLabel();
         });

@@ -48,7 +48,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 boolean[] ready = {false};
                 screen.onActivity(activity -> ready[0] =
                     findContains(activity.getWindow().getDecorView(), "Acquisition ") != null
-                        && find(activity.getWindow().getDecorView(), "Cible 90 % · assiduité estimée") != null);
+                        && find(activity.getWindow().getDecorView(), "Prévision · 90 % d’assiduité") != null);
                 if (ready[0]) break;
                 SystemClock.sleep(100);
             }
@@ -56,13 +56,13 @@ public final class CapHifzReadOnlyInstrumentedTest {
             screen.onActivity(activity -> {
                 View decor = activity.getWindow().getDecorView();
                 assertNotNull(find(decor, "Cap Hifdh"));
-                assertNotNull(findContains(decor, "Acquisition "));
+                assertNotNull(findContains(decor, "Prévision · 90 %"));
                 assertNull(find(decor, "Trajectoire"));
                 assertNull(find(decor, "Historique"));
                 assertNotNull(findGraph(decor));
                 assertNotNull("A dated milestone is selected inline, not in a popup",
                     findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
-                TextView history = findContains(decor, " lignes acquises · ");
+                TextView history = find(decor, "Acquis ›");
                 assertNotNull("Cap Hifdh history must remain visible on the home", history);
                 assertTrue(history.performClick());
                 assertNotNull("Acquired lines use the same fixed row, not a modal",
@@ -71,7 +71,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNotNull("Returning to the forecast must restore the QCF marker",
                     findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
                 assertNull(findContains(decor, "30 Juz acquis attestés"));
-                TextView target = find(decor, "Cible 90 % · assiduité estimée");
+                TextView target = find(decor, "Prévision · 90 % d’assiduité");
                 assertNotNull("A single non-interactive 90% target must be visible", target);
                 assertFalse("The fixed projection is not a toggle", target.isClickable());
                 assertNull(find(decor, "100 %"));
