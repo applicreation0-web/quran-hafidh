@@ -264,10 +264,14 @@ def verify_direct_cap_milestone_taps(tag, density):
         span = (gx2 - gx1) - 2 * margin
         stations = (margin + 6 * scale, margin + span * .34,
                     margin + span * .64, margin + span - 6 * scale)
-        # Main drawable uses 124dp between tracks on spacious BOOX,
-        # and 84dp on the compact 900x1200 E-Ink portrait.
+        # Follow the actual view-height-dependent BOOX lane separation;
+        # using a fixed 160dp/84dp offset falsely taps empty ink after the
+        # home starts using its previously wasted bottom viewport.
         spacious = (gx2 - gx1) >= 720 * scale
-        row = (160 if spacious else 84) if lane else 0
+        available_dp = (gy2 - gy1) / scale
+        lane_separation = max(160 if spacious else 88,
+                              available_dp - (147 if spacious else 86))
+        row = lane_separation if lane else 0
         px = int(gx1 + stations[station])
         py = int(gy1 + (row + (60 if spacious else 34)) * scale)
         if not (gx1 < px < gx2 and gy1 < py < gy2):
