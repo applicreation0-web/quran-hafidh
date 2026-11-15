@@ -493,10 +493,13 @@ final class CapHifzPanel extends LinearLayout {
         String summary = "Acquis ›";
         String spokenSummary = acquired.size() + " lignes acquises, " + dated + " datées";
         TextView history = line(summary, spaciousBoox() ? 16 : 12);
-        history.setMinHeight(Ui.dp(context, 64));
+        // 48dp is the accessible minimum. The weighted BOOX graph needs the
+        // freed height to render both full sourah/date rows at font 150%.
+        int historyDp = context.getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 48 : 64;
+        history.setMinHeight(Ui.dp(context, historyDp));
         // TextView.setMinHeight is not honored when the fixed BOOX root
         // compresses WRAP_CONTENT. Reserve a measurable hit target instead.
-        history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, 64)));
+        history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, historyDp)));
         history.setGravity(Gravity.CENTER_VERTICAL);
         history.setPadding(Ui.dp(context, 8), 0, Ui.dp(context, 8), 0);
         history.setContentDescription("Parcourir les acquis. " + spokenSummary + ". Sans fenêtre");
