@@ -42,7 +42,7 @@ jobs:
             }
             public static void main(String[] args) throws Exception {
               final String CERT="66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14";
-              final String SIGNED_DATA="90366fee51bdb2b2cece2794e07942ff64df927a8fcd6978f18798764eefcf55";
+              final String SIGNED_DATA="990bc501a4e5baa4993928d83cd9934e3bf28c91adf0b18067e198b2c1089daf";
               byte[] data=Base64.getMimeDecoder().decode(Files.readString(Path.of("signing-input/signed_data_11720.b64")));
               if(data.length!=1449 || !hex(MessageDigest.getInstance("SHA-256").digest(data)).equals(SIGNED_DATA))
                 throw new SecurityException("Refusing unapproved APK metadata input");
