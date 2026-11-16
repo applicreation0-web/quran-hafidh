@@ -5,6 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.util.List;
 import static org.junit.Assert.*;
 
 /**
@@ -150,6 +152,13 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("verticalOffset()")
             && timeline.contains("Math.min(wanted, Math.max(0f, heightDp - dateBaseline() - 24f))")
             && timeline.contains("float wanted = labelScale() > 1f ? 190f : 126f"));
+        assertTrue("Projected An-Nās in 2028 must hide the Maîtrise lane in 2031",
+            panel.contains("CapHifzForecast.projectedTailFinishedBeforeYear(quarters, year)")
+            && panel.contains("boolean showMastery = tailForecast && !projectedPostNas")
+            && panel.contains("boolean showEntretien = postNas || projectedPostNas")
+            && timeline.contains("private final boolean projectedMaintenance")
+            && timeline.contains("if (projectedMaintenance)")
+            && timeline.contains("Après الناس · v.6 (prévision)"));
         assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
             panel.contains("forecastSabqi || tailForecast || postNas")
             && panel.contains("prefs.juzMaintenance().read()")
@@ -262,6 +271,24 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("StudyReaderActivity.EXTRA_JUMP_PAGE")
             && panel.contains("StudyReaderActivity.EXTRA_JUMP_VERSE"));
         assertFalse("Forecast does not write Hifdh credits",panel.contains("completeDailyLesson("));
+    }
+
+    @Test public void projectedAnNasCompletionHidesMasteryFromFollowingYearsOnly() {
+        CapHifzForecast.Quarter before = new CapHifzForecast.Quarter(
+            LocalDate.of(2028, 6, 30), null, null, false, false);
+        CapHifzForecast.Quarter finished = new CapHifzForecast.Quarter(
+            LocalDate.of(2028, 12, 31), null, null, false, true,
+            List.of(), List.of(), null, LocalDate.of(2028, 10, 26));
+        List<CapHifzForecast.Quarter> plan = List.of(before, finished);
+        assertFalse(CapHifzForecast.projectedTailFinishedBeforeYear(plan, 2027));
+        assertFalse("Final An-Nās stays visible in its projected year",
+            CapHifzForecast.projectedTailFinishedBeforeYear(plan, 2028));
+        assertTrue("Following year must show only Entretien",
+            CapHifzForecast.projectedTailFinishedBeforeYear(plan, 2029));
+        assertTrue("2031 BOOX regression: no further Maîtrise rail",
+            CapHifzForecast.projectedTailFinishedBeforeYear(plan, 2031));
+        assertFalse("Unknown completion must not fabricate Entretien",
+            CapHifzForecast.projectedTailFinishedBeforeYear(List.of(before), 2031));
     }
 
     @Test public void todayAndHifzNavigationKeepCanonicalRouting() throws Exception {
