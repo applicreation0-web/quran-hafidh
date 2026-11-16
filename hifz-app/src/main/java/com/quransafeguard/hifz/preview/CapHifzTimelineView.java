@@ -183,7 +183,12 @@ final class CapHifzTimelineView extends View {
             if (point.date != null && point.verse != null
                     && GeometryRepository.ordinal(point.verse) > cursorOrdinal
                     && !point.date.isBefore(visibleFrom)
-                    && !point.date.isBefore(start)) upcoming.add(point);
+                    && !point.date.isBefore(start)
+                    && (selectedDate == null || selectedSabqi != sabqi
+                        || !point.date.equals(selectedDate) || selectedVerse == null
+                        || GeometryRepository.ordinal(point.verse)
+                            >= GeometryRepository.ordinal(selectedVerse)))
+                upcoming.add(point);
         }
         upcoming.sort(Comparator.comparing((CapHifzForecast.Milestone p) -> p.date)
             .thenComparingInt(p -> GeometryRepository.ordinal(p.verse)));
@@ -397,6 +402,11 @@ final class CapHifzTimelineView extends View {
         float row = verticalOffset() + (showSabqi && !sabqi ? laneSeparation() : 0f);
         if (Math.abs(py - dp(row + trackCenter())) > dp(38)) return null;
         float[] x = stations(left, width);
+        LocalDate end = finish(sabqi);
+        if (end != null && Math.abs(px - x[3]) <= dp(10)) {
+            VerseRef verse = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
+            return new CapHifzForecast.Milestone(end, verse, CapHifzForecast.hizb(verse));
+        }
         List<CapHifzForecast.Milestone> annual = yearSurahFinishes(sabqi);
         float margin = dp(20);
         CapHifzForecast.Milestone nearest = null;
@@ -410,7 +420,6 @@ final class CapHifzTimelineView extends View {
             }
         }
         if (nearest != null) return nearest;
-        LocalDate end = finish(sabqi);
         if (end != null && Math.abs(px - x[3]) <= dp(24)) {
             VerseRef verse = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
             return new CapHifzForecast.Milestone(end, verse, CapHifzForecast.hizb(verse));
