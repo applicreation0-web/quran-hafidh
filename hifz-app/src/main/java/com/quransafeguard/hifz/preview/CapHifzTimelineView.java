@@ -61,6 +61,7 @@ final class CapHifzTimelineView extends View {
     private final VerseRef actualTailVerse;
     private LocalDate selectedDate;
     private boolean selectedSabqi;
+    private VerseRef selectedVerse;
 
     CapHifzTimelineView(Context context, GeometryRepository geometry,
             List<CapHifzForecast.Quarter> quarters, LocalDate start, boolean showSabqi,
@@ -100,8 +101,10 @@ final class CapHifzTimelineView extends View {
                     .append(" ouverte à ").append(spokenVerse(maintenanceVerse)).append(". ");
             else spoken.append("Aucune nouvelle séance de Juz ouverte à cet instant. ");
         }
-        spoken.append("Touchez un jalon pour ouvrir son verset dans le Mushaf. ")
-            .append("Touchez un espace libre pour voir les autres jalons.");
+        spoken.append("Un point noir représente une fin de sourate dans son parcours. ")
+            .append("Le cercle extérieur indique la fin sélectionnée; ")
+            .append("touchez un point pour ouvrir son dernier verset dans le Mushaf. ")
+            .append("Touchez un espace libre pour parcourir les jalons.");
         setContentDescription(spoken.toString());
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
         setClickable(true);
@@ -133,8 +136,13 @@ final class CapHifzTimelineView extends View {
     private float dateBaseline() { return labelScale() > 1f ? 143f : 83f; }
 
     void setSelection(LocalDate date, boolean sabqi) {
+        setSelection(date, sabqi, null);
+    }
+
+    void setSelection(LocalDate date, boolean sabqi, VerseRef verse) {
         selectedDate = date;
         selectedSabqi = sabqi;
+        selectedVerse = verse;
         invalidate();
     }
 
@@ -142,31 +150,45 @@ final class CapHifzTimelineView extends View {
         return selectedYear == start.getYear() ? start : LocalDate.of(selectedYear, 1, 1);
     }
 
+    /** ALL physically completed sourates in the selected calendar year.
+     * Every one is a dot on its own track, including crowded Itqān years. */
+    private List<CapHifzForecast.Milestone> yearSurahFinishes(boolean sabqi) {
+        ArrayList<CapHifzForecast.Milestone> result = new ArrayList<>();
+        for (CapHifzForecast.Quarter q : quarters) {
+            List<CapHifzForecast.Milestone> points =
+                sabqi ? q.sabqiSurahFinishes : q.tailSurahFinishes;
+            for (CapHifzForecast.Milestone point : points)
+                if (point.date != null && point.date.getYear() == selectedYear)
+                    result.add(point);
+        }
+        result.sort(Comparator.comparing((CapHifzForecast.Milestone p) -> p.date)
+            .thenComparingInt(p -> GeometryRepository.ordinal(p.verse)));
+        return result;
+    }
+
+    private static float pinX(int index, int total, float left, float width, float margin) {
+        return left + margin + (width - 2f * margin) * (index + 1f) / (total + 1f);
+    }
+
     private List<CapHifzForecast.Milestone> nextMilestones(boolean sabqi) {
         ArrayList<CapHifzForecast.Milestone> upcoming = new ArrayList<>();
-        // The first predicted boundary may be exactly today's working verse.
-        // That is not the NEXT milestone. Filter physical positions first,
-        // without misclassifying a forecast as an attested acquisition.
+        // Every item is a true SURAH FINISH, not a Juz/Hizb transition.
         VerseRef physicalCursor = sabqi ? actualSabqiVerse : actualTailVerse;
         int cursorOrdinal = physicalCursor == null ? -1
             : GeometryRepository.ordinal(physicalCursor);
-        // When browsing a later checkpoint, recenter the visible pair on
-        // that date instead of leaving the first two events of the year frozen.
         LocalDate visibleFrom = windowStart();
         if (selectedDate != null && selectedSabqi == sabqi
                 && selectedDate.isAfter(visibleFrom)) visibleFrom = selectedDate;
-        for (CapHifzForecast.Quarter q : quarters) {
-            List<CapHifzForecast.Milestone> candidates =
-                sabqi ? q.sabqiMilestones : q.tailMilestones;
-            for (CapHifzForecast.Milestone point : candidates) {
-                if (point.date != null && point.verse != null
-                        && GeometryRepository.ordinal(point.verse) > cursorOrdinal
-                        && !point.date.isBefore(visibleFrom)
-                        && !point.date.isBefore(start)) upcoming.add(point);
-            }
+        for (CapHifzForecast.Milestone point : yearSurahFinishes(sabqi)) {
+            if (point.date != null && point.verse != null
+                    && GeometryRepository.ordinal(point.verse) > cursorOrdinal
+                    && !point.date.isBefore(visibleFrom)
+                    && !point.date.isBefore(start)) upcoming.add(point);
         }
         upcoming.sort(Comparator.comparing((CapHifzForecast.Milestone p) -> p.date)
             .thenComparingInt(p -> GeometryRepository.ordinal(p.verse)));
+        // Two readable labels fit, but ALL endings are still distinct visible
+        // pins on the year rail and addressable through the checkpoint arrows.
         return CapHifzForecast.visibleMilestones(upcoming);
     }
 
@@ -185,7 +207,8 @@ final class CapHifzTimelineView extends View {
 
     private void appendSpoken(StringBuilder spoken, boolean sabqi) {
         spoken.append(sabqi ? "Acquisition" : "Maîtrise")
-            .append(", position de travail ")
+            .append(", ").append(yearSurahFinishes(sabqi).size())
+            .append(" fins de sourates projetées dans l'année. Position de travail ")
             .append(spokenVerse(sabqi ? actualSabqiVerse : actualTailVerse)).append(". ");
         List<CapHifzForecast.Milestone> upcoming = nextMilestones(sabqi);
         for (CapHifzForecast.Milestone point : upcoming)
@@ -293,35 +316,35 @@ final class CapHifzTimelineView extends View {
 
         drawFitted(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE",
             left, top + dp(titleBaseline()), 13f, INK, Paint.Align.LEFT, true, width * .46f);
+        List<CapHifzForecast.Milestone> annual = yearSurahFinishes(sabqi);
+        drawFitted(canvas, annual.size() + " fins · " + selectedYear,
+            left + width, top + dp(titleBaseline()), 11f, MID,
+            Paint.Align.RIGHT, false, width * .5f);
 
-        // A schematic sequence rather than an invented time or completion scale.
+        // Equal-ordered calendar-year dots: each black pin = exactly one
+        // projected end of sourate. No fabricated percentage or completion
+        // credit. Selected pin has an OUTER ring linked to the bottom label.
         stroke(FAINT, 1.2f, true);
         canvas.drawLine(x[0], y, x[3], y, paint);
         paint.setPathEffect(null);
         filled(canvas, x[0], y, 3.6f);
-        // Selection halo stays OUTSIDE the icon: no white eraser over the glyph.
-        if (selectedDate != null && selectedSabqi == sabqi) {
-            for (int i = 0; i < coming.size(); i++) {
-                if (selectedDate.equals(coming.get(i).date)) {
-                    stroke(INK, 1.2f, false);
-                    canvas.drawCircle(x[i + 1], y,
-                        dp(labelScale() > 1f ? 21.5f : 13.5f), paint);
-                }
-            }
-            if (targetDate != null && selectedDate.equals(targetDate)) {
-                stroke(INK, 1.2f, false);
-                canvas.drawCircle(x[3], y,
-                    dp(labelScale() > 1f ? 16f : 13.5f), paint);
+        float markerMargin = dp(20);
+        for (int i = 0; i < annual.size(); i++) {
+            CapHifzForecast.Milestone point = annual.get(i);
+            float px = pinX(i, annual.size(), left, width, markerMargin);
+            boolean selected = selectedDate != null && selectedSabqi == sabqi
+                && selectedDate.equals(point.date)
+                && selectedVerse != null && selectedVerse.equals(point.verse);
+            filled(canvas, px, y, annual.size() > 45 ? 1.9f : 3.0f);
+            if (selected) {
+                ring(canvas, px, y, labelScale() > 1f ? 10f : 8f, 1.6f);
+                filled(canvas, px, y, 3.6f);
+                stroke(INK, 1.1f, false);
+                canvas.drawLine(px, y + dp(9), px, y + dp(14), paint);
             }
         }
-        // The touch targets remain the same, but stage identity is now Quranic
-        // (sourate + ayah) rather than Juz/Hizb numbering or type pictograms.
-        for (int i = 0; i < coming.size(); i++) {
-            ring(canvas, x[i + 1], y, i == 0 ? 8f : 6f, 1.5f);
-            filled(canvas, x[i + 1], y, 2f);
-        }
-        // No placeholder circles for years without forecast milestones.
-        // A missing date is not a future step and must not look clickable.
+        // The terminal diamond is always the canonical destination,
+        // independent of the selected year or number of yearly finishes.
         goalDiamond(canvas, x[3], y);
 
         float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
@@ -374,10 +397,19 @@ final class CapHifzTimelineView extends View {
         float row = verticalOffset() + (showSabqi && !sabqi ? laneSeparation() : 0f);
         if (Math.abs(py - dp(row + trackCenter())) > dp(38)) return null;
         float[] x = stations(left, width);
-        List<CapHifzForecast.Milestone> coming = nextMilestones(sabqi);
-        for (int i = 0; i < coming.size(); i++) {
-            if (Math.abs(px - x[i + 1]) <= dp(24)) return coming.get(i);
+        List<CapHifzForecast.Milestone> annual = yearSurahFinishes(sabqi);
+        float margin = dp(20);
+        CapHifzForecast.Milestone nearest = null;
+        float nearestDistance = dp(24);
+        for (int i = 0; i < annual.size(); i++) {
+            float target = pinX(i, annual.size(), left, width, margin);
+            float distance = Math.abs(px - target);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = annual.get(i);
+            }
         }
+        if (nearest != null) return nearest;
         LocalDate end = finish(sabqi);
         if (end != null && Math.abs(px - x[3]) <= dp(24)) {
             VerseRef verse = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
