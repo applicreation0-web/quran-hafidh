@@ -49,12 +49,15 @@ final class CapHifzPanel extends LinearLayout {
     private final Context context;
     private int year;
     private int lastForecastYear;
+    private List<CapHifzForecast.Quarter> forecastQuarters = java.util.Collections.emptyList();
     private int checkpointIndex = 0;
     private List<MilestoneChoice> shownCheckpoints = new ArrayList<>();
     private TextView checkpointLabel;
     private CapHifzTimelineView timeline;
+    private TextView previousYearNavigator;
     private TextView previousNavigator;
     private TextView nextNavigator;
+    private TextView nextYearNavigator;
     private boolean historyMode = false;
     private int acquiredIndex = 0;
     private List<AcquiredChoice> acquiredLines = new ArrayList<>();
@@ -239,6 +242,7 @@ final class CapHifzPanel extends LinearLayout {
 
         int lastYear = quarters.get(quarters.size() - 1).date.getYear();
         lastForecastYear = lastYear;
+        forecastQuarters = quarters;
         year = Math.max(today.getYear(), Math.min(year, lastYear));
         // Forecast navigation must never toggle the authentic completion
         // state. If An-Nās is predicted for 2028, 2031 shows only Entretien.
@@ -275,18 +279,20 @@ final class CapHifzPanel extends LinearLayout {
                     forecastSabqi && (showMastery || showEntretien) ? 184 : 90));
             body.addView(timeline, graphLayout);
         }
+        // One compact row: double chevrons change year; single chevrons
+        // browse actual dated forecast checkpoints, including year crossings.
+        // No added BOOX row, modal, scrollbar or persisted progress.
         LinearLayout navigator = Ui.row(context);
+        TextView previousYear = button(navigator, "«", v -> moveForecastYear(-1));
+        previousYear.setTextSize(spaciousBoox() ? 22f : 20f);
+        previousYearNavigator = previousYear;
+
         TextView previous = button(navigator, "‹", v -> {
             if (historyMode) {
                 acquiredIndex = Math.min(acquiredIndex + 1, acquiredLines.size() - 1);
                 updateCheckpointLabel();
-            } else {
-                year--;
-                checkpointIndex = 0;
-                render();
-            }
+            } else moveForecastStep(-1);
         });
-        // Larger navigation glyphs without a new row or extra screen height.
         previous.setTextSize(spaciousBoox() ? 22f : 20f);
         previousNavigator = previous;
 
@@ -296,29 +302,26 @@ final class CapHifzPanel extends LinearLayout {
                     openMushaf(acquiredLines.get(acquiredIndex).verse);
             } else if (!shownCheckpoints.isEmpty())
                 openMushaf(shownCheckpoints.get(checkpointIndex).verse);
-            else if (year < lastYear) {
-                year++;
-                checkpointIndex = 0;
-                render();
-            }
+            else if (year < lastYear) moveForecastYear(1);
         });
         checkpointLabel.setTextSize(spaciousBoox() ? 18f : 13f);
         checkpointLabel.setMaxLines(1);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
             Ui.dp(context, 48), 1f));
+
         TextView next = button(navigator, "›", v -> {
             if (historyMode) {
                 acquiredIndex = Math.max(0, acquiredIndex - 1);
                 updateCheckpointLabel();
-            } else {
-                year++;
-                checkpointIndex = 0;
-                render();
-            }
+            } else moveForecastStep(1);
         });
         next.setTextSize(spaciousBoox() ? 22f : 20f);
         nextNavigator = next;
+
+        TextView nextYear = button(navigator, "»", v -> moveForecastYear(1));
+        nextYear.setTextSize(spaciousBoox() ? 22f : 20f);
+        nextYearNavigator = nextYear;
         body.addView(navigator);
         updateCheckpointLabel();
         // Maintien is now the second roadmap lane, not a stray footer sentence.
@@ -387,26 +390,62 @@ final class CapHifzPanel extends LinearLayout {
             if (acquiredLines.isEmpty()) return;
             acquiredIndex = (acquiredIndex + 1) % acquiredLines.size();
             updateCheckpointLabel();
-            return;
-        }
-        if (shownCheckpoints.isEmpty()) return;
-        checkpointIndex = (checkpointIndex + 1) % shownCheckpoints.size();
-        updateCheckpointLabel();
+        } else moveForecastStep(1);
+    }
+
+    private void moveForecastYear(int direction) {
+        if (historyMode || direction != -1 && direction != 1) return;
+        int destination = year + direction;
+        if (destination < today.getYear() || destination > lastForecastYear) return;
+        year = destination;
+        checkpointIndex = 0;
+        render();
+    }
+
+    private java.util.function.IntUnaryOperator forecastCheckpointCounts() {
+        return selectedYear -> checkpointsForYear(forecastQuarters, selectedYear).size();
+    }
+
+    private void moveForecastStep(int direction) {
+        if (historyMode || direction != -1 && direction != 1) return;
+        CapHifzNavigation.Cursor moved = CapHifzNavigation.move(year, checkpointIndex,
+            direction, today.getYear(), lastForecastYear, forecastCheckpointCounts());
+        if (moved.year == year && moved.index == checkpointIndex) return;
+        boolean changedYear = moved.year != year;
+        year = moved.year;
+        checkpointIndex = moved.index;
+        if (changedYear) render();
+        else updateCheckpointLabel();
     }
 
     private void updateCheckpointLabel() {
         if (checkpointLabel == null) return;
+        if (previousYearNavigator != null) {
+            previousYearNavigator.setVisibility(historyMode ? View.GONE : View.VISIBLE);
+            previousYearNavigator.setEnabled(!historyMode && year > today.getYear());
+            previousYearNavigator.setContentDescription("Prévision : année précédente");
+        }
+        if (nextYearNavigator != null) {
+            nextYearNavigator.setVisibility(historyMode ? View.GONE : View.VISIBLE);
+            nextYearNavigator.setEnabled(!historyMode && year < lastForecastYear);
+            nextYearNavigator.setContentDescription("Prévision : année suivante");
+        }
+        CapHifzNavigation.Cursor position = new CapHifzNavigation.Cursor(year, checkpointIndex);
         if (previousNavigator != null) {
             previousNavigator.setEnabled(historyMode
-                ? acquiredIndex + 1 < acquiredLines.size() : year > today.getYear());
+                ? acquiredIndex + 1 < acquiredLines.size()
+                : CapHifzNavigation.canMove(position, -1, today.getYear(),
+                    lastForecastYear, forecastCheckpointCounts()));
             previousNavigator.setContentDescription(historyMode
-                ? "Acquis plus ancien" : "Année précédente de Cap Hifdh");
+                ? "Acquis plus ancien" : "Jalon prévisionnel précédent");
         }
         if (nextNavigator != null) {
             nextNavigator.setEnabled(historyMode
-                ? acquiredIndex > 0 : year < lastForecastYear);
+                ? acquiredIndex > 0
+                : CapHifzNavigation.canMove(position, 1, today.getYear(),
+                    lastForecastYear, forecastCheckpointCounts()));
             nextNavigator.setContentDescription(historyMode
-                ? "Acquis plus récent" : "Année suivante de Cap Hifdh");
+                ? "Acquis plus récent" : "Jalon prévisionnel suivant");
         }
         if (historyMode) {
             if (timeline != null) timeline.setSelection(null, true);
@@ -429,7 +468,7 @@ final class CapHifzPanel extends LinearLayout {
             return;
         }
         if (shownCheckpoints.isEmpty()) {
-            checkpointLabel.setText(year + " · Aucun jalon\n‹ › : autre année");
+            checkpointLabel.setText(year + " · Aucun jalon · « » années");
             checkpointLabel.setContentDescription(
                 "Cap Hifdh " + year + " : aucun jalon prévisionnel, changer d'année");
             if (timeline != null) timeline.setSelection(null, true);
