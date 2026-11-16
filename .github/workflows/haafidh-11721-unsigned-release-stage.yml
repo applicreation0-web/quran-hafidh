@@ -1,0 +1,67 @@
+name: Haafidh 1.17.21 — unsigned release staging, NO PRIVATE ASSETS
+on:
+  push:
+    branches:
+      - release-candidate/haafidh-11721-private-20261116
+    paths:
+      - .github/workflows/haafidh-11721-unsigned-release-stage.yml
+permissions:
+  contents: read
+jobs:
+  stage-unsigned:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify no private content enters public CI
+        run: |
+          set -euo pipefail
+          grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
+          grep -q 'versionCode = 59' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.21"' hifz-app/build.gradle.kts
+          test ! -d hifz-app/src/private114/assets
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install pinned Android SDK
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Build unsigned release only, bypass missing private-input gate for this staging
+        run: gradle --no-daemon :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs --stacktrace
+      - name: Verify this is unsigned code59 and contains no private materials
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(hifz-app/build-private114/outputs/apk/release/*.apk)
+          test "${#apks[@]}" -eq 1
+          apk="${apks[0]}"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" |
+            grep -q "package: name='com.quransafeguard.hifz' versionCode='59' versionName='1.17.21'"
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk" >/dev/null 2>&1; then
+            echo 'NO-GO: staging accidentally signed'; exit 1
+          fi
+          ! unzip -Z1 "$apk" | grep -Eq '^assets/(atlas_private|ayah_themes_private)/'
+          test "$(unzip -Z1 "$apk" | grep -c '^assets/mushaf/hafs/kfqc/svg-br/' || true)" -ge 604
+          mkdir -p unsigned-release-only
+          cp "$apk" unsigned-release-only/Quran_Haafidh_11721_UNSIGNED_NO_PRIVATE.apk
+          cp signing-input/signed_data_11720.b64 unsigned-release-only/HISTORICAL_PUBLIC_CERT_SIGNED_DATA_11720.b64
+          sha256sum unsigned-release-only/*.apk > unsigned-release-only/SHA256SUMS.txt
+          echo "UNSIGNED_ONLY_PASS__PUBLIC_SOURCE_ASSETS__NOT_INSTALLABLE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quran-haafidh-11721-unsigned-no-private-assets
+          path: unsigned-release-only/
+          if-no-files-found: error
+          retention-days: 1
