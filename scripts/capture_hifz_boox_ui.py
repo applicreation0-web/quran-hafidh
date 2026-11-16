@@ -216,8 +216,27 @@ def verify_cap_milestone_opens_mushaf(tag):
         value.startswith("Feuille de route prévisionnelle interactive"))
     if graph is None:
         raise AssertionError("Missing interactive Cap Hifdh annual ribbon")
-    # Touch empty lower timeline space to advance a checkpoint in place.
-    # Date/Juz details appear in the SAME fixed-height home row.
+    # Single chevrons now visibly browse forecast milestones.
+    # Double chevrons remain reserved for calendar years.
+    forward = find_control(home, lambda value: value == "Jalon prévisionnel suivant")
+    backward = find_control(home, lambda value: value == "Jalon prévisionnel précédent")
+    next_year = find_control(home, lambda value: value == "Prévision : année suivante")
+    if forward is None or backward is None or next_year is None:
+        raise AssertionError("Missing year/step controls on Cap Hifdh")
+    selected_before = " ".join(names(selected))
+    tap(forward)
+    home = hierarchy(f"{tag}-cap-step-chevron", lambda tree:
+        find_control(tree, lambda value:
+            value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :")) is not None)
+    selected_after = find_control(home, lambda value:
+        value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
+    if selected_after is None or " ".join(names(selected_after)) == selected_before:
+        raise AssertionError("Step chevron did not navigate to a new forecast milestone")
+    diagnostics(f"{tag}-cap-step-chevron")
+
+    # Touch empty timeline ink: the same step cursor advances without popup.
+    graph = find_control(home, lambda value:
+        value.startswith("Feuille de route prévisionnelle interactive"))
     x1, y1, x2, y2 = bounds(graph)
     adb("shell", "input", "tap", str((x1 + x2) // 2), str(y2 - 5))
     home = hierarchy(f"{tag}-cap-inline-step", lambda tree:
@@ -258,7 +277,7 @@ def verify_post_nas_forecast_year(tag):
     for year in range(2027, 2032):
         before = hierarchy(f"{tag}-cap-before-{year}")
         arrow = find_control(before, lambda label:
-            label == "Année suivante de Cap Hifdh")
+            label == "Prévision : année suivante")
         if arrow is None:
             raise AssertionError("Cap Hifdh year navigation stopped before 2031")
         tap(arrow)
