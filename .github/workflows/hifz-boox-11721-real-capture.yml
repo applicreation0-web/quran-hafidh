@@ -40,7 +40,7 @@ jobs:
         run: python3 scripts/test_build_11714_private_offline.py
       - name: Verify fail-closed 1.17.17 private offline release guard (synthetic only)
         run: python3 scripts/test_build_11717_private_offline.py
-      - name: Confirm 1.17.21 code58 identity and no private release artifact
+      - name: Confirm 1.17.21 code59 identity and no private release artifact
         run: |
           set -euo pipefail
           grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
