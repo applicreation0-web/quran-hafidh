@@ -1,0 +1,36 @@
+name: Haafidh offline APK verification toolchain (public SDK only)
+on:
+  push:
+    branches:
+      - audit/haafidh-11721-apksigner-check-20261116
+    paths:
+      - .github/workflows/haafidh-11721-offline-verifier.yml
+permissions:
+  contents: read
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Obtain Android SDK 36 verifier only; never load private APK or signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          TOOLS="$SDK_ROOT/build-tools/36.0.0"
+          if [ ! -f "$TOOLS/lib/apksigner.jar" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+            yes | "$SDKMANAGER" --licenses >/dev/null || true
+            "$SDKMANAGER" "build-tools;36.0.0"
+          fi
+          test -s "$TOOLS/lib/apksigner.jar"
+          mkdir -p offline-verifier
+          cp "$TOOLS/lib/apksigner.jar" offline-verifier/apksigner.jar
+          sha256sum offline-verifier/apksigner.jar > offline-verifier/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: official-android-sdk-36-verifier-only
+          path: offline-verifier/
+          if-no-files-found: error
+          retention-days: 1
