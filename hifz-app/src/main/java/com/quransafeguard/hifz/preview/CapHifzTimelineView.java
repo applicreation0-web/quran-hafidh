@@ -150,13 +150,18 @@ final class CapHifzTimelineView extends View {
         VerseRef physicalCursor = sabqi ? actualSabqiVerse : actualTailVerse;
         int cursorOrdinal = physicalCursor == null ? -1
             : GeometryRepository.ordinal(physicalCursor);
+        // When browsing a later checkpoint, recenter the visible pair on
+        // that date instead of leaving the first two events of the year frozen.
+        LocalDate visibleFrom = windowStart();
+        if (selectedDate != null && selectedSabqi == sabqi
+                && selectedDate.isAfter(visibleFrom)) visibleFrom = selectedDate;
         for (CapHifzForecast.Quarter q : quarters) {
             List<CapHifzForecast.Milestone> candidates =
                 sabqi ? q.sabqiMilestones : q.tailMilestones;
             for (CapHifzForecast.Milestone point : candidates) {
                 if (point.date != null && point.verse != null
                         && GeometryRepository.ordinal(point.verse) > cursorOrdinal
-                        && !point.date.isBefore(windowStart())
+                        && !point.date.isBefore(visibleFrom)
                         && !point.date.isBefore(start)) upcoming.add(point);
             }
         }
