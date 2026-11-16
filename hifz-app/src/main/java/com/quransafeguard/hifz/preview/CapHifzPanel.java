@@ -474,7 +474,7 @@ final class CapHifzPanel extends LinearLayout {
             + QuranSurahNames.name(choice.verse.getSurah())
             + " " + choice.verse.getAyah() + ". Prévision, pas acquis.");
         if (timeline != null)
-            timeline.setSelection(choice.date, choice.sabqi);
+            timeline.setSelection(choice.date, choice.sabqi, choice.verse);
     }
 
     /** Compact Quranic landmark: one true sourate and ayah, with forecast date. */
