@@ -219,10 +219,15 @@ def verify_cap_milestone_opens_mushaf(tag):
     # Single chevrons now visibly browse forecast milestones.
     # Double chevrons remain reserved for calendar years.
     forward = find_control(home, lambda value: value == "Jalon prévisionnel suivant")
-    backward = find_control(home, lambda value: value == "Jalon prévisionnel précédent")
+    backward = next((node for node in home.iter("node")
+        if node.get("package") == PACKAGE
+        and "Jalon prévisionnel précédent" in names(node) and bounds(node)), None)
     next_year = find_control(home, lambda value: value == "Prévision : année suivante")
     if forward is None or backward is None or next_year is None:
         raise AssertionError("Missing year/step controls on Cap Hifdh")
+    # At the first forecast checkpoint, going backward is correctly disabled.
+    if backward.get("enabled") == "true":
+        raise AssertionError("Initial step-back arrow must be disabled")
     selected_before = " ".join(names(selected))
     tap(forward)
     home = hierarchy(f"{tag}-cap-step-chevron", lambda tree:
