@@ -302,33 +302,50 @@ def verify_post_nas_forecast_year(tag):
 
 
 def verify_direct_cap_milestone_taps(tag, density):
-    """Tap EVERY future Juz/Hizb icon plus both terminal diamonds on the
-    actual Canvas surface. Validate Activity navigation and a nonblank QCF page.
-    No optimistic credit, mocked timeline click, or selector fallback."""
+    """Tap the first, middle and last ACTUAL projected surah endings on
+    each BOOX track, plus both terminal diamonds. Never test stale
+    hard-coded Juz/Hizb x-coordinates or infer Hifdh credits."""
     scale = density / 160.0
-    for lane, station in ((0, 1), (0, 2), (1, 1), (1, 2), (0, 3), (1, 3)):
+    home = hierarchy(f"{tag}-cap-annual-markers-ready", lambda tree:
+        find_control(tree, lambda value:
+            value.startswith("Feuille de route prévisionnelle interactive")) is not None)
+    graph = find_control(home, lambda value:
+        value.startswith("Feuille de route prévisionnelle interactive"))
+    spoken = " ".join(names(graph))
+    counts = []
+    for lane_name in ("Acquisition", "Maîtrise"):
+        match = re.search(rf"{lane_name}, (\\d+) fins de sourates", spoken)
+        counts.append(int(match.group(1)) if match else 0)
+    checks = []
+    for lane, count in enumerate(counts):
+        for index in sorted({0, count // 2, count - 1}) if count else []:
+            checks.append((lane, index, count, False))
+        checks.append((lane, -1, count, True))
+    for lane, index, count, is_goal in checks:
+        station = "goal" if is_goal else f"finish-{index+1}-of-{count}"
         home = hierarchy(f"{tag}-cap-direct-{lane}-{station}-ready",
-            lambda tree: find_control(tree, lambda label:
-                label.startswith("Feuille de route prévisionnelle interactive")) is not None)
-        graph = find_control(home, lambda label:
-            label.startswith("Feuille de route prévisionnelle interactive"))
+            lambda tree: find_control(tree, lambda value:
+                value.startswith("Feuille de route prévisionnelle interactive")) is not None)
+        graph = find_control(home, lambda value:
+            value.startswith("Feuille de route prévisionnelle interactive"))
         gx1, gy1, gx2, gy2 = bounds(graph)
         margin = 16 * scale
         span = (gx2 - gx1) - 2 * margin
-        stations = (margin + 6 * scale, margin + span * .34,
-                    margin + span * .64, margin + span - 6 * scale)
-        # Follow the actual view-height-dependent BOOX lane separation;
-        # using a fixed 160dp/84dp offset falsely taps empty ink after the
-        # home starts using its previously wasted bottom viewport.
         spacious = (gx2 - gx1) >= 720 * scale
-        available_dp = (gy2 - gy1) / scale
-        lane_separation = max(160 if spacious else 88,
-                              available_dp - (154 if spacious else 92))
-        row = lane_separation if lane else 0
-        px = int(gx1 + stations[station])
+        height_dp = (gy2 - gy1) / scale
+        baseline = 143 if spacious else 83
+        separation = min(190 if spacious else 126,
+                         max(0, height_dp - baseline - 24))
+        offset = max(0, (height_dp - (separation + baseline + 16)) / 2)
+        row = offset + (separation if lane else 0)
+        if is_goal:
+            px = int(gx1 + margin + span - 6 * scale)
+        else:
+            px = int(gx1 + margin + 20 * scale +
+                     (span - 40 * scale) * (index + 1) / (count + 1))
         py = int(gy1 + (row + (60 if spacious else 34)) * scale)
         if not (gx1 < px < gx2 and gy1 < py < gy2):
-            raise AssertionError(f"Direct icon {lane}/{station} outside BOOX viewport")
+            raise AssertionError(f"Projected surah ending {lane}/{station} is outside BOOX")
         adb("shell", "input", "tap", str(px), str(py))
         for _ in range(8):
             time.sleep(1)
@@ -337,7 +354,7 @@ def verify_direct_cap_milestone_taps(tag, density):
             if re.search(r"(?:topResumedActivity|mResumedActivity).*StudyReaderActivity", state):
                 break
         else:
-            raise AssertionError(f"Direct Juz/Hizb or goal tap {lane}/{station} did not open Mushaf")
+            raise AssertionError(f"Direct surah-finish or goal tap {lane}/{station} did not open Mushaf")
         # A foreground Reader initially paints its blank WebView shell.
         # Fail closed until the authentic QCF page has visibly rendered.
         rendered = False
@@ -349,7 +366,7 @@ def verify_direct_cap_milestone_taps(tag, density):
                 break
         if not rendered:
             raise AssertionError(f"Direct milestone {lane}/{station} opened a blank Mushaf page")
-        if station in (1, 3):
+        if is_goal or index == 0:
             diagnostics(f"{tag}-cap-direct-{lane}-{station}-mushaf")
         adb("shell", "input", "keyevent", "4")
         hierarchy(f"{tag}-cap-direct-{lane}-{station}-return",
