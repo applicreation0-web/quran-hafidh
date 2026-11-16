@@ -62,6 +62,40 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNotNull(findGraph(decor));
                 assertNotNull("A dated milestone is selected inline, not in a popup",
                     findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
+                // Exercise the real Android buttons, not merely the source:
+                // one step moves the selected QCF checkpoint, two chevrons
+                // change the year without changing any backed-up Hifz store.
+                View prevStep = findDescription(decor, "Jalon prévisionnel précédent");
+                View nextStep = findDescription(decor, "Jalon prévisionnel suivant");
+                View prevYear = findDescription(decor, "Prévision : année précédente");
+                View nextYear = findDescription(decor, "Prévision : année suivante");
+                assertNotNull(prevStep);
+                assertNotNull(nextStep);
+                assertNotNull(prevYear);
+                assertNotNull(nextYear);
+                TextView currentCheckpoint = (TextView) findDescription(
+                    decor, "Ouvrir le Mushaf depuis Cap Hifdh :");
+                if (nextStep.isEnabled()) {
+                    String beforeCheckpoint = currentCheckpoint.getText().toString();
+                    assertTrue(nextStep.performClick());
+                    TextView afterCheckpoint = (TextView) findDescription(
+                        decor, "Ouvrir le Mushaf depuis Cap Hifdh :");
+                    assertNotNull(afterCheckpoint);
+                    assertNotEquals("Step arrow must actually change projection",
+                        beforeCheckpoint, afterCheckpoint.getText().toString());
+                }
+                if (nextYear.isEnabled()) {
+                    String beforeYear = ((TextView) findDescription(
+                        decor, "Ouvrir le Mushaf depuis Cap Hifdh :")).getText().toString();
+                    assertTrue(nextYear.performClick());
+                    String afterYear = ((TextView) findDescription(
+                        decor, "Ouvrir le Mushaf depuis Cap Hifdh :")).getText().toString();
+                    assertNotEquals("Double chevron must change the forecast year",
+                        beforeYear.substring(0, 4), afterYear.substring(0, 4));
+                    View backYear = findDescription(decor, "Prévision : année précédente");
+                    assertTrue(backYear.isEnabled());
+                    assertTrue(backYear.performClick());
+                }
                 TextView history = find(decor, "Acquis ›");
                 assertNotNull("Cap Hifdh history must remain visible on the home", history);
                 assertTrue(history.performClick());
