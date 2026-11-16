@@ -50,6 +50,7 @@ final class CapHifzTimelineView extends View {
     private final boolean showSabqi;
     private final boolean showTail;
     private final boolean showMaintenance;
+    private final boolean projectedMaintenance;
     private final VerseRef maintenanceVerse;
     private final int maintenanceJuz;
     private final IntConsumer exploreYear;
@@ -66,7 +67,8 @@ final class CapHifzTimelineView extends View {
             boolean showTail, IntConsumer exploreYear,
             BiConsumer<Boolean, CapHifzForecast.Milestone> openMilestone, int selectedYear,
             VerseRef actualSabqiVerse, VerseRef actualTailVerse,
-            boolean showMaintenance, VerseRef maintenanceVerse, int maintenanceJuz) {
+            boolean showMaintenance, VerseRef maintenanceVerse, int maintenanceJuz,
+            boolean projectedMaintenance) {
         super(context);
         if (geometry == null || quarters == null || quarters.isEmpty() || start == null)
             throw new IllegalArgumentException("Real QCF and dated forecast required");
@@ -76,6 +78,7 @@ final class CapHifzTimelineView extends View {
         this.showSabqi = showSabqi;
         this.showTail = showTail;
         this.showMaintenance = showMaintenance;
+        this.projectedMaintenance = projectedMaintenance;
         this.maintenanceVerse = maintenanceVerse;
         this.maintenanceJuz = maintenanceJuz;
         this.exploreYear = exploreYear;
@@ -90,7 +93,9 @@ final class CapHifzTimelineView extends View {
         if (showTail) appendSpoken(spoken, false);
         if (showMaintenance) {
             spoken.append("Entretien : cycle sans échéance après An-Nās, verset 6. ");
-            if (maintenanceVerse != null)
+            if (projectedMaintenance)
+                spoken.append("Phase prévue, sans séance de Juz anticipée. ");
+            else if (maintenanceVerse != null)
                 spoken.append("Séance de Juz ").append(maintenanceJuz)
                     .append(" ouverte à ").append(spokenVerse(maintenanceVerse)).append(". ");
             else spoken.append("Aucune nouvelle séance de Juz ouverte à cet instant. ");
@@ -349,8 +354,8 @@ final class CapHifzTimelineView extends View {
         float top = dp(row);
         drawFitted(canvas, "ENTRETIEN", left, top + dp(titleBaseline()),
             13f, INK, Paint.Align.LEFT, true, width * .46f);
-        String description = maintenanceVerse == null
-            ? "Cycle continu après الناس · v.6"
+        String description = projectedMaintenance ? "Après الناس · v.6 (prévision)"
+            : maintenanceVerse == null ? "Cycle continu après الناس · v.6"
             : QuranSurahNames.rawName(maintenanceVerse.getSurah())
                 + " · v." + maintenanceVerse.getAyah() + " · séance en cours";
         drawFitted(canvas, description, left, top + dp(numberBaseline()),
