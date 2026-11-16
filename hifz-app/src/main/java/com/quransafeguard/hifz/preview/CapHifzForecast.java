@@ -57,6 +57,20 @@ final class CapHifzForecast {
         }
     }
 
+    /**
+     * A selected forecast year strictly AFTER the predicted first An-Nās
+     * completion is no longer a Maîtrise year. This does not change the
+     * persisted post-Nās latch or count any projected verse as acquired.
+     * Keep the completion year itself visible to show its real dated milestone.
+     */
+    static boolean projectedTailFinishedBeforeYear(List<Quarter> quarters, int selectedYear) {
+        for (Quarter row : quarters) {
+            if (row.tailFinish != null)
+                return row.tailFinish.getYear() < selectedYear;
+        }
+        return false;
+    }
+
     private CapHifzForecast() {}
 
     static List<Quarter> quarters(GeometryRepository geometry, LocalDate today,
