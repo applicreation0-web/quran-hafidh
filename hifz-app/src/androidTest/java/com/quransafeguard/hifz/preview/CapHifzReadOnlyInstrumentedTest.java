@@ -84,14 +84,14 @@ public final class CapHifzReadOnlyInstrumentedTest {
                     assertNotEquals("Step arrow must actually change projection",
                         beforeCheckpoint, afterCheckpoint.getText().toString());
                 }
+                // The preceding click may have reconstructed the row.
+                nextYear = findDescription(decor, "Prévision : année suivante");
                 if (nextYear.isEnabled()) {
-                    String beforeYear = ((TextView) findDescription(
-                        decor, "Ouvrir le Mushaf depuis Cap Hifdh :")).getText().toString();
+                    String beforeYear = String.valueOf(findGraph(decor).getContentDescription());
                     assertTrue(nextYear.performClick());
-                    String afterYear = ((TextView) findDescription(
-                        decor, "Ouvrir le Mushaf depuis Cap Hifdh :")).getText().toString();
+                    String afterYear = String.valueOf(findGraph(decor).getContentDescription());
                     assertNotEquals("Double chevron must change the forecast year",
-                        beforeYear.substring(0, 4), afterYear.substring(0, 4));
+                        beforeYear, afterYear);
                     View backYear = findDescription(decor, "Prévision : année précédente");
                     assertTrue(backYear.isEnabled());
                     assertTrue(backYear.performClick());
