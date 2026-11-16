@@ -57,6 +57,17 @@ final class CapHifzForecast {
         }
     }
 
+    /** The year of projected An-Nās completion is still shown; later
+     * forecast years must not retain a completed Maîtrise trajectory.
+     * Never converts a projection into persisted Hifz progress. */
+    static boolean projectedTailFinishedBeforeYear(List<Quarter> quarters, int selectedYear) {
+        for (Quarter row : quarters) {
+            if (row.tailFinish != null)
+                return row.tailFinish.getYear() < selectedYear;
+        }
+        return false;
+    }
+
     private CapHifzForecast() {}
 
     static List<Quarter> quarters(GeometryRepository geometry, LocalDate today,
