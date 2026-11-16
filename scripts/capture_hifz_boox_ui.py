@@ -186,6 +186,7 @@ def capture_cap_hifz(tag, home, width, height, fixed, density=None):
     if tag.endswith("font150") and fixed:
         verify_cap_milestone_opens_mushaf(tag)
         verify_direct_cap_milestone_taps(tag, density)
+        verify_post_nas_forecast_year(tag)
 
 
 
@@ -246,6 +247,34 @@ def verify_cap_milestone_opens_mushaf(tag):
     hierarchy(f"{tag}-cap-home-return", lambda tree:
               find_control(tree, lambda label: label == "Parcours") is not None)
 
+
+
+def verify_post_nas_forecast_year(tag):
+    """Real emulator portrait screenshot / accessibility test for owner photo.
+    With the source fixture An-Nās is forecast for 2028; on a selected 2031
+    timeline the Maîtrise progress lane must be absent, not merely empty.
+    It is NOT a real user completion or a fictitious maintenance Juz.
+    """
+    for year in range(2027, 2032):
+        before = hierarchy(f"{tag}-cap-before-{year}")
+        arrow = find_control(before, lambda label:
+            label == "Année suivante de Cap Hifdh")
+        if arrow is None:
+            raise AssertionError("Cap Hifdh year navigation stopped before 2031")
+        tap(arrow)
+    root = hierarchy(f"{tag}-cap-hifdh-post-nas-2031", lambda tree:
+        find_control(tree, lambda label:
+            label.startswith("Feuille de route prévisionnelle interactive 2031")) is not None)
+    graph = find_control(root, lambda label:
+        label.startswith("Feuille de route prévisionnelle interactive 2031"))
+    spoken = " ".join(names(graph))
+    if "Entretien : cycle sans échéance" not in spoken:
+        raise AssertionError("After projected An-Nās, Entretien is missing in 2031")
+    if "Maîtrise, position de travail" in spoken or "Objectif final An-Nās" in spoken:
+        raise AssertionError("The 2031 Cap Hifdh still draws a finished Maîtrise lane")
+    if any(node.get("scrollable") == "true" for node in root.iter("node")):
+        raise AssertionError("After projected An-Nās, BOOX home must stay unscrolled")
+    diagnostics(f"{tag}-cap-hifdh-post-nas-2031")
 
 
 def verify_direct_cap_milestone_taps(tag, density):
