@@ -304,8 +304,8 @@ final class CapHifzPanel extends LinearLayout {
                 openMushaf(shownCheckpoints.get(checkpointIndex).verse);
             else if (year < lastYear) moveForecastYear(1);
         });
-        checkpointLabel.setTextSize(spaciousBoox() ? 18f : 13f);
-        checkpointLabel.setMaxLines(1);
+        checkpointLabel.setTextSize(spaciousBoox() ? 14f : 12f);
+        checkpointLabel.setMaxLines(2);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
             Ui.dp(context, 48), 1f));
@@ -348,40 +348,31 @@ final class CapHifzPanel extends LinearLayout {
     }
 
     /**
-     * Every entry is an actual dated projected boundary or quarter position.
-     * These are read-only hypothetical future positions, not Hifdh receipts.
-     * No horizontal overflow, modal dialog, invented Juz or extra home row.
+     * ONE selectable forecast checkpoint for EVERY completed sourate; the two
+     * tracks are never confused. Quarter samples and Hizb crossings remain
+     * available to the forecast engine, but are not fake surah completions.
+     * Fātiḥah is excluded; 2..48 = Acquisition, 49..114 = Maîtrise.
      */
     private List<MilestoneChoice> checkpointsForYear(
             List<CapHifzForecast.Quarter> quarters, int selectedYear) {
         List<MilestoneChoice> choices = new ArrayList<>();
         for (CapHifzForecast.Quarter row : quarters) {
-            if (row.date.getYear() != selectedYear) continue;
-            for (CapHifzForecast.Milestone p : row.sabqiMilestones)
-                choices.add(new MilestoneChoice(p.date, p.verse,
-                    QuranSurahNames.rawName(p.verse.getSurah()) + " " + p.verse.getAyah(),
-                    true));
-            for (CapHifzForecast.Milestone p : row.tailMilestones)
-                choices.add(new MilestoneChoice(p.date, p.verse,
-                    QuranSurahNames.rawName(p.verse.getSurah()) + " " + p.verse.getAyah(),
-                    false));
-            if (row.sabqiFinish != null)
-                choices.add(new MilestoneChoice(row.sabqiFinish,
-                    SabqiRoute.ROUTE_END, "Al-Fatḥ · cible", true));
-            if (row.tailFinish != null)
-                choices.add(new MilestoneChoice(row.tailFinish,
-                    ItqanRotationPolicy.TAIL_END, "An-Nās · cible", false));
-            // At low cadence, no Juz may be crossed within this calendar
-            // year. A real quarter cursor remains directly browsable instead.
-            if (row.sabqi != null)
-                choices.add(new MilestoneChoice(row.date, row.sabqi, "T"
-                    + ((row.date.getMonthValue() - 1) / 3 + 1), true));
-            if (row.itqan != null)
-                choices.add(new MilestoneChoice(row.date, row.itqan, "T"
-                    + ((row.date.getMonthValue() - 1) / 3 + 1), false));
+            for (CapHifzForecast.Milestone point : row.sabqiSurahFinishes) {
+                if (point.date.getYear() != selectedYear) continue;
+                choices.add(new MilestoneChoice(point.date, point.verse,
+                    QuranSurahNames.rawName(point.verse.getSurah())
+                        + " v." + point.verse.getAyah(), true));
+            }
+            for (CapHifzForecast.Milestone point : row.tailSurahFinishes) {
+                if (point.date.getYear() != selectedYear) continue;
+                choices.add(new MilestoneChoice(point.date, point.verse,
+                    QuranSurahNames.rawName(point.verse.getSurah())
+                        + " v." + point.verse.getAyah(), false));
+            }
         }
         choices.sort(Comparator.comparing((MilestoneChoice c) -> c.date)
-            .thenComparing(c -> c.sabqi ? 0 : 1));
+            .thenComparing(c -> c.sabqi ? 0 : 1)
+            .thenComparingInt(c -> GeometryRepository.ordinal(c.verse)));
         return choices;
     }
 
@@ -488,9 +479,13 @@ final class CapHifzPanel extends LinearLayout {
 
     /** Compact Quranic landmark: one true sourate and ayah, with forecast date. */
     private CharSequence checkpointDisplay(MilestoneChoice choice) {
-        return year + " · " + QuranSurahNames.name(choice.verse.getSurah())
-            + " · " + choice.verse.getAyah() + " · "
-            + choice.date.format(DAY_MONTH) + "  ›";
+        String lane = choice.sabqi ? "Acquisition" : "Maîtrise";
+        // Line 1 identifies which frise owns the selected surah finish;
+        // line 2 is its actual canonical final ayah and projected date.
+        return year + " · " + lane + " · " + (checkpointIndex + 1)
+            + "/" + shownCheckpoints.size() + "\n"
+            + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
+            + choice.verse.getAyah() + " · " + choice.date.format(DAY_MONTH);
     }
 
     private void openMushaf(VerseRef verse) {
