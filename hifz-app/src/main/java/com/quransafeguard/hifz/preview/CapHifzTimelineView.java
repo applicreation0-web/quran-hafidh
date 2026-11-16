@@ -37,7 +37,6 @@ final class CapHifzTimelineView extends View {
     private static final int INK = Color.rgb(22, 22, 22);
     private static final int MID = Color.rgb(79, 79, 79);
     private static final int FAINT = Color.rgb(161, 158, 150);
-    private static final float SECOND_ROW = 96f;
     // Keep circular nodes clear of the caption beneath them at BOOX 150%.
     private static final float TRACK_Y = 34f;
     private static final DateTimeFormatter SHORT_DATE =
@@ -50,6 +49,7 @@ final class CapHifzTimelineView extends View {
     private final boolean showSabqi;
     private final boolean showTail;
     private final boolean showMaintenance;
+    private final boolean projectedMaintenance;
     private final VerseRef maintenanceVerse;
     private final int maintenanceJuz;
     private final IntConsumer exploreYear;
@@ -66,7 +66,8 @@ final class CapHifzTimelineView extends View {
             boolean showTail, IntConsumer exploreYear,
             BiConsumer<Boolean, CapHifzForecast.Milestone> openMilestone, int selectedYear,
             VerseRef actualSabqiVerse, VerseRef actualTailVerse,
-            boolean showMaintenance, VerseRef maintenanceVerse, int maintenanceJuz) {
+            boolean showMaintenance, VerseRef maintenanceVerse, int maintenanceJuz,
+            boolean projectedMaintenance) {
         super(context);
         if (geometry == null || quarters == null || quarters.isEmpty() || start == null)
             throw new IllegalArgumentException("Real QCF and dated forecast required");
@@ -76,6 +77,7 @@ final class CapHifzTimelineView extends View {
         this.showSabqi = showSabqi;
         this.showTail = showTail;
         this.showMaintenance = showMaintenance;
+        this.projectedMaintenance = projectedMaintenance;
         this.maintenanceVerse = maintenanceVerse;
         this.maintenanceJuz = maintenanceJuz;
         this.exploreYear = exploreYear;
@@ -89,8 +91,10 @@ final class CapHifzTimelineView extends View {
         if (showSabqi) appendSpoken(spoken, true);
         if (showTail) appendSpoken(spoken, false);
         if (showMaintenance) {
-            spoken.append("Maintien : cycle sans échéance après An-Nās, verset 6. ");
-            if (maintenanceVerse != null)
+            spoken.append("Entretien : cycle sans échéance après An-Nās, verset 6. ");
+            if (projectedMaintenance)
+                spoken.append("Phase future prévisionnelle, aucune séance de Juz anticipée. ");
+            else if (maintenanceVerse != null)
                 spoken.append("Séance de Juz ").append(maintenanceJuz)
                     .append(" ouverte à ").append(spokenVerse(maintenanceVerse)).append(". ");
             else spoken.append("Aucune nouvelle séance de Juz ouverte à cet instant. ");
@@ -108,14 +112,22 @@ final class CapHifzTimelineView extends View {
     /** Large E-Ink screens need readable labels rather than phone-sized text. */
     private float labelScale() { return getWidth() >= dp(720) ? 1.55f : 1f; }
     private float laneSeparation() {
-        // Spread two real rails into the free BOOX height, never adding a
-        // scrolling panel or making dates/credits from an artificial scale.
+        // Physical BOOX feedback: the old availableDp - below stretched the
+        // two rails hundreds of dp apart. Cap the gap at a readable distance.
         float availableDp = getHeight() / getResources().getDisplayMetrics().density;
         boolean spacious = labelScale() > 1f;
-        float floor = spacious ? 160f : 88f;
-        // Reserve enough pixels below the final detail text for descenders.
-        float below = spacious ? 154f : 92f;
-        return Math.max(floor, availableDp - below);
+        float minimum = spacious ? 168f : 113f;
+        float preferred = spacious ? 184f : 136f;
+        float roomForSecondCaption = availableDp - dateBaseline() - (spacious ? 12f : 8f);
+        return Math.min(preferred, Math.max(minimum, roomForSecondCaption));
+    }
+    private float laneStart() {
+        // When there is surplus height, distribute it ABOVE and BELOW the
+        // whole compact group, not as an empty canyon between both rails.
+        float availableDp = getHeight() / getResources().getDisplayMetrics().density;
+        float span = (labelScale() > 1f ? 163f : 103f)
+            + (showSabqi && (showTail || showMaintenance) ? laneSeparation() : 0f);
+        return Math.max(0f, (availableDp - span) * .42f);
     }
     private float trackCenter() { return labelScale() > 1f ? 60f : TRACK_Y; }
     private float titleBaseline() { return labelScale() > 1f ? 28f : 18f; }
@@ -252,10 +264,12 @@ final class CapHifzTimelineView extends View {
         float left = dp(16);
         float width = getWidth() - dp(32);
         if (width <= dp(140) || getHeight() < dp(78)) return;
-        if (showSabqi) drawLane(canvas, true, 0f, left, width);
-        if (showTail) drawLane(canvas, false, showSabqi ? laneSeparation() : 0f, left, width);
+        float top = laneStart();
+        if (showSabqi) drawLane(canvas, true, top, left, width);
+        if (showTail) drawLane(canvas, false,
+            top + (showSabqi ? laneSeparation() : 0f), left, width);
         if (showMaintenance)
-            drawMaintenanceLane(canvas, showSabqi ? laneSeparation() : 0f, left, width);
+            drawMaintenanceLane(canvas, top + (showSabqi ? laneSeparation() : 0f), left, width);
     }
 
     private void drawLane(Canvas canvas, boolean sabqi, float row, float left, float width) {
@@ -274,7 +288,7 @@ final class CapHifzTimelineView extends View {
             : ItqanRotationPolicy.TAIL_END.getAyah();
 
         drawFitted(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE",
-            left, top + dp(titleBaseline()), 11.5f, INK, Paint.Align.LEFT, true, width * .46f);
+            left, top + dp(titleBaseline()), 13.5f, INK, Paint.Align.LEFT, true, width * .46f);
 
         // A schematic sequence rather than an invented time or completion scale.
         stroke(FAINT, 1.2f, true);
@@ -302,83 +316,64 @@ final class CapHifzTimelineView extends View {
             ring(canvas, x[i + 1], y, i == 0 ? 8f : 6f, 1.5f);
             filled(canvas, x[i + 1], y, 2f);
         }
-        for (int i = coming.size(); i < 2; i++) ring(canvas, x[i + 1], y, 3.5f, .8f);
+        // Do not draw ghost milestones when the selected year contains no
+        // next step (e.g. Maîtrise already forecast to end in 2028, year 2031).
         goalDiamond(canvas, x[3], y);
 
         float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
         // The authentic current position is a surah and ayah, never a page.
         drawFitted(canvas, current == null ? "Sourate —"
                 : QuranSurahNames.rawName(current.getSurah()),
-            x[0], top + dp(numberBaseline()), 12f, INK, Paint.Align.LEFT, true, w);
+            x[0], top + dp(numberBaseline()), 15f, INK, Paint.Align.LEFT, true, w);
         drawFitted(canvas, current == null ? "verset —" : "verset " + current.getAyah(),
-            x[0], top + dp(dateBaseline()), 9.5f, MID, Paint.Align.LEFT, false, w);
+            x[0], top + dp(dateBaseline()), 11.5f, MID, Paint.Align.LEFT, false, w);
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < coming.size(); i++) {
             float xx = x[i + 1];
-            String name = i < coming.size()
-                ? QuranSurahNames.rawName(coming.get(i).verse.getSurah()) : "—";
-            String detail = i < coming.size()
-                ? "v." + coming.get(i).verse.getAyah() + " · "
-                    + coming.get(i).date.format(SHORT_DATE) : "à déterminer";
-            drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12.5f,
-                i == 0 ? INK : MID, Paint.Align.CENTER, true, w);
-            drawFitted(canvas, detail, xx, top + dp(dateBaseline()), 9.5f, MID,
+            String name = QuranSurahNames.rawName(coming.get(i).verse.getSurah());
+            String detail = "v." + coming.get(i).verse.getAyah() + " · "
+                + coming.get(i).date.format(SHORT_DATE);
+            drawFitted(canvas, name, xx, top + dp(numberBaseline()), 15f,
+                INK, Paint.Align.CENTER, true, w);
+            drawFitted(canvas, detail, xx, top + dp(dateBaseline()), 11.5f, MID,
                 Paint.Align.CENTER, false, w);
         }
 
         float lastW = (x[3] - x[2]) * .94f;
-        drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 12.5f, INK,
+        drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 15f, INK,
             Paint.Align.RIGHT, true, lastW);
         drawFitted(canvas, "v." + finalAyah + " · "
                 + (targetDate != null ? targetDate.format(SHORT_DATE) : "date —"),
-            x[3], top + dp(dateBaseline()), 9.5f, MID, Paint.Align.RIGHT, false, lastW);
+            x[3], top + dp(dateBaseline()), 11.5f, MID, Paint.Align.RIGHT, false, lastW);
     }
 
     /** No fictitious date or permanent completion goal after An-Nās.
      * Only an authentically opened maintenance session receives a navigable marker. */
+    /** Post-Nās is not a second progress rail: show a compact ongoing
+     * Entretien summary, with only the REAL next opened maintenance session.
+     * No phantom dates, fake Juz, or permanent 'finish' diamond. */
     private void drawMaintenanceLane(Canvas canvas, float row, float left, float width) {
         float top = dp(row);
-        float[] x = stations(left, width);
-        float y = top + dp(trackCenter());
-        drawFitted(canvas, "MAINTIEN", left, top + dp(titleBaseline()),
-            11.5f, INK, Paint.Align.LEFT, true, width * .46f);
-        stroke(FAINT, 1.2f, true);
-        canvas.drawLine(x[0], y, x[3], y, paint);
-        paint.setPathEffect(null);
-        filled(canvas, x[0], y, 3.6f);
-        if (maintenanceVerse != null) {
-            ring(canvas, x[1], y, 7.2f, 1.5f);
-            filled(canvas, x[1], y, 2.6f);
-        } else ring(canvas, x[1], y, 5.2f, 1.0f);
-        ring(canvas, x[3], y, 7f, 1.5f);
-        float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
-        drawFitted(canvas, QuranSurahNames.rawName(ItqanRotationPolicy.TAIL_END.getSurah()),
-            x[0], top + dp(numberBaseline()),
-            12f, INK, Paint.Align.LEFT, true, w);
-        drawFitted(canvas, "v.6", x[0], top + dp(dateBaseline()),
-            9.5f, MID, Paint.Align.LEFT, false, w);
-        drawFitted(canvas, maintenanceVerse == null ? "À ouvrir"
-                : QuranSurahNames.rawName(maintenanceVerse.getSurah()),
-            x[1], top + dp(numberBaseline()), 12f, INK,
-            Paint.Align.CENTER, true, w);
-        drawFitted(canvas, maintenanceVerse == null ? "séance" :
-                "verset " + maintenanceVerse.getAyah(), x[1],
-            top + dp(dateBaseline()), 9.5f, MID, Paint.Align.CENTER, false, w);
-        drawFitted(canvas, maintenanceVerse == null ? "—" : "SÉANCE",
-            x[2], top + dp(numberBaseline()), 11f, INK, Paint.Align.CENTER, true, w);
-        drawFitted(canvas, maintenanceVerse == null ? "aucune ouverte" : "en cours",
-            x[2], top + dp(dateBaseline()),
-            9.5f, MID, Paint.Align.CENTER, false, w);
-        float goalW = (x[3] - x[2]) * .94f;
-        drawFitted(canvas, "ROTATION", x[3], top + dp(numberBaseline()),
-            10.5f, INK, Paint.Align.RIGHT, true, goalW);
-        drawFitted(canvas, "continue", x[3], top + dp(dateBaseline()),
-            9.5f, MID, Paint.Align.RIGHT, false, goalW);
+        drawFitted(canvas, "ENTRETIEN", left, top + dp(titleBaseline()),
+            13.5f, INK, Paint.Align.LEFT, true, width);
+        stroke(FAINT, 1f, false);
+        float divider = top + dp(titleBaseline() + (labelScale() > 1f ? 13f : 10f));
+        canvas.drawLine(left, divider, left + width, divider, paint);
+        String title = projectedMaintenance ? "Après An-Nās (prévision)"
+            : maintenanceVerse == null ? "Aucune séance ouverte"
+            : QuranSurahNames.rawName(maintenanceVerse.getSurah());
+        String detail = projectedMaintenance ? "Cycle prévu · sans échéance"
+            : maintenanceVerse == null ? "Cycle continu · sans échéance"
+            : "Verset " + maintenanceVerse.getAyah() + " · séance en cours";
+        drawFitted(canvas, title, left, top + dp(numberBaseline()), 15f,
+            INK, Paint.Align.LEFT, true, width);
+        drawFitted(canvas, detail, left, top + dp(dateBaseline()), 11.5f,
+            MID, Paint.Align.LEFT, false, width);
     }
 
     private CapHifzForecast.Milestone touchedMilestone(boolean sabqi,
             float px, float py, float left, float width) {
-        float row = showSabqi && !sabqi ? laneSeparation() : 0f;
+        float row = laneStart() + (showSabqi && !sabqi ? laneSeparation() : 0f);
         if (Math.abs(py - dp(row + trackCenter())) > dp(38)) return null;
         float[] x = stations(left, width);
         List<CapHifzForecast.Milestone> coming = nextMilestones(sabqi);
@@ -414,11 +409,12 @@ final class CapHifzTimelineView extends View {
                 }
             }
             if (showMaintenance && maintenanceVerse != null && openMilestone != null) {
-                float[] x = stations(left, width);
-                float maintRow = showSabqi ? laneSeparation() : 0f;
-                if (Math.abs(event.getY() - dp(maintRow + trackCenter())) <= dp(38)
-                        && (Math.abs(event.getX() - x[1]) <= dp(24)
-                        || Math.abs(event.getX() - x[2]) <= dp(24))) {
+                float maintRow = laneStart() + (showSabqi ? laneSeparation() : 0f);
+                // Entire compact Entretien row is a genuine 48dp+ target
+                // only if the maintenance engine has opened a real session.
+                if (event.getY() >= dp(maintRow + titleBaseline())
+                        && event.getY() <= dp(maintRow + dateBaseline() + 16f)
+                        && event.getX() >= left && event.getX() <= left + width) {
                     openMilestone.accept(false, new CapHifzForecast.Milestone(
                         start, maintenanceVerse, CapHifzForecast.hizb(maintenanceVerse)));
                     return true;

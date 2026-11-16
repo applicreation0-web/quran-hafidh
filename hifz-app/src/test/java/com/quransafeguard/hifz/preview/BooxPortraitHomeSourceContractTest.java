@@ -5,6 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.util.List;
 import static org.junit.Assert.*;
 
 /**
@@ -146,14 +148,23 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, historyDp)))")
             && timeline.contains("1.55f")
             && timeline.contains("laneSeparation()")
-            && timeline.contains("SECOND_ROW = 96f")
-            && timeline.contains("availableDp - below")
-            && timeline.contains("float below = spacious ? 154f : 92f"));
-        assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
+            && timeline.contains("laneStart()")
+            && timeline.contains("roomForSecondCaption")
+            && timeline.contains("float preferred = spacious ? 184f : 136f")
+            && timeline.contains("Math.max(0f, (availableDp - span) * .42f)"));
+        assertTrue("After the forecast An-Nās year, Maîtrise must vanish even before real completion",
+            panel.contains("CapHifzForecast.projectedTailFinishedBeforeYear(quarters, year)")
+            && panel.contains("boolean showMastery = tailForecast && !forecastPostNas")
+            && panel.contains("boolean showEntretien = postNas || forecastPostNas")
+            && timeline.contains("private final boolean projectedMaintenance")
+            && timeline.contains("if (projectedMaintenance)")
+            && timeline.contains("Après An-Nās (prévision)"));
+        assertTrue("After An-Nas, the second row becomes compact ongoing Entretien, without a second milestone rail",
             panel.contains("forecastSabqi || tailForecast || postNas")
             && panel.contains("prefs.juzMaintenance().read()")
             && timeline.contains("drawMaintenanceLane(")
             && timeline.contains("cycle sans échéance")
+            && timeline.contains("drawFitted(canvas, \"ENTRETIEN\"")
             && !panel.contains("if (postNas) line(\"Maintien après An-Nās\""));
         assertTrue("A schematic short-term view must not compress decades into a time scale",
             timeline.contains("private List<CapHifzForecast.Milestone> nextMilestones")
@@ -166,10 +177,18 @@ public final class BooxPortraitHomeSourceContractTest {
             && forecast.contains("SabqiRoute.ROUTE_END.getSurah()")
             && forecast.contains("crossings(geometry, sabqiBoundaries"));
         assertTrue("Surah names and arrow glyphs must be readable on BOOX without extra rows",
-            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline()), 12.5f")
+            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline()), 15f")
             && panel.contains("previous.setTextSize(spaciousBoox() ? 22f : 20f)")
             && panel.contains("next.setTextSize(spaciousBoox() ? 22f : 20f)")
-            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 12.5f"));
+            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 15f"));
+        assertFalse("No ghost circles or dash / à déterminer after a projected finish",
+            timeline.contains("for (int i = coming.size(); i < 2; i++) ring(")
+            || timeline.contains("à déterminer")
+            || timeline.contains("String name = i < coming.size()"));
+        assertTrue("Use spare BOOX space around the group, not a giant gap between tracks",
+            timeline.contains("float top = laneStart()")
+            && timeline.contains("roomForSecondCaption")
+            && timeline.contains("laneStart() + (showSabqi && !sabqi ? laneSeparation() : 0f)"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
         assertTrue("A future checkpoint must be strictly after the authentic cursor",
             timeline.contains("GeometryRepository.ordinal(point.verse) > cursorOrdinal")
@@ -218,7 +237,10 @@ public final class BooxPortraitHomeSourceContractTest {
             || timeline.contains("milestoneNumber(")
             || panel.contains("new android.text.style.ImageSpan(icon"));
         assertTrue("Post-Nas maintenance does not invent an ongoing Juz session",
-            timeline.contains("maintenanceVerse == null ? \"aucune ouverte\" : \"en cours\"")
+            timeline.contains("maintenanceVerse == null")
+            && timeline.contains("Aucune séance ouverte")
+            && timeline.contains("Cycle continu · sans échéance")
+            && !timeline.contains("ring(canvas, x[3], y, 7f")
             && panel.contains("prefs.juzMaintenance().read()"));
         assertTrue("Touch must open a canonical Juz or Hizb milestone",
             timeline.contains("openMilestone.accept(true, hit)")
@@ -251,6 +273,24 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("StudyReaderActivity.EXTRA_JUMP_PAGE")
             && panel.contains("StudyReaderActivity.EXTRA_JUMP_VERSE"));
         assertFalse("Forecast does not write Hifdh credits",panel.contains("completeDailyLesson("));
+    }
+
+    @Test public void projectedNasFinishEndsMasteryOnlyInFollowingForecastYears() {
+        CapHifzForecast.Quarter before = new CapHifzForecast.Quarter(
+            LocalDate.of(2028, 6, 30), null, null, false, false);
+        CapHifzForecast.Quarter finished = new CapHifzForecast.Quarter(
+            LocalDate.of(2028, 12, 31), null, null, false, true,
+            List.of(), List.of(), null, LocalDate.of(2028, 10, 26));
+        List<CapHifzForecast.Quarter> dated = List.of(before, finished);
+        assertFalse(CapHifzForecast.projectedTailFinishedBeforeYear(dated, 2027));
+        assertFalse("The completion year retains An-Nās and its dated goal",
+            CapHifzForecast.projectedTailFinishedBeforeYear(dated, 2028));
+        assertTrue("Next year has Entretien, not the old Maîtrise timeline",
+            CapHifzForecast.projectedTailFinishedBeforeYear(dated, 2029));
+        assertTrue("The owner's 2031 navigation must not reintroduce Maîtrise",
+            CapHifzForecast.projectedTailFinishedBeforeYear(dated, 2031));
+        assertFalse("Unknown finish must not fabricate the completed phase",
+            CapHifzForecast.projectedTailFinishedBeforeYear(List.of(before), 2031));
     }
 
     @Test public void todayAndHifzNavigationKeepCanonicalRouting() throws Exception {

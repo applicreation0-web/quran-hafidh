@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - release-candidate/haafidh-11719-private-code-only-20261115
+      - work/haafidh-11720-cap-hifdh-boox-space-20261115
   workflow_dispatch:
 
 permissions:

@@ -64,7 +64,7 @@ final class CapHifzPanel extends LinearLayout {
         this.context = context;
         setOrientation(VERTICAL);
         setPadding(0, Ui.dp(context, 3), 0, 0);
-        addView(Ui.notebookTitle(context, "Cap Hifdh", 19));
+        addView(Ui.notebookTitle(context, "Cap Hifdh", spaciousBoox() ? 22 : 19));
         body = Ui.column(context);
         // History and navigator keep their reserved height on any BOOX font size.
         // The forecast graph alone expands into leftover height.
@@ -147,7 +147,7 @@ final class CapHifzPanel extends LinearLayout {
 
     private void renderTrajectory() {
         // One fixed target, never three competing simulations or a mutable UI setting.
-        line("Prévision · 90 % d’assiduité", 12);
+        line("Prévision · 90 % d’assiduité", spaciousBoox() ? 14 : 12);
         renderForecast();
     }
 
@@ -240,6 +240,13 @@ final class CapHifzPanel extends LinearLayout {
         int lastYear = quarters.get(quarters.size() - 1).date.getYear();
         lastForecastYear = lastYear;
         year = Math.max(today.getYear(), Math.min(year, lastYear));
+        // The owner's 2031 preview must not show the Maîtrise rail when
+        // An-Nās is already predicted for 2028. Actual completion and
+        // read-only forecast navigation are distinct states.
+        boolean forecastPostNas = !postNas && tailForecast
+            && CapHifzForecast.projectedTailFinishedBeforeYear(quarters, year);
+        boolean showMastery = tailForecast && !forecastPostNas;
+        boolean showEntretien = postNas || forecastPostNas;
         shownCheckpoints = checkpointsForYear(quarters, year);
         checkpointIndex = Math.max(0, Math.min(checkpointIndex,
             Math.max(0, shownCheckpoints.size() - 1)));
@@ -257,16 +264,16 @@ final class CapHifzPanel extends LinearLayout {
                 && !geometry.line(nextItqan).verses.isEmpty()
                 ? geometry.line(nextItqan).verses.get(0) : null;
             timeline = new CapHifzTimelineView(context, geometry, quarters, today,
-                forecastSabqi, tailForecast,
+                forecastSabqi, showMastery,
                 ignoredYear -> nextCheckpoint(),
                 (sabqi, milestone) -> openMushaf(milestone.verse), year,
-                sabqiCurrentVerse, tailCurrentVerse, postNas,
-                maintenanceVerse, maintenanceJuz);
+                sabqiCurrentVerse, tailCurrentVerse, showEntretien,
+                maintenanceVerse, maintenanceJuz, forecastPostNas);
             boolean boox = context.getResources().getConfiguration().smallestScreenWidthDp >= 600;
             LinearLayout.LayoutParams graphLayout = boox
                 ? new LinearLayout.LayoutParams(-1, 0, 1f)
                 : new LinearLayout.LayoutParams(-1, Ui.dp(context,
-                    forecastSabqi && (tailForecast || postNas) ? 184 : 90));
+                    forecastSabqi && (showMastery || showEntretien) ? 184 : 90));
             body.addView(timeline, graphLayout);
         }
         LinearLayout navigator = Ui.row(context);
@@ -296,7 +303,7 @@ final class CapHifzPanel extends LinearLayout {
                 render();
             }
         });
-        checkpointLabel.setTextSize(spaciousBoox() ? 18f : 13f);
+        checkpointLabel.setTextSize(spaciousBoox() ? 19f : 13f);
         checkpointLabel.setMaxLines(1);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
@@ -492,7 +499,7 @@ final class CapHifzPanel extends LinearLayout {
             && finalDates.get(id).acquired != null).count();
         String summary = "Acquis ›";
         String spokenSummary = acquired.size() + " lignes acquises, " + dated + " datées";
-        TextView history = line(summary, spaciousBoox() ? 16 : 12);
+        TextView history = line(summary, spaciousBoox() ? 18 : 12);
         // 48dp is the accessible minimum. The weighted BOOX graph needs the
         // freed height to render both full sourah/date rows at font 150%.
         int historyDp = context.getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 48 : 64;

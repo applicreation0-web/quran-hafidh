@@ -186,6 +186,7 @@ def capture_cap_hifz(tag, home, width, height, fixed, density=None):
     if tag.endswith("font150") and fixed:
         verify_cap_milestone_opens_mushaf(tag)
         verify_direct_cap_milestone_taps(tag, density)
+        capture_cap_hifz_far_year(tag)
 
 
 
@@ -248,10 +249,33 @@ def verify_cap_milestone_opens_mushaf(tag):
 
 
 
+def capture_cap_hifz_far_year(tag):
+    """Visual regression for BOOX owner's 2031 photo: no dummy nodes.
+
+    Forecast can end (e.g. Maîtrise in 2028) before the selected year.
+    All current/terminal points remain authentic; blank 'à déterminer'
+    circles are intentionally absent from the Canvas.
+    """
+    for year in range(2027, 2032):
+        home = hierarchy(f"{tag}-cap-before-{year}", lambda tree:
+            find_control(tree, lambda label:
+                label == "Année suivante de Cap Hifdh") is not None)
+        advance = find_control(home, lambda label:
+            label == "Année suivante de Cap Hifdh")
+        if advance is None:
+            raise AssertionError("Year navigation stopped before owner photo year 2031")
+        tap(advance)
+    root = hierarchy(f"{tag}-cap-hifdh-2031", lambda tree:
+        find_control(tree, lambda label:
+            label.startswith("Feuille de route prévisionnelle interactive 2031")) is not None)
+    if any(node.get("scrollable") == "true" for node in root.iter("node")):
+        raise AssertionError("2031 BOOX home must not scroll")
+    diagnostics(f"{tag}-cap-hifdh-2031")
+
+
 def verify_direct_cap_milestone_taps(tag, density):
-    """Tap EVERY future Juz/Hizb icon plus both terminal diamonds on the
-    actual Canvas surface. Validate Activity navigation and a nonblank QCF page.
-    No optimistic credit, mocked timeline click, or selector fallback."""
+    """Tap real surah/ayah markers and both terminal diamonds on the Canvas.
+    Verify navigation into genuine QCF Mushaf; no fake credit or modal."""
     scale = density / 160.0
     for lane, station in ((0, 1), (0, 2), (1, 1), (1, 2), (0, 3), (1, 3)):
         home = hierarchy(f"{tag}-cap-direct-{lane}-{station}-ready",
@@ -264,14 +288,18 @@ def verify_direct_cap_milestone_taps(tag, density):
         span = (gx2 - gx1) - 2 * margin
         stations = (margin + 6 * scale, margin + span * .34,
                     margin + span * .64, margin + span - 6 * scale)
-        # Follow the actual view-height-dependent BOOX lane separation;
-        # using a fixed 160dp/84dp offset falsely taps empty ink after the
-        # home starts using its previously wasted bottom viewport.
+        # Match the 1.17.20 bounded group geometry exactly. The 1.17.19
+        # formula maximized separation and missed the real circle centers.
         spacious = (gx2 - gx1) >= 720 * scale
         available_dp = (gy2 - gy1) / scale
-        lane_separation = max(160 if spacious else 88,
-                              available_dp - (154 if spacious else 92))
-        row = lane_separation if lane else 0
+        min_sep = 168 if spacious else 113
+        preferred = 184 if spacious else 136
+        caption = 143 if spacious else 83
+        room = available_dp - caption - (12 if spacious else 8)
+        lane_separation = min(preferred, max(min_sep, room))
+        group_span = (163 if spacious else 103) + lane_separation
+        lane_start = max(0, (available_dp - group_span) * .42)
+        row = lane_start + (lane_separation if lane else 0)
         px = int(gx1 + stations[station])
         py = int(gy1 + (row + (60 if spacious else 34)) * scale)
         if not (gx1 < px < gx2 and gy1 < py < gy2):

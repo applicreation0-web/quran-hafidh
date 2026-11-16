@@ -6,6 +6,7 @@ on:
       - release-candidate/haafidh-11717-code-only-20261113
       - work/haafidh-integration-cap-hifdh-20261114
       - release-candidate/haafidh-11719-private-code-only-20261115
+      - work/haafidh-11720-cap-hifdh-boox-space-20261115
   pull_request:
     branches:
       - feature/haafidh-itqan-30-recovery-maintien-cue-20261112
@@ -75,7 +76,7 @@ jobs:
             adb shell wm size 1404x1872
             adb shell wm density 240
             adb shell settings put system font_scale 1.0
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest --stacktrace
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest --stacktrace
             # connectedDebugAndroidTest uninstalls the instrumented app during cleanup,
             # removing MediaStore screenshots owned by that app. Its Gradle doLast
             # reinstalls the actual debug + test APKs. Run only the visual tests
@@ -86,9 +87,11 @@ jobs:
             adb install -r "$(find hifz-app/build/outputs/apk/androidTest/debug -type f -name '*.apk' | head -1)"
             adb shell pm list instrumentation | tee boox-real-renders/available-instrumentation.txt
             grep -q 'target=com.quransafeguard.hifz.ibnkathirtest' boox-real-renders/available-instrumentation.txt || { echo 'BOOX test package missing'; exit 1; }
-            adb shell am instrument -w -e class com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest "$(sed -n 's/^instrumentation:\([^ ]*\) (target=com.quransafeguard.hifz.ibnkathirtest).*/\1/p' boox-real-renders/available-instrumentation.txt | head -1 | tr -d '\r')" | tee boox-real-renders/visual-instrumentation.txt
-            grep -Eq 'OK \(2 tests\)' boox-real-renders/visual-instrumentation.txt || { echo 'BOOX visual instrumentation did not pass'; exit 1; }
+            adb shell am instrument -w -e class com.quransafeguard.hifz.preview.BooxPostNasVisualInstrumentedTest,com.quransafeguard.hifz.preview.BooxTodaySelectedDayInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest "$(sed -n 's/^instrumentation:\([^ ]*\) (target=com.quransafeguard.hifz.ibnkathirtest).*/\1/p' boox-real-renders/available-instrumentation.txt | head -1 | tr -d '\r')" | tee boox-real-renders/visual-instrumentation.txt
+            grep -Eq 'OK \(4 tests\)' boox-real-renders/visual-instrumentation.txt || { echo 'BOOX visual instrumentation did not pass'; exit 1; }
             adb shell ls -l /sdcard/Pictures/HaafidhAudit/independent-itqan-before-nas.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-before-nas.png boox-real-renders/boox-1404x1872-cap-hifdh-before-nas.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-entretien-after-nas.png boox-real-renders/boox-1404x1872-cap-hifdh-entretien-after-nas.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-before-nas.png boox-real-renders/boox-1404x1872-itqan-before-nas.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-itqan-after-nas.png boox-real-renders/boox-1404x1872-itqan-after-nas.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-calendar-today-selected-and-validated.png boox-real-renders/boox-1404x1872-calendar-today-selected-and-validated.png
