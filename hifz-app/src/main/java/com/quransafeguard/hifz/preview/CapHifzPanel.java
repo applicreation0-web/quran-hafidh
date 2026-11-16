@@ -240,6 +240,12 @@ final class CapHifzPanel extends LinearLayout {
         int lastYear = quarters.get(quarters.size() - 1).date.getYear();
         lastForecastYear = lastYear;
         year = Math.max(today.getYear(), Math.min(year, lastYear));
+        // Forecast navigation must never toggle the authentic completion
+        // state. If An-Nās is predicted for 2028, 2031 shows only Entretien.
+        boolean projectedPostNas = !postNas && tailForecast
+            && CapHifzForecast.projectedTailFinishedBeforeYear(quarters, year);
+        boolean showMastery = tailForecast && !projectedPostNas;
+        boolean showEntretien = postNas || projectedPostNas;
         shownCheckpoints = checkpointsForYear(quarters, year);
         checkpointIndex = Math.max(0, Math.min(checkpointIndex,
             Math.max(0, shownCheckpoints.size() - 1)));
@@ -257,16 +263,16 @@ final class CapHifzPanel extends LinearLayout {
                 && !geometry.line(nextItqan).verses.isEmpty()
                 ? geometry.line(nextItqan).verses.get(0) : null;
             timeline = new CapHifzTimelineView(context, geometry, quarters, today,
-                forecastSabqi, tailForecast,
+                forecastSabqi, showMastery,
                 ignoredYear -> nextCheckpoint(),
                 (sabqi, milestone) -> openMushaf(milestone.verse), year,
-                sabqiCurrentVerse, tailCurrentVerse, postNas,
-                maintenanceVerse, maintenanceJuz);
+                sabqiCurrentVerse, tailCurrentVerse, showEntretien,
+                maintenanceVerse, maintenanceJuz, projectedPostNas);
             boolean boox = context.getResources().getConfiguration().smallestScreenWidthDp >= 600;
             LinearLayout.LayoutParams graphLayout = boox
                 ? new LinearLayout.LayoutParams(-1, 0, 1f)
                 : new LinearLayout.LayoutParams(-1, Ui.dp(context,
-                    forecastSabqi && (tailForecast || postNas) ? 184 : 90));
+                    forecastSabqi && (showMastery || showEntretien) ? 184 : 90));
             body.addView(timeline, graphLayout);
         }
         LinearLayout navigator = Ui.row(context);
