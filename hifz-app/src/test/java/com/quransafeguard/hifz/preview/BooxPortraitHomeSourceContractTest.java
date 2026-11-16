@@ -219,8 +219,10 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
         assertTrue("Every stage caption has a width budget at large BOOX text sizes",
             timeline.contains("drawFitted(") && timeline.contains("paint.measureText(shown) > width"));
-        assertTrue("Future boundaries come from the shown year and real start date",
-            timeline.contains("!point.date.isBefore(windowStart())")
+        assertTrue("Future boundaries respect the year, selected milestone and real start date",
+            timeline.contains("LocalDate visibleFrom = windowStart()")
+            && timeline.contains("selectedDate.isAfter(visibleFrom)")
+            && timeline.contains("!point.date.isBefore(visibleFrom)")
             && timeline.contains("!point.date.isBefore(start)"));
         assertTrue("Projected stations present an actual sourate and ayah with forecast date",
             timeline.contains("QuranSurahNames.rawName(coming.get(i).verse.getSurah())")
