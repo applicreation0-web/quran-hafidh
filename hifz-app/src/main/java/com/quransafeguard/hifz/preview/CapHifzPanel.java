@@ -284,7 +284,7 @@ final class CapHifzPanel extends LinearLayout {
         // No added BOOX row, modal, scrollbar or persisted progress.
         LinearLayout navigator = Ui.row(context);
         TextView previousYear = button(navigator, "«", v -> moveForecastYear(-1));
-        previousYear.setTextSize(spaciousBoox() ? 22f : 20f);
+        labelNavigator(previousYear, "«", "ANNÉE");
         previousYearNavigator = previousYear;
 
         TextView previous = button(navigator, "‹", v -> {
@@ -293,7 +293,7 @@ final class CapHifzPanel extends LinearLayout {
                 updateCheckpointLabel();
             } else moveForecastStep(-1);
         });
-        previous.setTextSize(spaciousBoox() ? 22f : 20f);
+        labelNavigator(previous, "‹", "JALON");
         previousNavigator = previous;
 
         checkpointLabel = button(navigator, "", v -> {
@@ -316,11 +316,11 @@ final class CapHifzPanel extends LinearLayout {
                 updateCheckpointLabel();
             } else moveForecastStep(1);
         });
-        next.setTextSize(spaciousBoox() ? 22f : 20f);
+        labelNavigator(next, "›", "JALON");
         nextNavigator = next;
 
         TextView nextYear = button(navigator, "»", v -> moveForecastYear(1));
-        nextYear.setTextSize(spaciousBoox() ? 22f : 20f);
+        labelNavigator(nextYear, "»", "ANNÉE");
         nextYearNavigator = nextYear;
         body.addView(navigator);
         updateCheckpointLabel();
@@ -578,6 +578,22 @@ final class CapHifzPanel extends LinearLayout {
         text.setIncludeFontPadding(false);
         body.addView(text);
         return text;
+    }
+
+    /** BOOX: keep ONE 48dp navigation row but distinguish the YEAR pair
+     * from the SOURATE-FINISH step pair, using the same Patrick Hand family. */
+    private void labelNavigator(TextView view, String glyph, String kind) {
+        String content = glyph + "\n" + kind;
+        android.text.SpannableString marked = new android.text.SpannableString(content);
+        marked.setSpan(new android.text.style.RelativeSizeSpan(1.6f), 0, glyph.length(),
+            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        marked.setSpan(new android.text.style.RelativeSizeSpan(.70f),
+            glyph.length() + 1, content.length(),
+            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        view.setTextSize(spaciousBoox() ? 14f : 12f);
+        view.setText(marked);
+        view.setMaxLines(2);
+        view.setGravity(Gravity.CENTER);
     }
 
     private TextView button(LinearLayout parent, String label, View.OnClickListener click) {
