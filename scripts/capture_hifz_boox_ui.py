@@ -314,7 +314,7 @@ def verify_direct_cap_milestone_taps(tag, density):
     spoken = " ".join(names(graph))
     counts = []
     for lane_name in ("Acquisition", "Maîtrise"):
-        match = re.search(rf"{lane_name}, (\\d+) fins de sourates", spoken)
+        match = re.search(rf"{lane_name}, (\d+) fins de sourates", spoken)
         counts.append(int(match.group(1)) if match else 0)
     checks = []
     for lane, count in enumerate(counts):
