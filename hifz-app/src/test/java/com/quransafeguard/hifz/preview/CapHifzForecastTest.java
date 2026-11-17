@@ -61,6 +61,47 @@ public final class CapHifzForecastTest {
             new VerseRef(49, 1), QuranCanon.INSTANCE.next(new VerseRef(48, 29)));
     }
 
+    @Test public void acquisitionYearProgressKeepsAdvancingAfterItqanReachesAnNas()
+            throws Exception {
+        GeometryRepository geo = geometry();
+        List<CapHifzForecast.Quarter> rows = CapHifzForecast.quarters(
+            geo, LocalDate.of(2026, 11, 15),
+            geo.firstLineIndex(new VerseRef(2, 125)),
+            geo.firstLineIndex(new VerseRef(49, 1)), false,
+            day -> WeeklyProgramPolicy.actionFor(day.getDayOfWeek(),
+                HifzPrefs.WeeklyProgram.MANUAL_SEVEN, 3),
+            true, true, List.of(), Set.of(), null, .9);
+        int nasYear = -1, fathYear = -1;
+        for (CapHifzForecast.Quarter q : rows) {
+            if (q.tailFinish != null) nasYear = q.tailFinish.getYear();
+            if (q.sabqiFinish != null) fathYear = q.sabqiFinish.getYear();
+        }
+        assertTrue("Itqan should finish before Acquisition in this QCF fixture",
+            nasYear > 2026 && fathYear > nasYear);
+        int previously = -1;
+        boolean advancedAfterNas = false;
+        for (int year = 2026; year <= fathYear; year++) {
+            VerseRef position = CapHifzForecast.projectedPositionAtYear(rows, year,
+                true, new VerseRef(2, 125));
+            assertNotNull(position);
+            int ordinal = GeometryRepository.ordinal(position);
+            assertTrue("Acquisition must never reverse as the forecast year changes",
+                ordinal >= previously);
+            if (year > nasYear && previously >= 0 && ordinal > previously)
+                advancedAfterNas = true;
+            previously = ordinal;
+        }
+        assertTrue("Acquisition stays advancing after An-Nas; not frozen in 2029",
+            advancedAfterNas);
+        assertEquals("The last predicted Acquisition year ends at Al-Fath 48:29",
+            SabqiRoute.ROUTE_END, CapHifzForecast.projectedPositionAtYear(rows,
+                fathYear, true, new VerseRef(2, 125)));
+        assertEquals("Maîtrise finishes at An-Nas regardless of later Acquisition years",
+            ItqanRotationPolicy.TAIL_END,
+            CapHifzForecast.projectedPositionAtYear(rows, fathYear, false,
+                new VerseRef(49, 1)));
+    }
+
     @Test public void everySurahFinishIsOnceAndOnlyOnceOnItsOwnProjectedTrack()
             throws Exception {
         GeometryRepository geo = geometry();
