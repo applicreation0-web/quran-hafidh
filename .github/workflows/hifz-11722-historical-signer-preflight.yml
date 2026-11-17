@@ -1,0 +1,55 @@
+name: Hifz 1.17.22 historical signer capability preflight — NO APK
+on:
+  push:
+    branches:
+      - fix/cap-hifdh-forecast-navigation-20261116
+    paths:
+      - .github/workflows/hifz-11722-historical-signer-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  historical-signer-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify existing GitHub signing secrets and expected certificate fingerprint WITHOUT building
+        env:
+          HIFZ_KEYSTORE_BASE64: ${{ secrets.HIFZ_KEYSTORE_BASE64 }}
+          HIFZ_KEYSTORE_PASSWORD: ${{ secrets.HIFZ_KEYSTORE_PASSWORD }}
+          HIFZ_KEY_ALIAS: ${{ secrets.HIFZ_KEY_ALIAS }}
+          HIFZ_KEY_PASSWORD: ${{ secrets.HIFZ_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          tmp="$(mktemp "${RUNNER_TEMP}/historical-keystore-XXXXXX.jks")"
+          trap 'shred -u "$tmp" 2>/dev/null || rm -f "$tmp"' EXIT
+          for label in HIFZ_KEYSTORE_BASE64 HIFZ_KEYSTORE_PASSWORD HIFZ_KEY_ALIAS HIFZ_KEY_PASSWORD; do
+            if [ -z "${!label:-}" ]; then
+              echo "::error::NO-GO: an existing historical GitHub signing secret is unavailable ($label). No APK built."
+              exit 1
+            fi
+          done
+          printf '%s' "$HIFZ_KEYSTORE_BASE64" | base64 -d > "$tmp" 2>/dev/null || {
+            echo "::error::NO-GO: historical keystore decode failed."
+            exit 1
+          }
+          # Capture keytool output in-memory only, NEVER print secrets, alias, paths, or certificate details.
+          report="$(keytool -list -v -keystore "$tmp" -storepass "$HIFZ_KEYSTORE_PASSWORD" -alias "$HIFZ_KEY_ALIAS" 2>/dev/null)" || {
+            echo "::error::NO-GO: historical keystore authentication failed."
+            exit 1
+          }
+          if ! grep -q 'PrivateKeyEntry' <<<"$report"; then
+            echo "::error::NO-GO: historical alias is not a private key."
+            exit 1
+          fi
+          actual="$(grep 'SHA256:' <<<"$report" | head -1 | sed 's/.*SHA256: *//' | tr -d ':' | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          required="66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14"
+          if [ "$actual" != "$required" ]; then
+            echo "::error::NO-GO: signing certificate differs from historical official certificate."
+            exit 1
+          fi
+          echo "PASS: existing historical GitHub signing secrets and private-key alias match the official fingerprint; no build, no private assets, no APK, no key export."
