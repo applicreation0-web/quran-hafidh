@@ -152,20 +152,22 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("verticalOffset()")
             && timeline.contains("Math.min(wanted, Math.max(0f, heightDp - dateBaseline() - 24f))")
             && timeline.contains("float wanted = labelScale() > 1f ? 190f : 126f"));
-        assertTrue("Projected An-Nās in 2028 must hide the Maîtrise lane in 2031",
+        assertTrue("Projected An-Nās removes Maîtrise after its final projected year",
             panel.contains("CapHifzForecast.projectedTailFinishedBeforeYear(quarters, year)")
             && panel.contains("boolean showMastery = tailForecast && !projectedPostNas")
-            && panel.contains("boolean showEntretien = postNas || projectedPostNas")
-            && timeline.contains("private final boolean projectedMaintenance")
-            && timeline.contains("if (projectedMaintenance)")
-            && timeline.contains("Après الناس · v.6 (prévision)"));
-        assertTrue("After An-Nas, the second lane becomes a perpetual, read-only Maintien",
-            panel.contains("forecastSabqi || tailForecast || postNas")
-            && panel.contains("prefs.juzMaintenance().read()")
+            && panel.contains("boolean showEntretien = false")
+            && panel.contains("forecastSabqi || tailForecast || postNas"));
+        assertTrue("After An-Nās, Acquisition alone uses the second lane's former area",
+            timeline.contains("private boolean soloAcquisition()")
+            && timeline.contains("showSabqi && !showTail && !showMaintenance")
+            && timeline.contains("soloAcquisition() ? 18f : 0f")
+            && timeline.contains("soloAcquisition() ? 32f : 0f")
+            && timeline.contains("soloAcquisition() ? 42f : 0f")
+            && panel.contains("forecastSabqi && showMastery ? 184 : 108"));
+        assertTrue("Maintenance continues in the actual Parcours workflow, never a ghost Cap Hifdh rail",
+            panel.contains("prefs.juzMaintenance().read()")
             && timeline.contains("drawMaintenanceLane(")
-            && timeline.contains("ENTRETIEN")
-            && timeline.contains("cycle sans échéance")
-            && !panel.contains("if (postNas) line(\"Maintien après An-Nās\""));
+            && !panel.contains("boolean showEntretien = postNas || projectedPostNas"));
         assertTrue("A schematic short-term view must not compress decades into a time scale",
             timeline.contains("private List<CapHifzForecast.Milestone> nextMilestones")
             && timeline.contains("CapHifzForecast.visibleMilestones(upcoming)")
@@ -176,20 +178,23 @@ public final class BooxPortraitHomeSourceContractTest {
             forecast.contains("new VerseRef(surah, 1)")
             && forecast.contains("SabqiRoute.ROUTE_END.getSurah()")
             && forecast.contains("crossings(geometry, sabqiBoundaries"));
-        assertTrue("Surah names and arrow glyphs must be readable on BOOX without extra rows",
-            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline()), 15f")
-            && panel.contains("previous.setTextSize(spaciousBoox() ? 22f : 20f)")
-            && panel.contains("next.setTextSize(spaciousBoox() ? 22f : 20f)")
-            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 15f"));
+        assertTrue("Surah labels and YEAR/JALON controls must be readable in Patrick Hand",
+            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline())")
+            && panel.contains("labelNavigator(previousYear, \"«\", \"ANNÉE\")")
+            && panel.contains("labelNavigator(previous, \"‹\", \"JALON\")")
+            && panel.contains("labelNavigator(next, \"›\", \"JALON\")")
+            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline())"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
         assertTrue("Empty years must not render invented milestones",
             timeline.contains("for (int i = 0; i < Math.min(2, coming.size()); i++)")
             && !timeline.contains("à déterminer")
             && !timeline.contains("for (int i = coming.size(); i < 2; i++) ring"));
-        assertTrue("Post-Nas Entretien is one compact truthful status, not a second fake four-stop rail",
-            timeline.contains("Cycle continu après الناس · v.6")
-            && !timeline.contains("drawFitted(canvas, \"ROTATION\"")
-            && !timeline.contains("drawFitted(canvas, \"MAINTIEN\""));
+        assertTrue("After An-Nās, only the solo Acquisition frise is present",
+            panel.contains("boolean showEntretien = false")
+            && timeline.contains("if (showSabqi) drawLane(canvas, true")
+            && timeline.contains("if (showTail) drawLane(canvas, false")
+            && timeline.contains("if (showMaintenance)")
+            && timeline.contains("boolean doubleLane = showSabqi && (showTail || showMaintenance)"));
         assertTrue("A future checkpoint must be strictly after the authentic cursor",
             timeline.contains("GeometryRepository.ordinal(point.verse) > cursorOrdinal")
             && timeline.contains("sabqi ? actualSabqiVerse : actualTailVerse"));
