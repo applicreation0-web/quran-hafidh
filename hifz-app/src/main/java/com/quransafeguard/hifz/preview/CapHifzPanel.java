@@ -307,7 +307,7 @@ final class CapHifzPanel extends LinearLayout {
                 openMushaf(shownCheckpoints.get(checkpointIndex).verse);
             else if (year < lastYear) moveForecastYear(1);
         });
-        checkpointLabel.setTextSize(spaciousBoox() ? 14f : 12f);
+        checkpointLabel.setTextSize(spaciousBoox() ? 12.5f : 11.5f);
         checkpointLabel.setMaxLines(2);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
@@ -485,10 +485,10 @@ final class CapHifzPanel extends LinearLayout {
         String lane = choice.sabqi ? "Acquisition" : "Maîtrise";
         // Line 1 identifies which frise owns the selected surah finish;
         // line 2 is its actual canonical final ayah and projected date.
-        return year + " · " + lane + " · " + (checkpointIndex + 1)
-            + "/" + shownCheckpoints.size() + "\n"
+        return lane + " · " + year + " · fin estimée "
+            + (checkpointIndex + 1) + "/" + shownCheckpoints.size() + "\n"
             + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
-            + choice.verse.getAyah() + " · " + choice.date.format(DAY_MONTH);
+            + choice.verse.getAyah() + " · " + choice.date.format(FULL_DATE);
     }
 
     private void openMushaf(VerseRef verse) {
