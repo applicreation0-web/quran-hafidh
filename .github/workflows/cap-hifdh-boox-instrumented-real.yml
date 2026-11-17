@@ -26,6 +26,12 @@ jobs:
           gradle-version: '9.5.0'
       - name: Compile real APK and Android UI instrumentation
         run: gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleDebugAndroidTest --stacktrace
+      - name: Enable hardware virtualization for actual Android emulator
+        run: |
+          test -c /dev/kvm
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
+          sudo chmod u+rw /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
       - name: Real Android screenshots of both full BOOX homes
         uses: reactivecircus/android-emulator-runner@v2
         with:
