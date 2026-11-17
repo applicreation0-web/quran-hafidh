@@ -159,9 +159,11 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue("After An-Nās, Acquisition alone takes the extra BOOX room",
             timeline.contains("private boolean soloAcquisition()")
             && timeline.contains("showSabqi && !showTail && !showMaintenance")
-            && timeline.contains("soloAcquisition() ? 65f")
-            && timeline.contains("soloAcquisition() ? 109f")
-            && timeline.contains("soloAcquisition() ? 149f")
+            && timeline.contains("private float soloSpan()")
+            && timeline.contains("Math.max(100f, Math.min(340f, h - 26f))")
+            && timeline.contains("(soloSpan() - 22f) * .27f")
+            && timeline.contains("(soloSpan() - 22f) * .72f")
+            && timeline.contains("(soloSpan() - 22f) * .95f")
             && panel.contains("forecastSabqi && showMastery ? 184 : 108"));
         assertTrue("Maintenance continues in the actual Parcours workflow, never a ghost Cap Hifdh rail",
             panel.contains("prefs.juzMaintenance().read()")
