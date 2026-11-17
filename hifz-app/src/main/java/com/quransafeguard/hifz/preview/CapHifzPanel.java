@@ -6,6 +6,9 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.ListPopupWindow;
+import android.widget.ArrayAdapter;
+import android.view.ViewGroup;
 
 import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -58,6 +61,10 @@ final class CapHifzPanel extends LinearLayout {
     private TextView previousNavigator;
     private TextView nextNavigator;
     private TextView nextYearNavigator;
+    private LinearLayout yearNavigatorGroup;
+    // Instrumented screenshot comparison ONLY. Default official UX = arrows.
+    private boolean dropdownPreview;
+    private ListPopupWindow milestoneDropdown;
     private boolean historyMode = false;
     private int acquiredIndex = 0;
     private List<AcquiredChoice> acquiredLines = new ArrayList<>();
@@ -286,45 +293,67 @@ final class CapHifzPanel extends LinearLayout {
         // browse actual dated forecast checkpoints, including year crossings.
         // No added BOOX row, modal, scrollbar or persisted progress.
         LinearLayout navigator = Ui.row(context);
-        TextView previousYear = button(navigator, "«", v -> moveForecastYear(-1));
-        labelNavigator(previousYear, "«", "ANNÉE");
+        // Explicit, local YEAR group. The selected year is visible between
+        // its own two arrows; the adjacent controls only browse SOURATE ends.
+        LinearLayout yearGroup = Ui.row(context);
+        yearNavigatorGroup = yearGroup;
+        TextView previousYear = button(yearGroup, "‹", v -> moveForecastYear(-1));
+        labelNavigator(previousYear, "‹", "");
         previousYearNavigator = previousYear;
+        TextView yearBadge = Ui.text(context, "", spaciousBoox() ? 18f : 16f, true);
+        String yearText = "ANNÉE\\n" + year;
+        android.text.SpannableString markedYear = new android.text.SpannableString(yearText);
+        markedYear.setSpan(new android.text.style.RelativeSizeSpan(.63f), 0, 5,
+            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        yearBadge.setText(markedYear);
+        yearBadge.setMaxLines(2);
+        yearBadge.setIncludeFontPadding(false);
+        yearBadge.setGravity(Gravity.CENTER);
+        yearBadge.setContentDescription("Année de prévision " + year);
+        yearGroup.addView(yearBadge, new LinearLayout.LayoutParams(
+            Ui.dp(context, spaciousBoox() ? 70 : 60), Ui.dp(context, 58)));
+        TextView nextYear = button(yearGroup, "›", v -> moveForecastYear(1));
+        labelNavigator(nextYear, "›", "");
+        nextYearNavigator = nextYear;
+        navigator.addView(yearGroup);
 
-        TextView previous = button(navigator, "‹", v -> {
-            if (historyMode) {
-                acquiredIndex = Math.min(acquiredIndex + 1, acquiredLines.size() - 1);
-                updateCheckpointLabel();
-            } else moveForecastStep(-1);
-        });
-        labelNavigator(previous, "‹", "JALON");
-        previousNavigator = previous;
+        if (!dropdownPreview) {
+            TextView previous = button(navigator, "‹", v -> {
+                if (historyMode) {
+                    acquiredIndex = Math.min(acquiredIndex + 1, acquiredLines.size() - 1);
+                    updateCheckpointLabel();
+                } else moveForecastStep(-1);
+            });
+            labelNavigator(previous, "‹", "JALON");
+            previousNavigator = previous;
+        } else previousNavigator = null;
 
         checkpointLabel = button(navigator, "", v -> {
             if (historyMode) {
                 if (!acquiredLines.isEmpty())
                     openMushaf(acquiredLines.get(acquiredIndex).verse);
+            } else if (dropdownPreview) {
+                showDropdownPreview();
             } else if (!shownCheckpoints.isEmpty())
                 openMushaf(shownCheckpoints.get(checkpointIndex).verse);
             else if (year < lastYear) moveForecastYear(1);
         });
-        checkpointLabel.setTextSize(spaciousBoox() ? 12.5f : 11.5f);
+        checkpointLabel.setTextSize(spaciousBoox() ? 15f : 13.7f);
         checkpointLabel.setMaxLines(2);
         checkpointLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         checkpointLabel.setLayoutParams(new LinearLayout.LayoutParams(0,
-            Ui.dp(context, 48), 1f));
+            Ui.dp(context, 58), 1f));
 
-        TextView next = button(navigator, "›", v -> {
-            if (historyMode) {
-                acquiredIndex = Math.max(0, acquiredIndex - 1);
-                updateCheckpointLabel();
-            } else moveForecastStep(1);
-        });
-        labelNavigator(next, "›", "JALON");
-        nextNavigator = next;
-
-        TextView nextYear = button(navigator, "»", v -> moveForecastYear(1));
-        labelNavigator(nextYear, "»", "ANNÉE");
-        nextYearNavigator = nextYear;
+        if (!dropdownPreview) {
+            TextView next = button(navigator, "›", v -> {
+                if (historyMode) {
+                    acquiredIndex = Math.max(0, acquiredIndex - 1);
+                    updateCheckpointLabel();
+                } else moveForecastStep(1);
+            });
+            labelNavigator(next, "›", "JALON");
+            nextNavigator = next;
+        } else nextNavigator = null;
         body.addView(navigator);
         updateCheckpointLabel();
         // Maintien is now the second roadmap lane, not a stray footer sentence.
@@ -414,6 +443,8 @@ final class CapHifzPanel extends LinearLayout {
 
     private void updateCheckpointLabel() {
         if (checkpointLabel == null) return;
+        if (yearNavigatorGroup != null)
+            yearNavigatorGroup.setVisibility(historyMode ? View.GONE : View.VISIBLE);
         if (previousYearNavigator != null) {
             previousYearNavigator.setVisibility(historyMode ? View.GONE : View.VISIBLE);
             previousYearNavigator.setEnabled(!historyMode && year > today.getYear());
@@ -470,8 +501,14 @@ final class CapHifzPanel extends LinearLayout {
         }
         MilestoneChoice choice = shownCheckpoints.get(checkpointIndex);
         String track = choice.sabqi ? "Acquisition" : "Maîtrise";
-        checkpointLabel.setText(checkpointDisplay(choice));
-        checkpointLabel.setContentDescription("Ouvrir le Mushaf depuis Cap Hifdh : "
+        checkpointLabel.setText(dropdownPreview
+            ? "JALONS ▾  " + track + " · " + (checkpointIndex + 1)
+                + "/" + shownCheckpoints.size() + "\\n"
+                + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
+                + choice.verse.getAyah() + " · " + choice.date.format(FULL_DATE)
+            : checkpointDisplay(choice));
+        checkpointLabel.setContentDescription((dropdownPreview
+            ? "Choisir un jalon dans le menu : " : "Ouvrir le Mushaf depuis Cap Hifdh : ")
             + track + ", "
             + choice.date.format(FULL_DATE) + ", "
             + QuranSurahNames.name(choice.verse.getSurah())
@@ -485,10 +522,60 @@ final class CapHifzPanel extends LinearLayout {
         String lane = choice.sabqi ? "Acquisition" : "Maîtrise";
         // Line 1 identifies which frise owns the selected surah finish;
         // line 2 is its actual canonical final ayah and projected date.
-        return lane + " · " + year + " · fin estimée "
-            + (checkpointIndex + 1) + "/" + shownCheckpoints.size() + "\n"
+        return lane + " · jalon " + (checkpointIndex + 1) + "/"
+            + shownCheckpoints.size() + " · fin prévue\\n"
             + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
             + choice.verse.getAyah() + " · " + choice.date.format(FULL_DATE);
+    }
+
+    /** Screenshot-only comparison variant: every item is the SAME authentic,
+     * forecast-dated final verse as with the arrows. This is not a setting. */
+    private void showDropdownPreview() {
+        if (!dropdownPreview || historyMode || shownCheckpoints.isEmpty()
+                || checkpointLabel == null) return;
+        List<String> titles = new ArrayList<>();
+        for (MilestoneChoice choice : shownCheckpoints)
+            titles.add((choice.sabqi ? "Acquisition" : "Maîtrise") + "  ·  "
+                + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
+                + choice.verse.getAyah() + "  ·  " + choice.date.format(FULL_DATE));
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+                context, android.R.layout.simple_list_item_1, titles) {
+            @Override public View getView(int index, View recycled, ViewGroup parent) {
+                TextView entry = Ui.text(context, getItem(index),
+                    spaciousBoox() ? 16f : 14f, index == checkpointIndex);
+                entry.setPadding(Ui.dp(context, 14), Ui.dp(context, 8),
+                    Ui.dp(context, 14), Ui.dp(context, 8));
+                entry.setMinHeight(Ui.dp(context, 58));
+                entry.setMaxLines(2);
+                entry.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                return entry;
+            }
+        };
+        milestoneDropdown = new ListPopupWindow(context);
+        milestoneDropdown.setAdapter(adapter);
+        milestoneDropdown.setAnchorView(checkpointLabel);
+        milestoneDropdown.setWidth(Math.min(
+            context.getResources().getDisplayMetrics().widthPixels - Ui.dp(context, 30),
+            Math.max(checkpointLabel.getWidth(), Ui.dp(context, 330))));
+        milestoneDropdown.setHeight(Ui.dp(context, Math.min(292, 60 * titles.size())));
+        milestoneDropdown.setBackgroundDrawable(
+            new android.graphics.drawable.ColorDrawable(Ui.PAPER));
+        milestoneDropdown.setModal(true);
+        milestoneDropdown.setOnItemClickListener((parent, item, index, id) -> {
+            milestoneDropdown.dismiss();
+            checkpointIndex = index;
+            updateCheckpointLabel();
+        });
+        milestoneDropdown.show();
+    }
+
+    /** Available only from Android instrumentation, not exposed as a user
+     * preference or a second production navigation mode. */
+    void setDropdownPreviewForCapture(boolean enabled) {
+        if (dropdownPreview == enabled) return;
+        if (milestoneDropdown != null) milestoneDropdown.dismiss();
+        dropdownPreview = enabled;
+        render();
     }
 
     private void openMushaf(VerseRef verse) {
@@ -593,9 +680,15 @@ final class CapHifzPanel extends LinearLayout {
         marked.setSpan(new android.text.style.RelativeSizeSpan(.70f),
             glyph.length() + 1, content.length(),
             android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        view.setTextSize(spaciousBoox() ? 14f : 12f);
-        view.setText(marked);
-        view.setMaxLines(2);
+        if (kind.isEmpty()) {
+            view.setText(glyph);
+            view.setTextSize(spaciousBoox() ? 28f : 25f);
+            view.setMaxLines(1);
+        } else {
+            view.setTextSize(spaciousBoox() ? 16f : 14f);
+            view.setText(marked);
+            view.setMaxLines(2);
+        }
         view.setGravity(Gravity.CENTER);
     }
 
