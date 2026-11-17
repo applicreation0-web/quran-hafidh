@@ -102,6 +102,40 @@ public final class CapHifdhTwoRealScreensInstrumentedTest {
             Independent11710ScreensInstrumentedTest.capture(
                 "cap-hifdh-full-home-after-nas");
             assertTrue(years[1]>years[0]);
+
+            // Same REAL after-Nās forecast and the SAME Android process:
+            // compare arrows versus a native Patrick Hand dropdown, without
+            // enabling the dropdown for official users or changing receipts.
+            scene.onActivity(a -> {
+                CapHifzPanel p=(CapHifzPanel)field(a,"capHifz");
+                p.setDropdownPreviewForCapture(true);
+                assertFalse("Dropdown comparison must retain genuine predicted years",
+                    ((List<?>)field(p,"shownCheckpoints")).isEmpty());
+                assertTrue("Dropdown comparison must still have Acquisition",
+                    flag(timeline(p),"showSabqi"));
+                assertFalse("Maîtrise must stay absent", flag(timeline(p),"showTail"));
+            });
+            Independent11710ScreensInstrumentedTest.capture(
+                "cap-hifdh-full-home-after-nas-dropdown-closed");
+            scene.onActivity(a -> {
+                CapHifzPanel p=(CapHifzPanel)field(a,"capHifz");
+                android.widget.TextView field=(android.widget.TextView)field(p,"checkpointLabel");
+                assertTrue("Real dropdown anchor is clickable",field.performClick());
+                android.widget.ListPopupWindow popup =
+                    (android.widget.ListPopupWindow)field(p,"milestoneDropdown");
+                assertNotNull(popup);
+                assertTrue("Native Android milestone dropdown must be visible",
+                    popup.isShowing());
+            });
+            Independent11710ScreensInstrumentedTest.capture(
+                "cap-hifdh-full-home-after-nas-dropdown-open");
+            scene.onActivity(a -> {
+                CapHifzPanel p=(CapHifzPanel)field(a,"capHifz");
+                android.widget.ListPopupWindow popup =
+                    (android.widget.ListPopupWindow)field(p,"milestoneDropdown");
+                if (popup != null) popup.dismiss();
+                p.setDropdownPreviewForCapture(false);
+            });
         }
     }
 }
