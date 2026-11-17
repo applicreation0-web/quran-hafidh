@@ -1,0 +1,51 @@
+name: BOOX Cap Hifdh — two REAL Android screenshots before after Nas
+on:
+  push:
+    branches:
+      - fix/cap-hifdh-forecast-navigation-20261116
+  workflow_dispatch:
+
+jobs:
+  android-real-boox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK for real Hifdh debug build
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Build actual Android debug APK, never the official private signed release
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+      - name: Confirm screenshot capture script is valid
+        run: python3 -m py_compile scripts/capture_cap_hifdh_before_after_real.py
+      - name: Two BOOX home screenshots from SAME running Android app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
+          script: |
+            set -e
+            adb install -r "$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' | head -1)"
+            python3 scripts/capture_cap_hifdh_before_after_real.py
+      - name: Upload only real BOOX captures and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cap-hifdh-boox-real-before-after-nas
+          path: |
+            boox-cap-real-before-after/
+          if-no-files-found: warn
