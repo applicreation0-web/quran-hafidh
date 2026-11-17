@@ -187,18 +187,8 @@ final class CapHifzTimelineView extends View {
      * The same quarter projection feeds the estimated surah finish dates.
      * Do not use the immutable current cursor for future-year progress. */
     private VerseRef projectedPositionAtYear(boolean sabqi) {
-        VerseRef result = sabqi ? actualSabqiVerse : actualTailVerse;
-        for (CapHifzForecast.Quarter q : quarters) {
-            if (q.date.getYear() > selectedYear) break;
-            if (sabqi) {
-                if (q.sabqi != null) result = q.sabqi;
-            } else if (q.firstTailComplete) {
-                result = ItqanRotationPolicy.TAIL_END;
-            } else if (q.itqan != null) {
-                result = q.itqan;
-            }
-        }
-        return result;
+        return CapHifzForecast.projectedPositionAtYear(quarters, selectedYear,
+            sabqi, sabqi ? actualSabqiVerse : actualTailVerse);
     }
 
     /** Normalized physical QCF-line position along the COMPLETE route,
