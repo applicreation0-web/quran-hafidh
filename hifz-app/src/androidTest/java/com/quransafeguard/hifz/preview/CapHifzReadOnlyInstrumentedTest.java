@@ -113,9 +113,11 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNull(find(decor, "90 %"));
                 CapHifzTimelineView graph = findGraph(decor);
                 assertNotNull(graph);
-                assertEquals("After An-Nas only the compact read-only Entretien status remains",
-                    postNas, String.valueOf(graph.getContentDescription())
+                assertFalse("The Cap Hifdh second frise is removed after An-Nās; no Entretien ghost",
+                    String.valueOf(graph.getContentDescription())
                         .contains("Entretien : cycle sans échéance"));
+                assertTrue("Acquisition remains readable in either phase",
+                    String.valueOf(graph.getContentDescription()).contains("Acquisition,"));
                 assertNotNull(find(decor, "Acquis ›"));
                 if (activity.getResources().getConfiguration().smallestScreenWidthDp >= 600) {
                     assertFalse(hasScrollView(decor));
