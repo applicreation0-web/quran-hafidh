@@ -150,6 +150,10 @@ public final class CapHifdhTwoRealScreensInstrumentedTest {
                     ((Integer)field(p,"year")).intValue());
                 assertTrue("BOOX ring must now indicate actual working QCF position",
                     flag(timeline(p),"todayMode"));
+                assertTrue("Return Today restores the original genuine Maîtrise track",
+                    flag(timeline(p),"showTail"));
+                assertTrue("Return Today retains actual Acquisition",
+                    flag(timeline(p),"showSabqi"));
             });
             Independent11710ScreensInstrumentedTest.capture(
                 "cap-hifdh-full-home-return-today");
