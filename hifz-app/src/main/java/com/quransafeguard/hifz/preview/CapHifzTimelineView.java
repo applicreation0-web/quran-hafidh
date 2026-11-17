@@ -63,6 +63,9 @@ final class CapHifzTimelineView extends View {
     private LocalDate selectedDate;
     private boolean selectedSabqi;
     private VerseRef selectedVerse;
+    // Today is the CURRENT persisted QCF working position, not the end-of-year
+    // scenario. No forecast milestone is falsely credited on this view.
+    private boolean todayMode;
 
     CapHifzTimelineView(Context context, GeometryRepository geometry,
             List<CapHifzForecast.Quarter> quarters, LocalDate start, boolean showSabqi,
@@ -185,6 +188,11 @@ final class CapHifzTimelineView extends View {
         invalidate();
     }
 
+    void setTodayMode(boolean enabled) {
+        todayMode = enabled;
+        invalidate();
+    }
+
     private LocalDate windowStart() {
         return selectedYear == start.getYear() ? start : LocalDate.of(selectedYear, 1, 1);
     }
@@ -215,6 +223,32 @@ final class CapHifzTimelineView extends View {
 
     /** Normalized physical QCF-line position along the COMPLETE route,
      * not the selected year's number of surah dots. */
+    /** Physical route percentage of the LAST completed QCF line before
+     * the persisted next-line cursor; never a phantom receipt. */
+    private float actualProgress(boolean sabqi) {
+        VerseRef next = sabqi ? actualSabqiVerse : actualTailVerse;
+        if (next == null) return 0f;
+        VerseRef begin = sabqi ? new VerseRef(2, 1) : ItqanRotationPolicy.TAIL_START;
+        VerseRef finalVerse = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
+        int first = geometry.firstLineIndex(begin);
+        int finalLine = geometry.lastLineIndex(finalVerse);
+        int lastCompleted = geometry.firstLineIndex(next) - 1;
+        return Math.max(0f, Math.min(1f,
+            (lastCompleted - first + 1f) / Math.max(1f, finalLine - first + 1f)));
+    }
+
+    private float selectedMilestoneProgress(boolean sabqi) {
+        if (selectedDate == null || selectedVerse == null || selectedSabqi != sabqi)
+            return Float.NaN;
+        VerseRef begin = sabqi ? new VerseRef(2, 1) : ItqanRotationPolicy.TAIL_START;
+        VerseRef finalVerse = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
+        int first = geometry.firstLineIndex(begin);
+        int finalLine = geometry.lastLineIndex(finalVerse);
+        int line = geometry.lastLineIndex(selectedVerse);
+        return Math.max(0f, Math.min(1f,
+            (line - first + 1f) / Math.max(1f, finalLine - first + 1f)));
+    }
+
     private float projectedProgress(boolean sabqi) {
         VerseRef projected = projectedPositionAtYear(sabqi);
         if (projected == null) return 0f;
@@ -386,9 +420,10 @@ final class CapHifzTimelineView extends View {
         // for an acquired lesson, or show today's cursor as the year 2032.
         drawFitted(canvas, track, left, top + dp(titleBaseline()),
             soloAcquisition() ? 20f : 15f, INK, Paint.Align.LEFT, true, width * .43f);
-        drawFitted(canvas, "Fin " + selectedYear + " : " + yearEndText,
+        drawFitted(canvas, todayMode ? "Aujourd’hui · position de travail"
+                : "Fin " + selectedYear + " : " + yearEndText,
             left + width, top + dp(titleBaseline()),
-            soloAcquisition() ? 14.5f : 12f, MID, Paint.Align.RIGHT, false, width * .54f);
+            soloAcquisition() ? 14.5f : 12f, MID, Paint.Align.RIGHT, false, width * .57f);
 
         // Helpful micro-labels in the extra post-Nās height, keeping the
         // graphic light enough for e-ink and distinguishing both scales.
@@ -404,7 +439,7 @@ final class CapHifzTimelineView extends View {
 
         // Global position: continuous real QCF-line progress up to the
         // requested year, 2029 ... 2037. This is NOT the annual pin scale.
-        float fraction = projectedProgress(sabqi);
+        float fraction = todayMode ? actualProgress(sabqi) : projectedProgress(sabqi);
         float projectedX = x[0] + (x[3] - x[0]) * fraction;
         stroke(FAINT, 1.15f, true);
         canvas.drawLine(x[0], globalY, x[3], globalY, paint);
@@ -412,6 +447,19 @@ final class CapHifzTimelineView extends View {
         canvas.drawLine(x[0], globalY, projectedX, globalY, paint);
         filled(canvas, projectedX, globalY, soloAcquisition() ? 4.8f : 3.7f);
         goalDiamond(canvas, x[3], globalY);
+        // The triple concentric symbol is tied to the QCF line progression:
+        // Today -> the authentic next-line cursor; forecast selection -> the
+        // chosen surah's real final line (while fill still means year-end).
+        float markerFraction = todayMode
+            ? actualProgress(sabqi) : selectedMilestoneProgress(sabqi);
+        if (!Float.isNaN(markerFraction)) {
+            float markerX = x[0] + (x[3] - x[0]) * markerFraction;
+            if (markerX < x[3] - dp(13f)) {
+                ring(canvas, markerX, globalY, 10.5f, 1.4f);
+                ring(canvas, markerX, globalY, 6.7f, 1.2f);
+                filled(canvas, markerX, globalY, 3.8f);
+            }
+        }
         String goalDate = terminalDate == null ? "date —" : terminalDate.format(SHORT_DATE);
         // Leave a real gap below/left of the final diamond: the last
         // digit of a four-digit year must never sit underneath the symbol.
@@ -429,7 +477,7 @@ final class CapHifzTimelineView extends View {
         for (int i = 0; i < annual.size(); i++) {
             CapHifzForecast.Milestone p = annual.get(i);
             float px = pinX(i, annual.size(), left, width, dp(20));
-            boolean selected = selectedDate != null && selectedSabqi == sabqi
+            boolean selected = !todayMode && selectedDate != null && selectedSabqi == sabqi
                 && selectedDate.equals(p.date) && selectedVerse != null
                 && selectedVerse.equals(p.verse);
             if (selected) {
@@ -445,12 +493,14 @@ final class CapHifzTimelineView extends View {
         // Do NOT repeat the dated surah/ayah label: it is already shown in
         // the inline navigator under the frise. A one-line prompt links the
         // three-ring selected point to the sole date detail below.
-        String annualCaption = annual.isEmpty()
-            ? "Aucune fin de sourate prévue en " + selectedYear
-            : selectedIndex >= 0
-                ? "Jalon " + (selectedIndex + 1) + "/" + annual.size()
-                    + " sélectionné · Mushaf au toucher"
-                : annual.size() + " fins de sourates en " + selectedYear;
+        String annualCaption = todayMode
+            ? "Aujourd’hui · repère réel · prévisions disponibles →"
+            : annual.isEmpty()
+                ? "Aucune fin de sourate prévue en " + selectedYear
+                : selectedIndex >= 0
+                    ? "Jalon " + (selectedIndex + 1) + "/" + annual.size()
+                        + " sélectionné · détail sous la frise"
+                    : annual.size() + " fins de sourates en " + selectedYear;
         drawFitted(canvas, annualCaption, left, top + dp(captionBaseline()),
             soloAcquisition() ? 15f : 12f, MID,
             Paint.Align.LEFT, false, width * .95f);
