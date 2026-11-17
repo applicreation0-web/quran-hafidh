@@ -1,4 +1,4 @@
-name: Quran Haafidh 1.17.21 private source-only gate (NO APK)
+name: Quran Haafidh 1.17.22 private source-only gate (NO APK)
 on:
   push:
     branches:
@@ -34,15 +34,15 @@ jobs:
         run: |
           set -euo pipefail
           grep -q 'applicationId = "com.quransafeguard.hifz"' hifz-app/build.gradle.kts
-          grep -q 'versionCode = 59' hifz-app/build.gradle.kts
-          grep -q 'versionName = "1.17.21"' hifz-app/build.gradle.kts
+          grep -q 'versionCode = 60' hifz-app/build.gradle.kts
+          grep -q 'versionName = "1.17.22"' hifz-app/build.gradle.kts
           test ! -d hifz-app/src/private114/assets
-          test -f scripts/build_11721_private_offline.py
-          test -f scripts/test_build_11721_private_offline.py
-      - name: Run 1.17.21 private gate synthetic tests (no secrets)
+          test -f scripts/build_11722_private_offline.py
+          test -f scripts/test_build_11722_private_offline.py
+      - name: Run 1.17.22 private gate synthetic tests (no secrets)
         run: |
           set -euo pipefail
-          python3 scripts/test_build_11721_private_offline.py
+          python3 scripts/test_build_11722_private_offline.py
           python3 scripts/test_build_11718_private_offline.py
       - name: Run Hifz regression suites and source contracts without APK
         run: gradle --no-daemon --init-script scripts/no_apk.init.gradle :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
