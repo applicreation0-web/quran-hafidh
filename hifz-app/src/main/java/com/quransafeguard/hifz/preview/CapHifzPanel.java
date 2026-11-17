@@ -249,7 +249,10 @@ final class CapHifzPanel extends LinearLayout {
         boolean projectedPostNas = !postNas && tailForecast
             && CapHifzForecast.projectedTailFinishedBeforeYear(quarters, year);
         boolean showMastery = tailForecast && !projectedPostNas;
-        boolean showEntretien = postNas || projectedPostNas;
+        // Once An-Nās is complete, remove the Maîtrise rail entirely from
+        // Cap Hifdh. Maintenance remains available in its own Parcours
+        // activity; an empty second rail must not consume BOOX space.
+        boolean showEntretien = false;
         shownCheckpoints = checkpointsForYear(quarters, year);
         checkpointIndex = Math.max(0, Math.min(checkpointIndex,
             Math.max(0, shownCheckpoints.size() - 1)));
@@ -276,7 +279,7 @@ final class CapHifzPanel extends LinearLayout {
             LinearLayout.LayoutParams graphLayout = boox
                 ? new LinearLayout.LayoutParams(-1, 0, 1f)
                 : new LinearLayout.LayoutParams(-1, Ui.dp(context,
-                    forecastSabqi && (showMastery || showEntretien) ? 184 : 90));
+                    forecastSabqi && showMastery ? 184 : 108));
             body.addView(timeline, graphLayout);
         }
         // One compact row: double chevrons change year; single chevrons
