@@ -170,7 +170,8 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("drawMaintenanceLane(")
             && !panel.contains("boolean showEntretien = postNas || projectedPostNas"));
         assertTrue("Global Quran-line progress and annual surah endings are separate",
-            timeline.contains("float fraction = projectedProgress(sabqi)")
+            timeline.contains("float fraction = todayMode ? actualProgress(sabqi) : projectedProgress(sabqi)")
+            && timeline.contains("selectedMilestoneProgress(sabqi)")
             && timeline.contains("globalTrackBaseline()")
             && timeline.contains("annualTrackBaseline()")
             && timeline.contains("yearSurahFinishes(sabqi)")
