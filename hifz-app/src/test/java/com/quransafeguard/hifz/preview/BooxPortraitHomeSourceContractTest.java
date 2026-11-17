@@ -140,61 +140,60 @@ public final class BooxPortraitHomeSourceContractTest {
             && home.contains("TextView caption = Ui.bookText(this, display")
             && home.contains("tile.addView(caption)")
             && home.contains("spaciousBooxHome() ? 112 : 52"));
-        assertTrue("Cap Hifdh needs legible large BOOX text and full-size touch controls",
+        assertTrue("Cap Hifdh respects BOOX font 150% without overlapping tracks",
             panel.contains("LinearLayout.LayoutParams graphLayout = boox")
             && panel.contains("new LinearLayout.LayoutParams(-1, 0, 1f)")
             && panel.contains("historyDp = context.getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 48 : 64")
-            && panel.contains("history.setMinHeight(Ui.dp(context, historyDp))")
-            && panel.contains("history.setLayoutParams(new LinearLayout.LayoutParams(-1, Ui.dp(context, historyDp)))")
-            && timeline.contains("1.55f")
-            && timeline.contains("laneSeparation()")
-            && timeline.contains("SECOND_ROW = 96f")
-            && timeline.contains("verticalOffset()")
-            && timeline.contains("Math.min(wanted, Math.max(0f, heightDp - dateBaseline() - 24f))")
-            && timeline.contains("float wanted = labelScale() > 1f ? 190f : 126f"));
+            && timeline.contains("widthDp >= 720f ? 1.13f : 1f")
+            && timeline.contains("float contentHeight")
+            && timeline.contains("heightDp * .50f")
+            && timeline.contains("globalTrackBaseline()")
+            && timeline.contains("annualTrackBaseline()")
+            && timeline.contains("captionBaseline()")
+            && timeline.contains("verticalOffset()"));
         assertTrue("Projected An-Nās removes Maîtrise after its final projected year",
             panel.contains("CapHifzForecast.projectedTailFinishedBeforeYear(quarters, year)")
             && panel.contains("boolean showMastery = tailForecast && !projectedPostNas")
             && panel.contains("boolean showEntretien = false")
             && panel.contains("forecastSabqi || tailForecast || postNas"));
-        assertTrue("After An-Nās, Acquisition alone uses the second lane's former area",
+        assertTrue("After An-Nās, Acquisition alone takes the extra BOOX room",
             timeline.contains("private boolean soloAcquisition()")
             && timeline.contains("showSabqi && !showTail && !showMaintenance")
-            && timeline.contains("soloAcquisition() ? 18f : 0f")
-            && timeline.contains("soloAcquisition() ? 32f : 0f")
-            && timeline.contains("soloAcquisition() ? 42f : 0f")
+            && timeline.contains("soloAcquisition() ? 65f")
+            && timeline.contains("soloAcquisition() ? 109f")
+            && timeline.contains("soloAcquisition() ? 149f")
             && panel.contains("forecastSabqi && showMastery ? 184 : 108"));
         assertTrue("Maintenance continues in the actual Parcours workflow, never a ghost Cap Hifdh rail",
             panel.contains("prefs.juzMaintenance().read()")
             && timeline.contains("drawMaintenanceLane(")
             && !panel.contains("boolean showEntretien = postNas || projectedPostNas"));
-        assertTrue("A schematic short-term view must not compress decades into a time scale",
-            timeline.contains("private List<CapHifzForecast.Milestone> nextMilestones")
-            && timeline.contains("CapHifzForecast.visibleMilestones(upcoming)")
-            && timeline.contains("nextMilestones(sabqi)")
-            && timeline.contains("Stations have equal spacing ON PURPOSE"));
+        assertTrue("Global Quran-line progress and annual surah endings are separate",
+            timeline.contains("float fraction = projectedProgress(sabqi)")
+            && timeline.contains("globalTrackBaseline()")
+            && timeline.contains("annualTrackBaseline()")
+            && timeline.contains("yearSurahFinishes(sabqi)")
+            && timeline.contains("goalDiamond(canvas, x[3], globalY)"));
         String forecast = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzForecast.java");
         assertTrue("Chapter starts must be projected from real QCF crossings, notably Āl ʿImrān 3:1",
             forecast.contains("new VerseRef(surah, 1)")
             && forecast.contains("SabqiRoute.ROUTE_END.getSurah()")
             && forecast.contains("crossings(geometry, sabqiBoundaries"));
-        assertTrue("Surah labels and YEAR/JALON controls must be readable in Patrick Hand",
-            timeline.contains("drawFitted(canvas, name, xx, top + dp(numberBaseline())")
-            && panel.contains("labelNavigator(previousYear, \"«\", \"ANNÉE\")")
+        assertTrue("Year and milestone arrows remain labeled and visually separated",
+            panel.contains("labelNavigator(previousYear, \"«\", \"ANNÉE\")")
             && panel.contains("labelNavigator(previous, \"‹\", \"JALON\")")
             && panel.contains("labelNavigator(next, \"›\", \"JALON\")")
-            && timeline.contains("drawFitted(canvas, target, x[3], top + dp(numberBaseline())"));
+            && timeline.contains("selected.date.format(SHORT_DATE)"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
-        assertTrue("Empty years must not render invented milestones",
-            timeline.contains("for (int i = 0; i < Math.min(2, coming.size()); i++)")
-            && !timeline.contains("à déterminer")
-            && !timeline.contains("for (int i = coming.size(); i < 2; i++) ring"));
+        assertTrue("An empty year must never fabricate a finish, a dot or a date",
+            timeline.contains("if (annual.isEmpty())")
+            && timeline.contains("Aucune fin de sourate prévue en ")
+            && timeline.contains("for (int i = 0; i < annual.size(); i++)"));
         assertTrue("After An-Nās, only the solo Acquisition frise is present",
             panel.contains("boolean showEntretien = false")
             && timeline.contains("if (showSabqi) drawLane(canvas, true")
             && timeline.contains("if (showTail) drawLane(canvas, false")
             && timeline.contains("if (showMaintenance)")
-            && timeline.contains("boolean doubleLane = showSabqi && (showTail || showMaintenance)"));
+            && timeline.contains("boolean dual = showSabqi && (showTail || showMaintenance)"));
         assertTrue("A future checkpoint must be strictly after the authentic cursor",
             timeline.contains("GeometryRepository.ordinal(point.verse) > cursorOrdinal")
             && timeline.contains("sabqi ? actualSabqiVerse : actualTailVerse"));
@@ -205,7 +204,7 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("actualTailVerse")
             && timeline.contains("SabqiRoute.ROUTE_END.getSurah()")
             && timeline.contains("ItqanRotationPolicy.TAIL_END.getSurah()")
-            && timeline.contains("targetDate.format(SHORT_DATE)"));
+            && timeline.contains("terminalDate = finish(sabqi)"));
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         assertFalse("Unapproved Kalam titles must not be rendered on BOOX",
             ui.contains("createFromAsset(context.getAssets(), \"fonts/Kalam-Regular.ttf\")"));
@@ -217,9 +216,9 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("No old caption under an adjacent rail",
             timeline.contains("lastLabelX") || timeline.contains("yearY")
             || timeline.contains("text(canvas, \"ICI\""));
-        assertTrue("The actual cursor is displayed as surah and verse, not a page number",
-            timeline.contains("QuranSurahNames.rawName(current.getSurah())")
-            && timeline.contains("\"verset \" + current.getAyah()")
+        assertTrue("Global forecast cursor is the selected YEAR-END projected verse",
+            timeline.contains("QuranSurahNames.rawName(yearEnd.getSurah())")
+            && timeline.contains("projectedPositionAtYear(sabqi)")
             && !timeline.contains("\"p.\" + page")
             && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
         assertTrue("Every stage caption has a width budget at large BOOX text sizes",
@@ -229,12 +228,14 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("selectedDate.isAfter(visibleFrom)")
             && timeline.contains("!point.date.isBefore(visibleFrom)")
             && timeline.contains("!point.date.isBefore(start)"));
-        assertTrue("Projected stations present an actual sourate and ayah with forecast date",
-            timeline.contains("QuranSurahNames.rawName(coming.get(i).verse.getSurah())")
-            && timeline.contains("coming.get(i).verse.getAyah()")
-            && timeline.contains("coming.get(i).date.format(SHORT_DATE)")
-            && panel.contains("checkpointDisplay(choice)")
-            && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
+        assertTrue("The selected triple-ring surah finish has its exact date",
+            timeline.contains("QuranSurahNames.rawName(selected.verse.getSurah())")
+            && timeline.contains("selected.verse.getAyah()")
+            && timeline.contains("selected.date.format(SHORT_DATE)")
+            && timeline.contains("ring(canvas, px, annualY, 12f")
+            && timeline.contains("ring(canvas, px, annualY, 7.4f")
+            && timeline.contains("filled(canvas, px, annualY, 3.8f")
+            && panel.contains("checkpointDisplay(choice)"));
         assertTrue("Accessibility uses complete Quran positions, not Juz/Hizb numbers",
             timeline.contains("spokenVerse(point.verse)")
             && timeline.contains("QuranSurahNames.name(verse.getSurah())"));
