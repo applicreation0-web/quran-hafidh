@@ -60,14 +60,12 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNull(find(decor, "Trajectoire"));
                 assertNull(find(decor, "Historique"));
                 assertNotNull(findGraph(decor));
-                // A real post-Nās restore may have no remaining Acquisition
-                // lesson configured. Do not invent a selectable future milestone.
-                View initialCheckpoint = findDescription(decor,
-                    "Ouvrir le Mushaf depuis Cap Hifdh :");
-                if (!postNas) {
-                    assertNotNull("A dated milestone is selected inline, not in a popup",
-                        initialCheckpoint);
-                }
+                // Today is the real persisted working cursor, NOT an
+                // automatically credited future completion.
+                assertNotNull("Home starts at today's real QCF working position",
+                    findDescription(decor, "Situation réelle au "));
+                assertNotNull("Today one-tap return is always present",
+                    findDescription(decor, "Revenir à la situation réelle d’aujourd’hui"));
                 // Exercise the real Android buttons, not merely the source:
                 // one step moves the selected QCF checkpoint, two chevrons
                 // change the year without changing any backed-up Hifz store.
@@ -81,13 +79,15 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNotNull(nextYear);
                 TextView currentCheckpoint = (TextView) findDescription(
                     decor, "Ouvrir le Mushaf depuis Cap Hifdh :");
-                if (currentCheckpoint != null && nextStep.isEnabled()) {
-                    String beforeCheckpoint = currentCheckpoint.getText().toString();
+                if (nextStep.isEnabled()) {
+                    String beforeCheckpoint = currentCheckpoint == null
+                        ? "Aujourd’hui" : currentCheckpoint.getText().toString();
                     assertTrue(nextStep.performClick());
                     TextView afterCheckpoint = (TextView) findDescription(
                         decor, "Ouvrir le Mushaf depuis Cap Hifdh :");
-                    assertNotNull(afterCheckpoint);
-                    assertNotEquals("Step arrow must actually change projection",
+                    assertNotNull("Next step selects a genuine projected surah finish",
+                        afterCheckpoint);
+                    assertNotEquals("Step arrow must actually change the selected QCF marker",
                         beforeCheckpoint, afterCheckpoint.getText().toString());
                 }
                 // The preceding click may have reconstructed the row.
@@ -108,9 +108,13 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNotNull("Acquired lines use the same fixed row, not a modal",
                     findContains(decor, "Acquis · revenir à la projection"));
                 assertTrue(history.performClick());
-                if (!postNas)
-                    assertNotNull("Returning to the forecast must restore the QCF marker",
-                        findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
+                View todayReturn = findDescription(decor,
+                    "Revenir à la situation réelle d’aujourd’hui");
+                assertNotNull(todayReturn);
+                assertTrue("Return Today works after year and checkpoint browsing",
+                    todayReturn.performClick());
+                assertNotNull("Today shows real position, never a projected milestone",
+                    findDescription(decor, "Situation réelle au "));
                 assertNull(findContains(decor, "30 Juz acquis attestés"));
                 TextView target = find(decor, "Prévision · 90 % d’assiduité");
                 assertNotNull("A single non-interactive 90% target must be visible", target);
