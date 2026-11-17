@@ -84,6 +84,25 @@ final class CapHifzForecast {
 
     private CapHifzForecast() {}
 
+    /** The projected year-end cursor moves with the requested forecast year,
+     * independently on each route, including years AFTER An-Nās completion.
+     * Pure read-only presentation helper: nothing is credited or persisted. */
+    static VerseRef projectedPositionAtYear(List<Quarter> quarters, int year,
+            boolean acquisition, VerseRef actualPosition) {
+        VerseRef position = actualPosition;
+        for (Quarter q : quarters) {
+            if (q.date.getYear() > year) break;
+            if (acquisition) {
+                if (q.sabqi != null) position = q.sabqi;
+            } else if (q.firstTailComplete) {
+                position = ItqanRotationPolicy.TAIL_END;
+            } else if (q.itqan != null) {
+                position = q.itqan;
+            }
+        }
+        return position;
+    }
+
     static List<Quarter> quarters(GeometryRepository geometry, LocalDate today,
             int nextSabqiLine, int nextItqanLine, boolean tailComplete,
             WeeklyBilan.Calendar calendar, boolean forecastSabqi, boolean forecastTail,
