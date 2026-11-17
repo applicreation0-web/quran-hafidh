@@ -180,11 +180,13 @@ public final class BooxPortraitHomeSourceContractTest {
             forecast.contains("new VerseRef(surah, 1)")
             && forecast.contains("SabqiRoute.ROUTE_END.getSurah()")
             && forecast.contains("crossings(geometry, sabqiBoundaries"));
-        assertTrue("Year and milestone arrows remain labeled and visually separated",
-            panel.contains("labelNavigator(previousYear, \"«\", \"ANNÉE\")")
+        assertTrue("BOOX YEAR shows its value between its own two arrows",
+            panel.contains("String yearText = \"ANNÉE")
+            && panel.contains("yearBadge.setText(markedYear)")
+            && panel.contains("labelNavigator(previousYear, \"‹\", \"\")")
+            && panel.contains("labelNavigator(nextYear, \"›\", \"\")")
             && panel.contains("labelNavigator(previous, \"‹\", \"JALON\")")
-            && panel.contains("labelNavigator(next, \"›\", \"JALON\")")
-            && timeline.contains("selected.date.format(SHORT_DATE)"));
+            && panel.contains("labelNavigator(next, \"›\", \"JALON\")"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
         assertTrue("An empty year must never fabricate a finish, a dot or a date",
             timeline.contains("if (annual.isEmpty())")
@@ -230,14 +232,15 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("selectedDate.isAfter(visibleFrom)")
             && timeline.contains("!point.date.isBefore(visibleFrom)")
             && timeline.contains("!point.date.isBefore(start)"));
-        assertTrue("The selected triple-ring surah finish has its exact date",
-            timeline.contains("QuranSurahNames.rawName(selected.verse.getSurah())")
-            && timeline.contains("selected.verse.getAyah()")
-            && timeline.contains("selected.date.format(SHORT_DATE)")
-            && timeline.contains("ring(canvas, px, annualY, 12f")
+        assertTrue("Selected three-ring surah dot has just one full-date label",
+            timeline.contains("ring(canvas, px, annualY, 12f")
             && timeline.contains("ring(canvas, px, annualY, 7.4f")
             && timeline.contains("filled(canvas, px, annualY, 3.8f")
-            && panel.contains("checkpointDisplay(choice)"));
+            && !timeline.contains("selected.date.format(SHORT_DATE)")
+            && panel.contains("choice.date.format(FULL_DATE)")
+            && panel.contains("checkpointDisplay(choice)")
+            && timeline.contains("DateTimeFormatter.ofPattern(\"d MMM yyyy\"")
+            && timeline.contains("width * .88f"));
         assertTrue("Accessibility uses complete Quran positions, not Juz/Hizb numbers",
             timeline.contains("spokenVerse(point.verse)")
             && timeline.contains("QuranSurahNames.name(verse.getSurah())"));
