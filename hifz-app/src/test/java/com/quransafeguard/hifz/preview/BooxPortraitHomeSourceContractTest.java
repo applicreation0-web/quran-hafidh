@@ -202,8 +202,8 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("geometry.line(nextItqan).verses.get(0)")
             && timeline.contains("actualSabqiVerse")
             && timeline.contains("actualTailVerse")
-            && timeline.contains("SabqiRoute.ROUTE_END.getSurah()")
-            && timeline.contains("ItqanRotationPolicy.TAIL_END.getSurah()")
+            && timeline.contains("SabqiRoute.ROUTE_END")
+            && timeline.contains("ItqanRotationPolicy.TAIL_END")
             && timeline.contains("terminalDate = finish(sabqi)"));
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         assertFalse("Unapproved Kalam titles must not be rendered on BOOX",
