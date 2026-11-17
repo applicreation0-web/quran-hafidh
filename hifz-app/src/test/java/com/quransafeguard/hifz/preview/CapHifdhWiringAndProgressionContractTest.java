@@ -60,11 +60,11 @@ public final class CapHifdhWiringAndProgressionContractTest {
         assertTrue(home.contains("boolean afterNas=prefs.itqanPostNasMaintenance()")
             && home.contains("afterNas ? \"Maintien\" : \"Stabiliser\"")
             && home.contains("prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE)"));
-        assertTrue(view.contains("QuranSurahNames.rawName(selected.verse.getSurah())")
-            && view.contains("selected.verse.getAyah()")
-            && view.contains("selected.date.format(SHORT_DATE)")
+        assertTrue(view.contains("ring(canvas, px, annualY, 12f")
             && view.contains("projectedProgress(sabqi)")
-            && view.contains("drawMaintenanceLane(canvas"));
+            && view.contains("drawMaintenanceLane(canvas")
+            && panel.contains("choice.date.format(FULL_DATE)")
+            && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
         assertFalse(panel.contains("completeDailyLesson("));
     }
 }
