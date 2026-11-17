@@ -44,6 +44,24 @@ public final class CapHifdhTwoRealScreensInstrumentedTest {
     @Test public void screenshotBothFullHomesBeforeAndAfterAnNasReadOnly() {
         try (ActivityScenario<MainActivity> scene=ActivityScenario.launch(MainActivity.class)) {
             final int[] years=new int[2];
+            // MainActivity loads the QCF/forecast on the UI asynchronously.
+            // A one-shot ActivityScenario callback can observe an empty
+            // forecast before refresh() has completed; wait for real readiness.
+            boolean loaded=false;
+            for (int attempt=0;attempt<100;attempt++) {
+                final boolean[] ready={false};
+                scene.onActivity(activity -> {
+                    CapHifzPanel panel=(CapHifzPanel)field(activity,"capHifz");
+                    List<CapHifzForecast.Quarter> forecast=
+                        (List<CapHifzForecast.Quarter>)field(panel,"forecastQuarters");
+                    ready[0]=forecast!=null && !forecast.isEmpty()
+                        && timeline(panel)!=null;
+                });
+                if (ready[0]) { loaded=true;break; }
+                android.os.SystemClock.sleep(150L);
+            }
+            assertTrue("The REAL Cap Hifdh forecast failed to initialize on Android",
+                loaded);
             scene.onActivity(a -> {
                 CapHifzPanel p=(CapHifzPanel)field(a,"capHifz");
                 List<CapHifzForecast.Quarter> forecast =
