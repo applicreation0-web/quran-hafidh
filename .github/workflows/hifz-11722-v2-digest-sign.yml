@@ -1,0 +1,42 @@
+name: Hifz 1.17.22 sign ONLY APK v2 digest with historical key — NO PRIVATE ASSETS
+on:
+  push:
+    branches:
+      - fix/cap-hifdh-forecast-navigation-20261116
+    paths:
+      - .github/signing/haafidh-11722-v2-request.b64
+
+permissions:
+  contents: read
+
+jobs:
+  digest-only-sign:
+    if: github.actor == 'applicreation0-web'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: RSA-4096 remote signing of small v2 digest data only
+        env:
+          HIFZ_KEYSTORE_BASE64: ${{ secrets.HIFZ_KEYSTORE_BASE64 }}
+          HIFZ_KEYSTORE_PASSWORD: ${{ secrets.HIFZ_KEYSTORE_PASSWORD }}
+          HIFZ_KEY_ALIAS: ${{ secrets.HIFZ_KEY_ALIAS }}
+          HIFZ_KEY_PASSWORD: ${{ secrets.HIFZ_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$HIFZ_KEYSTORE_BASE64"
+          test -n "$HIFZ_KEYSTORE_PASSWORD"
+          test -n "$HIFZ_KEY_ALIAS"
+          test -n "$HIFZ_KEY_PASSWORD"
+          tmp="$(mktemp "${RUNNER_TEMP}/hifz-sign-XXXXXX.jks")"
+          trap 'shred -u "$tmp" 2>/dev/null || rm -f "$tmp"' EXIT
+          printf '%s' "$HIFZ_KEYSTORE_BASE64" | base64 -d > "$tmp" 2>/dev/null
+          export HIFZ_KEYSTORE_PATH="$tmp"
+          java .github/signing/HaafidhV2Signer.java
+          echo "PASS: 1.17.22 APK v2 digest signed with historical key; no APK, corpora or key leave private environments."
