@@ -581,13 +581,16 @@ final class CapHifzPanel extends LinearLayout {
             String itqan = currentTailVerse == null ? "—"
                 : QuranSurahNames.name(currentTailVerse.getSurah())
                     + " v." + currentTailVerse.getAyah();
+            boolean nasActuallyFinished = prefs != null && prefs.itqanPostNasMaintenance();
             checkpointLabel.setText("Aujourd’hui · " + today.format(FULL_DATE)
-                + "\nAcq. " + sabqi + " · Maîtr. " + itqan);
+                + "\nAcq. " + sabqi
+                + (nasActuallyFinished ? "" : " · Maîtr. " + itqan));
             checkpointLabel.setContentDescription(
                 "Situation réelle au " + today.format(FULL_DATE)
                 + ". Position de travail Acquisition : " + sabqi
-                + ". Position de travail Maîtrise : " + itqan
-                + ". Aucune progression anticipée.");
+                + (nasActuallyFinished ? ". Maîtrise achevée à An-Nās."
+                    : ". Position de travail Maîtrise : " + itqan)
+                + " Aucune progression anticipée.");
             return;
         }
         if (shownCheckpoints.isEmpty()) {
