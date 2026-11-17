@@ -279,13 +279,29 @@ def verify_post_nas_forecast_year(tag):
     timeline the Maîtrise progress lane must be absent, not merely empty.
     It is NOT a real user completion or a fictitious maintenance Juz.
     """
-    for year in range(2027, 2032):
-        before = hierarchy(f"{tag}-cap-before-{year}")
-        arrow = find_control(before, lambda label:
-            label == "Prévision : année suivante")
+    # Previous real Mushaf/return checks may have changed the selected year.
+    # Read the actual accessible year; do not blindly tap five more years.
+    current = None
+    for attempt in range(30):
+        root = hierarchy(f"{tag}-cap-before-2031-step-{attempt}")
+        graph = find_control(root, lambda label:
+            label.startswith("Feuille de route prévisionnelle interactive "))
+        if graph is None:
+            raise AssertionError("Missing actual BOOX Cap Hifdh graph")
+        match = re.search(r"interactive (\d{4})", " ".join(names(graph)))
+        if not match:
+            raise AssertionError("Forecast year inaccessible from live Android graph")
+        current = int(match.group(1))
+        if current == 2031:
+            break
+        arrow_label = ("Prévision : année suivante" if current < 2031
+                       else "Prévision : année précédente")
+        arrow = find_control(root, lambda label: label == arrow_label)
         if arrow is None:
-            raise AssertionError("Cap Hifdh year navigation stopped before 2031")
+            raise AssertionError(f"Cap Hifdh year navigation blocked at {current}")
         tap(arrow)
+    else:
+        raise AssertionError(f"Cannot navigate BOOX Cap Hifdh to 2031, last={current}")
     root = hierarchy(f"{tag}-cap-hifdh-post-nas-2031", lambda tree:
         find_control(tree, lambda label:
             label.startswith("Feuille de route prévisionnelle interactive 2031")) is not None)
@@ -335,17 +351,16 @@ def verify_direct_cap_milestone_taps(tag, density):
         span = (gx2 - gx1) - 2 * margin
         spacious = (gx2 - gx1) >= 720 * scale
         height_dp = (gy2 - gy1) / scale
-        baseline = 143 if spacious else 83
-        separation = min(190 if spacious else 126,
-                         max(0, height_dp - baseline - 24))
-        offset = max(0, (height_dp - (separation + baseline + 16)) / 2)
+        separation = min(169, height_dp * 0.50)
+        caption = 127 if spacious else 81
+        offset = max(0, (height_dp - (separation + caption + 5)) / 2)
         row = offset + (separation if lane else 0)
         if is_goal:
             px = int(gx1 + margin + span - 6 * scale)
         else:
             px = int(gx1 + margin + 20 * scale +
                      (span - 40 * scale) * (index + 1) / (count + 1))
-        rail = (60 if spacious else 34) + (-18 if is_goal else 15)
+        rail = (51 if spacious else 31) if is_goal else (96 if spacious else 58)
         py = int(gy1 + (row + rail) * scale)
         if not (gx1 < px < gx2 and gy1 < py < gy2):
             raise AssertionError(f"Projected surah ending {lane}/{station} is outside BOOX")
