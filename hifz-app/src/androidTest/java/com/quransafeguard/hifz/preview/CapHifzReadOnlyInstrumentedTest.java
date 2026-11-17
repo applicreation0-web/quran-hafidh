@@ -60,8 +60,14 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNull(find(decor, "Trajectoire"));
                 assertNull(find(decor, "Historique"));
                 assertNotNull(findGraph(decor));
-                assertNotNull("A dated milestone is selected inline, not in a popup",
-                    findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
+                // A real post-Nās restore may have no remaining Acquisition
+                // lesson configured. Do not invent a selectable future milestone.
+                View initialCheckpoint = findDescription(decor,
+                    "Ouvrir le Mushaf depuis Cap Hifdh :");
+                if (!postNas) {
+                    assertNotNull("A dated milestone is selected inline, not in a popup",
+                        initialCheckpoint);
+                }
                 // Exercise the real Android buttons, not merely the source:
                 // one step moves the selected QCF checkpoint, two chevrons
                 // change the year without changing any backed-up Hifz store.
@@ -75,7 +81,7 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNotNull(nextYear);
                 TextView currentCheckpoint = (TextView) findDescription(
                     decor, "Ouvrir le Mushaf depuis Cap Hifdh :");
-                if (nextStep.isEnabled()) {
+                if (currentCheckpoint != null && nextStep.isEnabled()) {
                     String beforeCheckpoint = currentCheckpoint.getText().toString();
                     assertTrue(nextStep.performClick());
                     TextView afterCheckpoint = (TextView) findDescription(
@@ -102,8 +108,9 @@ public final class CapHifzReadOnlyInstrumentedTest {
                 assertNotNull("Acquired lines use the same fixed row, not a modal",
                     findContains(decor, "Acquis · revenir à la projection"));
                 assertTrue(history.performClick());
-                assertNotNull("Returning to the forecast must restore the QCF marker",
-                    findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
+                if (!postNas)
+                    assertNotNull("Returning to the forecast must restore the QCF marker",
+                        findDescription(decor, "Ouvrir le Mushaf depuis Cap Hifdh :"));
                 assertNull(findContains(decor, "30 Juz acquis attestés"));
                 TextView target = find(decor, "Prévision · 90 % d’assiduité");
                 assertNotNull("A single non-interactive 90% target must be visible", target);
