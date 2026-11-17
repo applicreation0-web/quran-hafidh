@@ -52,6 +52,8 @@ jobs:
             grep -Eq 'OK \(1 test\)' cap-hifdh-instrumented-real/result.txt
             adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-before-nas.png cap-hifdh-instrumented-real/01-avant-nas-reel.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-after-nas.png cap-hifdh-instrumented-real/02-apres-nas-reel.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-after-nas-dropdown-closed.png cap-hifdh-instrumented-real/03-apres-nas-menu-deroulant-ferme.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-after-nas-dropdown-open.png cap-hifdh-instrumented-real/04-apres-nas-menu-deroulant-ouvert.png
             file cap-hifdh-instrumented-real/*.png
       - name: Store actual emulator screenshots and instrumented result
         uses: actions/upload-artifact@v4
