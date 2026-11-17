@@ -384,6 +384,11 @@ final class CapHifzTimelineView extends View {
         canvas.drawLine(x[0], globalY, projectedX, globalY, paint);
         filled(canvas, projectedX, globalY, soloAcquisition() ? 4.8f : 3.7f);
         goalDiamond(canvas, x[3], globalY);
+        String goalDate = terminalDate == null ? "date —" : terminalDate.format(SHORT_DATE);
+        drawFitted(canvas, "Objectif · " + terminalText + " · " + goalDate,
+            x[3], globalY + dp(labelScale() > 1f ? 21f : 17f),
+            soloAcquisition() ? 12f : 9.5f,
+            MID, Paint.Align.RIGHT, false, width * .70f);
 
         // Annual zoom. Every dot is an actual surah FINISH in this year
         // (not arbitrary Juz/Hizb milestones). The three concentric forms
