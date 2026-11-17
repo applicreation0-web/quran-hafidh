@@ -52,8 +52,9 @@ public final class CapHifzNavigationTest {
         Path path = Paths.get("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CapHifzPanel.java");
         if (!Files.exists(path)) path = Paths.get("..").resolve(path);
         String panel = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
-        assertTrue(panel.contains("button(navigator, \"«\", v -> moveForecastYear(-1))"));
-        assertTrue(panel.contains("button(navigator, \"»\", v -> moveForecastYear(1))"));
+        assertTrue(panel.contains("button(yearGroup, \"‹\", v -> moveForecastYear(-1))"));
+        assertTrue(panel.contains("button(yearGroup, \"›\", v -> moveForecastYear(1))"));
+        assertTrue(panel.contains("yearBadge.setText(markedYear)"));
         assertTrue(panel.contains("moveForecastStep(-1)"));
         assertTrue(panel.contains("moveForecastStep(1)"));
         assertTrue(panel.contains("CapHifzNavigation.canMove(position"));
