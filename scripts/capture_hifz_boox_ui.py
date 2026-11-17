@@ -292,10 +292,12 @@ def verify_post_nas_forecast_year(tag):
     graph = find_control(root, lambda label:
         label.startswith("Feuille de route prévisionnelle interactive 2031"))
     spoken = " ".join(names(graph))
-    if "Entretien : cycle sans échéance" not in spoken:
-        raise AssertionError("After projected An-Nās, Entretien is missing in 2031")
-    if "Maîtrise, position de travail" in spoken or "Objectif final An-Nās" in spoken:
-        raise AssertionError("The 2031 Cap Hifdh still draws a finished Maîtrise lane")
+    if "Entretien : cycle sans échéance" in spoken:
+        raise AssertionError("After An-Nās, the second frise must disappear entirely")
+    if "Maîtrise," in spoken or "Objectif final An-Nās" in spoken:
+        raise AssertionError("The 2031 Cap Hifdh still exposes the finished Maîtrise lane")
+    if "Acquisition," not in spoken:
+        raise AssertionError("Acquisition must remain visible and navigable after An-Nās")
     if any(node.get("scrollable") == "true" for node in root.iter("node")):
         raise AssertionError("After projected An-Nās, BOOX home must stay unscrolled")
     diagnostics(f"{tag}-cap-hifdh-post-nas-2031")
