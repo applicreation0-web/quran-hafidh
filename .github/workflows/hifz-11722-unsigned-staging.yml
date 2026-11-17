@@ -1,0 +1,73 @@
+name: Quran Haafidh 1.17.22 unsigned public-asset staging — NO PRIVATE APK
+on:
+  push:
+    branches:
+      - staging/haafidh-11722-unsigned-for-private-local-signing
+    paths:
+      - .github/workflows/hifz-11722-unsigned-staging.yml
+      - hifz-app/build.gradle.kts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unsigned-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      AYAH_THEMES_PRIVATE_114: '1'
+      HIFZ_PRIVATE_RELEASE_UPGRADE: '1'
+      HIFZ_UNSIGNED_PRIVATE_STAGING: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: SDK 37 + build tools 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Build unsigned 1.17.22 private-feature skeleton with ZERO private licensed assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${HIFZ_KEYSTORE_PATH:-}"
+          test -z "${HIFZ_KEYSTORE_BASE64:-}"
+          test -z "${HIFZ_KEYSTORE_PASSWORD:-}"
+          gradle --no-daemon :hifz-app:assembleRelease
+      - name: Enforce unsigned skeleton, exact identity, no historical key and zero private corpora
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build-private114/outputs/apk/release -name '*release*.apk' -type f | head -1)"
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | grep -q "package: name='com.quransafeguard.hifz' versionCode='60' versionName='1.17.22'"
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk" >/dev/null 2>&1; then
+            echo "::error::Signed APK is forbidden in unsigned staging"; exit 1
+          fi
+          python3 - "$apk" <<'PY'
+          import sys,zipfile
+          p=sys.argv[1]
+          private=("assets/atlas_private/","assets/ayah_themes_private/",
+                   "assets/atlas/atlas_display_catalog_v1.json")
+          with zipfile.ZipFile(p) as z:
+              names=z.namelist()
+              assert not any(any(n.startswith(pre) for pre in private) for n in names), "PRIVATE MATERIAL IN STAGING!"
+              print("PASS: unsigned 1.17.22/code60; NO keystore; no private assets.")
+          PY
+      - name: Upload ONLY unsigned public-asset staging skeleton
+        uses: actions/upload-artifact@v4
+        with:
+          name: 11722-unsigned-public-assets-only-${{ github.sha }}
+          path: hifz-app/build-private114/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 1
