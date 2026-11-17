@@ -72,6 +72,10 @@ public final class CapHifdhTwoRealScreensInstrumentedTest {
                 assertTrue("Before An-Nas must have Acquisition", flag(t,"showSabqi"));
                 assertTrue("Before An-Nas must have Maîtrise", flag(t,"showTail"));
                 years[0]=(Integer)field(p,"year");
+                assertTrue("The home opens on the ACTUAL date, not a projected finish",
+                    (Boolean)field(p,"todayMode"));
+                assertTrue("Today-mode graph uses genuine QCF cursor",
+                    flag(t,"todayMode"));
                 assertEquals("BOOX home must fit without vertical scrolling",
                     View.VISIBLE,p.getVisibility());
             });
@@ -90,6 +94,7 @@ public final class CapHifdhTwoRealScreensInstrumentedTest {
                 assertTrue("Acquisition continues beyond Nas",
                     target<=(Integer)field(p,"lastForecastYear"));
                 set(p,"year",target);
+                set(p,"todayMode",false); // simulate navigation; never credit a lesson
                 render(p);
                 CapHifzTimelineView t=timeline(p);
                 assertNotNull(t);
@@ -135,7 +140,19 @@ public final class CapHifdhTwoRealScreensInstrumentedTest {
                     (android.widget.ListPopupWindow)field(p,"milestoneDropdown");
                 if (popup != null) popup.dismiss();
                 p.setDropdownPreviewForCapture(false);
+                android.widget.TextView today =
+                    (android.widget.TextView)field(p,"todayShortcut");
+                assertTrue("One touch Today button is enabled after future navigation",
+                    today.isEnabled());
+                assertTrue("Return to real present must be clickable",today.performClick());
+                assertTrue("Returned to real V6 date", (Boolean)field(p,"todayMode"));
+                assertEquals("Returned to present calendar year",HifzClock.today().getYear(),
+                    ((Integer)field(p,"year")).intValue());
+                assertTrue("BOOX ring must now indicate actual working QCF position",
+                    flag(timeline(p),"todayMode"));
             });
+            Independent11710ScreensInstrumentedTest.capture(
+                "cap-hifdh-full-home-return-today");
         }
     }
 }
