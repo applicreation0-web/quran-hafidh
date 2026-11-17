@@ -490,6 +490,16 @@ final class CapHifzPanel extends LinearLayout {
         if (todayMode) {
             if (direction < 0) return;
             todayMode = false;
+            if (shownCheckpoints.isEmpty()) {
+                CapHifzNavigation.Cursor next = CapHifzNavigation.move(year, 0, 1,
+                    today.getYear(), lastForecastYear, forecastCheckpointCounts());
+                if (next.year != year) {
+                    year = next.year;
+                    checkpointIndex = next.index;
+                    render();
+                    return;
+                }
+            }
             updateCheckpointLabel();
             return;
         }
