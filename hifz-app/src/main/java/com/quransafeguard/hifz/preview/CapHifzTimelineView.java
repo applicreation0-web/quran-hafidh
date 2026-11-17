@@ -470,13 +470,16 @@ final class CapHifzTimelineView extends View {
     private CapHifzForecast.Milestone touchedMilestone(boolean sabqi,
             float px, float py, float left, float width) {
         float row = verticalOffset() + (showSabqi && !sabqi ? laneSeparation() : 0f);
-        if (Math.abs(py - dp(row + trackCenter() + 15f)) > dp(21)) return null;
         float[] x = stations(left, width);
+        float globalY = dp(row + trackCenter() - 18f);
+        float annualY = dp(row + trackCenter() + 15f);
         LocalDate end = finish(sabqi);
-        if (end != null && Math.abs(px - x[3]) <= dp(10)) {
+        if (end != null && Math.abs(py - globalY) <= dp(20)
+                && Math.abs(px - x[3]) <= dp(21)) {
             VerseRef verse = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
             return new CapHifzForecast.Milestone(end, verse, CapHifzForecast.hizb(verse));
         }
+        if (Math.abs(py - annualY) > dp(21)) return null;
         List<CapHifzForecast.Milestone> annual = yearSurahFinishes(sabqi);
         float margin = dp(20);
         CapHifzForecast.Milestone nearest = null;
@@ -490,10 +493,7 @@ final class CapHifzTimelineView extends View {
             }
         }
         if (nearest != null) return nearest;
-        if (end != null && Math.abs(px - x[3]) <= dp(24)) {
-            VerseRef verse = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
-            return new CapHifzForecast.Milestone(end, verse, CapHifzForecast.hizb(verse));
-        }
+
         return null;
     }
 
