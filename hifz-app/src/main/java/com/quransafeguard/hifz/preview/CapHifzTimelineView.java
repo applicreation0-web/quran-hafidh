@@ -66,6 +66,7 @@ final class CapHifzTimelineView extends View {
     // Today is the CURRENT persisted QCF working position, not the end-of-year
     // scenario. No forecast milestone is falsely credited on this view.
     private boolean todayMode;
+    private final String forecastAccessibilityDescription;
 
     CapHifzTimelineView(Context context, GeometryRepository geometry,
             List<CapHifzForecast.Quarter> quarters, LocalDate start, boolean showSabqi,
@@ -108,9 +109,11 @@ final class CapHifzTimelineView extends View {
         }
         spoken.append("Un point noir représente une fin de sourate dans son parcours. ")
             .append("Le cercle extérieur indique la fin sélectionnée; ")
-            .append("touchez un point pour ouvrir son dernier verset dans le Mushaf. ")
+            .append("touchez un point pour le sélectionner. ")
+            .append("Ouvrez ensuite sa référence en dessous pour accéder au Mushaf. ")
             .append("Touchez un espace libre pour parcourir les jalons.");
-        setContentDescription(spoken.toString());
+        forecastAccessibilityDescription = spoken.toString();
+        setContentDescription(forecastAccessibilityDescription);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
         setClickable(true);
         setLayerType(View.LAYER_TYPE_SOFTWARE, null);
@@ -185,12 +188,31 @@ final class CapHifzTimelineView extends View {
         selectedDate = date;
         selectedSabqi = sabqi;
         selectedVerse = verse;
+        updateAccessibility();
         invalidate();
     }
 
     void setTodayMode(boolean enabled) {
         todayMode = enabled;
+        updateAccessibility();
         invalidate();
+    }
+
+    private void updateAccessibility() {
+        if (todayMode) {
+            setContentDescription(forecastAccessibilityDescription
+                + " Mode aujourd’hui : position de travail réelle, avant la prochaine "
+                + "ligne de QCF. Acquisition " + spokenVerse(actualSabqiVerse)
+                + (showTail ? ", Maîtrise " + spokenVerse(actualTailVerse) : "")
+                + ". Les fins de sourates futures restent des prévisions, non des acquis.");
+        } else if (selectedDate != null && selectedVerse != null) {
+            setContentDescription(forecastAccessibilityDescription
+                + " Jalon sélectionné sur la progression " + (selectedSabqi ? "Acquisition" : "Maîtrise")
+                + " : " + spokenVerse(selectedVerse) + ", fin estimée le "
+                + selectedDate.format(SHORT_DATE) + ".");
+        } else {
+            setContentDescription(forecastAccessibilityDescription);
+        }
     }
 
     private LocalDate windowStart() {
