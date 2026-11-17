@@ -240,7 +240,7 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("choice.date.format(FULL_DATE)")
             && panel.contains("checkpointDisplay(choice)")
             && timeline.contains("DateTimeFormatter.ofPattern(\"d MMM yyyy\"")
-            && timeline.contains("width * .88f"));
+            && timeline.contains("width * .86f"));
         assertTrue("Accessibility uses complete Quran positions, not Juz/Hizb numbers",
             timeline.contains("spokenVerse(point.verse)")
             && timeline.contains("QuranSurahNames.name(verse.getSurah())"));
