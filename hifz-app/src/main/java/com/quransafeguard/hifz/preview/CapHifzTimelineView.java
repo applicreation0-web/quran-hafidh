@@ -116,40 +116,46 @@ final class CapHifzTimelineView extends View {
     private float dp(float n) { return n * getResources().getDisplayMetrics().density; }
     private float sp(float n) { return n * getResources().getDisplayMetrics().scaledDensity; }
     /** Large E-Ink screens need readable labels rather than phone-sized text. */
-    private float labelScale() { return getWidth() >= dp(720) ? 1.55f : 1f; }
-    private float laneSeparation() {
-        // Two compact, genuinely separate lanes. Never stretch the gap to
-        // consume the whole E-Ink screen; that caused the large empty band.
-        float heightDp = getHeight() / getResources().getDisplayMetrics().density;
-        float wanted = labelScale() > 1f ? 190f : 126f;
-        return Math.min(wanted, Math.max(0f, heightDp - dateBaseline() - 24f));
+    private float labelScale() {
+        // Patrick Hand remains the sole French UI font. At Android 150%
+        // accessibility scaling, the previous 1.55x Canvas multiplier was
+        // another zoom, crushing two actual BOOX rails into each other.
+        float widthDp = getWidth() / getResources().getDisplayMetrics().density;
+        return widthDp >= 720f ? 1.13f : 1f;
     }
-    private float verticalOffset() {
-        // Centre the *content* inside the remaining BOOX height so spare
-        // screen real estate is balanced above and below, not between lanes.
-        float heightDp = getHeight() / getResources().getDisplayMetrics().density;
-        boolean doubleLane = showSabqi && (showTail || showMaintenance);
-        float content = (doubleLane ? laneSeparation() : 0f) + dateBaseline() + 16f;
-        return Math.max(0f, (heightDp - content) / 2f);
-    }
+
     private boolean soloAcquisition() {
         return showSabqi && !showTail && !showMaintenance;
     }
-    private float trackCenter() {
-        return (labelScale() > 1f ? 60f : TRACK_Y)
-            + (soloAcquisition() ? 18f : 0f);
+
+    private float laneSeparation() {
+        // Two complete, measured rows that NEVER overlap at 900x1200
+        // and also use the extra vertical room on 1404x1872.
+        float heightDp = getHeight() / getResources().getDisplayMetrics().density;
+        return Math.min(169f, Math.max(0f, heightDp * .50f));
     }
+
     private float titleBaseline() {
-        return (labelScale() > 1f ? 28f : 18f)
-            + (soloAcquisition() ? 6f : 0f);
+        return soloAcquisition() ? 21f : (labelScale() > 1f ? 22f : 15f);
     }
-    private float numberBaseline() {
-        return (labelScale() > 1f ? 110f : 64f)
-            + (soloAcquisition() ? 32f : 0f);
+
+    private float globalTrackBaseline() {
+        return soloAcquisition() ? 65f : (labelScale() > 1f ? 51f : 31f);
     }
-    private float dateBaseline() {
-        return (labelScale() > 1f ? 143f : 83f)
-            + (soloAcquisition() ? 42f : 0f);
+
+    private float annualTrackBaseline() {
+        return soloAcquisition() ? 109f : (labelScale() > 1f ? 96f : 58f);
+    }
+
+    private float captionBaseline() {
+        return soloAcquisition() ? 149f : (labelScale() > 1f ? 127f : 81f);
+    }
+
+    private float verticalOffset() {
+        float heightDp = getHeight() / getResources().getDisplayMetrics().density;
+        boolean dual = showSabqi && (showTail || showMaintenance);
+        float contentHeight = (dual ? laneSeparation() : 0f) + captionBaseline() + 5f;
+        return Math.max(0f, (heightDp - contentHeight) / 2f);
     }
 
     void setSelection(LocalDate date, boolean sabqi) {
@@ -348,95 +354,76 @@ final class CapHifzTimelineView extends View {
     private void drawLane(Canvas canvas, boolean sabqi, float row, float left, float width) {
         float top = dp(row);
         float[] x = stations(left, width);
-        float y = top + dp(trackCenter());
-        VerseRef current = sabqi ? actualSabqiVerse : actualTailVerse;
-        List<CapHifzForecast.Milestone> coming = nextMilestones(sabqi);
-        LocalDate targetDate = finish(sabqi);
-        // Final surah uses exactly the same Arabic title and typography as
-        // every previous stop. Ayah appears in the second line with the date.
-        String target = QuranSurahNames.rawName(sabqi
-            ? SabqiRoute.ROUTE_END.getSurah()
-            : ItqanRotationPolicy.TAIL_END.getSurah());
-        int finalAyah = sabqi ? SabqiRoute.ROUTE_END.getAyah()
-            : ItqanRotationPolicy.TAIL_END.getAyah();
-
-        drawFitted(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE",
-            left, top + dp(titleBaseline()), soloAcquisition() ? 17f : 13f,
-            INK, Paint.Align.LEFT, true, width * .46f);
+        float globalY = top + dp(globalTrackBaseline());
+        float annualY = top + dp(annualTrackBaseline());
         List<CapHifzForecast.Milestone> annual = yearSurahFinishes(sabqi);
         VerseRef yearEnd = projectedPositionAtYear(sabqi);
-        String yearEndLabel = yearEnd == null ? "position —"
-            : QuranSurahNames.rawName(yearEnd.getSurah()) + " v." + yearEnd.getAyah();
-        drawFitted(canvas, "Fin " + selectedYear + " : " + yearEndLabel,
-            left + width, top + dp(titleBaseline()), 11f, MID,
-            Paint.Align.RIGHT, false, width * .58f);
+        VerseRef terminal = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
+        LocalDate terminalDate = finish(sabqi);
+        String track = sabqi ? "ACQUISITION" : "MAÎTRISE";
+        String terminalText = QuranSurahNames.rawName(terminal.getSurah())
+            + " · v." + terminal.getAyah();
+        String yearEndText = yearEnd == null ? "—"
+            : QuranSurahNames.rawName(yearEnd.getSurah()) + " · v." + yearEnd.getAyah();
 
-        // Two deliberately different scales:
-        // upper rail = global QCF physical-line progression through selected year;
-        // lower rail = a magnified view of ALL surah endings in that year.
-        // This makes the 2029 -> 2037 progress visibly advance while keeping
-        // closely spaced short-surah milestones individually accessible.
-        float globalY = y - dp(18f);
-        float annualY = y + dp(15f);
-        float ratio = projectedProgress(sabqi);
-        float projectedX = x[0] + (x[3] - x[0]) * ratio;
-        stroke(FAINT, 1.2f, true);
+        // Header: real annual projected position. Never mistake a prediction
+        // for an acquired lesson, or show today's cursor as the year 2032.
+        drawFitted(canvas, track, left, top + dp(titleBaseline()),
+            soloAcquisition() ? 18f : 13f, INK, Paint.Align.LEFT, true, width * .43f);
+        drawFitted(canvas, "Fin " + selectedYear + " : " + yearEndText,
+            left + width, top + dp(titleBaseline()),
+            soloAcquisition() ? 13f : 10.5f, MID, Paint.Align.RIGHT, false, width * .53f);
+
+        // Global position: continuous real QCF-line progress up to the
+        // requested year, 2029 ... 2037. This is NOT the annual pin scale.
+        float fraction = projectedProgress(sabqi);
+        float projectedX = x[0] + (x[3] - x[0]) * fraction;
+        stroke(FAINT, 1.15f, true);
         canvas.drawLine(x[0], globalY, x[3], globalY, paint);
-        stroke(INK, 2.4f, false);
+        stroke(INK, soloAcquisition() ? 2.8f : 2.1f, false);
         canvas.drawLine(x[0], globalY, projectedX, globalY, paint);
-        filled(canvas, projectedX, globalY, 4.6f);
-        stroke(FAINT, 1.0f, true);
-        canvas.drawLine(x[0], annualY, x[3], annualY, paint);
-        paint.setPathEffect(null);
-        filled(canvas, x[0], annualY, 2.2f);
-        float markerMargin = dp(20);
-        for (int i = 0; i < annual.size(); i++) {
-            CapHifzForecast.Milestone point = annual.get(i);
-            float px = pinX(i, annual.size(), left, width, markerMargin);
-            boolean selected = selectedDate != null && selectedSabqi == sabqi
-                && selectedDate.equals(point.date)
-                && selectedVerse != null && selectedVerse.equals(point.verse);
-            filled(canvas, px, annualY, annual.size() > 45 ? 1.9f
-                : soloAcquisition() ? 4.2f : 3.0f);
-            if (selected) {
-                ring(canvas, px, annualY, labelScale() > 1f ? 10f : 8f, 1.6f);
-                filled(canvas, px, annualY, 3.6f);
-                stroke(INK, 1.1f, false);
-                canvas.drawLine(px, annualY + dp(9), px, annualY + dp(14), paint);
-            }
-        }
-        // The terminal diamond is always the canonical destination,
-        // independent of the selected year or number of yearly finishes.
+        filled(canvas, projectedX, globalY, soloAcquisition() ? 4.8f : 3.7f);
         goalDiamond(canvas, x[3], globalY);
 
-        float w = Math.min(x[1] - x[0], x[2] - x[1]) * .85f;
-        // The authentic current position is a surah and ayah, never a page.
-        drawFitted(canvas, current == null ? "Sourate —"
-                : QuranSurahNames.rawName(current.getSurah()),
-            x[0], top + dp(numberBaseline()), soloAcquisition() ? 18f : 15f,
-            INK, Paint.Align.LEFT, true, w);
-        drawFitted(canvas, current == null ? "verset —" : "verset " + current.getAyah(),
-            x[0], top + dp(dateBaseline()), 11.5f, MID, Paint.Align.LEFT, false, w);
-
-        for (int i = 0; i < Math.min(2, coming.size()); i++) {
-            float xx = x[i + 1];
-            String name = QuranSurahNames.rawName(coming.get(i).verse.getSurah());
-            String detail = "v." + coming.get(i).verse.getAyah() + " · "
-                + coming.get(i).date.format(SHORT_DATE);
-            drawFitted(canvas, name, xx, top + dp(numberBaseline()),
-                soloAcquisition() ? 18f : 15f,
-                i == 0 ? INK : MID, Paint.Align.CENTER, true, w);
-            drawFitted(canvas, detail, xx, top + dp(dateBaseline()), 11.5f, MID,
-                Paint.Align.CENTER, false, w);
+        // Annual zoom. Every dot is an actual surah FINISH in this year
+        // (not arbitrary Juz/Hizb milestones). The three concentric forms
+        // mark the automatically selected dated end of a specific surah.
+        stroke(FAINT, .85f, false);
+        canvas.drawLine(x[0] + dp(10), annualY, x[3] - dp(10), annualY, paint);
+        int selectedIndex = -1;
+        for (int i = 0; i < annual.size(); i++) {
+            CapHifzForecast.Milestone p = annual.get(i);
+            float px = pinX(i, annual.size(), left, width, dp(20));
+            boolean selected = selectedDate != null && selectedSabqi == sabqi
+                && selectedDate.equals(p.date) && selectedVerse != null
+                && selectedVerse.equals(p.verse);
+            if (selected) {
+                selectedIndex = i;
+                ring(canvas, px, annualY, 12f, 1.2f);
+                ring(canvas, px, annualY, 7.4f, 1.2f);
+                filled(canvas, px, annualY, 3.8f);
+            } else {
+                filled(canvas, px, annualY, annual.size() > 40 ? 1.7f : 3f);
+            }
         }
 
-        float lastW = (x[3] - x[2]) * .94f;
-        drawFitted(canvas, target, x[3], top + dp(numberBaseline()),
-            soloAcquisition() ? 18f : 15f, INK,
-            Paint.Align.RIGHT, true, lastW);
-        drawFitted(canvas, "v." + finalAyah + " · "
-                + (targetDate != null ? targetDate.format(SHORT_DATE) : "date —"),
-            x[3], top + dp(dateBaseline()), 11.5f, MID, Paint.Align.RIGHT, false, lastW);
+        // The selected checkpoint has ONE clear date label, rather than
+        // several 15-line/QCF captions overlapping both rails at BOOX 150%.
+        String annualCaption;
+        if (annual.isEmpty()) {
+            annualCaption = "Aucune fin de sourate prévue en " + selectedYear;
+        } else if (selectedIndex >= 0) {
+            CapHifzForecast.Milestone selected = annual.get(selectedIndex);
+            annualCaption = "Fin estimée " + QuranSurahNames.rawName(selected.verse.getSurah())
+                + " · v." + selected.verse.getAyah()
+                + " · " + selected.date.format(SHORT_DATE)
+                + "   (" + (selectedIndex + 1) + "/" + annual.size() + ")";
+        } else {
+            annualCaption = annual.size() + " fins de sourates en " + selectedYear;
+        }
+        drawFitted(canvas, annualCaption, left, top + dp(captionBaseline()),
+            soloAcquisition() ? 13f : 10.5f, MID,
+            Paint.Align.LEFT, false, width * .95f);
     }
 
     /** Post-Nās is a continuing activity, NOT a second forecast rail.
@@ -460,31 +447,29 @@ final class CapHifzTimelineView extends View {
     private CapHifzForecast.Milestone touchedMilestone(boolean sabqi,
             float px, float py, float left, float width) {
         float row = verticalOffset() + (showSabqi && !sabqi ? laneSeparation() : 0f);
+        float globalY = dp(row + globalTrackBaseline());
+        float annualY = dp(row + annualTrackBaseline());
         float[] x = stations(left, width);
-        float globalY = dp(row + trackCenter() - 18f);
-        float annualY = dp(row + trackCenter() + 15f);
+
         LocalDate end = finish(sabqi);
-        if (end != null && Math.abs(py - globalY) <= dp(20)
-                && Math.abs(px - x[3]) <= dp(21)) {
+        if (end != null && Math.abs(py - globalY) <= dp(15)
+                && Math.abs(px - x[3]) <= dp(15)) {
             VerseRef verse = sabqi ? SabqiRoute.ROUTE_END : ItqanRotationPolicy.TAIL_END;
             return new CapHifzForecast.Milestone(end, verse, CapHifzForecast.hizb(verse));
         }
-        if (Math.abs(py - annualY) > dp(21)) return null;
+        if (Math.abs(py - annualY) > dp(17)) return null;
         List<CapHifzForecast.Milestone> annual = yearSurahFinishes(sabqi);
-        float margin = dp(20);
+        float nearestDistance = dp(16);
         CapHifzForecast.Milestone nearest = null;
-        float nearestDistance = dp(24);
         for (int i = 0; i < annual.size(); i++) {
-            float target = pinX(i, annual.size(), left, width, margin);
+            float target = pinX(i, annual.size(), left, width, dp(20));
             float distance = Math.abs(px - target);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
                 nearest = annual.get(i);
             }
         }
-        if (nearest != null) return nearest;
-
-        return null;
+        return nearest;
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
