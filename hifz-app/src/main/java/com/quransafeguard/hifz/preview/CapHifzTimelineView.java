@@ -413,10 +413,12 @@ final class CapHifzTimelineView extends View {
         filled(canvas, projectedX, globalY, soloAcquisition() ? 4.8f : 3.7f);
         goalDiamond(canvas, x[3], globalY);
         String goalDate = terminalDate == null ? "date —" : terminalDate.format(SHORT_DATE);
+        // Leave a real gap below/left of the final diamond: the last
+        // digit of a four-digit year must never sit underneath the symbol.
         drawFitted(canvas, "Objectif · " + terminalText + " · " + goalDate,
-            x[3], globalY + dp(labelScale() > 1f ? 23f : 20f),
+            x[3] - dp(16), globalY + dp(labelScale() > 1f ? 31f : 28f),
             soloAcquisition() ? 14f : 11f,
-            MID, Paint.Align.RIGHT, false, width * .88f);
+            MID, Paint.Align.RIGHT, false, width * .86f);
 
         // Annual zoom. Every dot is an actual surah FINISH in this year
         // (not arbitrary Juz/Hizb milestones). The three concentric forms
