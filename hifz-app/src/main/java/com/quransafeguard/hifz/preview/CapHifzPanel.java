@@ -301,7 +301,7 @@ final class CapHifzPanel extends LinearLayout {
         labelNavigator(previousYear, "‹", "");
         previousYearNavigator = previousYear;
         TextView yearBadge = Ui.text(context, "", spaciousBoox() ? 18f : 16f, true);
-        String yearText = "ANNÉE\\n" + year;
+        String yearText = "ANNÉE\n" + year;
         android.text.SpannableString markedYear = new android.text.SpannableString(yearText);
         markedYear.setSpan(new android.text.style.RelativeSizeSpan(.63f), 0, 5,
             android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -503,7 +503,7 @@ final class CapHifzPanel extends LinearLayout {
         String track = choice.sabqi ? "Acquisition" : "Maîtrise";
         checkpointLabel.setText(dropdownPreview
             ? "JALONS ▾  " + track + " · " + (checkpointIndex + 1)
-                + "/" + shownCheckpoints.size() + "\\n"
+                + "/" + shownCheckpoints.size() + "\n"
                 + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
                 + choice.verse.getAyah() + " · " + choice.date.format(FULL_DATE)
             : checkpointDisplay(choice));
@@ -523,7 +523,7 @@ final class CapHifzPanel extends LinearLayout {
         // Line 1 identifies which frise owns the selected surah finish;
         // line 2 is its actual canonical final ayah and projected date.
         return lane + " · jalon " + (checkpointIndex + 1) + "/"
-            + shownCheckpoints.size() + " · fin prévue\\n"
+            + shownCheckpoints.size() + " · fin prévue\n"
             + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
             + choice.verse.getAyah() + " · " + choice.date.format(FULL_DATE);
     }
