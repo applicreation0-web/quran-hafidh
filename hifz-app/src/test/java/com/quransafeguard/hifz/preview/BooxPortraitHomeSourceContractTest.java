@@ -160,7 +160,7 @@ public final class BooxPortraitHomeSourceContractTest {
             timeline.contains("private boolean soloAcquisition()")
             && timeline.contains("showSabqi && !showTail && !showMaintenance")
             && timeline.contains("private float soloSpan()")
-            && timeline.contains("Math.max(100f, Math.min(340f, h - 26f))")
+            && timeline.contains("Math.max(100f, Math.min(295f, h - 28f))")
             && timeline.contains("(soloSpan() - 22f) * .27f")
             && timeline.contains("(soloSpan() - 22f) * .72f")
             && timeline.contains("(soloSpan() - 22f) * .95f")
