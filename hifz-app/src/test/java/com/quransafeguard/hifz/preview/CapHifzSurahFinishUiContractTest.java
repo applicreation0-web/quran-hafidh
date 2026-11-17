@@ -49,7 +49,8 @@ public final class CapHifzSurahFinishUiContractTest {
         String forecast = java("CapHifzForecast");
         assertTrue(panel.contains("CapHifzForecast.projectedTailFinishedBeforeYear(quarters, year)"));
         assertTrue(panel.contains("boolean showMastery = tailForecast && !projectedPostNas;"));
-        assertTrue(panel.contains("boolean showEntretien = postNas || projectedPostNas;"));
+        assertTrue(panel.contains("boolean showEntretien = false;"));
+        assertTrue(java("CapHifzTimelineView").contains("soloAcquisition()"));
         assertTrue(panel.contains("forecastSabqi || tailForecast || postNas"));
         assertTrue(panel.contains("PROJECTION_ATTENDANCE_PERCENT = 90"));
         assertFalse(forecast.contains("prefs.edit()"));
