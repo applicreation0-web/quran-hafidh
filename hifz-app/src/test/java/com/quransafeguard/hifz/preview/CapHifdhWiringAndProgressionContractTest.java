@@ -54,7 +54,9 @@ public final class CapHifdhWiringAndProgressionContractTest {
             && panel.contains("prefs.itqanPostNasMaintenance()")
             && panel.contains("prefs.juzMaintenance().read()")
             && panel.contains("PROJECTION_ATTENDANCE_PERCENT / 100.0")
-            && panel.contains("openMushaf(milestone.verse)"));
+            && panel.contains("selectForecastMilestone(sabqi, milestone)")
+            && panel.contains("openMushaf(shownCheckpoints.get(checkpointIndex).verse)")
+            && panel.contains("private void goToday()"));
         assertTrue(prefs.contains("migrateLegacySabqiEndDefault()")
             && prefs.contains("SabqiRoute.ROUTE_END.toString()"));
         assertTrue(home.contains("boolean afterNas=prefs.itqanPostNasMaintenance()")
