@@ -261,7 +261,7 @@ public final class BooxPortraitHomeSourceContractTest {
             panel.contains("shownCheckpoints = checkpointsForYear(quarters, year)")
             && panel.contains("ignoredYear -> nextCheckpoint()")
             && panel.contains("openMushaf(shownCheckpoints.get(checkpointIndex).verse)")
-            && panel.contains("checkpointLabel.setContentDescription(\"Ouvrir le Mushaf depuis Cap Hifdh")); 
+            && panel.contains("checkpointLabel.setContentDescription((dropdownPreview")); 
         assertFalse("Cap Hifdh itself must never create an Android dialog",
             panel.contains("new AlertDialog.Builder("));
         assertTrue("Only one fixed 90% target; no choice row and no mutable scenario",
