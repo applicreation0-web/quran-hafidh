@@ -1,0 +1,28 @@
+name: Fetch official Android apksigner verifier for LOCAL final private APK audit
+on:
+  push:
+    branches:
+      - staging/haafidh-11722-unsigned-for-private-local-signing
+    paths:
+      - .github/workflows/hifz-11722-public-apksigner-tool.yml
+permissions:
+  contents: read
+jobs:
+  public-sdk-tool:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install official Android build-tools 36.0.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "build-tools;36.0.0"
+          cp "$SDK_ROOT/build-tools/36.0.0/lib/apksigner.jar" ./apksigner-36.0.0.jar
+          test -s ./apksigner-36.0.0.jar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: official-apksigner-36.0.0-public-tool-only
+          path: apksigner-36.0.0.jar
+          retention-days: 1
