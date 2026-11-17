@@ -54,15 +54,19 @@ public final class CapHifdhWiringAndProgressionContractTest {
             && panel.contains("prefs.itqanPostNasMaintenance()")
             && panel.contains("prefs.juzMaintenance().read()")
             && panel.contains("PROJECTION_ATTENDANCE_PERCENT / 100.0")
-            && panel.contains("openMushaf(milestone.verse)"));
+            && panel.contains("selectForecastMilestone(sabqi, milestone)")
+            && panel.contains("openMushaf(shownCheckpoints.get(checkpointIndex).verse)")
+            && panel.contains("private void goToday()"));
         assertTrue(prefs.contains("migrateLegacySabqiEndDefault()")
             && prefs.contains("SabqiRoute.ROUTE_END.toString()"));
         assertTrue(home.contains("boolean afterNas=prefs.itqanPostNasMaintenance()")
             && home.contains("afterNas ? \"Maintien\" : \"Stabiliser\"")
             && home.contains("prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE)"));
-        assertTrue(view.contains("QuranSurahNames.rawName(coming.get(i).verse.getSurah())")
-            && view.contains("coming.get(i).verse.getAyah()")
-            && view.contains("drawMaintenanceLane(canvas"));
+        assertTrue(view.contains("ring(canvas, px, annualY, 12f")
+            && view.contains("projectedProgress(sabqi)")
+            && view.contains("drawMaintenanceLane(canvas")
+            && panel.contains("choice.date.format(FULL_DATE)")
+            && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
         assertFalse(panel.contains("completeDailyLesson("));
     }
 }

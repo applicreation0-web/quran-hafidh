@@ -61,6 +61,102 @@ public final class CapHifzForecastTest {
             new VerseRef(49, 1), QuranCanon.INSTANCE.next(new VerseRef(48, 29)));
     }
 
+    @Test public void acquisitionYearProgressKeepsAdvancingAfterItqanReachesAnNas()
+            throws Exception {
+        GeometryRepository geo = geometry();
+        List<CapHifzForecast.Quarter> rows = CapHifzForecast.quarters(
+            geo, LocalDate.of(2026, 11, 15),
+            geo.firstLineIndex(new VerseRef(2, 125)),
+            geo.firstLineIndex(new VerseRef(49, 1)), false,
+            day -> WeeklyProgramPolicy.actionFor(day.getDayOfWeek(),
+                HifzPrefs.WeeklyProgram.MANUAL_SEVEN, 3),
+            true, true, List.of(), Set.of(), null, .9);
+        int nasYear = -1, fathYear = -1;
+        for (CapHifzForecast.Quarter q : rows) {
+            if (q.tailFinish != null) nasYear = q.tailFinish.getYear();
+            if (q.sabqiFinish != null) fathYear = q.sabqiFinish.getYear();
+        }
+        assertTrue("Itqan should finish before Acquisition in this QCF fixture",
+            nasYear > 2026 && fathYear > nasYear);
+        int previously = -1;
+        boolean advancedAfterNas = false;
+        for (int year = 2026; year <= fathYear; year++) {
+            VerseRef position = CapHifzForecast.projectedPositionAtYear(rows, year,
+                true, new VerseRef(2, 125));
+            assertNotNull(position);
+            int ordinal = GeometryRepository.ordinal(position);
+            assertTrue("Acquisition must never reverse as the forecast year changes",
+                ordinal >= previously);
+            if (year > nasYear && previously >= 0 && ordinal > previously)
+                advancedAfterNas = true;
+            previously = ordinal;
+        }
+        assertTrue("Acquisition stays advancing after An-Nas; not frozen in 2029",
+            advancedAfterNas);
+        assertEquals("The last predicted Acquisition year ends at Al-Fath 48:29",
+            SabqiRoute.ROUTE_END, CapHifzForecast.projectedPositionAtYear(rows,
+                fathYear, true, new VerseRef(2, 125)));
+        assertEquals("Maîtrise finishes at An-Nas regardless of later Acquisition years",
+            ItqanRotationPolicy.TAIL_END,
+            CapHifzForecast.projectedPositionAtYear(rows, fathYear, false,
+                new VerseRef(49, 1)));
+    }
+
+    @Test public void everySurahFinishIsOnceAndOnlyOnceOnItsOwnProjectedTrack()
+            throws Exception {
+        GeometryRepository geo = geometry();
+        List<CapHifzForecast.Quarter> rows = CapHifzForecast.quarters(
+            geo, LocalDate.of(2026, 11, 15),
+            geo.firstLineIndex(new VerseRef(2, 1)),
+            geo.firstLineIndex(new VerseRef(49, 1)), false,
+            date -> WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
+                HifzPrefs.WeeklyProgram.MANUAL_SEVEN, 3),
+            true, true, List.of(), Set.of(), null, .9);
+        assertTrue(rows.get(rows.size() - 1).sabqiComplete);
+        assertTrue(rows.get(rows.size() - 1).firstTailComplete);
+        Set<Integer> sabqi = new LinkedHashSet<>();
+        Set<Integer> itqan = new LinkedHashSet<>();
+        int prevSabqi = -1, prevItqan = -1;
+        for (CapHifzForecast.Quarter q : rows) {
+            for (CapHifzForecast.Milestone m : q.sabqiSurahFinishes) {
+                int ordinal = GeometryRepository.ordinal(m.verse);
+                assertTrue("Acquisition fins strictly canonical", ordinal > prevSabqi);
+                prevSabqi = ordinal;
+                int surah = m.verse.getSurah();
+                assertTrue("Acquisition surah range", surah >= 2 && surah <= 48);
+                assertEquals("Exact final verse of acquisition sourate",
+                    QuranCanon.INSTANCE.fromOrdinal(
+                        GeometryRepository.ordinal(new VerseRef(surah + 1, 1)) - 1),
+                    m.verse);
+                assertTrue("No duplicated Acquisition ending", sabqi.add(surah));
+                assertFalse(m.date.isAfter(q.date));
+            }
+            for (CapHifzForecast.Milestone m : q.tailSurahFinishes) {
+                int ordinal = GeometryRepository.ordinal(m.verse);
+                assertTrue("Maîtrise fins strictly canonical", ordinal > prevItqan);
+                prevItqan = ordinal;
+                int surah = m.verse.getSurah();
+                assertTrue("Maîtrise surah range", surah >= 49 && surah <= 114);
+                VerseRef exact = surah == 114 ? ItqanRotationPolicy.TAIL_END
+                    : QuranCanon.INSTANCE.fromOrdinal(
+                        GeometryRepository.ordinal(new VerseRef(surah + 1, 1)) - 1);
+                assertEquals("Exact final verse of Maîtrise sourate", exact, m.verse);
+                assertTrue("No duplicated Maîtrise ending", itqan.add(surah));
+                assertFalse(m.date.isAfter(q.date));
+            }
+        }
+        assertEquals("47 surahs from Al-Baqarah through Al-Fath", 47, sabqi.size());
+        assertEquals("66 surahs from Al-Hujurat through An-Nas", 66, itqan.size());
+        assertEquals("Every one of the 113 planned surah finishes is represented",
+            113, sabqi.size() + itqan.size());
+        assertEquals(new VerseRef(48, 29),
+            rows.stream().flatMap(q -> q.sabqiSurahFinishes.stream())
+                .reduce((a, b) -> b).orElseThrow().verse);
+        assertEquals(new VerseRef(114, 6),
+            rows.stream().flatMap(q -> q.tailSurahFinishes.stream())
+                .reduce((a, b) -> b).orElseThrow().verse);
+    }
+
     @Test public void canonicalJuzAndHizbBoundariesMatchMushaf() {
         assertEquals(1, CapHifzForecast.juz(new VerseRef(2,125)));
         assertEquals(2, CapHifzForecast.hizb(new VerseRef(2,125)));

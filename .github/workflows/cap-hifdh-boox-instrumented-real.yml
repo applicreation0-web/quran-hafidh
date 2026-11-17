@@ -1,0 +1,65 @@
+name: BOOX REAL screenshots via instrumented Android UI before after Nas
+on:
+  push:
+    branches:
+      - fix/cap-hifdh-forecast-navigation-20261116
+  workflow_dispatch:
+
+jobs:
+  android-photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android build dependencies
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Compile real APK and Android UI instrumentation
+        run: gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleDebugAndroidTest --stacktrace
+      - name: Enable hardware virtualization for actual Android emulator
+        run: |
+          test -c /dev/kvm
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
+          sudo chmod u+rw /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Real Android screenshots of both full BOOX homes
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
+          script: |
+            set -e
+            adb shell wm size 1404x1872
+            adb shell wm density 240
+            adb shell settings put system font_scale 1.5
+            mkdir -p cap-hifdh-instrumented-real
+            adb install -r "$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' | head -1)"
+            adb install -r "$(find hifz-app/build/outputs/apk/androidTest/debug -type f -name '*.apk' | head -1)"
+            adb shell pm list instrumentation | tee cap-hifdh-instrumented-real/instrumentation.txt
+            adb shell am instrument -w -e class com.quransafeguard.hifz.preview.CapHifdhTwoRealScreensInstrumentedTest "$(sed -n 's/^instrumentation:\([^ ]*\) (target=com.quransafeguard.hifz.ibnkathirtest).*/\1/p' cap-hifdh-instrumented-real/instrumentation.txt | head -1 | tr -d '\r')" | tee cap-hifdh-instrumented-real/result.txt
+            grep -Eq 'OK \(1 test\)' cap-hifdh-instrumented-real/result.txt
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-before-nas.png cap-hifdh-instrumented-real/01-avant-nas-reel.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-after-nas.png cap-hifdh-instrumented-real/02-apres-nas-reel.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-after-nas-dropdown-closed.png cap-hifdh-instrumented-real/03-apres-nas-menu-deroulant-ferme.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-after-nas-dropdown-open.png cap-hifdh-instrumented-real/04-apres-nas-menu-deroulant-ouvert.png
+            adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-return-today.png cap-hifdh-instrumented-real/05-retour-aujourdhui-position-reelle.png
+            file cap-hifdh-instrumented-real/*.png
+      - name: Store actual emulator screenshots and instrumented result
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cap-hifdh-before-after-nas-real-android-ui
+          path: cap-hifdh-instrumented-real/
+          if-no-files-found: warn

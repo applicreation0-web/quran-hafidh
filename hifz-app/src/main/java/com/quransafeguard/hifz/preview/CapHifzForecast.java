@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.preview;
 
 import com.quransafeguard.hifz.core.CadenceAction;
 import com.quransafeguard.hifz.core.VerseRef;
+import com.quransafeguard.hifz.core.QuranCanon;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,6 +35,9 @@ final class CapHifzForecast {
         final boolean firstTailComplete;
         final List<Milestone> sabqiMilestones;
         final List<Milestone> tailMilestones;
+        // Every surah FINISH is a selectable annual marker on its own track.
+        final List<Milestone> sabqiSurahFinishes;
+        final List<Milestone> tailSurahFinishes;
         final LocalDate sabqiFinish;
         final LocalDate tailFinish;
 
@@ -45,6 +49,14 @@ final class CapHifzForecast {
         Quarter(LocalDate date, VerseRef sabqi, VerseRef itqan, boolean sabqiComplete,
                 boolean firstTailComplete, List<Milestone> sabqiMilestones, List<Milestone> tailMilestones,
                 LocalDate sabqiFinish, LocalDate tailFinish) {
+            this(date, sabqi, itqan, sabqiComplete, firstTailComplete,
+                sabqiMilestones, tailMilestones, List.of(), List.of(), sabqiFinish, tailFinish);
+        }
+
+        Quarter(LocalDate date, VerseRef sabqi, VerseRef itqan, boolean sabqiComplete,
+                boolean firstTailComplete, List<Milestone> sabqiMilestones, List<Milestone> tailMilestones,
+                List<Milestone> sabqiSurahFinishes, List<Milestone> tailSurahFinishes,
+                LocalDate sabqiFinish, LocalDate tailFinish) {
             this.date = date;
             this.sabqi = sabqi;
             this.itqan = itqan;
@@ -52,6 +64,8 @@ final class CapHifzForecast {
             this.firstTailComplete = firstTailComplete;
             this.sabqiMilestones = List.copyOf(sabqiMilestones);
             this.tailMilestones = List.copyOf(tailMilestones);
+            this.sabqiSurahFinishes = List.copyOf(sabqiSurahFinishes);
+            this.tailSurahFinishes = List.copyOf(tailSurahFinishes);
             this.sabqiFinish = sabqiFinish;
             this.tailFinish = tailFinish;
         }
@@ -69,6 +83,25 @@ final class CapHifzForecast {
     }
 
     private CapHifzForecast() {}
+
+    /** The projected year-end cursor moves with the requested forecast year,
+     * independently on each route, including years AFTER An-Nās completion.
+     * Pure read-only presentation helper: nothing is credited or persisted. */
+    static VerseRef projectedPositionAtYear(List<Quarter> quarters, int year,
+            boolean acquisition, VerseRef actualPosition) {
+        VerseRef position = actualPosition;
+        for (Quarter q : quarters) {
+            if (q.date.getYear() > year) break;
+            if (acquisition) {
+                if (q.sabqi != null) position = q.sabqi;
+            } else if (q.firstTailComplete) {
+                position = ItqanRotationPolicy.TAIL_END;
+            } else if (q.itqan != null) {
+                position = q.itqan;
+            }
+        }
+        return position;
+    }
 
     static List<Quarter> quarters(GeometryRepository geometry, LocalDate today,
             int nextSabqiLine, int nextItqanLine, boolean tailComplete,
@@ -92,11 +125,17 @@ final class CapHifzForecast {
         List<Milestone> tailBoundaries = boundaries(geometry, 49, geometry.lineCount() - 1);
         int sabqiBoundary = firstPendingBoundary(geometry, sabqiBoundaries, sabqiCursor);
         int tailBoundary = firstPendingBoundary(geometry, tailBoundaries, nextItqanLine);
+        List<Milestone> sabqiSurahBounds = surahEndBoundaries(geometry, 2, 48);
+        List<Milestone> tailSurahBounds = surahEndBoundaries(geometry, 49, 114);
+        int sabqiSurahBoundary = firstPendingBoundary(geometry, sabqiSurahBounds, sabqiCursor);
+        int tailSurahBoundary = firstPendingBoundary(geometry, tailSurahBounds, nextItqanLine);
         // At the minimum displayed attendance, even one Sabqi slot per week covers
         // the entire route within this bound. Unreachable routes remain open.
         for (int i = 0; i < 240; i++) {
             List<Milestone> sabqiMilestones = new ArrayList<>();
             List<Milestone> tailMilestones = new ArrayList<>();
+            List<Milestone> sabqiSurahFinishes = new ArrayList<>();
+            List<Milestone> tailSurahFinishes = new ArrayList<>();
             LocalDate sabqiFinish = null;
             LocalDate tailFinish = null;
             while (!day.isAfter(date)) {
@@ -105,6 +144,8 @@ final class CapHifzForecast {
                         && attended(++sabqiOpportunities, percent)) {
                     sabqiCursor = geometry.fiveLineBlock(sabqiCursor, limit).endLineIndex + 1;
                     sabqiBoundary = crossings(geometry, sabqiBoundaries, sabqiBoundary, sabqiCursor, day, sabqiMilestones);
+                    sabqiSurahBoundary = crossings(geometry, sabqiSurahBounds,
+                        sabqiSurahBoundary, sabqiCursor, day, sabqiSurahFinishes);
                     if (sabqiCursor > limit) sabqiFinish = day;
                 }
                 if (forecastTail && !tail.complete && action == CadenceAction.STABILIZATION
@@ -112,6 +153,8 @@ final class CapHifzForecast {
                     tail.advance(day);
                     int covered = tail.position == null ? -1 : geometry.lastLineIndex(tail.position);
                     tailBoundary = crossings(geometry, tailBoundaries, tailBoundary, covered + 1, day, tailMilestones);
+                    tailSurahBoundary = crossings(geometry, tailSurahBounds,
+                        tailSurahBoundary, covered + 1, day, tailSurahFinishes);
                     if (tail.complete) tailFinish = day;
                 }
                 day = day.plusDays(1);
@@ -120,11 +163,29 @@ final class CapHifzForecast {
             VerseRef sabqi = sabqiDone ? SabqiRoute.ROUTE_END
                 : lastCompleteVerse(geometry, sabqiCursor - 1);
             rows.add(new Quarter(date, sabqi, tail.complete ? null : tail.position, sabqiDone, tail.complete,
-                sabqiMilestones, tailMilestones, sabqiFinish, tailFinish));
+                sabqiMilestones, tailMilestones,
+                sabqiSurahFinishes, tailSurahFinishes, sabqiFinish, tailFinish));
             if ((sabqiDone || !forecastSabqi) && (tail.complete || !forecastTail)) break;
             date = date.plusDays(1).plusMonths(3).minusDays(1);
         }
         return Collections.unmodifiableList(rows);
+    }
+
+    /** Canonical final ayah for EACH sourate in the relevant route; no Fatihah or
+     * guessed completion date. A mark is dated only after its final QCF line
+     * is actually crossed in the projection. */
+    private static List<Milestone> surahEndBoundaries(GeometryRepository geometry,
+            int firstSurah, int lastSurah) {
+        ArrayList<Milestone> ends = new ArrayList<>();
+        for (int surah = firstSurah; surah <= lastSurah; surah++) {
+            VerseRef end = surah == 114 ? ItqanRotationPolicy.TAIL_END
+                : QuranCanon.INSTANCE.fromOrdinal(
+                    GeometryRepository.ordinal(new VerseRef(surah + 1, 1)) - 1);
+            if (end.getSurah() != surah || geometry.lastLineIndex(end) < 0)
+                throw new IllegalStateException("Invalid canonical end of surah " + surah);
+            ends.add(new Milestone(null, end, hizb(end)));
+        }
+        return ends;
     }
 
     private static List<Milestone> boundaries(GeometryRepository geometry, int firstSurah, int lastLine) {

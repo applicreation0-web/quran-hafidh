@@ -207,17 +207,50 @@ def verify_cap_milestone_opens_mushaf(tag):
     tap(find_control(home, lambda value: value == "Quitter la consultation des acquis"))
     home = hierarchy(f"{tag}-cap-inline-return", lambda tree:
         find_control(tree, lambda value:
+            value.startswith("Situation réelle au ")) is not None)
+    if find_control(home, lambda value: value.startswith("Situation réelle au ")) is None:
+        raise AssertionError("Today must represent real persisted QCF position")
+    first_step = find_control(home, lambda value: value == "Jalon prévisionnel suivant")
+    if first_step is None or first_step.get("enabled") != "true":
+        raise AssertionError("Forecast must be reachable from Today without credit")
+    tap(first_step)
+    home = hierarchy(f"{tag}-cap-first-forecast", lambda tree:
+        find_control(tree, lambda value:
             value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :")) is not None)
     selected = find_control(home, lambda value:
         value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
     if selected is None:
-        raise AssertionError("Missing inline, directly clickable checkpoint")
+        raise AssertionError("First forecast milestone unavailable after Today")
     graph = find_control(home, lambda value:
         value.startswith("Feuille de route prévisionnelle interactive"))
     if graph is None:
         raise AssertionError("Missing interactive Cap Hifdh annual ribbon")
-    # Touch empty lower timeline space to advance a checkpoint in place.
-    # Date/Juz details appear in the SAME fixed-height home row.
+    # Single chevrons now visibly browse forecast milestones.
+    # Double chevrons remain reserved for calendar years.
+    forward = find_control(home, lambda value: value == "Jalon prévisionnel suivant")
+    backward = next((node for node in home.iter("node")
+        if node.get("package") == PACKAGE
+        and "Jalon prévisionnel précédent" in names(node) and bounds(node)), None)
+    next_year = find_control(home, lambda value: value == "Prévision : année suivante")
+    if forward is None or backward is None or next_year is None:
+        raise AssertionError("Missing year/step controls on Cap Hifdh")
+    # At the first forecast checkpoint, going backward is correctly disabled.
+    if backward.get("enabled") == "true":
+        raise AssertionError("Initial step-back arrow must be disabled")
+    selected_before = " ".join(names(selected))
+    tap(forward)
+    home = hierarchy(f"{tag}-cap-step-chevron", lambda tree:
+        find_control(tree, lambda value:
+            value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :")) is not None)
+    selected_after = find_control(home, lambda value:
+        value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
+    if selected_after is None or " ".join(names(selected_after)) == selected_before:
+        raise AssertionError("Step chevron did not navigate to a new forecast milestone")
+    diagnostics(f"{tag}-cap-step-chevron")
+
+    # Touch empty timeline ink: the same step cursor advances without popup.
+    graph = find_control(home, lambda value:
+        value.startswith("Feuille de route prévisionnelle interactive"))
     x1, y1, x2, y2 = bounds(graph)
     adb("shell", "input", "tap", str((x1 + x2) // 2), str(y2 - 5))
     home = hierarchy(f"{tag}-cap-inline-step", lambda tree:
@@ -255,57 +288,105 @@ def verify_post_nas_forecast_year(tag):
     timeline the Maîtrise progress lane must be absent, not merely empty.
     It is NOT a real user completion or a fictitious maintenance Juz.
     """
-    for year in range(2027, 2032):
-        before = hierarchy(f"{tag}-cap-before-{year}")
-        arrow = find_control(before, lambda label:
-            label == "Année suivante de Cap Hifdh")
+    # Previous real Mushaf/return checks may have changed the selected year.
+    # Read the actual accessible year; do not blindly tap five more years.
+    current = None
+    for attempt in range(30):
+        root = hierarchy(f"{tag}-cap-before-2031-step-{attempt}")
+        graph = find_control(root, lambda label:
+            label.startswith("Feuille de route prévisionnelle interactive "))
+        if graph is None:
+            raise AssertionError("Missing actual BOOX Cap Hifdh graph")
+        match = re.search(r"interactive (\d{4})", " ".join(names(graph)))
+        if not match:
+            raise AssertionError("Forecast year inaccessible from live Android graph")
+        current = int(match.group(1))
+        if current == 2031:
+            break
+        arrow_label = ("Prévision : année suivante" if current < 2031
+                       else "Prévision : année précédente")
+        arrow = find_control(root, lambda label: label == arrow_label)
         if arrow is None:
-            raise AssertionError("Cap Hifdh year navigation stopped before 2031")
+            raise AssertionError(f"Cap Hifdh year navigation blocked at {current}")
         tap(arrow)
+    else:
+        raise AssertionError(f"Cannot navigate BOOX Cap Hifdh to 2031, last={current}")
     root = hierarchy(f"{tag}-cap-hifdh-post-nas-2031", lambda tree:
         find_control(tree, lambda label:
             label.startswith("Feuille de route prévisionnelle interactive 2031")) is not None)
     graph = find_control(root, lambda label:
         label.startswith("Feuille de route prévisionnelle interactive 2031"))
     spoken = " ".join(names(graph))
-    if "Entretien : cycle sans échéance" not in spoken:
-        raise AssertionError("After projected An-Nās, Entretien is missing in 2031")
-    if "Maîtrise, position de travail" in spoken or "Objectif final An-Nās" in spoken:
-        raise AssertionError("The 2031 Cap Hifdh still draws a finished Maîtrise lane")
+    if "Entretien : cycle sans échéance" in spoken:
+        raise AssertionError("After An-Nās, the second frise must disappear entirely")
+    if "Maîtrise," in spoken or "Objectif final An-Nās" in spoken:
+        raise AssertionError("The 2031 Cap Hifdh still exposes the finished Maîtrise lane")
+    if "Acquisition," not in spoken:
+        raise AssertionError("Acquisition must remain visible and navigable after An-Nās")
     if any(node.get("scrollable") == "true" for node in root.iter("node")):
         raise AssertionError("After projected An-Nās, BOOX home must stay unscrolled")
     diagnostics(f"{tag}-cap-hifdh-post-nas-2031")
 
 
 def verify_direct_cap_milestone_taps(tag, density):
-    """Tap EVERY future Juz/Hizb icon plus both terminal diamonds on the
-    actual Canvas surface. Validate Activity navigation and a nonblank QCF page.
-    No optimistic credit, mocked timeline click, or selector fallback."""
+    """Tap the first, middle and last ACTUAL projected surah endings on
+    each BOOX track, plus both terminal diamonds. Never test stale
+    hard-coded Juz/Hizb x-coordinates or infer Hifdh credits."""
     scale = density / 160.0
-    for lane, station in ((0, 1), (0, 2), (1, 1), (1, 2), (0, 3), (1, 3)):
+    home = hierarchy(f"{tag}-cap-annual-markers-ready", lambda tree:
+        find_control(tree, lambda value:
+            value.startswith("Feuille de route prévisionnelle interactive")) is not None)
+    graph = find_control(home, lambda value:
+        value.startswith("Feuille de route prévisionnelle interactive"))
+    spoken = " ".join(names(graph))
+    counts = []
+    for lane_name in ("Acquisition", "Maîtrise"):
+        match = re.search(rf"{lane_name}, (\d+) fins de sourates", spoken)
+        counts.append(int(match.group(1)) if match else 0)
+    checks = []
+    for lane, count in enumerate(counts):
+        for index in sorted({0, count // 2, count - 1}) if count else []:
+            checks.append((lane, index, count, False))
+        checks.append((lane, -1, count, True))
+    for lane, index, count, is_goal in checks:
+        station = "goal" if is_goal else f"finish-{index+1}-of-{count}"
         home = hierarchy(f"{tag}-cap-direct-{lane}-{station}-ready",
-            lambda tree: find_control(tree, lambda label:
-                label.startswith("Feuille de route prévisionnelle interactive")) is not None)
-        graph = find_control(home, lambda label:
-            label.startswith("Feuille de route prévisionnelle interactive"))
+            lambda tree: find_control(tree, lambda value:
+                value.startswith("Feuille de route prévisionnelle interactive")) is not None)
+        graph = find_control(home, lambda value:
+            value.startswith("Feuille de route prévisionnelle interactive"))
         gx1, gy1, gx2, gy2 = bounds(graph)
         margin = 16 * scale
         span = (gx2 - gx1) - 2 * margin
-        stations = (margin + 6 * scale, margin + span * .34,
-                    margin + span * .64, margin + span - 6 * scale)
-        # Follow the actual view-height-dependent BOOX lane separation;
-        # using a fixed 160dp/84dp offset falsely taps empty ink after the
-        # home starts using its previously wasted bottom viewport.
         spacious = (gx2 - gx1) >= 720 * scale
-        available_dp = (gy2 - gy1) / scale
-        lane_separation = max(160 if spacious else 88,
-                              available_dp - (154 if spacious else 92))
-        row = lane_separation if lane else 0
-        px = int(gx1 + stations[station])
-        py = int(gy1 + (row + (60 if spacious else 34)) * scale)
+        height_dp = (gy2 - gy1) / scale
+        separation = min(169, height_dp * 0.50)
+        caption = 127 if spacious else 81
+        offset = max(0, (height_dp - (separation + caption + 5)) / 2)
+        row = offset + (separation if lane else 0)
+        if is_goal:
+            px = int(gx1 + margin + span - 6 * scale)
+        else:
+            px = int(gx1 + margin + 20 * scale +
+                     (span - 40 * scale) * (index + 1) / (count + 1))
+        rail = (51 if spacious else 31) if is_goal else (96 if spacious else 58)
+        py = int(gy1 + (row + rail) * scale)
         if not (gx1 < px < gx2 and gy1 < py < gy2):
-            raise AssertionError(f"Direct icon {lane}/{station} outside BOOX viewport")
+            raise AssertionError(f"Projected surah ending {lane}/{station} is outside BOOX")
         adb("shell", "input", "tap", str(px), str(py))
+        if not is_goal:
+            # A yearly dot now SELECTS its true end-of-surah and synchronizes
+            # both concentric rings; only the inline label opens the Mushaf.
+            selected_home = hierarchy(f"{tag}-cap-selected-{lane}-{station}",
+                lambda tree: find_control(tree, lambda value:
+                    value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :")) is not None)
+            selected_label = find_control(selected_home, lambda value:
+                value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
+            if selected_label is None:
+                raise AssertionError(f"Touching {lane}/{station} did not select a year milestone")
+            if "prévision" not in " ".join(names(selected_label)).lower():
+                raise AssertionError(f"Selected {lane}/{station} lost its forecast label")
+            tap(selected_label)
         for _ in range(8):
             time.sleep(1)
             state = adb("shell", "dumpsys", "activity", "activities").stdout.decode(
@@ -313,7 +394,7 @@ def verify_direct_cap_milestone_taps(tag, density):
             if re.search(r"(?:topResumedActivity|mResumedActivity).*StudyReaderActivity", state):
                 break
         else:
-            raise AssertionError(f"Direct Juz/Hizb or goal tap {lane}/{station} did not open Mushaf")
+            raise AssertionError(f"Direct surah-finish or goal tap {lane}/{station} did not open Mushaf")
         # A foreground Reader initially paints its blank WebView shell.
         # Fail closed until the authentic QCF page has visibly rendered.
         rendered = False
@@ -325,7 +406,7 @@ def verify_direct_cap_milestone_taps(tag, density):
                 break
         if not rendered:
             raise AssertionError(f"Direct milestone {lane}/{station} opened a blank Mushaf page")
-        if station in (1, 3):
+        if is_goal or index == 0:
             diagnostics(f"{tag}-cap-direct-{lane}-{station}-mushaf")
         adb("shell", "input", "keyevent", "4")
         hierarchy(f"{tag}-cap-direct-{lane}-{station}-return",
