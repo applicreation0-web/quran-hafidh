@@ -36,12 +36,17 @@ public final class CapHifzSurahFinishUiContractTest {
         assertTrue(panel.contains("choice.sabqi ? \"Acquisition\" : \"Maîtrise\""));
         assertTrue(panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
         assertTrue(panel.contains("choice.verse.getAyah()"));
-        assertTrue(panel.contains("choice.date.format(DAY_MONTH)"));
+        assertTrue(panel.contains("choice.date.format(FULL_DATE)"));
         assertTrue(panel.contains("openMushaf(shownCheckpoints.get(checkpointIndex).verse)"));
-        assertTrue(panel.contains("labelNavigator(previousYear, \"«\", \"ANNÉE\")"));
+        assertTrue(panel.contains("labelNavigator(previousYear, \"‹\", \"\")"));
         assertTrue(panel.contains("labelNavigator(previous, \"‹\", \"JALON\")"));
         assertTrue(panel.contains("labelNavigator(next, \"›\", \"JALON\")"));
-        assertTrue(panel.contains("labelNavigator(nextYear, \"»\", \"ANNÉE\")"));
+        assertTrue(panel.contains("labelNavigator(nextYear, \"›\", \"\")"));
+        assertTrue(panel.contains("String yearText = \"ANNÉE"));
+        assertTrue(panel.contains("yearBadge.setText(markedYear)"));
+        assertTrue(panel.contains("showDropdownPreview()"));
+        assertTrue(panel.contains("dropdownPreview = enabled"));
+        assertTrue(panel.contains("milestoneDropdown.setAdapter(adapter)"));
     }
 
     @Test public void fullHorizonAndPostNasRemainReadOnly() throws Exception {
