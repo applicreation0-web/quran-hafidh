@@ -30,6 +30,12 @@ jobs:
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
       - name: Confirm screenshot capture script is valid
         run: python3 -m py_compile scripts/capture_cap_hifdh_before_after_real.py
+      - name: Enable hardware virtualization for real BOOX emulator
+        run: |
+          test -c /dev/kvm
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
+          sudo chmod u+rw /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
       - name: Two BOOX home screenshots from SAME running Android app
         uses: reactivecircus/android-emulator-runner@v2
         with:
