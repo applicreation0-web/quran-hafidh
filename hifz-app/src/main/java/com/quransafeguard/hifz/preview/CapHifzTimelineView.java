@@ -135,20 +135,36 @@ final class CapHifzTimelineView extends View {
         return Math.min(169f, Math.max(0f, heightDp * .50f));
     }
 
+    /** After An-Nās the missing Maîtrise lane releases real screen space.
+     * Spread solo Acquisition vertically across that SAME graph viewport,
+     * rather than centering a tiny 149dp strip with empty bands above/below.
+     * This is layout-only and never affects forecast QCF positions.
+     */
+    private float soloSpan() {
+        float h = getHeight() / getResources().getDisplayMetrics().density;
+        return Math.max(100f, Math.min(340f, h - 26f));
+    }
+
     private float titleBaseline() {
-        return soloAcquisition() ? 21f : (labelScale() > 1f ? 22f : 15f);
+        return soloAcquisition() ? 22f : (labelScale() > 1f ? 22f : 15f);
     }
 
     private float globalTrackBaseline() {
-        return soloAcquisition() ? 65f : (labelScale() > 1f ? 51f : 31f);
+        return soloAcquisition()
+            ? 22f + (soloSpan() - 22f) * .27f
+            : (labelScale() > 1f ? 51f : 31f);
     }
 
     private float annualTrackBaseline() {
-        return soloAcquisition() ? 109f : (labelScale() > 1f ? 96f : 58f);
+        return soloAcquisition()
+            ? 22f + (soloSpan() - 22f) * .72f
+            : (labelScale() > 1f ? 96f : 58f);
     }
 
     private float captionBaseline() {
-        return soloAcquisition() ? 149f : (labelScale() > 1f ? 127f : 81f);
+        return soloAcquisition()
+            ? 22f + (soloSpan() - 22f) * .95f
+            : (labelScale() > 1f ? 127f : 81f);
     }
 
     private float verticalOffset() {
@@ -373,6 +389,18 @@ final class CapHifzTimelineView extends View {
         drawFitted(canvas, "Fin " + selectedYear + " : " + yearEndText,
             left + width, top + dp(titleBaseline()),
             soloAcquisition() ? 13f : 10.5f, MID, Paint.Align.RIGHT, false, width * .53f);
+
+        // Helpful micro-labels in the extra post-Nās height, keeping the
+        // graphic light enough for e-ink and distinguishing both scales.
+        if (soloAcquisition()) {
+            drawFitted(canvas, "Parcours global", left,
+                top + dp(globalTrackBaseline() - 18f), 12f, MID,
+                Paint.Align.LEFT, false, width * .44f);
+            if (annualTrackBaseline() - globalTrackBaseline() >= 73f)
+                drawFitted(canvas, "Fins de sourates en " + selectedYear,
+                    left, top + dp(annualTrackBaseline() - 21f), 12.5f,
+                    MID, Paint.Align.LEFT, false, width * .70f);
+        }
 
         // Global position: continuous real QCF-line progress up to the
         // requested year, 2029 ... 2037. This is NOT the annual pin scale.
