@@ -438,7 +438,7 @@ final class CapHifzTimelineView extends View {
             : maintenanceVerse == null ? "Cycle continu après الناس · v.6"
             : QuranSurahNames.rawName(maintenanceVerse.getSurah())
                 + " · v." + maintenanceVerse.getAyah() + " · séance en cours";
-        drawFitted(canvas, description, left, top + dp(numberBaseline()),
+        drawFitted(canvas, description, left, top + dp(captionBaseline()),
             14f, INK, Paint.Align.LEFT, false, width - dp(16));
         // No future finish date, false milestone, empty diamonds or
         // unnecessary duplicate Maîtrise progression after An-Nās.
@@ -497,7 +497,7 @@ final class CapHifzTimelineView extends View {
                 // verse; no fake checkpoint can be selected after An-Nās.
                 float maintRow = verticalOffset() + (showSabqi ? laneSeparation() : 0f);
                 if (event.getX() >= left && event.getX() <= left + width
-                        && Math.abs(event.getY() - dp(maintRow + numberBaseline())) <= dp(26)) {
+                        && Math.abs(event.getY() - dp(maintRow + captionBaseline())) <= dp(26)) {
                     openMilestone.accept(false, new CapHifzForecast.Milestone(
                         start, maintenanceVerse, CapHifzForecast.hizb(maintenanceVerse)));
                     super.performClick();
