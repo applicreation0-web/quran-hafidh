@@ -41,7 +41,7 @@ final class CapHifzTimelineView extends View {
     // Keep circular nodes clear of the caption beneath them at BOOX 150%.
     private static final float TRACK_Y = 34f;
     private static final DateTimeFormatter SHORT_DATE =
-        DateTimeFormatter.ofPattern("d MMM yy", Locale.FRANCE);
+        DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRANCE);
     private static final DateTimeFormatter GOAL_DATE =
         DateTimeFormatter.ofPattern("MMM yyyy", Locale.FRANCE);
 
@@ -142,7 +142,7 @@ final class CapHifzTimelineView extends View {
      */
     private float soloSpan() {
         float h = getHeight() / getResources().getDisplayMetrics().density;
-        return Math.max(100f, Math.min(340f, h - 26f));
+        return Math.max(100f, Math.min(295f, h - 28f));
     }
 
     private float titleBaseline() {
@@ -385,20 +385,20 @@ final class CapHifzTimelineView extends View {
         // Header: real annual projected position. Never mistake a prediction
         // for an acquired lesson, or show today's cursor as the year 2032.
         drawFitted(canvas, track, left, top + dp(titleBaseline()),
-            soloAcquisition() ? 18f : 13f, INK, Paint.Align.LEFT, true, width * .43f);
+            soloAcquisition() ? 20f : 15f, INK, Paint.Align.LEFT, true, width * .43f);
         drawFitted(canvas, "Fin " + selectedYear + " : " + yearEndText,
             left + width, top + dp(titleBaseline()),
-            soloAcquisition() ? 13f : 10.5f, MID, Paint.Align.RIGHT, false, width * .53f);
+            soloAcquisition() ? 14.5f : 12f, MID, Paint.Align.RIGHT, false, width * .54f);
 
         // Helpful micro-labels in the extra post-Nās height, keeping the
         // graphic light enough for e-ink and distinguishing both scales.
         if (soloAcquisition()) {
             drawFitted(canvas, "Parcours global", left,
-                top + dp(globalTrackBaseline() - 18f), 12f, MID,
+                top + dp(globalTrackBaseline() - 20f), 14f, MID,
                 Paint.Align.LEFT, false, width * .44f);
             if (annualTrackBaseline() - globalTrackBaseline() >= 73f)
                 drawFitted(canvas, "Fins de sourates en " + selectedYear,
-                    left, top + dp(annualTrackBaseline() - 21f), 12.5f,
+                    left, top + dp(annualTrackBaseline() - 22f), 14f,
                     MID, Paint.Align.LEFT, false, width * .70f);
         }
 
@@ -414,9 +414,9 @@ final class CapHifzTimelineView extends View {
         goalDiamond(canvas, x[3], globalY);
         String goalDate = terminalDate == null ? "date —" : terminalDate.format(SHORT_DATE);
         drawFitted(canvas, "Objectif · " + terminalText + " · " + goalDate,
-            x[3], globalY + dp(labelScale() > 1f ? 21f : 17f),
-            soloAcquisition() ? 12f : 9.5f,
-            MID, Paint.Align.RIGHT, false, width * .70f);
+            x[3], globalY + dp(labelScale() > 1f ? 23f : 20f),
+            soloAcquisition() ? 14f : 11f,
+            MID, Paint.Align.RIGHT, false, width * .88f);
 
         // Annual zoom. Every dot is an actual surah FINISH in this year
         // (not arbitrary Juz/Hizb milestones). The three concentric forms
@@ -440,22 +440,17 @@ final class CapHifzTimelineView extends View {
             }
         }
 
-        // The selected checkpoint has ONE clear date label, rather than
-        // several 15-line/QCF captions overlapping both rails at BOOX 150%.
-        String annualCaption;
-        if (annual.isEmpty()) {
-            annualCaption = "Aucune fin de sourate prévue en " + selectedYear;
-        } else if (selectedIndex >= 0) {
-            CapHifzForecast.Milestone selected = annual.get(selectedIndex);
-            annualCaption = "Fin estimée " + QuranSurahNames.rawName(selected.verse.getSurah())
-                + " · v." + selected.verse.getAyah()
-                + " · " + selected.date.format(SHORT_DATE)
-                + "   (" + (selectedIndex + 1) + "/" + annual.size() + ")";
-        } else {
-            annualCaption = annual.size() + " fins de sourates en " + selectedYear;
-        }
+        // Do NOT repeat the dated surah/ayah label: it is already shown in
+        // the inline navigator under the frise. A one-line prompt links the
+        // three-ring selected point to the sole date detail below.
+        String annualCaption = annual.isEmpty()
+            ? "Aucune fin de sourate prévue en " + selectedYear
+            : selectedIndex >= 0
+                ? "Jalon " + (selectedIndex + 1) + "/" + annual.size()
+                    + " sélectionné · Mushaf au toucher"
+                : annual.size() + " fins de sourates en " + selectedYear;
         drawFitted(canvas, annualCaption, left, top + dp(captionBaseline()),
-            soloAcquisition() ? 13f : 10.5f, MID,
+            soloAcquisition() ? 15f : 12f, MID,
             Paint.Align.LEFT, false, width * .95f);
     }
 
