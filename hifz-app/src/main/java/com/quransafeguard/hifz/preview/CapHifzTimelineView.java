@@ -130,10 +130,25 @@ final class CapHifzTimelineView extends View {
         float content = (doubleLane ? laneSeparation() : 0f) + dateBaseline() + 16f;
         return Math.max(0f, (heightDp - content) / 2f);
     }
-    private float trackCenter() { return labelScale() > 1f ? 60f : TRACK_Y; }
-    private float titleBaseline() { return labelScale() > 1f ? 28f : 18f; }
-    private float numberBaseline() { return labelScale() > 1f ? 110f : 64f; }
-    private float dateBaseline() { return labelScale() > 1f ? 143f : 83f; }
+    private boolean soloAcquisition() {
+        return showSabqi && !showTail && !showMaintenance;
+    }
+    private float trackCenter() {
+        return (labelScale() > 1f ? 60f : TRACK_Y)
+            + (soloAcquisition() ? 18f : 0f);
+    }
+    private float titleBaseline() {
+        return (labelScale() > 1f ? 28f : 18f)
+            + (soloAcquisition() ? 6f : 0f);
+    }
+    private float numberBaseline() {
+        return (labelScale() > 1f ? 110f : 64f)
+            + (soloAcquisition() ? 32f : 0f);
+    }
+    private float dateBaseline() {
+        return (labelScale() > 1f ? 143f : 83f)
+            + (soloAcquisition() ? 42f : 0f);
+    }
 
     void setSelection(LocalDate date, boolean sabqi) {
         setSelection(date, sabqi, null);
@@ -320,7 +335,8 @@ final class CapHifzTimelineView extends View {
             : ItqanRotationPolicy.TAIL_END.getAyah();
 
         drawFitted(canvas, sabqi ? "ACQUISITION" : "MAÎTRISE",
-            left, top + dp(titleBaseline()), 13f, INK, Paint.Align.LEFT, true, width * .46f);
+            left, top + dp(titleBaseline()), soloAcquisition() ? 17f : 13f,
+            INK, Paint.Align.LEFT, true, width * .46f);
         List<CapHifzForecast.Milestone> annual = yearSurahFinishes(sabqi);
         drawFitted(canvas, annual.size() + " fins · " + selectedYear,
             left + width, top + dp(titleBaseline()), 11f, MID,
@@ -340,7 +356,8 @@ final class CapHifzTimelineView extends View {
             boolean selected = selectedDate != null && selectedSabqi == sabqi
                 && selectedDate.equals(point.date)
                 && selectedVerse != null && selectedVerse.equals(point.verse);
-            filled(canvas, px, y, annual.size() > 45 ? 1.9f : 3.0f);
+            filled(canvas, px, y, annual.size() > 45 ? 1.9f
+                : soloAcquisition() ? 4.2f : 3.0f);
             if (selected) {
                 ring(canvas, px, y, labelScale() > 1f ? 10f : 8f, 1.6f);
                 filled(canvas, px, y, 3.6f);
@@ -356,7 +373,8 @@ final class CapHifzTimelineView extends View {
         // The authentic current position is a surah and ayah, never a page.
         drawFitted(canvas, current == null ? "Sourate —"
                 : QuranSurahNames.rawName(current.getSurah()),
-            x[0], top + dp(numberBaseline()), 15f, INK, Paint.Align.LEFT, true, w);
+            x[0], top + dp(numberBaseline()), soloAcquisition() ? 18f : 15f,
+            INK, Paint.Align.LEFT, true, w);
         drawFitted(canvas, current == null ? "verset —" : "verset " + current.getAyah(),
             x[0], top + dp(dateBaseline()), 11.5f, MID, Paint.Align.LEFT, false, w);
 
@@ -365,14 +383,16 @@ final class CapHifzTimelineView extends View {
             String name = QuranSurahNames.rawName(coming.get(i).verse.getSurah());
             String detail = "v." + coming.get(i).verse.getAyah() + " · "
                 + coming.get(i).date.format(SHORT_DATE);
-            drawFitted(canvas, name, xx, top + dp(numberBaseline()), 15f,
+            drawFitted(canvas, name, xx, top + dp(numberBaseline()),
+                soloAcquisition() ? 18f : 15f,
                 i == 0 ? INK : MID, Paint.Align.CENTER, true, w);
             drawFitted(canvas, detail, xx, top + dp(dateBaseline()), 11.5f, MID,
                 Paint.Align.CENTER, false, w);
         }
 
         float lastW = (x[3] - x[2]) * .94f;
-        drawFitted(canvas, target, x[3], top + dp(numberBaseline()), 15f, INK,
+        drawFitted(canvas, target, x[3], top + dp(numberBaseline()),
+            soloAcquisition() ? 18f : 15f, INK,
             Paint.Align.RIGHT, true, lastW);
         drawFitted(canvas, "v." + finalAyah + " · "
                 + (targetDate != null ? targetDate.format(SHORT_DATE) : "date —"),
