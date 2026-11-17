@@ -414,7 +414,10 @@ val privateReleaseAssets = mapOf(
 val verifyPrivateReleaseInputs by tasks.registering {
     doLast {
         if (!privateReleaseUpgrade) return@doLast
-        if (privateUnsignedStaging) {
+        // Evaluate at execution time, not the potentially cached Gradle
+        // configuration time: this opt-in exists only on the staging branch.
+        if (System.getenv("HIFZ_UNSIGNED_PRIVATE_STAGING") == "1") {
+            check(privateReleaseUpgrade) { "NO-GO: stage must compile true private BuildConfig" }
             check(System.getenv("GITHUB_ACTIONS") == "true") {
                 "NO-GO: unsigned staging is allowed only in GitHub CI"
             }
