@@ -27,7 +27,7 @@ public final class CapHifzSurahFinishUiContractTest {
         assertTrue(view.contains("yearSurahFinishes(sabqi)"));
         assertTrue(view.contains("for (int i = 0; i < annual.size(); i++)"));
         assertTrue(view.contains("pinX(i, annual.size()"));
-        assertTrue(view.contains("selectedVerse.equals(point.verse)"));
+        assertTrue(view.contains("selectedVerse.equals(p.verse)"));
         assertTrue(panel.contains("timeline.setSelection(choice.date, choice.sabqi, choice.verse)"));
     }
 
