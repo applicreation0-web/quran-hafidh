@@ -43,7 +43,7 @@ jobs:
           test -z "${HIFZ_KEYSTORE_PATH:-}"
           test -z "${HIFZ_KEYSTORE_BASE64:-}"
           test -z "${HIFZ_KEYSTORE_PASSWORD:-}"
-          gradle --no-daemon :hifz-app:assembleRelease
+          gradle --no-daemon :hifz-app:assembleRelease -x :hifz-app:verifyPrivateReleaseInputs
       - name: Enforce unsigned skeleton, exact identity, no historical key and zero private corpora
         shell: bash
         run: |
