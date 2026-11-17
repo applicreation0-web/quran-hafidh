@@ -207,11 +207,20 @@ def verify_cap_milestone_opens_mushaf(tag):
     tap(find_control(home, lambda value: value == "Quitter la consultation des acquis"))
     home = hierarchy(f"{tag}-cap-inline-return", lambda tree:
         find_control(tree, lambda value:
+            value.startswith("Situation réelle au ")) is not None)
+    if find_control(home, lambda value: value.startswith("Situation réelle au ")) is None:
+        raise AssertionError("Today must represent real persisted QCF position")
+    first_step = find_control(home, lambda value: value == "Jalon prévisionnel suivant")
+    if first_step is None or first_step.get("enabled") != "true":
+        raise AssertionError("Forecast must be reachable from Today without credit")
+    tap(first_step)
+    home = hierarchy(f"{tag}-cap-first-forecast", lambda tree:
+        find_control(tree, lambda value:
             value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :")) is not None)
     selected = find_control(home, lambda value:
         value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
     if selected is None:
-        raise AssertionError("Missing inline, directly clickable checkpoint")
+        raise AssertionError("First forecast milestone unavailable after Today")
     graph = find_control(home, lambda value:
         value.startswith("Feuille de route prévisionnelle interactive"))
     if graph is None:
@@ -365,6 +374,19 @@ def verify_direct_cap_milestone_taps(tag, density):
         if not (gx1 < px < gx2 and gy1 < py < gy2):
             raise AssertionError(f"Projected surah ending {lane}/{station} is outside BOOX")
         adb("shell", "input", "tap", str(px), str(py))
+        if not is_goal:
+            # A yearly dot now SELECTS its true end-of-surah and synchronizes
+            # both concentric rings; only the inline label opens the Mushaf.
+            selected_home = hierarchy(f"{tag}-cap-selected-{lane}-{station}",
+                lambda tree: find_control(tree, lambda value:
+                    value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :")) is not None)
+            selected_label = find_control(selected_home, lambda value:
+                value.startswith("Ouvrir le Mushaf depuis Cap Hifdh :"))
+            if selected_label is None:
+                raise AssertionError(f"Touching {lane}/{station} did not select a year milestone")
+            if "prévision" not in " ".join(names(selected_label)).lower():
+                raise AssertionError(f"Selected {lane}/{station} lost its forecast label")
+            tap(selected_label)
         for _ in range(8):
             time.sleep(1)
             state = adb("shell", "dumpsys", "activity", "activities").stdout.decode(
