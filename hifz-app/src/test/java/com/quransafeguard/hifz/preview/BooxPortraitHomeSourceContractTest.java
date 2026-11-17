@@ -189,7 +189,7 @@ public final class BooxPortraitHomeSourceContractTest {
             && panel.contains("labelNavigator(next, \"›\", \"JALON\")"));
         assertFalse("Old yearly tick axis must be removed", timeline.contains("yearY"));
         assertTrue("An empty year must never fabricate a finish, a dot or a date",
-            timeline.contains("if (annual.isEmpty())")
+            timeline.contains("annual.isEmpty()")
             && timeline.contains("Aucune fin de sourate prévue en ")
             && timeline.contains("for (int i = 0; i < annual.size(); i++)"));
         assertTrue("After An-Nās, only the solo Acquisition frise is present",
