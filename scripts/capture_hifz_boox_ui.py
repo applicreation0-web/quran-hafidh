@@ -345,7 +345,8 @@ def verify_direct_cap_milestone_taps(tag, density):
         else:
             px = int(gx1 + margin + 20 * scale +
                      (span - 40 * scale) * (index + 1) / (count + 1))
-        py = int(gy1 + (row + (60 if spacious else 34)) * scale)
+        rail = (60 if spacious else 34) + (-18 if is_goal else 15)
+        py = int(gy1 + (row + rail) * scale)
         if not (gx1 < px < gx2 and gy1 < py < gy2):
             raise AssertionError(f"Projected surah ending {lane}/{station} is outside BOOX")
         adb("shell", "input", "tap", str(px), str(py))
