@@ -11,6 +11,10 @@ val boox1175Preview = private114 && System.getenv("HAAFIDH_1175_PRIVATE_DEBUG") 
 // Explicit opt-in: private corpus belongs in an official in-place RELEASE only on a
 // trusted offline assembler; ordinary debug previews always keep their suffix.
 val privateReleaseUpgrade = private114 && System.getenv("HIFZ_PRIVATE_RELEASE_UPGRADE") == "1"
+// STAGING BRANCH ONLY: compile an UNSIGNED public-asset skeleton on CI.
+// Private assets are never uploaded. A separate LOCAL v2 signing step
+// inserts the exact 7 audited assets and uses historical GitHub signer.
+val privateUnsignedStaging = privateReleaseUpgrade && System.getenv("HIFZ_PRIVATE_UNSIGNED_STAGING") == "1"
 if (private114) layout.buildDirectory.set(file("build-private114"))
 
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
@@ -410,6 +414,17 @@ val privateReleaseAssets = mapOf(
 val verifyPrivateReleaseInputs by tasks.registering {
     doLast {
         if (!privateReleaseUpgrade) return@doLast
+        if (privateUnsignedStaging) {
+            check(System.getenv("GITHUB_ACTIONS") == "true") {
+                "NO-GO: unsigned staging is allowed only in GitHub CI"
+            }
+            check(!hasReleaseSigning) { "NO-GO: staging must NEVER have a signing key" }
+            check(privateReleaseAssets.keys.none { file("src/private114/assets/$it").exists() }) {
+                "NO-GO: private resources must NEVER enter the public staging build"
+            }
+            println("UNSIGNED STAGING ONLY: real package/BuildConfig, 0 private assets, no signer")
+            return@doLast
+        }
         check(hasReleaseSigning) { "NO-GO: official upgrade requires the official release signing keystore (never the private debug key)." }
         val storePath = file(System.getenv("HIFZ_KEYSTORE_PATH"))
         val storePassword = System.getenv("HIFZ_KEYSTORE_PASSWORD") ?: error("NO-GO: missing release keystore password")
