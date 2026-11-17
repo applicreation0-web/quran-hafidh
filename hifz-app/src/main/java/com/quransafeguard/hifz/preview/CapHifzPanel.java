@@ -107,9 +107,13 @@ final class CapHifzPanel extends LinearLayout {
         ledger = DashboardLedger.readOnly(context);
         finals = new PostFinalRecallStore(context);
         today = HifzClock.today();
-        todayMode = true;
-        year = today.getYear();
-        checkpointIndex = 0;
+        // A freshly opened home starts in reality, but coming BACK from the
+        // Mushaf must not throw away a future year/step being explored.
+        // Explicit goToday() alone resets an exploration in one gesture.
+        if (todayMode) {
+            year = today.getYear();
+            checkpointIndex = 0;
+        }
         historyMode = false;
         acquiredLines = new ArrayList<>();
         monday = today.minusDays(today.getDayOfWeek().getValue() - 1);
