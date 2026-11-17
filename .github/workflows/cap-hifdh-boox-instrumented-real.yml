@@ -48,9 +48,7 @@ jobs:
             adb install -r "$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' | head -1)"
             adb install -r "$(find hifz-app/build/outputs/apk/androidTest/debug -type f -name '*.apk' | head -1)"
             adb shell pm list instrumentation | tee cap-hifdh-instrumented-real/instrumentation.txt
-            RUNNER="$(sed -n 's/^instrumentation:\([^ ]*\) (target=com.quransafeguard.hifz.ibnkathirtest).*/\1/p' cap-hifdh-instrumented-real/instrumentation.txt | head -1 | tr -d '\r')"
-            test -n "$RUNNER"
-            adb shell am instrument -w -e class com.quransafeguard.hifz.preview.CapHifdhTwoRealScreensInstrumentedTest "$RUNNER" | tee cap-hifdh-instrumented-real/result.txt
+            adb shell am instrument -w -e class com.quransafeguard.hifz.preview.CapHifdhTwoRealScreensInstrumentedTest "$(sed -n 's/^instrumentation:\([^ ]*\) (target=com.quransafeguard.hifz.ibnkathirtest).*/\1/p' cap-hifdh-instrumented-real/instrumentation.txt | head -1 | tr -d '\r')" | tee cap-hifdh-instrumented-real/result.txt
             grep -Eq 'OK \(1 test\)' cap-hifdh-instrumented-real/result.txt
             adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-before-nas.png cap-hifdh-instrumented-real/01-avant-nas-reel.png
             adb pull /sdcard/Pictures/HaafidhAudit/independent-cap-hifdh-full-home-after-nas.png cap-hifdh-instrumented-real/02-apres-nas-reel.png
