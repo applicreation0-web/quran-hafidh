@@ -167,6 +167,13 @@ public final class SettingsActivity extends android.app.Activity {
             .setPositiveButton("OK",null).show()));
         backup.addView(backupNoteRow);
 
+        // Offline-safe personal references: opens an external browser only on user action;
+        // never imports book text into the app or modifies any Hifz engine or receipt.
+        advanced.addView(Ui.settingRow(this, "Bibliothèque personnelle",
+            "BOOX · PDF/EPUB local · livres en ligne",
+            v -> startActivity(new Intent(this, PersonalLibraryActivity.class))));
+        advanced.addView(Ui.divider(this));
+
         // Keep episodic, manually scoped memorisation available without adding a
         // competing Home tile or touching saved FreeMem state and Hifz engines.
         advanced.addView(Ui.settingRow(this,"Mémorisation ponctuelle",
