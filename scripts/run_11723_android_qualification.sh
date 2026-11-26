@@ -88,6 +88,7 @@ for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
             adb shell settings put system font_scale "$font" || { status=1; continue; }
         adb shell rm -f "/sdcard/Android/data/$package/files/fragilite-visible.png" \
             "/sdcard/Android/data/$package/files/fragilite-masquee.png" \
+            "/sdcard/Android/data/$package/files/fragilite-cible.png" \
             "/sdcard/Android/data/$package/files/fragilite-reprise.png" || { status=1; continue; }
         adb shell am instrument -w -r -e class \
             com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#standaloneVisibleMaskedAndDeferredPreserveAllAcquisitionAndActiveEvidence \
@@ -95,7 +96,7 @@ for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
         cat "$dest/result.txt"
         grep -Fxq 'OK (1 test)' "$dest/result.txt" || status=1
         grep -Fxq 'INSTRUMENTATION_CODE: -1' "$dest/result.txt" || status=1
-        for phase in visible masquee reprise; do
+        for phase in visible masquee cible reprise; do
             adb pull "/sdcard/Android/data/$package/files/fragilite-$phase.png" "$dest/" || status=1
             test -s "$dest/fragilite-$phase.png" || status=1
         done
