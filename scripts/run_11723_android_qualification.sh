@@ -47,7 +47,7 @@ verify_process_death() {
 
 status=0
 gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
-    -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest \
+    -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#threePageBatchAdvancesResumesDefersAndReturnsWithoutActiveCredit,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#continuationCannotCrossTheMorningEveningBoundary \
     || status=1
 verify_process_death || status=1
 # The candidate now has a higher versionCode. Android refuses an ordinary
@@ -90,7 +90,7 @@ for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
             "/sdcard/Android/data/$package/files/fragilite-masquee.png" \
             "/sdcard/Android/data/$package/files/fragilite-reprise.png" || { status=1; continue; }
         adb shell am instrument -w -r -e class \
-            com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest \
+            com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#standaloneVisibleMaskedAndDeferredPreserveAllAcquisitionAndActiveEvidence \
             "$package.test/androidx.test.runner.AndroidJUnitRunner" >"$dest/result.txt" 2>&1 || status=1
         cat "$dest/result.txt"
         grep -Fxq 'OK (1 test)' "$dest/result.txt" || status=1
