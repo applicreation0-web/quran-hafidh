@@ -31,6 +31,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     public static final String EXTRA_MODE = "mode";
     public static final String EXTRA_SCHEDULED_DATE = "scheduled_date";
     public static final String EXTRA_FRAGILITY_PAGE = "fragility_page";
+    static final String EXTRA_FINISHED_ACTIVE_SLOT = "finished_active_slot";
+    static final String EXTRA_FINISHED_ACTIVE_DATE = "finished_active_date";
     private boolean standaloneFragility;
     private int standaloneMinutes;
     public static final String SABQI = "SABQI";
@@ -261,13 +263,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                     if(!activeSlots.settleOtherCorrections(null,null))
                         throw new IllegalStateException("Pending correction");
                     int page=getIntent().getIntExtra(EXTRA_FRAGILITY_PAGE,-1);
-                    if (!FragilityQueuePolicy.merge(correctionStore.queuedPages(),
-                            prefs.weakVersePages(geometry)).contains(page))
-                        throw new IllegalStateException("Page no longer queued");
+                    List<Integer> batch=FragilityQueuePolicy.startingAt(
+                        FragilityQueuePolicy.merge(correctionStore.queuedPages(),
+                            prefs.weakVersePages(geometry)),page);
                     standaloneMinutes=prefs.activeReviewMinutes(geometry);
                     VerseRef anchor=prefs.activeMurajaahCursor();
                     if(!correctionStore.begin(HifzClock.today().toString(),anchor,anchor,
-                            standaloneMinutes*60_000L,Collections.singletonList(page),page))
+                            standaloneMinutes*60_000L,batch,page))
                         throw new IllegalStateException("Unable to open correction");
                 }else{
                     standaloneMinutes=(int)(pending.activeElapsedMs/60_000L);
@@ -2394,13 +2396,22 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(standaloneFragility){
             if(correctionState==null||(!"DONE".equals(correctionState.stage)
                     && correctionState.correctionElapsedMs<fragilityTargetMs()))return;
-            if(!correctionStore.finishIndependent(correctionState)){
+            ActiveReviewCorrectionStore.State completed=correctionState;
+            int processed="DONE".equals(completed.stage)?completed.pages.size():completed.pageIndex;
+            int corrected=processed-completed.deferred.size();
+            if(!correctionStore.finishIndependent(completed)){
                 onError("Impossible de sauvegarder la correction.");return;
             }
             stopFragilityClock();
             correctionState=null;
             sessionCompleted=true;
-            renderMode();
+            ++correctionRenderGeneration;
+            int remaining=completed.pages.size()-corrected;
+            Toast.makeText(this,corrected+" / "+completed.pages.size()+" corrigée(s)"
+                +(remaining>0?" · "+remaining+" à reprendre":" · correction terminée"),
+                Toast.LENGTH_LONG).show();
+            // Return directly to the existing Parcours; no inert masked end screen.
+            finish();
             return;
         }
         if (activeSlot != null && correctionState == null
@@ -2423,6 +2434,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             correctionState=null;
             closeClockForCompletedSession();
             renderMode();
+            // Keep the authentic Al-Fatiha closing page, then let the learner
+            // explicitly continue to the same morning/evening's next activity.
+            if(sessionDate.equals(HifzClock.today()))
+                actions.addView(Ui.roundAction(this,"","Continuer",v->{
+                    setResult(RESULT_OK,new Intent()
+                        .putExtra(EXTRA_FINISHED_ACTIVE_SLOT,activeSlot.name())
+                        .putExtra(EXTRA_FINISHED_ACTIVE_DATE,sessionDate.toString()));
+                    finish();
+                }));
             return;
         }
         if(active && correctionState==null){
@@ -2566,7 +2586,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             showFragilityTime(state.correctionElapsedMs);
         }
         mushaf.setHighlightVerses(Collections.emptyList());
-        progress.setText("Page "+(state.pageIndex+1)+"/"+state.pages.size()
+        progress.setText("Page "+(state.pageIndex+1)+"/"+state.pages.size()+" · Mushaf "+state.page()
             +("READ".equals(state.stage)
                 ?" · relisez toute la page en visible"
                 :" · récitez toute la page en masqué"));
