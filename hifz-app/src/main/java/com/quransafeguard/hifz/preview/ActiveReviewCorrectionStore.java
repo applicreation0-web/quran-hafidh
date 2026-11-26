@@ -84,6 +84,10 @@ final class ActiveReviewCorrectionStore {
 
     State pending() {
         String raw=prefs.getString(stateKey,"");
+        return decodeState(raw);
+    }
+
+    static State decodeState(String raw){
         if(raw==null||raw.isEmpty())return null;
         try {
             JSONObject doc=new JSONObject(raw);
@@ -259,8 +263,12 @@ final class ActiveReviewCorrectionStore {
     }
 
     List<Integer> queuedPages() {
+        return decodeQueue(prefs.getString(KEY_QUEUE,"[]"));
+    }
+
+    static List<Integer> decodeQueue(String encoded){
         try {
-            JSONArray raw=new JSONArray(prefs.getString(KEY_QUEUE,"[]"));
+            JSONArray raw=new JSONArray(encoded);
             LinkedHashSet<Integer> result=new LinkedHashSet<>();
             for(int i=0;i<raw.length();i++){
                 int page=strictInt(raw.get(i));
