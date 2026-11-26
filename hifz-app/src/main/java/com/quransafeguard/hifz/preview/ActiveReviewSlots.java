@@ -349,14 +349,16 @@ final class ActiveReviewSlots {
             ActiveReviewCorrectionStore correction = correction(date, slot);
             ActiveReviewCorrectionStore.State replay = correction.pending();
             if (replay != null) {
-                if (!"DONE".equals(replay.stage) || !date.toString().equals(replay.date)
+                if ((!"DONE".equals(replay.stage)
+                        && replay.correctionElapsedMs < ActiveReviewDurationPolicy.fragilityMinutes(saved.targetMinutes)*60_000L)
+                        || !date.toString().equals(replay.date)
                         || !start.equals(replay.start) || !saved.end.equals(replay.end)
                         || replay.activeElapsedMs != saved.durationMs()) return false;
             } else if (!correction.revealed(date.toString(), start).isEmpty()) {
                 return false;
             }
 
-            SharedPreferences.Editor editor = correction.clear(prefs.edit())
+            SharedPreferences.Editor editor = correction.clear(correction.settleQueue(prefs.edit(),replay))
                 .putString(RECEIPT + scope(date, slot), label)
                 .putInt(RECEIPT_MINUTES + scope(date, slot), saved.targetMinutes)
                 .remove(DRAFT + scope(date, slot));
