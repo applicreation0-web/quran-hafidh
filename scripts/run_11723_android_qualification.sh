@@ -50,7 +50,13 @@ gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
     -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest \
     || status=1
 verify_process_death || status=1
-run_capture "$reference" "$evidence/before" || status=1
+if ! run_capture "$reference" "$evidence/before"; then
+    echo "Reference contract failure recorded in before/result.txt"
+    for name in boox-1404x1872-font100 boox-900x1200-font100; do
+        test -s "$evidence/before/$name-home.png" && test -s "$evidence/before/$name.png" || status=1
+    done
+    test -s "$evidence/before/phone-font100-home.png" || status=1
+fi
 # Both builds share the isolated debug package. Start each visual run with synthetic default state.
 adb shell pm clear com.quransafeguard.hifz.ibnkathirtest || status=1
 run_capture "$candidate" "$evidence/after" || status=1
