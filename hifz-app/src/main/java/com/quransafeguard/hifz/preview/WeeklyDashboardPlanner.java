@@ -71,17 +71,12 @@ final class WeeklyDashboardPlanner {
             android.util.Log.e("QuranHifz","Weekly Sabqi cursor unavailable",problem);
         }
 
-        VerseRef murajaahCursor=null;
-        EligibleCorpus murajaahCorpus=null;
         int duration=-1;
         try {
-            murajaahCursor=prefs.murajaahCursor();
-            murajaahCorpus=prefs.murajaahCorpus(geometry);
             duration=prefs.activeReviewMinutes(geometry);
         } catch(RuntimeException problem) {
-            android.util.Log.e("QuranHifz","Weekly revision projection unavailable",problem);
+            android.util.Log.e("QuranHifz","Weekly active revision projection unavailable",problem);
         }
-        final int revisionMinutes=duration;
 
         // The historic OPEN snapshot and the live rotation are independent
         // sources; neither may invalidate the other six visible dates.
