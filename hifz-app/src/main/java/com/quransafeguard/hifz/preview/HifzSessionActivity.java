@@ -35,6 +35,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     static final String EXTRA_FINISHED_ACTIVE_DATE = "finished_active_date";
     private boolean standaloneFragility;
     private int standaloneMinutes;
+    private Button generalAudioButton;
+    private AlertDialog fragilityVersePicker;
     public static final String SABQI = "SABQI";
     public static final String SABQI_TODAY_REVIEW = "SABQI_TODAY_REVIEW";
     public static final String ITQAN = "ITQAN";
@@ -374,7 +376,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         controlBar.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,2));
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
-        controlBar.addView(actions);
+        if(MURAJAAH_ACTIVE.equals(mode)){
+            android.widget.HorizontalScrollView actionScroll=new android.widget.HorizontalScrollView(this);
+            actionScroll.setHorizontalScrollBarEnabled(false);
+            actionScroll.setFillViewport(true);
+            actionScroll.addView(actions);
+            controlBar.addView(actionScroll,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1f));
+        }else controlBar.addView(actions);
         discriminantButton=Ui.iconButton(this,"","Similitudes",v->openRevisionDiscriminant());
         discriminantButton.setVisibility(View.GONE);
         controlBar.addView(discriminantButton);
@@ -396,7 +404,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             controlBar.addView(annotationClearButton);
         }
         // Audio only when the recitation pack is actually installed.
-        if (new HifzAudioGate(this).installed()) controlBar.addView(Ui.iconButton(this, "", "Écouter", v -> openAudio()));
+        if (new HifzAudioGate(this).installed()) {
+            generalAudioButton=Ui.iconButton(this,"","Écouter",v->openAudio());
+            controlBar.addView(generalAudioButton);
+        }
         root.addView(controlBar);
 
         setContentView(root);
@@ -420,6 +431,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         // accident: Révision active and post-An-Nās Itqān recall opt back in explicitly.
         if (mushaf != null) { mushaf.clearSemanticCues(); mushaf.clearPageLandmarkBoxes(); }
         actions.removeAllViews();
+        if(generalAudioButton!=null)generalAudioButton.setVisibility(View.VISIBLE);
         revealButton = null;
         murajaahFinishButton = null;
         awaitingValidation = false;
@@ -2394,8 +2406,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void completeMurajaahValidation(){
         boolean active = MURAJAAH_ACTIVE.equals(mode);
         if(standaloneFragility){
-            if(correctionState==null||(!"DONE".equals(correctionState.stage)
-                    && correctionState.correctionElapsedMs<fragilityTargetMs()))return;
+            if(correctionState==null||!"DONE".equals(correctionState.stage))return;
             ActiveReviewCorrectionStore.State completed=correctionState;
             int processed="DONE".equals(completed.stage)?completed.pages.size():completed.pageIndex;
             int corrected=processed-completed.deferred.size();
@@ -2566,79 +2577,127 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private long correctionRenderGeneration;
 
     private void renderActiveCorrection() {
-        final long generation = ++correctionRenderGeneration;
+        final long generation=++correctionRenderGeneration;
         fragilityPageReady=false;
-        if(fragilityClock!=null)fragilityClock.pause();
+        if(fragilityVersePicker!=null){fragilityVersePicker.dismiss();fragilityVersePicker=null;}
         ActiveReviewCorrectionStore.State state=correctionState;
         if(state==null)return;
         if("DONE".equals(state.stage)){completeMurajaahValidation();return;}
         updateActiveClockAction();
         closeAudio();
+        if(generalAudioButton!=null)generalAudioButton.setVisibility(View.GONE);
         currentPage=state.page();
         correctionMaskedPageReady=false;
         correctionPageDoneButton=null;
         currentMask="READ".equals(state.stage)?0:100;
         currentSelection=Collections.emptyList();
         currentLineIds=currentMask==100?geometry.lineIdsOnPage(currentPage):Collections.emptyList();
-        program.setText(activeSlot==null?activeReviewTitle()+" · pages dévoilées":"Fragilités");
-        if(activeSlot!=null) {
-            if(fragilityClock==null) fragilityClock=new SessionClock(state.correctionElapsedMs,this::onFragilityTick);
+        program.setText("Fragilités");
+        timerText.setTextSize(getResources().getConfiguration().smallestScreenWidthDp>=600?19f:15f);
+        timerText.setTextColor(Ui.INK);
+        if(standaloneFragility)timerText.setText("Libre");
+        else if(activeSlot!=null){
+            if(fragilityClock==null)fragilityClock=new SessionClock(state.correctionElapsedMs,this::onFragilityTick);
             showFragilityTime(state.correctionElapsedMs);
         }
         mushaf.setHighlightVerses(Collections.emptyList());
-        progress.setText("Page "+(state.pageIndex+1)+"/"+state.pages.size()+" · Mushaf "+state.page()
-            +("READ".equals(state.stage)
-                ?" · relisez toute la page en visible"
-                :" · récitez toute la page en masqué"));
-        showCurrent();
+        progress.setText("Page "+state.page() +" · "+state.pageIndex+"/"+state.pages.size()+" traitées"
+            +(state.assisted?" · avec aide":currentMask==100?" · masquée":" · visible"));
         actions.removeAllViews();
-        if("READ".equals(state.stage)){
-            actions.addView(Ui.roundAction(this,"","Page relue",v->{
-                if (!isCurrentCorrectionRender(generation) || (!fragilityPageReady && activeSlot != null)) return;
-                if(!correctionStore.pageReread(correctionState)){
-                    onError("Impossible de sauvegarder la page relue.");return;
-                }
-                correctionState=correctionStore.pending();
-                renderActiveCorrection();
-            }));
-        }else{
-            LinearLayout passed=Ui.roundAction(this,"","Page récitée sans aide",v->{
-                if (!isCurrentCorrectionRender(generation)) return;
-                if(!correctionMaskedPageReady||correctionState.assisted){
-                    Toast.makeText(this,"Masque non prêt ou aide utilisée : recommencez la page.",
-                        Toast.LENGTH_LONG).show();return;
-                }
-                if(!correctionStore.pageRecalled(correctionState)){
-                    onError("Impossible de sauvegarder la récitation masquée.");return;
-                }
-                correctionState=correctionStore.pending();
-                renderActiveCorrection();
-            });
-            correctionPageDoneButton=(Button)passed.getChildAt(0);
-            correctionPageDoneButton.setEnabled(correctionMaskedPageReady&&!state.assisted);
-            actions.addView(passed);
-            actions.addView(Ui.roundAction(this,"","Recommencer la page",v->{
-                if (!isCurrentCorrectionRender(generation)) return;
-                if(!correctionStore.restartPage(correctionState)){
-                    onError("Impossible de reprendre cette page.");return;
-                }
-                correctionState=correctionStore.pending();
-                renderActiveCorrection();
-            }));
-            LinearLayout reveal=Ui.roundAction(this,"","Révéler",null);
-            revealButton=(Button)reveal.getChildAt(0);
-            configureRevealButton(revealButton);
-            actions.addView(reveal);
-            updateRevealButton();
-        }
-        if(activeSlot!=null)actions.addView(Ui.roundAction(this,"","Reporter cette page",v->{
-            if (!isCurrentCorrectionRender(generation)) return;
+        int remaining=state.pages.size()-state.pageIndex;
+        Button previous=Ui.iconButton(this,"","Page précédente",v->navigateFragility(generation,-1));
+        previous.setEnabled(remaining>1);actions.addView(previous);
+        Button mask=Ui.iconButton(this,"",currentMask==0?"Masquer la page":"Afficher la page",v->{
+            if(!isCurrentCorrectionRender(generation)||!fragilityPageReady||!fragilityHasTime())return;
+            boolean saved=currentMask==0||correctionState.assisted
+                ?correctionStore.remask(correctionState):correctionStore.restartPage(correctionState);
+            if(!saved){onError("Impossible de sauvegarder le masquage.");return;}
+            correctionState=correctionStore.pending();renderActiveCorrection();
+        });
+        if(state.assisted)Ui.setIconDescription(mask,"Masquer la page");
+        actions.addView(mask);
+        actions.addView(Ui.iconButton(this,"","Révéler un verset",v->chooseFragilityVerse(generation,false)));
+        actions.addView(Ui.iconButton(this,"","Audio ciblé",v->chooseFragilityVerse(generation,true)));
+        correctionPageDoneButton=Ui.iconButton(this,"","Page récitée sans aide",v->{
+            if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
+            if(!correctionMaskedPageReady||correctionState.assisted||audioPlayer!=null){
+                onError("Masquez toute la page et récitez-la sans aide avant de valider.");return;
+            }
+            if(!correctionStore.pageRecalled(correctionState)){
+                onError("Impossible de sauvegarder la récitation.");return;
+            }
+            correctionState=correctionStore.pending();renderActiveCorrection();
+        });
+        correctionPageDoneButton.setEnabled(false);actions.addView(correctionPageDoneButton);
+        actions.addView(Ui.iconButton(this,"","Reporter cette page",v->{
+            if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
             if(!correctionStore.deferPage(correctionState)){
                 onError("Impossible de reporter cette page.");return;
             }
-            correctionState=correctionStore.pending();
-            renderActiveCorrection();
+            correctionState=correctionStore.pending();renderActiveCorrection();
         }));
+        Button next=Ui.iconButton(this,"","Page suivante",v->navigateFragility(generation,1));
+        next.setEnabled(remaining>1);actions.addView(next);
+        showCurrent();
+    }
+
+    private boolean fragilityHasTime(){
+        if(standaloneFragility||activeSlot==null)return true;
+        if(fragilityClock==null)return false;
+        long elapsed=Math.min(fragilityClock.elapsedMs(),fragilityTargetMs());
+        onFragilityTick(elapsed);
+        if(elapsed>=fragilityTargetMs()){
+            if(correctionState!=null)completeMurajaahValidation();
+            return false;
+        }
+        return !fragilityClockFailed;
+    }
+
+    private void navigateFragility(long generation,int delta){
+        if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
+        if(correctionState.pages.size()-correctionState.pageIndex<2)return;
+        if(!correctionStore.navigate(correctionState,delta)){onError("Navigation non sauvegardée.");return;}
+        correctionState=correctionStore.pending();renderActiveCorrection();
+    }
+
+    private void chooseFragilityVerse(long generation,boolean audio){
+        if(!isCurrentCorrectionRender(generation)||!fragilityPageReady||!fragilityHasTime())return;
+        LinkedHashSet<VerseRef> verses=new LinkedHashSet<>();
+        for(WordGeometryRepository.WordBox word:WordGeometryRepository.shared(this).wordsForPage(currentPage))
+            verses.add(new VerseRef(word.surah,word.ayah));
+        if(verses.isEmpty()){onError("Géométrie des versets indisponible.");return;}
+        List<VerseRef> choices=new ArrayList<>(verses);
+        String[] labels=new String[choices.size()];
+        for(int i=0;i<labels.length;i++)labels[i]="Verset "+choices.get(i).toString();
+        fragilityVersePicker=new AlertDialog.Builder(this)
+            .setTitle(audio?"Écouter un verset":"Révéler un verset")
+            .setItems(labels,(d,i)->applyFragilityAid(generation,choices.get(i),audio))
+            .setNegativeButton("Fermer",null).show();
+    }
+
+    private void applyFragilityAid(long generation,VerseRef verse,boolean audio){
+        if(!isCurrentCorrectionRender(generation)||!fragilityPageReady||!fragilityHasTime())return;
+        org.json.JSONArray boxes=WordGeometryRepository.shared(this).boxesForVerse(currentPage,verse);
+        if(boxes.length()==0){onError("Verset absent de cette page.");return;}
+        if(audio&&!new HifzAudioGate(this).installed()){
+            onError("Pack audio non installé · Paramètres › Audio");return;
+        }
+        if("RECALL".equals(correctionState.stage)){
+            if(!correctionStore.revealDuringControl(correctionState)){
+                onError("Impossible d'enregistrer cette aide.");return;
+            }
+            correctionState=correctionStore.pending();
+            if(correctionPageDoneButton!=null)correctionPageDoneButton.setEnabled(false);
+            progress.setText("Page "+currentPage+" · "+correctionState.pageIndex+"/"+correctionState.pages.size()+" traitées · avec aide");
+        }
+        closeAudio();
+        if(audio){
+            audioPlayer=new HifzAudioDialog(this,mushaf,Collections.singletonList(verse));
+            audioPlayer.attachInline(audioHost);
+        }else if(currentMask==100){
+            mushaf.setPageLandmarkBoxes(boxes);
+            mushaf.setSemanticCues(new org.json.JSONArray(),true,false);
+        }else mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsOnPage(currentPage));
     }
 
     private boolean isCurrentCorrectionRender(long generation) {
@@ -2654,7 +2713,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void onFragilityTick(long elapsed){
-        if(activeSlot==null||correctionState==null||sessionCompleted||fragilityClockFailed
+        if(standaloneFragility||activeSlot==null||correctionState==null||sessionCompleted||fragilityClockFailed
                 ||"DONE".equals(correctionState.stage))return;
         long bounded=Math.min(elapsed,fragilityTargetMs());
         if(bounded>correctionState.correctionElapsedMs){
@@ -2679,7 +2738,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void resumeFragilityClock(){
-        if(fragilityClock==null||correctionState==null||!sessionResumed
+        if(standaloneFragility||fragilityClock==null||correctionState==null||!sessionResumed
                 ||!fragilityPageReady||sessionCompleted||fragilityClockFailed)return;
         if(correctionState.correctionElapsedMs>=fragilityTargetMs())
             onFragilityTick(correctionState.correctionElapsedMs);
@@ -2794,7 +2853,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     @Override public void onVerseTap(VerseRef verse){
         if (maintenanceDraft != null) return;
-        if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted || correctionState!=null) return;
+        if(correctionState!=null){
+            if(currentMask==100)applyFragilityAid(correctionRenderGeneration,verse,false);
+            else mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsOnPage(currentPage));
+            return;
+        }
+        if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted) return;
         EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
         if (!corpus.contains(verse) || (activeSlot!=null&&!murajaahPlan.traversalVerses.contains(verse))) {
             Toast.makeText(this, "Ce verset est hors du parcours de révision prévu.", Toast.LENGTH_SHORT).show();
@@ -2809,7 +2873,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateMurajaahActions();
     }
 
-    @Override public void onPageSwipe(int delta){if(correctionState==null)goPage(delta);}
+    @Override public void onPageSwipe(int delta){
+        if(correctionState==null)goPage(delta);else navigateFragility(correctionRenderGeneration,delta);
+    }
     @Override public void onSemanticCueTap(String passageId) {
         if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
         semanticTitleDialog=null;
@@ -3208,7 +3274,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 correctionPageDoneButton.setEnabled(correctionMaskedPageReady
                     &&!correctionState.assisted);
         }
-        if(activeSlot!=null&&correctionState!=null&&page==correctionState.page()){
+        if(correctionState!=null&&page==correctionState.page()){
             fragilityPageReady="READ".equals(correctionState.stage)||correctionMaskedPageReady;
             resumeFragilityClock();
         }
@@ -3337,5 +3403,5 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         super.onPause();
     }
     @Override protected void onDestroy(){stopFragilityClock();if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
-    @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(correctionState!=null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
+    @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(correctionState!=null){if(code==KeyEvent.KEYCODE_PAGE_UP||code==KeyEvent.KEYCODE_PAGE_DOWN){navigateFragility(correctionRenderGeneration,code==KeyEvent.KEYCODE_PAGE_UP?-1:1);return true;}return super.onKeyDown(code,e);}if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }
