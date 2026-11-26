@@ -50,6 +50,14 @@ gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
     -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest \
     || status=1
 verify_process_death || status=1
+# The candidate now has a higher versionCode. Android refuses an ordinary
+# install -r of the older reference. Remove ONLY the disposable emulator's
+# synthetic debug package before reference capture; never touch a real device.
+if [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" != "1" ]]; then
+    echo "Refusing reference reset: not an Android emulator" >&2
+    exit 1
+fi
+adb uninstall com.quransafeguard.hifz.ibnkathirtest || exit 1
 if ! run_capture "$reference" "$evidence/before"; then
     echo "Reference contract failure recorded in before/result.txt"
     for name in boox-1404x1872-font100 boox-900x1200-font100; do
