@@ -72,7 +72,11 @@ final class ActiveReviewCoverage {
         }
         covered.and(acquired);
         if(proofs==0)return "Couverture sur 10 jours : historique non mesuré";
-        return "Couverture confirmée sur 10 jours : "+covered.cardinality()+"/"+acquired.cardinality()+" versets"
-            +(unknown>0?" · "+unknown+" séance(s) ancienne(s) non mesurée(s)":"");
+        String result = "Couverture confirmée sur 10 jours : " + covered.cardinality()
+            + "/" + acquired.cardinality() + " versets";
+        if (unknown > 0) return result + " · " + unknown + " séance(s) ancienne(s) non mesurée(s)";
+        if (!today.minusDays(9).isBefore(slots.programmeStart()) && !covered.equals(acquired))
+            return result + " · rotation incomplète sur les dix derniers jours";
+        return result;
     }
 }

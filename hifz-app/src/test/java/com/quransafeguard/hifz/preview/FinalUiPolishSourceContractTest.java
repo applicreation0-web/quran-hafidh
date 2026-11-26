@@ -79,10 +79,11 @@ public final class FinalUiPolishSourceContractTest {
         assertFalse(settings.contains("addRepere(root"));
     }
 
-    @Test public void settingsExposeReadableSeparatedSpeeds() throws Exception {
+    @Test public void settingsKeepConsolidationSpeedAndLegacyDiagnostic() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         String speed = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSpeedStore.java");
-        assertTrue(settings.contains("\"Vitesse · Révision passive\"") && settings.contains("\"Vitesse · Consolidation\""));
+        assertFalse(settings.contains("\"Vitesse · Révision passive\""));
+        assertTrue(settings.contains("\"Vitesse · Consolidation\""));
         assertTrue(settings.contains("speedStore.maintenanceSummary()"));
         assertTrue(settings.contains("speedStore.consolidationSummary()"));
         assertTrue(speed.contains("s/ligne"));

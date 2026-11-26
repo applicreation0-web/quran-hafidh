@@ -1515,6 +1515,14 @@ public final class HifzPrefs {
      */
     public List<VerseRef> advanceWeakVerseStreaks(java.util.Collection<VerseRef> cleanThisSession,
                                                   java.util.Collection<VerseRef> revealedThisSession) {
+        SharedPreferences.Editor editor = p.edit();
+        List<VerseRef> remaining = stageWeakVerseStreaks(editor, cleanThisSession, revealedThisSession);
+        if (!editor.commit()) return murajaahWeakVerses();
+        return remaining;
+    }
+
+    private List<VerseRef> stageWeakVerseStreaks(SharedPreferences.Editor editor,
+            java.util.Collection<VerseRef> cleanThisSession, java.util.Collection<VerseRef> revealedThisSession) {
         LinkedHashSet<VerseRef> weak = new LinkedHashSet<>(murajaahWeakVerses());
         if (weak.isEmpty()) return new ArrayList<>(weak);
         java.util.Map<VerseRef, Integer> streaks = weakVerseStreaks();
@@ -1540,11 +1548,30 @@ public final class HifzPrefs {
         if (!changed) return new ArrayList<>(weak);
         JSONArray array = new JSONArray();
         for (VerseRef verse : weak) array.put(verse.toString());
-        p.edit()
-            .putString("murajaahWeakVerses", array.toString())
-            .putString("murajaahWeakVerseStreaks", weakVerseStreaksJson(streaks))
-            .commit();
+        editor.putString("murajaahWeakVerses", array.toString())
+            .putString("murajaahWeakVerseStreaks", weakVerseStreaksJson(streaks));
         return new ArrayList<>(weak);
+    }
+
+    List<Integer> weakVersePages(GeometryRepository geometry) {
+        LinkedHashSet<Integer> pages = new LinkedHashSet<>();
+        for (VerseRef verse : murajaahWeakVerses()) pages.add(geometry.pageForVerse(verse));
+        return new ArrayList<>(pages);
+    }
+
+    void stageConfirmedWeakVerseRecall(SharedPreferences.Editor editor, GeometryRepository geometry,
+            String proof, java.util.Set<Integer> revealedPages) {
+        java.util.BitSet covered = ActiveReviewCoverage.decode(proof);
+        List<VerseRef> clean = new ArrayList<>(), assisted = new ArrayList<>();
+        for (VerseRef verse : murajaahWeakVerses()) {
+            if (!covered.get(GeometryRepository.ordinal(verse))) continue;
+            int firstPage = geometry.line(geometry.firstLineIndex(verse)).page;
+            int lastPage = geometry.line(geometry.lastLineIndex(verse)).page;
+            boolean revealed = false;
+            for (int page = firstPage; page <= lastPage; page++) revealed |= revealedPages.contains(page);
+            (revealed ? assisted : clean).add(verse);
+        }
+        stageWeakVerseStreaks(editor, clean, assisted);
     }
 
     public int sabqiLineCursor() { return p.getInt("sabqiLineCursor", -1); }

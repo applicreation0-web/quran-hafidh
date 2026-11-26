@@ -357,6 +357,10 @@ final class ActiveReviewSlots {
         }
     }
 
+    boolean correctionPending(LocalDate date, Slot slot) {
+        return correction(date, slot).pending() != null;
+    }
+
     String receipt(LocalDate date, Slot slot) {
         return prefs.getString(RECEIPT + scope(date, slot), null);
     }
@@ -391,7 +395,12 @@ final class ActiveReviewSlots {
         return complete(date,slot,start,next,label,null);
     }
 
-    boolean complete(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label,String proof) {
+    boolean complete(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label, String proof) {
+        return complete(date, slot, start, next, label, proof, null);
+    }
+
+    boolean complete(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label,
+            String proof, GeometryRepository geometry) {
         synchronized (LOCK) {
             if (!date.equals(HifzClock.today())) return false;
             Draft saved = draft(date, slot);
@@ -418,6 +427,7 @@ final class ActiveReviewSlots {
                 .remove(DRAFT + scope(date, slot));
             editor.putString(CURSOR, next.toString()).putLong(REVISION, revision() + 1L);
             ActiveReviewCoverage.append(editor,date,slot,proof);
+            stageWeakVerseRecall(editor, geometry, proof, correction, date, start);
             return editor.commit();
         }
     }
@@ -430,7 +440,12 @@ final class ActiveReviewSlots {
         return completeRecall(date,slot,start,next,label,null);
     }
 
-    boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label,String proof) {
+    boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label, String proof) {
+        return completeRecall(date, slot, start, next, label, proof, null);
+    }
+
+    boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label,
+            String proof, GeometryRepository geometry) {
         synchronized (LOCK) {
             if (!date.equals(HifzClock.today())) return false;
             Draft saved=draft(date,slot);
@@ -440,7 +455,7 @@ final class ActiveReviewSlots {
                     ||label==null||label.isEmpty()||!matchesFrozenProof(saved, proof))return false;
             ActiveReviewCorrectionStore correction=correction(date,slot);
             ActiveReviewCorrectionStore.State state=correction.pending();
-            if(state==null)return complete(date,slot,start,next,label,proof);
+            if(state==null)return complete(date,slot,start,next,label,proof,geometry);
             if(!date.toString().equals(state.date)||!start.equals(state.start)
                     ||!saved.end.equals(state.end)||state.activeElapsedMs!=saved.durationMs())return false;
             if(!state.pages.containsAll(correction.revealed(date.toString(),start)))return false;
@@ -450,12 +465,21 @@ final class ActiveReviewSlots {
                 .remove(DRAFT+scope(date,slot))
                 .putString(CURSOR,next.toString()).putLong(REVISION,revision()+1L);
             ActiveReviewCoverage.append(edit,date,slot,proof);
+            stageWeakVerseRecall(edit, geometry, proof, correction, date, start);
             return edit.commit();
         }
     }
 
     /** Close old independent corrections before a new batch snapshots the queue.
      * No cursor, receipt or acquisition is changed. */
+    private void stageWeakVerseRecall(SharedPreferences.Editor editor, GeometryRepository geometry,
+            String proof, ActiveReviewCorrectionStore correction, LocalDate date, VerseRef start) {
+        if (geometry != null && proof != null) {
+            new HifzPrefs(prefs, geometry).stageConfirmedWeakVerseRecall(
+                editor, geometry, proof, correction.revealed(date.toString(), start));
+        }
+    }
+
     ActiveReviewCorrectionStore manualCorrection(){
         return new ActiveReviewCorrectionStore(prefs,"|manual");
     }

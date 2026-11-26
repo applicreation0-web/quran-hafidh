@@ -764,7 +764,9 @@ public final class MainActivity extends android.app.Activity {
                     return;
                 }
             }
-            java.util.List<Integer> pages=slots.correction(date,ActiveReviewSlots.Slot.MORNING).queuedPages();
+            List<Integer> pages = FragilityQueuePolicy.merge(
+                slots.correction(date, ActiveReviewSlots.Slot.MORNING).queuedPages(),
+                prefs.weakVersePages(geometry));
             android.app.AlertDialog.Builder dialog=new android.app.AlertDialog.Builder(this)
                 .setTitle("Fragilités · "+pages.size()+" page(s) en attente").setNegativeButton("Fermer",null);
             if(pages.isEmpty())dialog.setMessage("Aucune page en attente.");
@@ -949,6 +951,11 @@ public final class MainActivity extends android.app.Activity {
                 return ActiveReviewSlots.Slot.EVENING.mode;
             return ActiveReviewSlots.Slot.MORNING.mode;
         }
+        if (reviews.correctionPending(today, ActiveReviewSlots.Slot.MORNING))
+            return ActiveReviewSlots.Slot.MORNING.mode;
+        if (reviews.receipt(today, ActiveReviewSlots.Slot.EVENING) != null
+                && reviews.correctionPending(today, ActiveReviewSlots.Slot.EVENING))
+            return ActiveReviewSlots.Slot.EVENING.mode;
         if (due!=null) {
             String lesson=nextCadenceMode(due.getScheduledDate(),today,due.getAction());
             if(lesson!=null) {
@@ -1218,7 +1225,7 @@ public final class MainActivity extends android.app.Activity {
         if(!reviews.scheduled(today,slot))return;
         int minutes=reviews.targetMinutes(today,slot,prefs.activeReviewMinutes(geometry));
         addToday(out,slot.title()+" · "+minutes+" min · Fragilités "+ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min",
-            slot.mode,today,reviews.receipt(today,slot)!=null,nextMode);
+            slot.mode,today,reviews.receipt(today,slot)!=null&&!reviews.correctionPending(today,slot),nextMode);
     }
 
     private void addToday(List<TodaySession> out,String label,String mode,LocalDate scheduled,boolean done,String nextMode){

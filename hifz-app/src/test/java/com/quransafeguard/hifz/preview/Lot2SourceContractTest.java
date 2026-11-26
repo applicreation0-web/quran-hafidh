@@ -89,7 +89,7 @@ public final class Lot2SourceContractTest {
         assertTrue(session.contains("clock.resume()"));
     }
 
-    @Test public void maintenanceEndpointMayExtendBeyondPlanButMustStayInsideAcquiredCorpus() throws Exception {
+    @Test public void legacyMaintenanceMayExtendButDatedActiveReviewUsesFrozenPlan() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(session.contains("EligibleCorpus corpus = prefs.murajaahCorpus(geometry)") && session.contains("prefs.activeMurajaahCorpus()"));
         assertTrue(session.contains("if (!corpus.contains(verse))"));
@@ -99,10 +99,8 @@ public final class Lot2SourceContractTest {
         int tapStart = session.indexOf("@Override public void onVerseTap");
         int tapEnd = session.indexOf("@Override public void onPageSwipe", tapStart);
         assertTrue(tapStart >= 0 && tapEnd > tapStart);
-        // This protects endpoint validation, not a read-only Atlas link's own scope.
-        // A documented comparison can be restricted to the displayed plan without
-        // forbidding the learner from revising beyond that plan.
-        assertFalse(session.substring(tapStart, tapEnd).contains("murajaahPlan.traversalVerses.contains(verse)"));
+        assertTrue(session.substring(tapStart, tapEnd).contains(
+            "!corpus.contains(verse) || (activeSlot!=null&&!murajaahPlan.traversalVerses.contains(verse))"));
         int countStart=session.indexOf("private int countMurajaahLinesThrough(");
         int countEnd=session.indexOf("private String murajaahObjectiveLabel()",countStart);
         assertTrue(countStart>=0&&countEnd>countStart);

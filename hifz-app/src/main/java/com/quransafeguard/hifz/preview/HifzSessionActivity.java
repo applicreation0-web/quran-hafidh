@@ -261,7 +261,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                     if(!activeSlots.settleOtherCorrections(null,null))
                         throw new IllegalStateException("Pending correction");
                     int page=getIntent().getIntExtra(EXTRA_FRAGILITY_PAGE,-1);
-                    if(!correctionStore.queuedPages().contains(page))
+                    if (!FragilityQueuePolicy.merge(correctionStore.queuedPages(),
+                            prefs.weakVersePages(geometry)).contains(page))
                         throw new IllegalStateException("Page no longer queued");
                     standaloneMinutes=prefs.activeReviewMinutes(geometry);
                     VerseRef anchor=prefs.activeMurajaahCursor();
@@ -2432,7 +2433,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             }
             List<Integer> revealedPages=activeSlot==null?ActiveReviewCorrectionPlan.select(
                 correctionStore.revealed(sessionDate.toString(),murajaahPlan.start))
-                :correctionStore.pagesToCorrect(sessionDate.toString(),murajaahPlan.start);
+                :FragilityQueuePolicy.merge(
+                    correctionStore.pagesToCorrect(sessionDate.toString(),murajaahPlan.start),
+                    prefs.weakVersePages(geometry));
             if(!revealedPages.isEmpty()){
                 // Freeze the original cursor and time. These repeated pages earn no new credit.
                 if(!correctionStore.begin(sessionDate.toString(),murajaahPlan.start,
@@ -2467,7 +2470,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
             boolean committed = activeSlot == null
                 ? prefs.completeActiveMurajaah(next, sessionDate.toString(), label)
-                : activeSlots.complete(sessionDate, activeSlot, murajaahPlan.start, next, label, confirmedCoverage());
+                : activeSlots.complete(sessionDate, activeSlot, murajaahPlan.start, next, label, confirmedCoverage(), geometry);
             if (!committed) {
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
@@ -2521,7 +2524,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef next=prefs.activeMurajaahCorpus().next(murajaahActualEnd);
         String label=activeReviewTitle()+" · testé : "+QuranSurahNames.range(murajaahPlan.start,murajaahActualEnd)
             +" · "+lines+"L/"+activeTargetMs()/1000L+"s";
-        if(!activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label,confirmedCoverage()))return false;
+        if(!activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label,confirmedCoverage(),geometry))return false;
         validatedCorrespondenceVerse=CorrespondenceCases.lastValidatedAnchor(murajaahPlan.traversalVerses,murajaahActualEnd);
         validatedDiscriminantVerse=null;
         for(VerseRef verse:murajaahPlan.traversalVerses){

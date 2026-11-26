@@ -617,12 +617,12 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             murajaahCorpus.contains("all.addAll(promotedRanges());"));
     }
 
-    /** Sunday finals and the two active slots are independent in either programme. */
-    @Test public void sundayFinalsRetainIndependentActiveSlotsInEitherProgramme() throws Exception {
+    /** Sunday finals remain independent of the dated active review schedule. */
+    @Test public void sundayFinalsRetainIndependentMorningReviewInEitherProgramme() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue("after Sunday finales the evening active slot remains available",
-            main.contains("return reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null"));
+        assertTrue("The review store decides whether Sunday evening is scheduled",
+            main.contains("if(!reviews.scheduled(today,slot))return;"));
         assertTrue("classic Sunday is complete after two separate finales",
             main.contains("return learningFinalResolved(date)")
                 && main.contains("prefs.itqanPostNasMaintenance() || consolidationFinalResolved(date)"));
@@ -630,8 +630,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             main.contains("if(recommendedSunday(date))")
             && main.contains("!prefs.itqanPostNasMaintenance() && !consolidationFinalResolved(today)"));
         assertFalse(main.contains("if(!modeComplete(date,HifzSessionActivity.ITQAN))return false;"));
-        assertTrue("Sunday schedule excludes passive review",
-            main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY) {"));
+        assertFalse(main.contains("addToday(out,\"Révision passive"));
         assertTrue("Sunday forecast offers Consolidation finale instead of general Entretien",
             weekly.contains("evening=!itqanFinalDue?\"—\":consolidationDone?\"✓ Finale Itqān\""));
         assertFalse("Sunday REVISION branch must not project any passive cursor",

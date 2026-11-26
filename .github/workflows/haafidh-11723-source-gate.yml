@@ -31,6 +31,7 @@ jobs:
         with:
           gradle-version: '9.5.0'
       - name: Verify no private corpus or signing material
+        id: confidentiality
         run: |
           set -euo pipefail
           test ! -d hifz-app/src/private114/assets
@@ -39,6 +40,7 @@ jobs:
       - name: Unit tests and existing source contracts
         run: gradle --no-daemon --init-script scripts/no_apk.init.gradle :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
       - name: Compile private release sources without packaging
+        if: ${{ !cancelled() && steps.confidentiality.outcome == 'success' }}
         env:
           AYAH_THEMES_PRIVATE_114: '1'
           HIFZ_PRIVATE_RELEASE_UPGRADE: '1'

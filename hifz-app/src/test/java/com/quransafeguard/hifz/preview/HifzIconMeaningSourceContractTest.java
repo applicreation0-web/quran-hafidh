@@ -35,7 +35,7 @@ public final class HifzIconMeaningSourceContractTest {
         assertTrue(main.contains("pathTile(otherModes, \"Stabilisation\""));
         assertTrue(main.contains("pathTile(otherModes, \"Consolidation\""));
         assertTrue(main.contains("pathTile(reviewModes, \"Révision active\""));
-        assertTrue(main.contains("pathTile(reviewModes, \"Révision passive\""));
+        assertTrue(main.contains("pathTile(reviewModes, \"Fragilités\""));
         assertTrue(main.contains("R.drawable.ic_haafidh_lecture"));
         assertTrue(main.contains("R.drawable.ic_haafidh_progression"));
         assertTrue(main.contains("ic_hifz_catchup_clock"));

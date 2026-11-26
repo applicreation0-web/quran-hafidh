@@ -115,13 +115,11 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(week.contains("\"Ancrage ·"));
         assertFalse(week.contains("\"Ancrage fractionné ·"));
         // Each half-day shows its own active slot alongside its other sessions.
-        assertTrue(week.contains("morning=joinSessions(activeMorning,passive);"));
         assertTrue(week.contains("morning=joinSessions(activeMorning,morning);"));
-        assertTrue(week.contains("evening=joinSessions(evening,activeEvening);"));
+        assertTrue(week.contains("if(eveningScheduled)evening=joinSessions(activeEvening,evening);"));
         assertFalse("No obsolete UI Entretien label",
             week.contains("\"Entretien ·"));
-        assertTrue("Passive review is optional",
-            week.contains("if(!passiveDone)passive+=\" · facultative\";"));
+        assertFalse(week.contains("\"Révision passive ·"));
     }
 
     @Test public void localHusaryImportContractRemainsUntouched() throws Exception {
