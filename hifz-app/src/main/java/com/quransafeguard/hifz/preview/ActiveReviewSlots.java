@@ -396,8 +396,17 @@ final class ActiveReviewSlots {
 
     /** Close old independent corrections before a new batch snapshots the queue.
      * No cursor, receipt or acquisition is changed. */
+    ActiveReviewCorrectionStore manualCorrection(){
+        return new ActiveReviewCorrectionStore(prefs,"|manual");
+    }
+
     boolean settleOtherCorrections(LocalDate date,Slot slot) {
         synchronized(LOCK){
+            if(date!=null){
+                ActiveReviewCorrectionStore manual=manualCorrection();
+                ActiveReviewCorrectionStore.State pending=manual.pending();
+                if(pending!=null&&!manual.finishIndependent(pending))return false;
+            }
             for(String key:prefs.getAll().keySet()){
                 if(!key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|"))continue;
                 String[] parts=key.split("\\|",-1);
