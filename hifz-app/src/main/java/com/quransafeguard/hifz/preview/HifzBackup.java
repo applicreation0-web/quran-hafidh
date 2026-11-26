@@ -245,15 +245,22 @@ final class HifzBackup {
             while(keys.hasNext()){
                 String key=keys.next();
                 boolean coverage=key.startsWith(ActiveReviewCoverage.KEY+"|");
+                boolean draft=key.startsWith(ActiveReviewSlots.DRAFT+"|");
                 boolean correction=key.equals(ActiveReviewCorrectionStore.KEY_STATE)
                     ||key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|");
                 boolean queue=key.equals(ActiveReviewCorrectionStore.KEY_QUEUE);
-                if(!coverage&&!correction&&!queue)continue;
+                if(!coverage&&!correction&&!queue&&!draft)continue;
                 JSONObject entry=values.getJSONObject(key);
                 if(!"s".equals(entry.getString("t"))||!(entry.get("v") instanceof String))
                     throw new IllegalArgumentException("Invalid active-review journal type");
                 String raw=entry.getString("v");
-                if(queue){
+                if(draft){
+                    String[] scope=key.substring(ActiveReviewSlots.DRAFT.length()+1).split("\\|",-1);
+                    if(scope.length!=2)throw new IllegalArgumentException("Invalid draft scope");
+                    java.time.LocalDate.parse(scope[0]);
+                    ActiveReviewSlots.Slot.valueOf(scope[1]);
+                    ActiveReviewSlots.decodeDraft(raw);
+                }else if(queue){
                     ActiveReviewCorrectionStore.decodeQueue(raw);
                 }else if(correction){
                     ActiveReviewCorrectionStore.State state=ActiveReviewCorrectionStore.decodeState(raw);

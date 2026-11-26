@@ -88,7 +88,7 @@ public final class PassiveApprisAndSundayContractTest {
         catch(IllegalArgumentException expected){}
     }
 
-    @Test public void bothProgrammesScheduleActiveButNotPassiveOnSunday() throws Exception {
+    @Test public void sundayScheduleDelegatesEveningEligibilityToDatedSlots() throws Exception {
         java.nio.file.Path mainFile=Paths.get(
             "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         if(!Files.exists(mainFile))mainFile=Paths.get("..",mainFile.toString());
@@ -97,9 +97,9 @@ public final class PassiveApprisAndSundayContractTest {
         if(!Files.exists(plannerFile))plannerFile=Paths.get("..",plannerFile.toString());
         String main=new String(Files.readAllBytes(mainFile),StandardCharsets.UTF_8);
         String planner=new String(Files.readAllBytes(plannerFile),StandardCharsets.UTF_8);
-        assertTrue(main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY)"));
+        assertTrue(main.contains("if(!reviews.scheduled(today,slot))return;"));
         assertTrue(main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING"));
-        assertTrue(planner.contains("evening=joinSessions(evening,activeEvening);"));
+        assertTrue(planner.contains("if(eveningScheduled)evening=joinSessions(activeEvening,evening);"));
         assertTrue(main.contains("Finale Sabqi · matin"));
         assertTrue(main.contains("Finale Itqān · soir"));
     }
