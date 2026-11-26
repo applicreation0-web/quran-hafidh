@@ -77,7 +77,7 @@ final class WeeklyDashboardPlanner {
         try {
             murajaahCursor=prefs.murajaahCursor();
             murajaahCorpus=prefs.murajaahCorpus(geometry);
-            duration=maintenanceMinutes();
+            duration=prefs.activeReviewMinutes(geometry);
         } catch(RuntimeException problem) {
             android.util.Log.e("QuranHifz","Weekly revision projection unavailable",problem);
         }
@@ -272,34 +272,8 @@ final class WeeklyDashboardPlanner {
             boolean eveningDone=ledger.find(date,pm.mode)!=null;
             String activeMorning=activeReviewLabel(am,morningDone,prefs.activeReviewSlots().targetMinutes(date,am,duration));
             String activeEvening=activeReviewLabel(pm,eveningDone,prefs.activeReviewSlots().targetMinutes(date,pm,duration));
-            if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY) {
-                boolean passiveDone=ledger.find(date,HifzSessionActivity.MURAJAAH)!=null;
-                String durationLabel=revisionMinutes>0 ? revisionMinutes+" min" : "durée à vérifier";
-                String passive=(passiveDone?"✓ ":"")+"Révision passive · "+durationLabel;
-                if(!passiveDone && murajaahCursor!=null && murajaahCorpus!=null
-                        && revisionMinutes>0) {
-                    Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
-                    // projectMurajaah already includes duration; display it once.
-                    String range=projected.label;
-                    String trailing=" · "+revisionMinutes+" min";
-                    if(range.endsWith(trailing))
-                        range=range.substring(0,range.length()-trailing.length());
-                    passive+=" · "+range;
-                    murajaahCursor=projected.next; // Read-only forecast, not a saved cursor.
-                } else if(!passiveDone) {
-                    passive+=" · position à vérifier";
-                }
-                if(!passiveDone)passive+=" · facultative";
-                if(action==CadenceAction.LEARNING || action==CadenceAction.STABILIZATION) {
-                    evening=joinSessions(morning,evening);
-                } else {
-                    state="Validé";
-                }
-                morning=joinSessions(activeMorning,passive);
-            } else {
-                morning=joinSessions(activeMorning,morning);
-            }
-            evening=joinSessions(evening,activeEvening);
+            morning=joinSessions(activeMorning,morning);
+            evening=joinSessions(activeEvening,evening);
             if(!morningDone)state="À faire";
             else if(!eveningDone&&("Validé".equals(state)||"Aucune finale à valider".equals(state)))
                 state="Soir à faire";
