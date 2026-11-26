@@ -57,6 +57,31 @@ public final class FragilityReaderVisualInstrumentedTest {
                 HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("fragilite-masquee.png");
                 double maskedInk=inkFraction(context,"fragilite-masquee.png");
                 assertTrue("Masked folio exposes too much ink: "+maskedInk,maskedInk<visibleInk*0.25);
+                // Pick the verse with the largest central word-box area. It must reveal
+                // real ink, but not replace the mask by an entirely visible folio.
+                java.util.Map<VerseRef,Double> areas=new java.util.LinkedHashMap<>();
+                for(WordGeometryRepository.WordBox w:WordGeometryRepository.shared(context).wordsForPage(page)){
+                    double area=Math.max(0,Math.min(w.x1,276)-Math.max(w.x0,69))
+                        *Math.max(0,Math.min(w.y1,440)-Math.max(w.y0,110));
+                    VerseRef v=new VerseRef(w.surah,w.ayah);
+                    areas.put(v,areas.getOrDefault(v,0d)+area);
+                }
+                VerseRef target=null;double largest=0;
+                for(java.util.Map.Entry<VerseRef,Double> entry:areas.entrySet())
+                    if(entry.getValue()>largest){largest=entry.getValue();target=entry.getKey();}
+                assertNotNull("Precise verse geometry required",target);
+                final VerseRef chosen=target;
+                activity.onActivity(a->{
+                    a.onVerseTap(chosen);
+                    assertTrue(prefs.activeReviewSlots().manualCorrection().pending().assisted);
+                    assertFalse(control((View)field(a,"actions"),"Page récitée sans aide").isEnabled());
+                });
+                HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("fragilite-cible.png");
+                double partialInk=inkFraction(context,"fragilite-cible.png");
+                assertTrue("Targeted verse must reveal actual ink",partialInk>maskedInk+0.0002);
+                assertTrue("Targeted aid must not expose the whole page",partialInk<visibleInk*0.8);
+                activity.onActivity(a->click(a,"Masquer la page"));
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Fresh full mask after targeted help");
                 activity.recreate();
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Fragilité masquée reprise");
                 activity.onActivity(a->{
