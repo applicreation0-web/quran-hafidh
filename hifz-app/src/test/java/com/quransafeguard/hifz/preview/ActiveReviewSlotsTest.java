@@ -28,6 +28,53 @@ public final class ActiveReviewSlotsTest {
             day.atStartOfDay(java.time.ZoneOffset.UTC).toInstant(),java.time.ZoneOffset.UTC));
     }
 
+    @Test public void rollForwardCannotCreateANewSundayEveningSlot() {
+        LocalDate saturday = SUNDAY.minusDays(1);
+        store.ensureProgramme(saturday);
+        assertTrue(store.checkpoint(saturday, ActiveReviewSlots.Slot.EVENING,
+            FIRST, END, 2, 250_000L, false, 40));
+        assertFalse(store.carryForward(SUNDAY, ActiveReviewSlots.Slot.EVENING));
+        assertNull(store.draft(SUNDAY, ActiveReviewSlots.Slot.EVENING));
+        assertNotNull(store.draft(saturday, ActiveReviewSlots.Slot.EVENING));
+        assertTrue(store.carryForward(SUNDAY, ActiveReviewSlots.Slot.MORNING));
+        assertEquals(250_000L, store.draft(SUNDAY, ActiveReviewSlots.Slot.MORNING).elapsedMs);
+    }
+
+    @Test public void frozenPlanSurvivesRestartAndRejectsAnInsertedVerseOrProof() {
+        ActiveReviewSlots.Slot slot = ActiveReviewSlots.Slot.MORNING;
+        VerseRef disjoint = new VerseRef(49, 1);
+        java.util.List<VerseRef> frozen = java.util.Arrays.asList(FIRST, disjoint);
+        assertTrue(store.checkpoint(SUNDAY, slot, FIRST, FIRST, 2, 2000L, false, 40, frozen));
+
+        ActiveReviewSlots reopened = new ActiveReviewSlots(disk);
+        assertEquals(frozen, reopened.draft(SUNDAY, slot).traversal);
+        assertFalse(reopened.checkpoint(SUNDAY, slot, FIRST, END, 2, 2400000L, false, 70,
+            java.util.Arrays.asList(FIRST, END, disjoint)));
+        assertTrue(reopened.checkpoint(SUNDAY, slot, FIRST, disjoint, 515, 2400000L,
+            false, 70, frozen));
+        assertEquals(40, reopened.draft(SUNDAY, slot).targetMinutes);
+        String half = ActiveReviewCoverage.encode(ActiveReviewCoverage.through(frozen, FIRST));
+        assertFalse(reopened.complete(SUNDAY, slot, FIRST, NEXT, "incomplet", half));
+        assertNull(reopened.receipt(SUNDAY, slot));
+        String full = ActiveReviewCoverage.encode(ActiveReviewCoverage.through(frozen, disjoint));
+        assertTrue(reopened.complete(SUNDAY, slot, FIRST, NEXT, "confirmé", full));
+    }
+
+    @Test public void expiredCorrectionKeepsUnresolvedPagesWithoutChangingCursor() {
+        ActiveReviewSlots.Slot slot = ActiveReviewSlots.Slot.EVENING;
+        assertTrue(store.checkpoint(SUNDAY, slot, FIRST, null, 2, 540_000L));
+        ActiveReviewCorrectionStore replay = store.correction(SUNDAY, slot);
+        assertTrue(replay.recordReveal(SUNDAY.toString(), FIRST, 2));
+        setDay(SUNDAY.plusDays(1));
+        assertTrue(store.restoreExpiredRevealCorrection(SUNDAY, slot));
+        assertFalse(store.finishCorrectionWithoutReceipt(SUNDAY, slot));
+        assertTrue(replay.recordElapsed(replay.pending(), 300_000L));
+        assertTrue(store.finishCorrectionWithoutReceipt(SUNDAY, slot));
+        assertEquals(Collections.singletonList(2), replay.queuedPages());
+        assertNull(store.receipt(SUNDAY, slot));
+        assertFalse(disk.contains("activeMurajaahCursor"));
+    }
+
     @Test public void sundayMorningAndEveningEachRequireThirtyMinutesAndUseTheSameCursor() {
         ActiveReviewSlots.Slot morning = ActiveReviewSlots.Slot.MORNING;
         ActiveReviewSlots.Slot evening = ActiveReviewSlots.Slot.EVENING;

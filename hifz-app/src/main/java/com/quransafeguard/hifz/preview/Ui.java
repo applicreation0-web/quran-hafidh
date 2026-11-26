@@ -358,6 +358,7 @@ final class Ui {
         if (s.equals("lecture cumulative")) return R.drawable.ic_ui_revision;
         if (s.equals("page récitée")) return R.drawable.ic_ui_validate;
         if (s.equals("page relue") || s.equals("page récitée sans aide")) return R.drawable.ic_ui_validate;
+        if (s.equals("reporter cette page")) return R.drawable.ic_ui_next;
         if (s.equals("recommencer la page") || s.startsWith("échec ·")) return R.drawable.ic_ui_repeat;
         if (s.contains("difficulté") || s.contains("difficulte")) return R.drawable.ic_ui_difficulty;
         if (s.equals("marquer") || s.startsWith("touchez le verset")) return R.drawable.ic_ui_difficulty;

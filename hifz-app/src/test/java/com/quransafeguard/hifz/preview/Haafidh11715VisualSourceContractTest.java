@@ -35,7 +35,7 @@ public final class Haafidh11715VisualSourceContractTest {
         String session=java("HifzSessionActivity");
         assertTrue(session.contains("if (hasAuthenticClosingReceipt()) showClosingFatiha();"));
         assertTrue(session.contains("else if(!hasShown&&hasAuthenticClosingReceipt())showClosingFatiha();"));
-        assertTrue(session.contains("if (sessionRenderFailed || !sessionCompleted || awaitingValidation) return false;"));
+        assertTrue(session.contains("if (standaloneFragility || sessionRenderFailed || !sessionCompleted || awaitingValidation || correctionState!=null) return false;"));
         assertTrue(session.contains("date.equals(prefs.lastLearningSnowballEveningDate())"));
         assertTrue(session.contains("date.equals(prefs.lastRecentSabqiReviewDate())"));
         assertTrue("Closing page must still be an authentic full Fatiha",session.contains("geometry.pageForVerse(new VerseRef(1, 7)) != page"));
@@ -76,8 +76,8 @@ public final class Haafidh11715VisualSourceContractTest {
     }
     @Test public void buildIdentityIsOnlyIncrement()throws Exception{
         String gradle=source("hifz-app/build.gradle.kts");
-        assertTrue(gradle.contains("versionCode = 60"));
-        assertTrue(gradle.contains("versionName = \"1.17.22\""));
+        assertTrue(gradle.contains("versionCode = 61"));
+        assertTrue(gradle.contains("versionName = \"1.17.23\""));
         assertTrue(gradle.contains("applicationId = \"com.quransafeguard.hifz\""));
     }
 }

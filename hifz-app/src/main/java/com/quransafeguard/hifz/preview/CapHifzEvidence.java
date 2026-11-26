@@ -68,6 +68,13 @@ final class CapHifzEvidence {
             LocalDate coverage, LocalDate activeFrom, WeeklyBilan.Calendar datedCalendar,
             Predicate<LocalDate> sabqiDue, Predicate<LocalDate> itqanDue,
             BiPredicate<Track, LocalDate> received) {
+        return count(from,through,today,coverage,activeFrom,datedCalendar,sabqiDue,itqanDue,received,day->true);
+    }
+
+    static Map<Track, Count> count(LocalDate from, LocalDate through, LocalDate today,
+            LocalDate coverage, LocalDate activeFrom, WeeklyBilan.Calendar datedCalendar,
+            Predicate<LocalDate> sabqiDue, Predicate<LocalDate> itqanDue,
+            BiPredicate<Track, LocalDate> received, Predicate<LocalDate> eveningDue) {
         Map<Track, Count> counts = new EnumMap<>(Track.class);
         for (Track track : Track.values()) counts.put(track, new Count());
         LocalDate day = from.isBefore(coverage) ? coverage : from;
@@ -79,7 +86,7 @@ final class CapHifzEvidence {
                 add(counts.get(Track.ITQAN), day, today, received.test(Track.ITQAN, day));
             if (!day.isBefore(activeFrom)) {
                 add(counts.get(Track.MORNING), day, today, received.test(Track.MORNING, day));
-                add(counts.get(Track.EVENING), day, today, received.test(Track.EVENING, day));
+                if(eveningDue.test(day))add(counts.get(Track.EVENING), day, today, received.test(Track.EVENING, day));
             }
         }
         return counts;

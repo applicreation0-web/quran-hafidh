@@ -145,6 +145,7 @@ final class HifzBackup {
             checkValues(j10);checkValues(gates);
             if(freeMem!=null){checkValues(freeMem);validateFreeMemory(freeMem);}
             validateReceipts(dashboard);
+            validateActiveReview(values);
             synchronized(J10ReviewStore.LEGACY_STORE_LOCK) {
                 SharedPreferences main=context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
                 SharedPreferences ledger=context.getSharedPreferences(DASHBOARD_NAME,Context.MODE_PRIVATE);
@@ -235,6 +236,75 @@ final class HifzBackup {
         JSONObject out=new JSONObject();
         for(Map.Entry<String,?> e:all.entrySet())out.put(e.getKey(),encode(e.getValue()));
         return out;
+    }
+
+    /** Validate the new journals BEFORE the restore transaction touches local progress. */
+    static void validateActiveReview(JSONObject values) throws JSONException {
+        try{
+            Iterator<String> keys=values.keys();
+            while(keys.hasNext()){
+                String key=keys.next();
+                boolean coverage=key.startsWith(ActiveReviewCoverage.KEY+"|");
+                boolean draft=key.startsWith(ActiveReviewSlots.DRAFT+"|");
+                boolean correction=key.equals(ActiveReviewCorrectionStore.KEY_STATE)
+                    ||key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|");
+                boolean queue=key.equals(ActiveReviewCorrectionStore.KEY_QUEUE);
+                boolean revealed=key.equals(ActiveReviewCorrectionStore.KEY_REVEALED)
+                    || key.startsWith(ActiveReviewCorrectionStore.KEY_REVEALED+"|");
+                if(!coverage&&!correction&&!queue&&!draft&&!revealed)continue;
+                JSONObject entry=values.getJSONObject(key);
+                if(!"s".equals(entry.getString("t"))||!(entry.get("v") instanceof String))
+                    throw new IllegalArgumentException("Invalid active-review journal type");
+                String raw=entry.getString("v");
+                if(draft){
+                    String[] scope=key.substring(ActiveReviewSlots.DRAFT.length()+1).split("\\|",-1);
+                    if(scope.length!=2)throw new IllegalArgumentException("Invalid draft scope");
+                    java.time.LocalDate.parse(scope[0]);
+                    ActiveReviewSlots.Slot.valueOf(scope[1]);
+                    ActiveReviewSlots.decodeDraft(raw);
+                }else if(revealed){
+                    java.time.LocalDate date = null;
+                    if (!key.equals(ActiveReviewCorrectionStore.KEY_REVEALED)) {
+                        String[] scope = key.substring(ActiveReviewCorrectionStore.KEY_REVEALED.length()+1)
+                            .split("\\|", -1);
+                        if (scope.length != 2) throw new IllegalArgumentException("Invalid reveal scope");
+                        date = java.time.LocalDate.parse(scope[0]);
+                        ActiveReviewSlots.Slot.valueOf(scope[1]);
+                    }
+                    ActiveReviewCorrectionStore.validateRevealJournal(raw, date);
+                }else if(queue){
+                    ActiveReviewCorrectionStore.decodeQueue(raw);
+                }else if(correction){
+                    ActiveReviewCorrectionStore.State state=ActiveReviewCorrectionStore.decodeState(raw);
+                    if(state==null)throw new IllegalArgumentException("Empty correction state");
+                    if(state.correctionElapsedMs>900_000L)
+                        throw new IllegalArgumentException("Correction exceeds maximum duration");
+                    if(key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|")
+                            &&!key.endsWith("|manual")){
+                        String suffix=key.substring(ActiveReviewCorrectionStore.KEY_STATE.length()+1);
+                        String[] parts=suffix.split("\\|",-1);
+                        if(parts.length!=2||!state.date.equals(parts[0]))
+                            throw new IllegalArgumentException("Invalid correction scope");
+                        ActiveReviewSlots.Slot.valueOf(parts[1]);
+                        JSONObject proof = values.optJSONObject(ActiveReviewCoverage.KEY + "|" + suffix);
+                        if (proof != null)
+                            ActiveReviewCoverage.restoreTraversal(proof.getString("v"), state.start, state.end);
+                    }
+                }else{
+                    ActiveReviewCoverage.decode(raw);
+                    String suffix=key.substring(ActiveReviewCoverage.KEY.length()+1);
+                    String[] parts=suffix.split("\\|",-1);
+                    if(parts.length!=2)throw new IllegalArgumentException("Invalid coverage scope");
+                    java.time.LocalDate.parse(parts[0]);
+                    ActiveReviewSlots.Slot.valueOf(parts[1]);
+                    JSONObject receipt=values.getJSONObject("activeReviewReceiptV1|"+suffix);
+                    if(!"s".equals(receipt.getString("t"))||receipt.getString("v").isEmpty())
+                        throw new IllegalArgumentException("Coverage without receipt");
+                }
+            }
+        }catch(RuntimeException invalid){
+            throw new JSONException("Journal de révision invalide ; restauration refusée.");
+        }
     }
 
     private static void checkValues(JSONObject values) throws JSONException {

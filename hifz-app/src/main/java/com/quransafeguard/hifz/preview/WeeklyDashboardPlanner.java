@@ -71,17 +71,12 @@ final class WeeklyDashboardPlanner {
             android.util.Log.e("QuranHifz","Weekly Sabqi cursor unavailable",problem);
         }
 
-        VerseRef murajaahCursor=null;
-        EligibleCorpus murajaahCorpus=null;
         int duration=-1;
         try {
-            murajaahCursor=prefs.murajaahCursor();
-            murajaahCorpus=prefs.murajaahCorpus(geometry);
-            duration=maintenanceMinutes();
+            duration=prefs.activeReviewMinutes(geometry);
         } catch(RuntimeException problem) {
-            android.util.Log.e("QuranHifz","Weekly revision projection unavailable",problem);
+            android.util.Log.e("QuranHifz","Weekly active revision projection unavailable",problem);
         }
-        final int revisionMinutes=duration;
 
         // The historic OPEN snapshot and the live rotation are independent
         // sources; neither may invalidate the other six visible dates.
@@ -269,37 +264,12 @@ final class WeeklyDashboardPlanner {
             ActiveReviewSlots.Slot am=ActiveReviewSlots.Slot.MORNING;
             ActiveReviewSlots.Slot pm=ActiveReviewSlots.Slot.EVENING;
             boolean morningDone=ledger.find(date,am.mode)!=null;
-            boolean eveningDone=ledger.find(date,pm.mode)!=null;
+            boolean eveningScheduled=prefs.activeReviewSlots().scheduled(date,pm);
+            boolean eveningDone=!eveningScheduled||ledger.find(date,pm.mode)!=null;
             String activeMorning=activeReviewLabel(am,morningDone,prefs.activeReviewSlots().targetMinutes(date,am,duration));
             String activeEvening=activeReviewLabel(pm,eveningDone,prefs.activeReviewSlots().targetMinutes(date,pm,duration));
-            if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY) {
-                boolean passiveDone=ledger.find(date,HifzSessionActivity.MURAJAAH)!=null;
-                String durationLabel=revisionMinutes>0 ? revisionMinutes+" min" : "durée à vérifier";
-                String passive=(passiveDone?"✓ ":"")+"Révision passive · "+durationLabel;
-                if(!passiveDone && murajaahCursor!=null && murajaahCorpus!=null
-                        && revisionMinutes>0) {
-                    Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,revisionMinutes);
-                    // projectMurajaah already includes duration; display it once.
-                    String range=projected.label;
-                    String trailing=" · "+revisionMinutes+" min";
-                    if(range.endsWith(trailing))
-                        range=range.substring(0,range.length()-trailing.length());
-                    passive+=" · "+range;
-                    murajaahCursor=projected.next; // Read-only forecast, not a saved cursor.
-                } else if(!passiveDone) {
-                    passive+=" · position à vérifier";
-                }
-                if(!passiveDone)passive+=" · facultative";
-                if(action==CadenceAction.LEARNING || action==CadenceAction.STABILIZATION) {
-                    evening=joinSessions(morning,evening);
-                } else {
-                    state="Validé";
-                }
-                morning=joinSessions(activeMorning,passive);
-            } else {
-                morning=joinSessions(activeMorning,morning);
-            }
-            evening=joinSessions(evening,activeEvening);
+            morning=joinSessions(activeMorning,morning);
+            if(eveningScheduled)evening=joinSessions(activeEvening,evening);
             if(!morningDone)state="À faire";
             else if(!eveningDone&&("Validé".equals(state)||"Aucune finale à valider".equals(state)))
                 state="Soir à faire";
@@ -317,7 +287,7 @@ final class WeeklyDashboardPlanner {
     }
 
     private static String activeReviewLabel(ActiveReviewSlots.Slot slot,boolean done,int minutes){
-        return (done?"✓ ":"")+slot.title()+" · "+minutes+" min";
+        return (done?"✓ ":"")+slot.title()+" · "+minutes+" min · Fragilités "+ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min";
     }
 
     private static String joinSessions(String first,String second){

@@ -30,6 +30,9 @@ import java.util.Locale;
 public final class HifzSessionActivity extends android.app.Activity implements MushafView.Listener {
     public static final String EXTRA_MODE = "mode";
     public static final String EXTRA_SCHEDULED_DATE = "scheduled_date";
+    public static final String EXTRA_FRAGILITY_PAGE = "fragility_page";
+    private boolean standaloneFragility;
+    private int standaloneMinutes;
     public static final String SABQI = "SABQI";
     public static final String SABQI_TODAY_REVIEW = "SABQI_TODAY_REVIEW";
     public static final String ITQAN = "ITQAN";
@@ -124,6 +127,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean activeCorrectionRecoveryRequired;
     private boolean sessionRenderFailed; // Recovery failure is not a validated session.
     private boolean correctionMaskedPageReady;
+    private SessionClock fragilityClock;
+    private boolean fragilityPageReady, fragilityTimeoutPosted, fragilityClockFailed;
     private Button correctionPageDoneButton;
     private LocalDate sessionDate;
     /** Today's date is captured once on entry; never silently changes mid-session. */
@@ -138,6 +143,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         mode = getIntent().getStringExtra(EXTRA_MODE);
+        standaloneFragility=getIntent().hasExtra(EXTRA_FRAGILITY_PAGE);
+        if(standaloneFragility)mode=MURAJAAH_ACTIVE;
         ActiveReviewSlots.Slot requestedActiveSlot = ActiveReviewSlots.Slot.fromMode(mode);
         if (requestedActiveSlot != null) mode = MURAJAAH_ACTIVE;
         if (!SABQI.equals(mode) && !SABQI_TODAY_REVIEW.equals(mode) && !ITQAN.equals(mode)
@@ -167,6 +174,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (MURAJAAH_ACTIVE.equals(mode)) {
             try {
                 activeSlots = prefs.activeReviewSlots();
+                if(standaloneFragility){
+                    activeSlot=ActiveReviewSlots.Slot.MORNING;
+                    correctionStore=activeSlots.manualCorrection();
+                } else {
                 ActiveReviewCorrectionStore.State saved=correctionStore.pending();
                 if(saved!=null)sessionDate=LocalDate.parse(saved.date);
                 else if(prefs.isActiveMurajaahCursorValid()) {
@@ -191,6 +202,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                         activeDraft = activeSlots.draft(sessionDate, activeSlot);
                         activeClockPaused = activeDraft != null && activeDraft.paused;
                     }
+                }
                 }
             }catch(RuntimeException damaged) {
                 activeCorrectionRecoveryRequired=true;
@@ -242,8 +254,34 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 return;
             }
         }
+        if(standaloneFragility){
+            try{
+                ActiveReviewCorrectionStore.State pending=correctionStore.pending();
+                if(pending==null){
+                    if(!activeSlots.settleOtherCorrections(null,null))
+                        throw new IllegalStateException("Pending correction");
+                    int page=getIntent().getIntExtra(EXTRA_FRAGILITY_PAGE,-1);
+                    if (!FragilityQueuePolicy.merge(correctionStore.queuedPages(),
+                            prefs.weakVersePages(geometry)).contains(page))
+                        throw new IllegalStateException("Page no longer queued");
+                    standaloneMinutes=prefs.activeReviewMinutes(geometry);
+                    VerseRef anchor=prefs.activeMurajaahCursor();
+                    if(!correctionStore.begin(HifzClock.today().toString(),anchor,anchor,
+                            standaloneMinutes*60_000L,Collections.singletonList(page),page))
+                        throw new IllegalStateException("Unable to open correction");
+                }else{
+                    standaloneMinutes=(int)(pending.activeElapsedMs/60_000L);
+                    if(standaloneMinutes!=40&&standaloneMinutes!=60&&standaloneMinutes!=70)
+                        throw new IllegalStateException("Invalid manual correction budget");
+                }
+            }catch(RuntimeException problem){
+                Ui.showFatal(this,"Fragilité indisponible ; les données sont conservées.");
+                return;
+            }
+        }
         murajaahActualEnd = prefs.murajaahActualEnd();
         clock = new SessionClock(persistedSessionElapsed(), elapsed -> {
+            if(standaloneFragility||(activeSlot!=null&&correctionState!=null&&activeReceiptLabel()!=null))return;
             if (activeSlot != null && !sessionCompleted && correctionState==null
                     && !carryActiveOverMidnight()) {
                 expireActiveReview();
@@ -542,7 +580,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Display-only guard: an inactive/blocked/error state is not a completed lesson.
      * Reads existing dated receipts; never creates or modifies a credit. */
     private boolean hasAuthenticClosingReceipt() {
-        if (sessionRenderFailed || !sessionCompleted || awaitingValidation) return false;
+        if (standaloneFragility || sessionRenderFailed || !sessionCompleted || awaitingValidation || correctionState!=null) return false;
         String date = sessionDate.toString();
         if (SABQI.equals(mode)) return date.equals(prefs.lastSabqiDate());
         if (SABQI_TODAY_REVIEW.equals(mode)) return date.equals(prefs.lastSabqiTodayReviewDate());
@@ -1952,6 +1990,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private String activeReceiptLabel() {
+        if(standaloneFragility)return null;
         if (activeSlot != null) return activeSlots.receipt(sessionDate, activeSlot);
         return sessionDate.toString().equals(prefs.lastActiveMurajaahDate())
             ? prefs.lastActiveMurajaahLabel() : null;
@@ -1967,18 +2006,51 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             throw new IllegalStateException("Revealed-page checkpoint requires recovery");
         String today = sessionDate.toString();
         correctionState=correctionStore.pending();
+        if(standaloneFragility){
+            if(correctionState==null){
+                sessionCompleted=true;
+                program.setText("Fragilités");
+                progress.setText("Séance terminée");
+                updateActiveClockAction();
+            }else{
+                sessionCompleted=false;
+                renderActiveCorrection();
+            }
+            return;
+        }
         String receipt = activeReceiptLabel();
         if (activeSlot != null && correctionState == null && receipt == null
                 && activeSlots.restoreExpiredRevealCorrection(sessionDate, activeSlot)) {
             correctionState = correctionStore.pending();
         }
         if (receipt != null) {
+            if(activeSlot!=null&&correctionState!=null){
+                List<VerseRef> confirmed = activeSlots.confirmedTraversal(sessionDate, activeSlot,
+                    correctionState.start, correctionState.end);
+                if (!confirmed.isEmpty()) setValidatedReviewAnchors(confirmed, correctionState.end);
+                sessionCompleted=false;
+                renderActiveCorrection();
+                return;
+            }
             if(activeSlot==null&&!correctionStore.clear())
                 throw new IllegalStateException("Validated correction checkpoint could not be cleared");
             correctionState=null;
             sessionCompleted = true;
             program.setText(activeReviewTitle() + " · séance validée");
             progress.setText(receipt.isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(receipt));
+            updateActiveClockAction();
+            return;
+        }
+        if (activeSlot != null && correctionState != null && sessionDate.isBefore(HifzClock.today())) {
+            sessionCompleted = false;
+            clock.pause();
+            renderActiveCorrection();
+            return;
+        }
+        if(activeSlot!=null&&!activeSlots.scheduled(sessionDate,activeSlot)){
+            sessionCompleted=true;
+            program.setText("Dimanche soir · libre");
+            progress.setText("La finale Itqān reste accessible si nécessaire.");
             updateActiveClockAction();
             return;
         }
@@ -2010,10 +2082,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
         EligibleCorpus corpus = prefs.activeMurajaahCorpus();
-        int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
+        double planningSeconds=activeSlot==null?speedStore.maintenanceSecondsPerLine():8.0;
+        int lines = HifzCadence.targetLines(targetMinutes(), planningSeconds);
         VerseRef start = prefs.activeMurajaahCursor();
         if (activeDraft != null) start = activeDraft.start;
-        murajaahPlan = geometry.planEligibleLines(start, lines, corpus);
+        if (activeDraft != null && !activeDraft.traversal.isEmpty()) {
+            List<VerseRef> traversal = activeDraft.traversal;
+            for (VerseRef verse : traversal) {
+                if (!corpus.contains(verse))
+                    throw new IllegalStateException("Frozen active-review plan no longer belongs to the acquired corpus");
+            }
+            murajaahPlan = new GeometryRepository.EligibleLinePlan(
+                start, traversal.get(traversal.size() - 1), lines, traversal);
+        } else {
+            murajaahPlan = geometry.planEligibleLines(start, lines, corpus);
+        }
         murajaahActualEnd = activeSlot == null ? prefs.activeMurajaahActualEnd()
             : activeDraft == null ? null : activeDraft.end;
         if(correctionState!=null){
@@ -2026,6 +2109,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 throw new IllegalStateException("Correction and active Hifz endpoint mismatch");
             murajaahActualEnd=correctionState.end;
             clock.pause();
+            if(activeSlot!=null&&correctionState.activeElapsedMs==activeTargetMs()
+                    &&!commitIndependentRecall())
+                throw new IllegalStateException("Unable to preserve active recall before correction");
             renderActiveCorrection();
             return;
         }
@@ -2270,7 +2356,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void finishMurajaah(){
         if (activeSlot != null && (!carryActiveOverMidnight()
                 || clock.elapsedMs() < activeTargetMs())) return;
-        if (!StructuredSessionPolicy.murajaahCanValidate(murajaahActualEnd != null)) {
+        if (!StructuredSessionPolicy.murajaahCanValidate(murajaahActualEnd != null
+                && (activeSlot==null||murajaahPlan.traversalVerses.contains(murajaahActualEnd)))) {
             Toast.makeText(this, "Touchez d’abord le dernier verset réellement révisé.", Toast.LENGTH_LONG).show();
             return;
         }
@@ -2304,16 +2391,54 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private void completeMurajaahValidation(){
         boolean active = MURAJAAH_ACTIVE.equals(mode);
+        if(standaloneFragility){
+            if(correctionState==null||(!"DONE".equals(correctionState.stage)
+                    && correctionState.correctionElapsedMs<fragilityTargetMs()))return;
+            if(!correctionStore.finishIndependent(correctionState)){
+                onError("Impossible de sauvegarder la correction.");return;
+            }
+            stopFragilityClock();
+            correctionState=null;
+            sessionCompleted=true;
+            renderMode();
+            return;
+        }
         if (activeSlot != null && correctionState == null
                 && clock.elapsedMs() < activeTargetMs()) return;
+        if (activeSlot != null && correctionState != null && activeReceiptLabel() == null
+                && sessionDate.isBefore(HifzClock.today())) {
+            if (!activeSlots.finishCorrectionWithoutReceipt(sessionDate, activeSlot)) return;
+            stopFragilityClock();
+            correctionState = null;
+            expireActiveReview();
+            return;
+        }
+        if(activeSlot!=null&&correctionState!=null&&activeReceiptLabel()!=null){
+            if(!"DONE".equals(correctionState.stage)
+                    && correctionState.correctionElapsedMs<fragilityTargetMs())return;
+            if(!activeSlots.finishIndependentCorrection(sessionDate,activeSlot,correctionState)){
+                onError("Impossible de clôturer les fragilités ; la révision est déjà sauvegardée.");return;
+            }
+            stopFragilityClock();
+            correctionState=null;
+            closeClockForCompletedSession();
+            renderMode();
+            return;
+        }
         if(active && correctionState==null){
             if(activeSlot!=null&&!carryActiveOverMidnight())return;
             if (!checkpointMurajaah(clock.elapsedMs())) {
                 onError("Impossible de sauvegarder la révision avant validation.");
                 return;
             }
-            List<Integer> revealedPages=ActiveReviewCorrectionPlan.select(
-                correctionStore.revealed(sessionDate.toString(),murajaahPlan.start));
+            if(activeSlot!=null&&!activeSlots.settleOtherCorrections(sessionDate,activeSlot)){
+                onError("Impossible de reporter les anciennes fragilités.");return;
+            }
+            List<Integer> revealedPages=activeSlot==null?ActiveReviewCorrectionPlan.select(
+                correctionStore.revealed(sessionDate.toString(),murajaahPlan.start))
+                :FragilityQueuePolicy.merge(
+                    correctionStore.pagesToCorrect(sessionDate.toString(),murajaahPlan.start),
+                    prefs.weakVersePages(geometry));
             if(!revealedPages.isEmpty()){
                 // Freeze the original cursor and time. These repeated pages earn no new credit.
                 if(!correctionStore.begin(sessionDate.toString(),murajaahPlan.start,
@@ -2323,12 +2448,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 }
                 correctionState=correctionStore.pending();
                 clock.pause();
+                if(activeSlot!=null&&!commitIndependentRecall()){
+                    onError("Impossible de sauvegarder la révision ; reprise conservée.");return;
+                }
                 renderActiveCorrection();
                 return;
             }
         }
-        if(active&&correctionState!=null&&!"DONE".equals(correctionState.stage)){
-            onError("Relisez puis récitez en masqué toutes les pages dévoilées.");return;
+        if(active&&correctionState!=null&&!"DONE".equals(correctionState.stage)
+                &&(activeSlot==null||correctionState.correctionElapsedMs<fragilityTargetMs())){
+            onError("Relisez puis récitez en masqué les pages fragiles.");return;
         }
         if (activeSlot != null && correctionState != null && !carryActiveOverMidnight()) {
             onError("La correction est conservée. Vérifiez le créneau de reprise.");
@@ -2344,11 +2473,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
             boolean committed = activeSlot == null
                 ? prefs.completeActiveMurajaah(next, sessionDate.toString(), label)
-                : activeSlots.complete(sessionDate, activeSlot, murajaahPlan.start, next, label);
+                : activeSlots.complete(sessionDate, activeSlot, murajaahPlan.start, next, label, confirmedCoverage(), geometry);
             if (!committed) {
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
             }
+            stopFragilityClock();
             // Return to the genuine pre-correction reading location; no fake cursor movement.
             if(correctionState!=null){
                 currentPage=correctionState.originPage;
@@ -2384,8 +2514,41 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
+    private String confirmedCoverage(){
+        return ActiveReviewCoverage.encode(ActiveReviewCoverage.through(murajaahPlan.traversalVerses,murajaahActualEnd));
+    }
+
+    private boolean commitIndependentRecall(){
+        if(activeSlot==null||correctionState==null||murajaahPlan==null||murajaahActualEnd==null
+                ||!murajaahPlan.traversalVerses.contains(murajaahActualEnd))return false;
+        if(activeReceiptLabel()!=null)return true;
+        if(!carryActiveOverMidnight())return false;
+        int lines=countMurajaahLinesThrough(murajaahActualEnd);
+        VerseRef next=prefs.activeMurajaahCorpus().next(murajaahActualEnd);
+        String label=activeReviewTitle()+" · testé : "+QuranSurahNames.range(murajaahPlan.start,murajaahActualEnd)
+            +" · "+lines+"L/"+activeTargetMs()/1000L+"s";
+        if(!activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label,confirmedCoverage(),geometry))return false;
+        setValidatedReviewAnchors(murajaahPlan.traversalVerses, murajaahActualEnd);
+        return true;
+    }
+
+    private void setValidatedReviewAnchors(List<VerseRef> traversal, VerseRef end) {
+        validatedCorrespondenceVerse = CorrespondenceCases.lastValidatedAnchor(traversal, end);
+        validatedDiscriminantVerse = null;
+        for (VerseRef verse : traversal) {
+            if (AtlasDiscriminantCases.indexFor(verse.getSurah(), verse.getAyah()) >= 0)
+                validatedDiscriminantVerse = verse;
+            if (verse.equals(end)) break;
+        }
+    }
+
     /** Original 15-line QCF page; reread in full before masked recitation. */
+    private long correctionRenderGeneration;
+
     private void renderActiveCorrection() {
+        final long generation = ++correctionRenderGeneration;
+        fragilityPageReady=false;
+        if(fragilityClock!=null)fragilityClock.pause();
         ActiveReviewCorrectionStore.State state=correctionState;
         if(state==null)return;
         if("DONE".equals(state.stage)){completeMurajaahValidation();return;}
@@ -2397,7 +2560,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask="READ".equals(state.stage)?0:100;
         currentSelection=Collections.emptyList();
         currentLineIds=currentMask==100?geometry.lineIdsOnPage(currentPage):Collections.emptyList();
-        program.setText(activeReviewTitle() + " · pages dévoilées");
+        program.setText(activeSlot==null?activeReviewTitle()+" · pages dévoilées":"Fragilités");
+        if(activeSlot!=null) {
+            if(fragilityClock==null) fragilityClock=new SessionClock(state.correctionElapsedMs,this::onFragilityTick);
+            showFragilityTime(state.correctionElapsedMs);
+        }
         mushaf.setHighlightVerses(Collections.emptyList());
         progress.setText("Page "+(state.pageIndex+1)+"/"+state.pages.size()
             +("READ".equals(state.stage)
@@ -2407,6 +2574,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions.removeAllViews();
         if("READ".equals(state.stage)){
             actions.addView(Ui.roundAction(this,"","Page relue",v->{
+                if (!isCurrentCorrectionRender(generation) || (!fragilityPageReady && activeSlot != null)) return;
                 if(!correctionStore.pageReread(correctionState)){
                     onError("Impossible de sauvegarder la page relue.");return;
                 }
@@ -2415,6 +2583,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             }));
         }else{
             LinearLayout passed=Ui.roundAction(this,"","Page récitée sans aide",v->{
+                if (!isCurrentCorrectionRender(generation)) return;
                 if(!correctionMaskedPageReady||correctionState.assisted){
                     Toast.makeText(this,"Masque non prêt ou aide utilisée : recommencez la page.",
                         Toast.LENGTH_LONG).show();return;
@@ -2429,6 +2598,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             correctionPageDoneButton.setEnabled(correctionMaskedPageReady&&!state.assisted);
             actions.addView(passed);
             actions.addView(Ui.roundAction(this,"","Recommencer la page",v->{
+                if (!isCurrentCorrectionRender(generation)) return;
                 if(!correctionStore.restartPage(correctionState)){
                     onError("Impossible de reprendre cette page.");return;
                 }
@@ -2441,6 +2611,66 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             actions.addView(reveal);
             updateRevealButton();
         }
+        if(activeSlot!=null)actions.addView(Ui.roundAction(this,"","Reporter cette page",v->{
+            if (!isCurrentCorrectionRender(generation)) return;
+            if(!correctionStore.deferPage(correctionState)){
+                onError("Impossible de reporter cette page.");return;
+            }
+            correctionState=correctionStore.pending();
+            renderActiveCorrection();
+        }));
+    }
+
+    private boolean isCurrentCorrectionRender(long generation) {
+        return generation == correctionRenderGeneration && correctionState != null;
+    }
+
+    private long fragilityTargetMs(){
+        return ActiveReviewDurationPolicy.fragilityMinutes(targetMinutes())*60_000L;
+    }
+
+    private void showFragilityTime(long elapsed){
+        if(timerText!=null)timerText.setText(SessionClock.format(Math.max(0L,fragilityTargetMs()-elapsed)));
+    }
+
+    private void onFragilityTick(long elapsed){
+        if(activeSlot==null||correctionState==null||sessionCompleted||fragilityClockFailed
+                ||"DONE".equals(correctionState.stage))return;
+        long bounded=Math.min(elapsed,fragilityTargetMs());
+        if(bounded>correctionState.correctionElapsedMs){
+            if(!correctionStore.recordElapsed(correctionState,bounded)){
+                fragilityClockFailed=true;
+                if(fragilityClock!=null)fragilityClock.pause();
+                onError("Impossible de sauvegarder le temps des fragilités.");
+                return;
+            }
+            correctionState=correctionStore.pending();
+        }
+        showFragilityTime(bounded);
+        if(bounded>=fragilityTargetMs()&&sessionResumed&&!fragilityTimeoutPosted){
+            fragilityTimeoutPosted=true;
+            timerText.post(()->{
+                fragilityTimeoutPosted=false;
+                if(sessionResumed&&!sessionCompleted&&correctionState!=null
+                        &&correctionState.correctionElapsedMs>=fragilityTargetMs())
+                    completeMurajaahValidation();
+            });
+        }
+    }
+
+    private void resumeFragilityClock(){
+        if(fragilityClock==null||correctionState==null||!sessionResumed
+                ||!fragilityPageReady||sessionCompleted||fragilityClockFailed)return;
+        if(correctionState.correctionElapsedMs>=fragilityTargetMs())
+            onFragilityTick(correctionState.correctionElapsedMs);
+        else fragilityClock.resume();
+    }
+
+    private void stopFragilityClock(){
+        SessionClock stopped=fragilityClock;
+        fragilityClock=null;
+        fragilityClockFailed=true;
+        if(stopped!=null)stopped.dispose();
     }
 
     /**
@@ -2523,11 +2753,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private boolean checkpointMurajaah(long elapsed){
-        if (!isMurajaahMode() || sessionCompleted || correctionState!=null || murajaahPlan==null) return true;
+        if (standaloneFragility || !isMurajaahMode() || sessionCompleted || correctionState!=null || murajaahPlan==null) return true;
         if (activeSlot != null) {
             if (!carryActiveOverMidnight()) return false;
             if (!activeSlots.checkpoint(sessionDate, activeSlot, murajaahPlan.start,
-                    murajaahActualEnd, currentPage, elapsed, activeClockPaused, targetMinutes())) return false;
+                    murajaahActualEnd, currentPage, elapsed, activeClockPaused, targetMinutes(),
+                    murajaahPlan.traversalVerses)) return false;
             activeDraft = activeSlots.draft(sessionDate, activeSlot);
             return true;
         }
@@ -2545,8 +2776,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (maintenanceDraft != null) return;
         if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted || correctionState!=null) return;
         EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
-        if (!corpus.contains(verse)) {
-            Toast.makeText(this, "Ce verset n’appartient pas encore au corpus acquis.", Toast.LENGTH_SHORT).show();
+        if (!corpus.contains(verse) || (activeSlot!=null&&!murajaahPlan.traversalVerses.contains(verse))) {
+            Toast.makeText(this, "Ce verset est hors du parcours de révision prévu.", Toast.LENGTH_SHORT).show();
             return;
         }
         murajaahActualEnd=verse;
@@ -2586,9 +2817,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         if(MURAJAAH_ACTIVE.equals(mode)&&correctionState!=null){
             if("READ".equals(correctionState.stage)){
-                mushaf.clearSemanticCues();
-                mushaf.clearPageLandmarkBoxes();
-                mushaf.show(currentPage,Collections.emptyList(),Collections.emptyList(),0,false);
+                mushaf.showCorrectionVisiblePage(currentPage,geometry.lineIdsOnPage(currentPage));
             }else
                 mushaf.showFullMaskedPreparedPage(currentPage,currentLineIds);
             return;
@@ -2856,8 +3085,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         return MURAJAAH.equals(mode) || MURAJAAH_ACTIVE.equals(mode);
     }
     private int targetMinutes(){
+    if(standaloneFragility)return standaloneMinutes;
     if (activeSlot != null) {
-        return activeSlots.targetMinutes(sessionDate, activeSlot, revisionCoverageMinutes());
+        return activeSlots.targetMinutes(sessionDate, activeSlot, prefs.activeReviewMinutes(geometry));
     }
     SessionKind kind;
     if (SABQI.equals(mode)) kind = SessionKind.SABQI_NEW;
@@ -2958,6 +3188,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 correctionPageDoneButton.setEnabled(correctionMaskedPageReady
                     &&!correctionState.assisted);
         }
+        if(activeSlot!=null&&correctionState!=null&&page==correctionState.page()){
+            fragilityPageReady="READ".equals(correctionState.stage)||correctionMaskedPageReady;
+            resumeFragilityClock();
+        }
         boolean titleTargets=(isMurajaahMode()&&correctionState==null) || (ITQAN.equals(mode) && currentMask==100
             && itqanUnit!=null && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime,prefs.itqanRep()));
         if(titleTargets)AyahThemesReviewDisplay.apply(this,mushaf,ayahThemesTitles,page);
@@ -2992,10 +3226,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             correspondenceSelectorVerse=null;
             correspondenceSelectorClockWasRunning=false;
         }
-        resumeSessionClock();
+        if(correctionState!=null){
+            ActiveReviewCorrectionStore.State live=correctionStore.pending();
+            if(live==null){stopFragilityClock();correctionState=null;renderMode();return;}
+            correctionState=live;
+            resumeFragilityClock();
+        }else resumeSessionClock();
     }
 
     private long persistedSessionElapsed() {
+        if(standaloneFragility)return 0L;
         if (activeSlot == null) return prefs.elapsedFor(mode);
         return activeDraft == null || activeReceiptLabel()!=null ? 0L : activeDraft.elapsedMs;
     }
@@ -3025,7 +3265,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      * the acquired-corpus cursor until an authentic completion.
      */
     private boolean carryActiveOverMidnight() {
-        if (activeSlot == null || sessionDate.equals(HifzClock.today())) return true;
+        if (standaloneFragility || activeSlot == null || activeReceiptLabel()!=null || sessionDate.equals(HifzClock.today())) return true;
         LocalDate now = HifzClock.today();
         if (sessionDate.isAfter(now) || activeDraft == null || sessionCompleted) return false;
         if (correctionState == null && murajaahPlan != null && clock != null) {
@@ -3069,12 +3309,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override protected void onPause(){
         sessionResumed=false;
         if(clock==null){super.onPause();return;}
+        if(fragilityClock!=null)fragilityClock.pause();
         long elapsed=clock.pause();
         if (activeSlot != null) checkpointMurajaah(elapsed);
         else if(sessionCompleted&&!awaitingValidation&&!sessionRenderFailed)prefs.setElapsedFor(mode,0L);
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){stopFragilityClock();if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(correctionState!=null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

@@ -238,7 +238,7 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
         assertEquals(new VerseRef(1, 3), secondRestart.activeMurajaahCursor());
     }
 
-    @Test public void sundayKeepsFinalsAndShowsBothActiveSlots() throws Exception {
+    @Test public void sundayKeepsFinalsAndMirrorsDatedReviewEligibility() throws Exception {
         assertEquals(DayOfWeek.SUNDAY, SUNDAY.getDayOfWeek());
         assertEquals(com.quransafeguard.hifz.core.CadenceAction.REVISION,
             WeeklyProgramPolicy.actionFor(DayOfWeek.SUNDAY, HifzPrefs.WeeklyProgram.CLASSIC, 3));
@@ -252,6 +252,6 @@ public final class SundayPromotionActiveCorpusIntegrationTest {
         if (!Files.exists(plannerPath)) plannerPath = Paths.get("..", plannerPath.toString());
         String planner = new String(Files.readAllBytes(plannerPath), StandardCharsets.UTF_8);
         assertTrue(planner.contains("morning=joinSessions(activeMorning,morning);"));
-        assertTrue(planner.contains("evening=joinSessions(evening,activeEvening);"));
+        assertTrue(planner.contains("if(eveningScheduled)evening=joinSessions(activeEvening,evening);"));
     }
 }

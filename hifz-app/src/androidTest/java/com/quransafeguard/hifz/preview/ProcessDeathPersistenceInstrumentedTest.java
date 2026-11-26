@@ -49,14 +49,23 @@ public final class ProcessDeathPersistenceInstrumentedTest {
 
         HifzPrefs prefs = new HifzPrefs(context);
         GeometryRepository geometry = GeometryRepository.get(context);
-        AnchoringQueue.Entry entry = prefs.currentAnchoringEntry(geometry);
-        assertNotNull(entry);
-        VerseRef start = GeometryRepository.parseVerse(entry.start);
-        VerseRef end = GeometryRepository.parseVerse(entry.end);
+        // Page 13 is a complete 15-line QCF folio beyond the declared first hizb.
+        // Seed the historical full-page queue rather than sampling today's first
+        // four-date block, which is allowed to contain fewer than three blocks.
+        VerseRef start = new VerseRef(2, 84);
+        VerseRef end = new VerseRef(2, 88);
+        assertEquals(15, geometry.lineCountForVerseRange(start, end));
+        String pending = "[{\"start\":\"2:84\",\"end\":\"2:88\"}]";
+        String queue = "[{\"start\":\"2:84\",\"end\":\"2:88\","
+            + "\"origin\":\"PROMOTED\",\"protocol\":\"FULL\",\"failures\":0}]";
         // Preserve a REALISTIC legacy V6 OPEN snapshot as imported data.
         // This test verifies byte-exact backup/rollback fidelity, not earned
         // completion. Never invoke the retired legacy credit endpoints.
         assertTrue(raw.edit()
+            .putString("promotedRanges", pending)
+            .putString("unconsolidatedPromotedRanges", pending)
+            .putString("anchoringQueue", queue)
+            .putBoolean("anchoringQueueInitialized", true)
             .putInt("itqanBlockIndex",2)
             .putInt("itqanRep",3)
             .putInt("itqanAssisted",1)

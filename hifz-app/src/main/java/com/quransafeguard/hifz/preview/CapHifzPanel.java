@@ -195,7 +195,7 @@ final class CapHifzPanel extends LinearLayout {
                 day.getDayOfWeek(), prefs.weeklyProgramFor(day), prefs.learningDaysPerWeek()),
             day -> prefs.weeklyProgramFor(day) == HifzPrefs.WeeklyProgram.RECOMMENDED && !stopped,
             day -> prefs.weeklyProgramFor(day) == HifzPrefs.WeeklyProgram.RECOMMENDED && !prefs.weeklyItqanPageClosed(day),
-            received);
+            received,day->prefs.activeReviewSlots().scheduled(day,ActiveReviewSlots.Slot.EVENING));
     }
 
     private String carryovers() {

@@ -59,6 +59,7 @@ public final class UiIconMappingTest {
             {"Page relue", R.drawable.ic_ui_validate},
             {"Page récitée sans aide", R.drawable.ic_ui_validate},
             {"Recommencer la page", R.drawable.ic_ui_repeat},
+            {"Reporter cette page", R.drawable.ic_ui_next},
             {"Répéter le verset", R.drawable.ic_ui_repeat},
             {"Réessayer", R.drawable.ic_ui_repeat},
             {"Reprendre", R.drawable.ic_ui_resume},

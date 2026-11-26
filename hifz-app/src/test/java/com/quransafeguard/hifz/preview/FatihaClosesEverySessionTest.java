@@ -57,7 +57,7 @@ public final class FatihaClosesEverySessionTest {
         String session = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
         assertTrue("Only a verified dated completion may show closing Al-Fātiḥa",
             session.contains("if (hasAuthenticClosingReceipt()) showClosingFatiha();")
-                && session.contains("if (sessionRenderFailed || !sessionCompleted || awaitingValidation) return false;"));
+                && session.contains("if (standaloneFragility || sessionRenderFailed || !sessionCompleted || awaitingValidation || correctionState!=null) return false;"));
         assertTrue("unmasked, no selection",
             session.contains("mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0, false);"));
         assertTrue("a session opened already done shows it too",

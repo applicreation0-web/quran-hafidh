@@ -4,11 +4,13 @@ import android.content.SharedPreferences;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -16,12 +18,13 @@ import java.util.Map;
 final class ActiveReviewSlots {
     static final int LEGACY_MINUTES = 30;
     static final long DURATION_MS = LEGACY_MINUTES * 60_000L;
-    private static final String DRAFT = "activeReviewDraftV1";
+    static final String DRAFT = "activeReviewDraftV1";
     private static final String RECEIPT = "activeReviewReceiptV1";
     private static final String RECEIPT_MINUTES = "activeReviewReceiptMinutesV1";
     private static final String CURSOR = "activeMurajaahCursor";
     private static final String REVISION = "activeReviewCursorRevisionV1";
     private static final String PROGRAMME_START = "activeReviewProgrammeStartV1";
+    private static final String SUNDAY_REST_START = "activeReviewSundayRestStartV1";
     private static final Object LOCK = new Object();
 
     enum Slot {
@@ -46,7 +49,9 @@ final class ActiveReviewSlots {
         final int page, targetMinutes;
         final long elapsedMs, revision;
         final boolean paused;
-        Draft(VerseRef start, VerseRef end, int page, long elapsedMs, long revision, boolean paused, int targetMinutes) {
+        final List<VerseRef> traversal;
+        Draft(VerseRef start, VerseRef end, int page, long elapsedMs, long revision, boolean paused, int targetMinutes,
+                List<VerseRef> traversal) {
             this.targetMinutes = targetMinutes;
             this.start = start;
             this.end = end;
@@ -54,6 +59,7 @@ final class ActiveReviewSlots {
             this.elapsedMs = elapsedMs;
             this.revision = revision;
             this.paused = paused;
+            this.traversal = traversal;
         }
         long durationMs() { return targetMinutes * 60_000L; }
     }
@@ -67,6 +73,8 @@ final class ActiveReviewSlots {
             if (!prefs.contains(PROGRAMME_START)
                     && !prefs.edit().putString(PROGRAMME_START, today.toString()).commit())
                 throw new IllegalStateException("Impossible d’enregistrer les créneaux de révision.");
+            if(!prefs.contains(SUNDAY_REST_START)&&!prefs.edit().putString(SUNDAY_REST_START,today.toString()).commit())
+                throw new IllegalStateException("Impossible d’enregistrer le calendrier de révision.");
         }
     }
 
@@ -74,11 +82,20 @@ final class ActiveReviewSlots {
         return LocalDate.parse(prefs.getString(PROGRAMME_START, HifzClock.today().toString()));
     }
 
+    boolean scheduled(LocalDate date,Slot slot){
+        LocalDate from=LocalDate.parse(prefs.getString(SUNDAY_REST_START,LocalDate.MAX.toString()));
+        return slot!=Slot.EVENING||date.isBefore(from)||date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY
+            ||receipt(date,slot)!=null||draft(date,slot)!=null;
+    }
+
     private static String scope(LocalDate date, Slot slot) { return "|" + date + "|" + slot.name(); }
 
     Draft draft(LocalDate date, Slot slot) {
         String raw = prefs.getString(DRAFT + scope(date, slot), null);
-        if (raw == null) return null;
+        return raw == null ? null : decodeDraft(raw);
+    }
+
+    static Draft decodeDraft(String raw) {
         try {
             JSONObject doc = new JSONObject(raw);
             int page = Math.toIntExact(integral(doc.get("page")));
@@ -87,12 +104,22 @@ final class ActiveReviewSlots {
             int minutes = doc.has("targetMinutes")
                 ? Math.toIntExact(integral(doc.get("targetMinutes"))) : LEGACY_MINUTES;
             if (page < 1 || page > 604 || elapsed < 0L || elapsed > minutes * 60_000L
-                    || revision < 0L || minutes < LEGACY_MINUTES || minutes % 15 != 0)
+                    || revision < 0L || !ActiveReviewDurationPolicy.validPersistedMinutes(minutes))
                 throw new IllegalArgumentException("Invalid active-review checkpoint");
-            String end = doc.getString("end");
-            return new Draft(GeometryRepository.parseVerse(doc.getString("start")),
-                end.isEmpty() ? null : GeometryRepository.parseVerse(end), page, elapsed, revision,
-                doc.getBoolean("paused"), minutes);
+            VerseRef start = GeometryRepository.parseVerse(doc.getString("start"));
+            String rawEnd = doc.getString("end");
+            VerseRef end = rawEnd.isEmpty() ? null : GeometryRepository.parseVerse(rawEnd);
+            List<VerseRef> traversal = new ArrayList<>();
+            if (doc.has("traversal")) {
+                JSONArray verses = doc.getJSONArray("traversal");
+                for (int i = 0; i < verses.length(); i++)
+                    traversal.add(GeometryRepository.parseVerse(verses.getString(i)));
+                if (traversal.isEmpty() || !start.equals(traversal.get(0))
+                        || end != null && !traversal.contains(end))
+                    throw new IllegalArgumentException("Invalid frozen active-review plan");
+            }
+            return new Draft(start, end, page, elapsed, revision, doc.getBoolean("paused"), minutes,
+                Collections.unmodifiableList(traversal));
         } catch (JSONException | RuntimeException invalid) {
             throw new IllegalStateException("État du créneau de révision à vérifier.", invalid);
         }
@@ -118,6 +145,7 @@ final class ActiveReviewSlots {
     boolean canOpen(LocalDate date, Slot slot) {
         if (date == null || slot == null) return false;
         synchronized (LOCK) {
+            if (!scheduled(date, slot)) return false;
             Slot other = slot == Slot.MORNING ? Slot.EVENING : Slot.MORNING;
             if (receipt(date, other) != null || draft(date, other) == null) return true;
             // Old versions could persist both unfinished slots. Allow the
@@ -240,6 +268,12 @@ final class ActiveReviewSlots {
 
     boolean checkpoint(LocalDate date, Slot slot, VerseRef start, VerseRef end, int page, long elapsed,
             boolean paused, int proposedMinutes) {
+        return checkpoint(date, slot, start, end, page, elapsed, paused, proposedMinutes,
+            Collections.emptyList());
+    }
+
+    boolean checkpoint(LocalDate date, Slot slot, VerseRef start, VerseRef end, int page, long elapsed,
+            boolean paused, int proposedMinutes, List<VerseRef> traversal) {
         synchronized (LOCK) {
             if (receipt(date, slot) != null || !canOpen(date, slot)) return false;
             Draft saved = draft(date, slot);
@@ -249,27 +283,38 @@ final class ActiveReviewSlots {
                     || !isCurrent(saved, currentCursor(start)))) return false;
             long checkpointRevision = saved == null ? revision() : saved.revision;
             long savedElapsed = saved == null ? 0L : saved.elapsedMs;
+            List<VerseRef> frozen = saved == null || saved.traversal.isEmpty()
+                ? traversal : saved.traversal;
+            if (!frozen.isEmpty() && (!start.equals(frozen.get(0))
+                    || end != null && !frozen.contains(end)
+                    || !traversal.isEmpty() && !frozen.equals(traversal))) return false;
             return save(date, slot, start, end, page, Math.max(elapsed, savedElapsed),
-                checkpointRevision, paused, saved == null ? proposedMinutes : saved.targetMinutes);
+                checkpointRevision, paused, saved == null ? proposedMinutes : saved.targetMinutes, frozen);
         }
     }
 
     private JSONObject encode(VerseRef start, VerseRef end, int page, long elapsed, long revision,
-            boolean paused, int minutes)
+            boolean paused, int minutes, List<VerseRef> traversal)
             throws JSONException {
-        return new JSONObject().put("start", start.toString())
+        JSONObject doc = new JSONObject().put("start", start.toString())
             .put("end", end == null ? "" : end.toString()).put("page", page)
             .put("elapsedMs", Math.min(minutes * 60_000L, elapsed)).put("revision", revision)
             .put("targetMinutes", minutes)
             .put("paused", paused);
+        if (!traversal.isEmpty()) {
+            JSONArray verses = new JSONArray();
+            for (VerseRef verse : traversal) verses.put(verse.toString());
+            doc.put("traversal", verses);
+        }
+        return doc;
     }
 
     private boolean save(LocalDate date, Slot slot, VerseRef start, VerseRef end, int page,
-            long elapsed, long revision, boolean paused, int minutes) {
-        if (minutes < LEGACY_MINUTES || minutes % 15 != 0) return false;
+            long elapsed, long revision, boolean paused, int minutes, List<VerseRef> traversal) {
+        if (!ActiveReviewDurationPolicy.validPersistedMinutes(minutes)) return false;
         if (start == null || page < 1 || page > 604 || elapsed < 0L) return false;
         try {
-            JSONObject doc = encode(start, end, page, elapsed, revision, paused, minutes);
+            JSONObject doc = encode(start, end, page, elapsed, revision, paused, minutes, traversal);
             return prefs.edit().putString(DRAFT + scope(date, slot), doc.toString()).commit();
         } catch (JSONException invalid) {
             throw new IllegalStateException("Impossible d’enregistrer le créneau de révision.", invalid);
@@ -312,6 +357,16 @@ final class ActiveReviewSlots {
         }
     }
 
+    List<VerseRef> confirmedTraversal(LocalDate date, Slot slot, VerseRef start, VerseRef end) {
+        if (receipt(date, slot) == null) return Collections.emptyList();
+        return ActiveReviewCoverage.restoreTraversal(
+            prefs.getString(ActiveReviewCoverage.KEY + scope(date, slot), null), start, end);
+    }
+
+    boolean correctionPending(LocalDate date, Slot slot) {
+        return correction(date, slot).pending() != null;
+    }
+
     String receipt(LocalDate date, Slot slot) {
         return prefs.getString(RECEIPT + scope(date, slot), null);
     }
@@ -337,31 +392,131 @@ final class ActiveReviewSlots {
         return records;
     }
 
+    private boolean matchesFrozenProof(Draft draft, String proof) {
+        return draft.traversal.isEmpty() || ActiveReviewCoverage.encode(
+            ActiveReviewCoverage.through(draft.traversal, draft.end)).equals(proof);
+    }
+
     boolean complete(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label) {
+        return complete(date,slot,start,next,label,null);
+    }
+
+    boolean complete(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label, String proof) {
+        return complete(date, slot, start, next, label, proof, null);
+    }
+
+    boolean complete(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label,
+            String proof, GeometryRepository geometry) {
         synchronized (LOCK) {
             if (!date.equals(HifzClock.today())) return false;
             Draft saved = draft(date, slot);
             if (saved == null || !saved.start.equals(start) || saved.end == null || next == null
                     || saved.elapsedMs != saved.durationMs() || receipt(date, slot) != null
                     || !canOpen(date, slot) || !isCurrent(saved, currentCursor(start))
-                    || label == null || label.isEmpty()) return false;
+                    || label == null || label.isEmpty() || !matchesFrozenProof(saved, proof)) return false;
 
             ActiveReviewCorrectionStore correction = correction(date, slot);
             ActiveReviewCorrectionStore.State replay = correction.pending();
             if (replay != null) {
-                if (!"DONE".equals(replay.stage) || !date.toString().equals(replay.date)
+                if ((!"DONE".equals(replay.stage)
+                        && replay.correctionElapsedMs < ActiveReviewDurationPolicy.fragilityMinutes(saved.targetMinutes)*60_000L)
+                        || !date.toString().equals(replay.date)
                         || !start.equals(replay.start) || !saved.end.equals(replay.end)
                         || replay.activeElapsedMs != saved.durationMs()) return false;
             } else if (!correction.revealed(date.toString(), start).isEmpty()) {
                 return false;
             }
 
-            SharedPreferences.Editor editor = correction.clear(prefs.edit())
+            SharedPreferences.Editor editor = correction.clear(correction.settleQueue(prefs.edit(),replay))
                 .putString(RECEIPT + scope(date, slot), label)
                 .putInt(RECEIPT_MINUTES + scope(date, slot), saved.targetMinutes)
                 .remove(DRAFT + scope(date, slot));
             editor.putString(CURSOR, next.toString()).putLong(REVISION, revision() + 1L);
+            ActiveReviewCoverage.append(editor,date,slot,proof);
+            stageWeakVerseRecall(editor, geometry, proof, correction, date, start);
             return editor.commit();
+        }
+    }
+
+    /** A genuine completed recall is independent from its subsequent correction.
+     * The receipt, cursor and every revealed page are committed in one transaction.
+     * The old complete() path remains available for historical callers.
+     */
+    boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label) {
+        return completeRecall(date,slot,start,next,label,null);
+    }
+
+    boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label, String proof) {
+        return completeRecall(date, slot, start, next, label, proof, null);
+    }
+
+    boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label,
+            String proof, GeometryRepository geometry) {
+        synchronized (LOCK) {
+            if (!date.equals(HifzClock.today())) return false;
+            Draft saved=draft(date,slot);
+            if(saved==null||!saved.start.equals(start)||saved.end==null||next==null
+                    ||saved.elapsedMs!=saved.durationMs()||receipt(date,slot)!=null
+                    ||!canOpen(date,slot)||!isCurrent(saved,currentCursor(start))
+                    ||label==null||label.isEmpty()||!matchesFrozenProof(saved, proof))return false;
+            ActiveReviewCorrectionStore correction=correction(date,slot);
+            ActiveReviewCorrectionStore.State state=correction.pending();
+            if(state==null)return complete(date,slot,start,next,label,proof,geometry);
+            if(!date.toString().equals(state.date)||!start.equals(state.start)
+                    ||!saved.end.equals(state.end)||state.activeElapsedMs!=saved.durationMs())return false;
+            if(!state.pages.containsAll(correction.revealed(date.toString(),start)))return false;
+            SharedPreferences.Editor edit=correction.enqueue(prefs.edit(),state)
+                .putString(RECEIPT+scope(date,slot),label)
+                .putInt(RECEIPT_MINUTES+scope(date,slot),saved.targetMinutes)
+                .remove(DRAFT+scope(date,slot))
+                .putString(CURSOR,next.toString()).putLong(REVISION,revision()+1L);
+            ActiveReviewCoverage.append(edit,date,slot,proof);
+            stageWeakVerseRecall(edit, geometry, proof, correction, date, start);
+            return edit.commit();
+        }
+    }
+
+    /** Close old independent corrections before a new batch snapshots the queue.
+     * No cursor, receipt or acquisition is changed. */
+    private void stageWeakVerseRecall(SharedPreferences.Editor editor, GeometryRepository geometry,
+            String proof, ActiveReviewCorrectionStore correction, LocalDate date, VerseRef start) {
+        if (geometry != null && proof != null) {
+            new HifzPrefs(prefs, geometry).stageConfirmedWeakVerseRecall(
+                editor, geometry, proof, correction.revealed(date.toString(), start));
+        }
+    }
+
+    ActiveReviewCorrectionStore manualCorrection(){
+        return new ActiveReviewCorrectionStore(prefs,"|manual");
+    }
+
+    boolean settleOtherCorrections(LocalDate date,Slot slot) {
+        synchronized(LOCK){
+            if(date!=null){
+                ActiveReviewCorrectionStore manual=manualCorrection();
+                ActiveReviewCorrectionStore.State pending=manual.pending();
+                if(pending!=null&&!manual.finishIndependent(pending))return false;
+            }
+            for(String key:prefs.getAll().keySet()){
+                if(!key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|"))continue;
+                String[] parts=key.split("\\|",-1);
+                if(parts.length!=3)continue;
+                LocalDate old=LocalDate.parse(parts[1]);
+                Slot oldSlot=Slot.valueOf(parts[2]);
+                if(old.equals(date)&&oldSlot==slot)continue;
+                if(receipt(old,oldSlot)==null)continue;
+                ActiveReviewCorrectionStore store=correction(old,oldSlot);
+                ActiveReviewCorrectionStore.State state=store.pending();
+                if(state!=null&&!store.finishIndependent(state))return false;
+            }
+            return true;
+        }
+    }
+
+    boolean finishIndependentCorrection(LocalDate date,Slot slot,ActiveReviewCorrectionStore.State state){
+        synchronized(LOCK){
+            if(receipt(date,slot)==null||state==null||!date.toString().equals(state.date))return false;
+            return correction(date,slot).finishIndependent(state);
         }
     }
 
@@ -376,11 +531,14 @@ final class ActiveReviewSlots {
             Draft saved = draft(date, slot);
             ActiveReviewCorrectionStore correction = correction(date, slot);
             ActiveReviewCorrectionStore.State replay = correction.pending();
-            if (saved == null || replay == null || !"DONE".equals(replay.stage)
+            if (saved == null || replay == null
                     || !date.toString().equals(replay.date) || !saved.start.equals(replay.start)
                     || !replay.end.equals(saved.end == null ? saved.start : saved.end)
                     || replay.activeElapsedMs != saved.elapsedMs || receipt(date, slot) != null) return false;
-            return correction.clear(prefs.edit()).remove(DRAFT + scope(date, slot)).commit();
+            long budget = ActiveReviewDurationPolicy.fragilityMinutes(saved.targetMinutes) * 60_000L;
+            if (!"DONE".equals(replay.stage) && replay.correctionElapsedMs < budget) return false;
+            return correction.clear(correction.settleQueue(prefs.edit(), replay))
+                .remove(DRAFT + scope(date, slot)).commit();
         }
     }
 }

@@ -146,7 +146,7 @@ public final class SettingsActivity extends android.app.Activity {
 
         murajaahStatus=Ui.text(this,"",16f,false);murajaahStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));revision.addView(murajaahStatus);
         revision.addView(Ui.divider(this));
-        revision.addView(Ui.settingRow(this,"Vitesse · Révision passive",speedStore.maintenanceSummary(),null));
+        revision.addView(Ui.settingRow(this,"Rotation active · objectif","10 jours · référence 8 s/ligne",null));
         revision.addView(Ui.divider(this));
         revision.addView(Ui.settingRow(this,"Vitesse · Consolidation",speedStore.consolidationSummary(),null));
 
@@ -187,7 +187,7 @@ public final class SettingsActivity extends android.app.Activity {
         addGlossaryTerm(about,"Itqān (إتقان) · maîtrise",
             "Précision et fluidité de la récitation. Dans Haafidh : Consolidation, puis Maintien de la maîtrise après l’arrivée à An-Nās.");
         addGlossaryTerm(about,"Murājaʿah (مراجعة) · révision",
-            "Maintien des passages déjà mémorisés. Haafidh distingue révision active (texte masqué) et révision passive (texte visible).");
+            "Maintien des passages déjà mémorisés. Révision active en masqué, puis relecture visible et restitution masquée des fragilités. Lecture libre hors programme.");
         addGlossaryTerm(about,"Manzil · révision ancienne",
             "Nom donné dans certaines traditions au corpus ancien révisé régulièrement ; ce n’est pas un nouveau mode dans Haafidh.");
         TextView glossaryNote=Ui.text(this,
@@ -352,7 +352,7 @@ public final class SettingsActivity extends android.app.Activity {
         renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") :"
             +"\n1. Renforcement Sabqi : protocole conservé. Consolidation Itqān : ×7 sur le nouveau bloc, puis passage continu des blocs précédents (sans refaire chacun ×7)."
             +"\n2. Dimanche matin : finale Sabqi. Dimanche soir : finale Itqān seulement pendant le premier régime. Après An-Nās, aucune finale Itqān."
-            +"\n3. Révision active : durée progressive, matin et soir, dimanche compris. Révision passive facultative : "+maintenanceMinutes()+" min.");
+            +"\n3. Révision active puis fragilités, matin et soir sauf dimanche soir. Finale Itqān conservée si nécessaire. Lecture libre hors programme.");
     }
 
     private String suggestedTimeLabel(boolean morning) {
@@ -662,10 +662,10 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Révision active · "+MaintenanceCoveragePolicy.minutes(
-            prefs.acquiredLineCountV6(),geometry.lineCount(),speedStore.maintenanceSecondsPerLine())
-            +" min matin et soir\nRévision passive facultative · "
-            +maintenanceMinutes()+" min · position "+prefs.murajaahCursor());
+        int minutes=prefs.activeReviewMinutes(geometry);
+        murajaahStatus.setText("Palier actuel · "+minutes+" min actives + "
+            +ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min fragilités\n"
+            +"0–15 juz · 40 + 5 min\n>15–25 juz · 60 + 10 min\n>25–30 juz · 70 + 15 min\n"+prefs.activeCoverageSummary());
         murajaahStatus.setTextColor(Ui.MUTED);
     }
 

@@ -45,6 +45,12 @@ final class WeeklyBilan {
 
     static Summary calculate(LocalDate today, LocalDate programStart, LocalDate receiptCoverage,
             LocalDate activeSlotsFrom, Calendar calendar, Attendance attendance) {
+        return calculate(today,programStart,receiptCoverage,activeSlotsFrom,calendar,attendance,day->true);
+    }
+
+    static Summary calculate(LocalDate today, LocalDate programStart, LocalDate receiptCoverage,
+            LocalDate activeSlotsFrom, Calendar calendar, Attendance attendance,
+            java.util.function.Predicate<LocalDate> eveningDue) {
         if(today==null || programStart==null || receiptCoverage==null || activeSlotsFrom==null
                 || calendar==null || attendance==null)
             throw new IllegalArgumentException("Dates and validated evidence are required");
@@ -64,7 +70,7 @@ final class WeeklyBilan {
             }
             String[] reviews;
             if (!day.isBefore(activeSlotsFrom)) {
-                reviews=new String[]{ActiveReviewSlots.Slot.MORNING.mode,ActiveReviewSlots.Slot.EVENING.mode};
+                reviews=eveningDue.test(day)?new String[]{ActiveReviewSlots.Slot.MORNING.mode,ActiveReviewSlots.Slot.EVENING.mode}:new String[]{ActiveReviewSlots.Slot.MORNING.mode};
             } else if (day.getDayOfWeek()!=DayOfWeek.SUNDAY) {
                 reviews=new String[]{HifzSessionActivity.MURAJAAH_ACTIVE,HifzSessionActivity.MURAJAAH};
             } else {

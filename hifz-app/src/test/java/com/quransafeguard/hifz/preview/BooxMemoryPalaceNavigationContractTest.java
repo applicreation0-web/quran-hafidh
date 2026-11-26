@@ -22,11 +22,11 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertTrue(main.contains("pathTile(learningModes, \"Apprentissage\""));
         assertTrue(main.contains("pathTile(otherModes, \"Stabilisation\""));
         assertTrue(main.contains("pathTile(reviewModes, \"Révision active\""));
-        assertTrue(main.contains("pathTile(reviewModes, \"Révision passive\""));
+        assertTrue(main.contains("pathTile(reviewModes, \"Fragilités\""));
         assertTrue(main.contains("pathTile(learningModes, \"Renforcement\""));
         assertTrue(main.contains("pathTile(otherModes, \"Consolidation\""));
         assertTrue(main.contains("showRevisionSelector(false)"));
-        assertTrue(main.contains("HifzSessionActivity.MURAJAAH"));
+        assertTrue(main.contains("showFragilityQueue()"));
     }
 
     @Test public void vectorArtworkFillsBooxColumnsNotTinyIntrinsicBounds() throws Exception {

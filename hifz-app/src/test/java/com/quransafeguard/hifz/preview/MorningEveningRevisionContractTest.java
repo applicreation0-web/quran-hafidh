@@ -18,11 +18,10 @@ public final class MorningEveningRevisionContractTest {
 
     @Test public void weeklyPlannerSeparatesMorningAndEveningAndPreservesSunday() throws Exception {
         String plan=source("WeeklyDashboardPlanner.java");
-        assertTrue(plan.contains("morning=joinSessions(activeMorning,passive);"));
-        assertTrue(plan.contains("evening=joinSessions(evening,activeEvening);"));
+        assertTrue(plan.contains("if(eveningScheduled)evening=joinSessions(activeEvening,evening);"));
         assertTrue(plan.contains("activeReviewLabel(am,morningDone,"));
-        assertTrue(plan.contains("Révision passive · "));
-        assertTrue(plan.contains("if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY)"));
+        assertFalse(plan.contains("Révision passive · "));
+        assertTrue(plan.contains("boolean eveningScheduled=prefs.activeReviewSlots().scheduled(date,pm);"));
         assertTrue(plan.contains("morning=joinSessions(activeMorning,morning);"));
         assertFalse("No obsolete user-facing Entretien label",
             plan.contains("\"Entretien ·"));
@@ -32,13 +31,12 @@ public final class MorningEveningRevisionContractTest {
         String main=source("MainActivity.java");
         int begin=main.indexOf("private List<TodaySession> todaySessions(");
         int active=main.indexOf("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING",begin);
-        int passive=main.indexOf("addToday(out,\"Révision passive · matin",begin);
         int lesson=main.indexOf("case LEARNING:",begin);
-        assertTrue(begin>=0&&active>begin&&passive>active&&lesson>passive);
-        assertTrue(main.contains("eveningLessonDetail=todayRow!=null?stripDone(compactSession(todayRow.evening))"));
+        assertTrue(begin>=0&&active>begin&&lesson>active);
+        assertTrue(main.contains("String planned=todayRow.morning;"));
         assertTrue(main.indexOf("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING",lesson)>lesson);
         assertTrue(main.contains("Itqān · Maintien de la maîtrise"));
-        assertTrue(main.contains("Révision passive · matin"));
+        assertFalse(main.contains("addToday(out,\"Révision passive"));
     }
 
     @Test public void lateDisplayFixesArePresentAndSundayItqanIsNotTheFinale() throws Exception {
@@ -48,8 +46,7 @@ public final class MorningEveningRevisionContractTest {
         String vocabulary=source("HifzDisplayVocabulary.java");
         assertFalse("Sunday must never offer ordinary Itqan",
             main.contains("addToday(out,anchoringTodayDetail(prefs,geometry),HifzSessionActivity.ITQAN,"));
-        assertTrue("Passive forecast must suppress its repeated duration",
-            planner.contains("if(range.endsWith(trailing))"));
+        assertTrue(planner.contains("Fragilités "));
         assertTrue(session.contains("Validez d’abord les 5 lignes d’Apprentissage du soir."));
         assertTrue(session.contains(" · répétition d’un hizb · "));
         assertTrue(vocabulary.contains(".replace(\"Entretien\", \"Révision passive\")"));
@@ -64,13 +61,12 @@ public final class MorningEveningRevisionContractTest {
         assertTrue(main.contains("HifzSessionActivity.MURAJAAH.equals(mode)"));
     }
 
-    @Test public void displayUsesOnlyRevisionPassiveTerminology() throws Exception {
+    @Test public void settingsDescribeNewReviewAndRetainLegacyVocabularyInDiagnostics() throws Exception {
         String settings=source("SettingsActivity.java");
         String selector=source("RevisionSelector.java");
-        assertTrue(settings.contains("min matin et soir"));
-        assertTrue(settings.contains("Vitesse · Révision passive"));
+        assertTrue(settings.contains("Révision active puis fragilités, matin et soir sauf dimanche soir"));
+        assertFalse(settings.contains("Vitesse · Révision passive"));
         assertTrue(settings.contains("Position Révision passive : "));
-        assertTrue(settings.contains("dimanche compris. Révision passive facultative"));
         assertTrue(selector.contains("\"Révision passive · \" + maintenanceCue"));
         assertTrue(settings.contains("Bascule automatique ; séances déjà ouvertes préservées."));
         assertFalse(settings.contains("Vitesse · Entretien"));

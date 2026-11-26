@@ -18,7 +18,8 @@ final class RevisionSelector {
                       HifzSpeedStore speedStore, boolean includePassive, Choice choice) {
         LocalDate today = HifzClock.today();
         ActiveReviewSlots store = prefs.activeReviewSlots();
-        ActiveReviewSlots.Slot[] slots = ActiveReviewSlots.Slot.values();
+        ActiveReviewSlots.Slot[] slots = java.util.Arrays.stream(ActiveReviewSlots.Slot.values())
+            .filter(slot->store.scheduled(today,slot)).toArray(ActiveReviewSlots.Slot[]::new);
         String[] items = new String[slots.length + (includePassive ? 1 : 0)];
         int proposedMinutes = geometry == null ? ActiveReviewSlots.LEGACY_MINUTES
             : MaintenanceCoveragePolicy.minutes(
@@ -27,8 +28,9 @@ final class RevisionSelector {
         for (int i = 0; i < slots.length; i++) {
             ActiveReviewSlots.Slot slot = slots[i];
             boolean done = store.receipt(today, slot) != null;
-            items[i] = slot.title() + " · " + store.targetMinutes(today, slot, proposedMinutes)
-                + " min · " + (done ? "fait" : "à faire");
+            int minutes=store.targetMinutes(today, slot, geometry == null ? ActiveReviewSlots.LEGACY_MINUTES : prefs.activeReviewMinutes(geometry));
+            items[i] = slot.title() + " · " + minutes
+                + " min · Fragilités "+ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min · " + (done ? "fait" : "à faire");
         }
         if (includePassive) items[slots.length] = "Révision passive · " + maintenanceCue
             + (today.toString().equals(prefs.lastMurajaahDate()) ? " · fait" : " · facultative");
