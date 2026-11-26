@@ -23,7 +23,7 @@ final class ActiveReviewCoverage {
     }
 
     static String encode(BitSet bits){
-        if(bits.isEmpty()||bits.length()>LIMIT)throw new IllegalArgumentException("Invalid coverage");
+        if(bits.isEmpty()||bits.get(0)||bits.length()>LIMIT)throw new IllegalArgumentException("Invalid coverage");
         StringBuilder out=new StringBuilder();
         for(int start=bits.nextSetBit(0);start>=0;){
             int end=bits.nextClearBit(start)-1;
@@ -43,7 +43,7 @@ final class ActiveReviewCoverage {
             if(parts.length!=2||!parts[0].matches("[0-9]{1,4}")||!parts[1].matches("[0-9]{1,4}"))
                 throw new IllegalArgumentException("Invalid coverage range");
             int start=Integer.parseInt(parts[0]),end=Integer.parseInt(parts[1]);
-            if(start<=previous||end<start||end>=LIMIT)throw new IllegalArgumentException("Invalid coverage range");
+            if(start<1||start<=previous||end<start||end>=LIMIT)throw new IllegalArgumentException("Invalid coverage range");
             result.set(start,end+1);
             previous=end;
         }
