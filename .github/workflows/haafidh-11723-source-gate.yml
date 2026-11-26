@@ -1,11 +1,11 @@
-name: Haafidh active review — source-only qualification
+name: Haafidh 1.17.24 — fragility flow qualification
 on:
   push:
     branches:
-      - work/haafidh-11723-active-review-fragilities
+      - work/haafidh-11724-fragility-flow
   pull_request:
     branches:
-      - staging/haafidh-11722-unsigned-for-private-local-signing
+      - work/haafidh-11723-active-review-fragilities
   workflow_dispatch:
 permissions:
   contents: read
@@ -78,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: haafidh-11723-jvm-evidence
+          name: haafidh-11724-jvm-evidence
           path: |
             hifz-core/build/test-results/test/TEST-*.xml
             hifz-app/build/test-results/testDebugUnitTest/TEST-*.xml
@@ -108,7 +108,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Install tools and prepare the 1.17.22 reference checkout
+      - name: Install tools and prepare the 1.17.23 reference checkout
         run: |
           set -euo pipefail
           test ! -d hifz-app/src/private114/assets
@@ -121,7 +121,7 @@ jobs:
           "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
           test -c /dev/kvm
           sudo chown "$(id -u):$(id -g)" /dev/kvm
-          git worktree add --detach "$RUNNER_TEMP/haafidh-base" 5365c3827798411852969e25ec0f3cd4ffdac23e
+          git worktree add --detach "$RUNNER_TEMP/haafidh-base" e5d1f00b7f27ed473e8d9bdb25ee5ff71ccc3ca3
       - name: Compile the two isolated debug builds
         run: |
           set -euo pipefail
@@ -139,7 +139,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: haafidh-11723-android-evidence
+          name: haafidh-11724-android-evidence
           path: |
             haafidh-evidence/**/*.png
             haafidh-evidence/**/build.txt
