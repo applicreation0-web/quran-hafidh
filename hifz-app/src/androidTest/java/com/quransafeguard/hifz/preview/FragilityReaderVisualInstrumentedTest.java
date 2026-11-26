@@ -45,6 +45,8 @@ public final class FragilityReaderVisualInstrumentedTest {
                     assertNotNull(control((View)field(a,"actions"),"Page relue"));
                 });
                 HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("fragilite-visible.png");
+                double visibleInk=inkFraction(context,"fragilite-visible.png");
+                assertTrue("Visible folio is blank or not fully painted: "+visibleInk,visibleInk>0.02);
                 activity.onActivity(a->click(a,"Page relue"));
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Fragilité masquée");
                 activity.onActivity(a->{
@@ -53,6 +55,8 @@ public final class FragilityReaderVisualInstrumentedTest {
                     assertTrue(control((View)field(a,"actions"),"Page récitée sans aide").isEnabled());
                 });
                 HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("fragilite-masquee.png");
+                double maskedInk=inkFraction(context,"fragilite-masquee.png");
+                assertTrue("Masked folio exposes too much ink: "+maskedInk,maskedInk<visibleInk*0.25);
                 activity.recreate();
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Fragilité masquée reprise");
                 activity.onActivity(a->{
@@ -60,6 +64,7 @@ public final class FragilityReaderVisualInstrumentedTest {
                     assertTrue((Boolean)field(a,"correctionMaskedPageReady"));
                 });
                 HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("fragilite-reprise.png");
+                assertTrue("Resumed masked folio exposes too much ink",inkFraction(context,"fragilite-reprise.png")<visibleInk*0.25);
                 activity.onActivity(a->click(a,"Reporter cette page"));
             }
             assertTrue(prefs.activeReviewSlots().manualCorrection().queuedPages().contains(page));
@@ -69,6 +74,28 @@ public final class FragilityReaderVisualInstrumentedTest {
             for(int ayah=1;ayah<=74;ayah++)
                 assertTrue(prefs.activeMurajaahCorpus().contains(new VerseRef(2,ayah)));
         }finally{HifzBackup.restore(context,original);}
+    }
+
+    /** Pixel proof from the actual screenshot: the central 60% excludes header,
+     * footer and most margins. A blank cream page previously passed DOM tests. */
+    private static double inkFraction(Context context,String name){
+        java.io.File file=new java.io.File(context.getExternalFilesDir(null),name);
+        android.graphics.Bitmap image=android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath());
+        assertNotNull("Missing actual frame "+name,image);
+        long dark=0,count=0;
+        try{
+            int w=image.getWidth(),h=image.getHeight();
+            int[] row=new int[w];
+            for(int y=h/5;y<4*h/5;y++){
+                image.getPixels(row,0,w,0,y,w,1);
+                for(int x=w/5;x<4*w/5;x++){
+                    int p=row[x];count++;
+                    if(android.graphics.Color.red(p)<100&&android.graphics.Color.green(p)<100
+                        &&android.graphics.Color.blue(p)<100)dark++;
+                }
+            }
+            return (double)dark/count;
+        }finally{image.recycle();}
     }
 
     private static Object field(Object target,String name){
