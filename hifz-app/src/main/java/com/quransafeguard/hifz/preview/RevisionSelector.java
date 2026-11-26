@@ -27,8 +27,9 @@ final class RevisionSelector {
         for (int i = 0; i < slots.length; i++) {
             ActiveReviewSlots.Slot slot = slots[i];
             boolean done = store.receipt(today, slot) != null;
-            items[i] = slot.title() + " · " + store.targetMinutes(today, slot, geometry == null ? ActiveReviewSlots.LEGACY_MINUTES : prefs.activeReviewMinutes(geometry))
-                + " min · " + (done ? "fait" : "à faire");
+            int minutes=store.targetMinutes(today, slot, geometry == null ? ActiveReviewSlots.LEGACY_MINUTES : prefs.activeReviewMinutes(geometry));
+            items[i] = slot.title() + " · " + minutes
+                + " min · Fragilités "+ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min · " + (done ? "fait" : "à faire");
         }
         if (includePassive) items[slots.length] = "Révision passive · " + maintenanceCue
             + (today.toString().equals(prefs.lastMurajaahDate()) ? " · fait" : " · facultative");
