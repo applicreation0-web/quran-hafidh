@@ -2037,6 +2037,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             updateActiveClockAction();
             return;
         }
+        if(activeSlot!=null&&!activeSlots.scheduled(sessionDate,activeSlot)){
+            sessionCompleted=true;
+            program.setText("Dimanche soir · libre");
+            progress.setText("La finale Itqān reste accessible si nécessaire.");
+            updateActiveClockAction();
+            return;
+        }
         if (!prefs.isActiveMurajaahCursorValid()) {
             sessionCompleted = true;
             program.setText("Révision active · curseur à vérifier");
@@ -2486,7 +2493,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef next=prefs.activeMurajaahCorpus().next(murajaahActualEnd);
         String label=activeReviewTitle()+" · testé : "+QuranSurahNames.range(murajaahPlan.start,murajaahActualEnd)
             +" · "+lines+"L/"+activeTargetMs()/1000L+"s";
-        return activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label);
+        if(!activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label))return false;
+        validatedCorrespondenceVerse=CorrespondenceCases.lastValidatedAnchor(murajaahPlan.traversalVerses,murajaahActualEnd);
+        validatedDiscriminantVerse=null;
+        for(VerseRef verse:murajaahPlan.traversalVerses){
+            if(AtlasDiscriminantCases.indexFor(verse.getSurah(),verse.getAyah())>=0)
+                validatedDiscriminantVerse=verse;
+            if(verse.equals(murajaahActualEnd))break;
+        }
+        return true;
     }
 
     /** Original 15-line QCF page; reread in full before masked recitation. */
@@ -3164,8 +3179,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             correspondenceSelectorVerse=null;
             correspondenceSelectorClockWasRunning=false;
         }
-        if(correctionState!=null)resumeFragilityClock();
-        else resumeSessionClock();
+        if(correctionState!=null){
+            ActiveReviewCorrectionStore.State live=correctionStore.pending();
+            if(live==null){stopFragilityClock();correctionState=null;renderMode();return;}
+            correctionState=live;
+            resumeFragilityClock();
+        }else resumeSessionClock();
     }
 
     private long persistedSessionElapsed() {
