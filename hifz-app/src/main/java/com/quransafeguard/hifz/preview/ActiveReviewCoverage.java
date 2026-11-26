@@ -13,7 +13,7 @@ import java.util.List;
 /** Evidence of user-confirmed traversal, never inferred from attendance or elapsed minutes. */
 final class ActiveReviewCoverage {
     static final String KEY = "activeReviewCoverageV1";
-    private static final int LIMIT = 6237;
+    private static final int LIMIT = QuranCanon.TOTAL_VERSES + 1;
     private ActiveReviewCoverage() {}
 
     static BitSet through(List<VerseRef> traversal, VerseRef endpoint) {

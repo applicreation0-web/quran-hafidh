@@ -286,6 +286,9 @@ final class HifzBackup {
                         if(parts.length!=2||!state.date.equals(parts[0]))
                             throw new IllegalArgumentException("Invalid correction scope");
                         ActiveReviewSlots.Slot.valueOf(parts[1]);
+                        JSONObject proof = values.optJSONObject(ActiveReviewCoverage.KEY + "|" + suffix);
+                        if (proof != null)
+                            ActiveReviewCoverage.restoreTraversal(proof.getString("v"), state.start, state.end);
                     }
                 }else{
                     ActiveReviewCoverage.decode(raw);
