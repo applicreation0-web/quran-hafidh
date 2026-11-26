@@ -665,7 +665,7 @@ public final class SettingsActivity extends android.app.Activity {
         int minutes=prefs.activeReviewMinutes(geometry);
         murajaahStatus.setText("Palier actuel · "+minutes+" min actives + "
             +ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min fragilités\n"
-            +"0–15 juz · 40 + 5 min\n>15–25 juz · 60 + 10 min\n>25–30 juz · 70 + 15 min");
+            +"0–15 juz · 40 + 5 min\n>15–25 juz · 60 + 10 min\n>25–30 juz · 70 + 15 min\n"+prefs.activeCoverageSummary());
         murajaahStatus.setTextColor(Ui.MUTED);
     }
 
