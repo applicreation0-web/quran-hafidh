@@ -2857,7 +2857,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
     private int targetMinutes(){
     if (activeSlot != null) {
-        return activeSlots.targetMinutes(sessionDate, activeSlot, revisionCoverageMinutes());
+        return activeSlots.targetMinutes(sessionDate, activeSlot, prefs.activeReviewMinutes(geometry));
     }
     SessionKind kind;
     if (SABQI.equals(mode)) kind = SessionKind.SABQI_NEW;
