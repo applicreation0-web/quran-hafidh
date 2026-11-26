@@ -1894,7 +1894,7 @@ public final class MainActivity extends android.app.Activity {
     /** Avoid a wall of blocks/pages/Arabic coordinates in the main phone rail. */
     static String readableScheduleEssentials(String raw) {
         if(raw==null||raw.trim().isEmpty())return "Aucune séance";
-        String[] tokens=stripDone(raw).split(" · ");
+        String[] tokens=stripDone(raw).split(" · | \\+ ");
         java.util.ArrayList<String> essentials=new java.util.ArrayList<>();
         for(String part:tokens){
             String t=part.trim();
