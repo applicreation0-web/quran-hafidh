@@ -245,18 +245,14 @@ final class ActiveReviewCorrectionStore {
     }
 
     List<Integer> pagesToCorrect(String date,VerseRef start) {
-        LinkedHashSet<Integer> pages=new LinkedHashSet<>(queuedPages());
-        pages.addAll(revealed(date,start));
-        return new ArrayList<>(pages);
+        return FragilityQueuePolicy.merge(queuedPages(),revealed(date,start));
     }
 
     /** Called with the same editor as the genuine active receipt and cursor. */
     SharedPreferences.Editor settleQueue(SharedPreferences.Editor editor,State state) {
         if(state==null)return editor;
-        LinkedHashSet<Integer> remaining=new LinkedHashSet<>(queuedPages());
-        remaining.removeAll(state.pages);
-        if(!"DONE".equals(state.stage))
-            remaining.addAll(state.pages.subList(state.pageIndex,state.pages.size()));
+        List<Integer> remaining=FragilityQueuePolicy.remaining(queuedPages(),state.pages,
+            state.pageIndex,"DONE".equals(state.stage));
         JSONArray values=new JSONArray();
         for(Integer page:remaining)values.put(page);
         return editor.putString(KEY_QUEUE,values.toString());
