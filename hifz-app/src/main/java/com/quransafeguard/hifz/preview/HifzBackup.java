@@ -249,7 +249,9 @@ final class HifzBackup {
                 boolean correction=key.equals(ActiveReviewCorrectionStore.KEY_STATE)
                     ||key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|");
                 boolean queue=key.equals(ActiveReviewCorrectionStore.KEY_QUEUE);
-                if(!coverage&&!correction&&!queue&&!draft)continue;
+                boolean revealed=key.equals(ActiveReviewCorrectionStore.KEY_REVEALED)
+                    || key.startsWith(ActiveReviewCorrectionStore.KEY_REVEALED+"|");
+                if(!coverage&&!correction&&!queue&&!draft&&!revealed)continue;
                 JSONObject entry=values.getJSONObject(key);
                 if(!"s".equals(entry.getString("t"))||!(entry.get("v") instanceof String))
                     throw new IllegalArgumentException("Invalid active-review journal type");
@@ -260,6 +262,16 @@ final class HifzBackup {
                     java.time.LocalDate.parse(scope[0]);
                     ActiveReviewSlots.Slot.valueOf(scope[1]);
                     ActiveReviewSlots.decodeDraft(raw);
+                }else if(revealed){
+                    java.time.LocalDate date = null;
+                    if (!key.equals(ActiveReviewCorrectionStore.KEY_REVEALED)) {
+                        String[] scope = key.substring(ActiveReviewCorrectionStore.KEY_REVEALED.length()+1)
+                            .split("\\|", -1);
+                        if (scope.length != 2) throw new IllegalArgumentException("Invalid reveal scope");
+                        date = java.time.LocalDate.parse(scope[0]);
+                        ActiveReviewSlots.Slot.valueOf(scope[1]);
+                    }
+                    ActiveReviewCorrectionStore.validateRevealJournal(raw, date);
                 }else if(queue){
                     ActiveReviewCorrectionStore.decodeQueue(raw);
                 }else if(correction){

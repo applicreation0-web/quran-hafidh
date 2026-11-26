@@ -22,11 +22,12 @@ public final class TodayWindowSourceContractTest {
         org.junit.Assert.assertFalse(main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));
         assertTrue(main.contains("showTodayWindow(sessions);"));
         assertTrue(main.contains("if(sessions.isEmpty()){"));
-        assertTrue("Both active slots have their own receipt and selectable entry",
+        assertTrue("Dated active slots remain selectable until their pending corrections close",
             main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING")
             && main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING")
-            && main.contains("slot.mode,today,reviews.receipt(today,slot)!=null,nextMode);"));
-        assertTrue("Passive reading is optional",main.contains("?\" · Facultative\""));
+            && main.contains("slot.mode,today,reviews.receipt(today,slot)!=null&&!reviews.correctionPending(today,slot),nextMode);"));
+        org.junit.Assert.assertFalse("Passive reading is no longer a scheduled session",
+            main.contains("addToday(out,\"Révision passive"));
         assertTrue("each line carries its state and the next one due is marked",
             main.contains("items[i]=(s.done?\"✓ \":s.next?\"▸ \":\"  \")+slot+title+")
                 && main.contains("(s.done?\" · Terminé\""));

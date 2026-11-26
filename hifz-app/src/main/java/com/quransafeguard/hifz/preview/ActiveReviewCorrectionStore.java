@@ -206,18 +206,21 @@ final class ActiveReviewCorrectionStore {
             JSONObject doc=new JSONObject(raw);
             if(!date.equals(doc.optString("date"))||!start.toString().equals(doc.optString("start")))
                 return Collections.emptySet();
-            JSONArray values=doc.getJSONArray("pages");
-            LinkedHashSet<Integer> pages=new LinkedHashSet<>();
-            for(int i=0;i<values.length();i++){
-                int page=strictInt(values.get(i));
-                if(page<1||page>604||!pages.add(page))
-                    throw new IllegalArgumentException("Malformed revealed page list");
-            }
-            return pages;
+            return new LinkedHashSet<>(decodeQueue(doc.getJSONArray("pages").toString()));
         }catch(Exception invalid){
             throw new IllegalStateException("Revealed-page checkpoint requires review",invalid);
         }
     }
+    static void validateRevealJournal(String raw, LocalDate scopedDate) throws org.json.JSONException {
+        JSONObject doc = new JSONObject(raw);
+        LocalDate date = LocalDate.parse(doc.getString("date"));
+        if (scopedDate != null && !date.equals(scopedDate))
+            throw new IllegalArgumentException("Invalid reveal date");
+        GeometryRepository.parseVerse(doc.getString("start"));
+        if (decodeQueue(doc.getJSONArray("pages").toString()).isEmpty())
+            throw new IllegalArgumentException("Empty reveal journal");
+    }
+
     boolean recordReveal(String date,VerseRef start,int page){
         if(date==null||start==null||page<1||page>604)return false;
         try{

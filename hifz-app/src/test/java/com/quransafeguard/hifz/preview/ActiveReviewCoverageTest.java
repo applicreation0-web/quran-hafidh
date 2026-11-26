@@ -47,6 +47,22 @@ public final class ActiveReviewCoverageTest {
         HifzBackup.validateActiveReview(new JSONObject().put(ActiveReviewCoverage.KEY+"|2026-11-26|MORNING",entry("8:11")));
     }
 
+    @Test(expected=JSONException.class)
+    public void revealJournalWithInvalidPageRefusesRestore() throws Exception {
+        String key = ActiveReviewCorrectionStore.KEY_REVEALED + "|2026-11-26|MORNING";
+        JSONObject journal = new JSONObject().put("date", "2026-11-26")
+            .put("start", "2:1").put("pages", new org.json.JSONArray().put(605));
+        HifzBackup.validateActiveReview(new JSONObject().put(key, entry(journal.toString())));
+    }
+
+    @Test(expected=JSONException.class)
+    public void revealJournalFromAnotherSlotDateRefusesRestore() throws Exception {
+        String key = ActiveReviewCorrectionStore.KEY_REVEALED + "|2026-11-26|MORNING";
+        JSONObject journal = new JSONObject().put("date", "2026-11-25")
+            .put("start", "2:1").put("pages", new org.json.JSONArray().put(2));
+        HifzBackup.validateActiveReview(new JSONObject().put(key, entry(journal.toString())));
+    }
+
     @Test public void validCoverageWithReceiptAccepted()throws Exception {
         String suffix="|2026-11-26|MORNING";
         HifzBackup.validateActiveReview(new JSONObject()

@@ -2536,7 +2536,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     /** Original 15-line QCF page; reread in full before masked recitation. */
+    private long correctionRenderGeneration;
+
     private void renderActiveCorrection() {
+        final long generation = ++correctionRenderGeneration;
         fragilityPageReady=false;
         if(fragilityClock!=null)fragilityClock.pause();
         ActiveReviewCorrectionStore.State state=correctionState;
@@ -2564,7 +2567,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions.removeAllViews();
         if("READ".equals(state.stage)){
             actions.addView(Ui.roundAction(this,"","Page relue",v->{
-                if (!sameRenderedCorrectionStep(state) || (!fragilityPageReady && activeSlot != null)) return;
+                if (!isCurrentCorrectionRender(generation) || (!fragilityPageReady && activeSlot != null)) return;
                 if(!correctionStore.pageReread(correctionState)){
                     onError("Impossible de sauvegarder la page relue.");return;
                 }
@@ -2573,7 +2576,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             }));
         }else{
             LinearLayout passed=Ui.roundAction(this,"","Page récitée sans aide",v->{
-                if (!sameRenderedCorrectionStep(state)) return;
+                if (!isCurrentCorrectionRender(generation)) return;
                 if(!correctionMaskedPageReady||correctionState.assisted){
                     Toast.makeText(this,"Masque non prêt ou aide utilisée : recommencez la page.",
                         Toast.LENGTH_LONG).show();return;
@@ -2588,7 +2591,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             correctionPageDoneButton.setEnabled(correctionMaskedPageReady&&!state.assisted);
             actions.addView(passed);
             actions.addView(Ui.roundAction(this,"","Recommencer la page",v->{
-                if (!sameRenderedCorrectionStep(state)) return;
+                if (!isCurrentCorrectionRender(generation)) return;
                 if(!correctionStore.restartPage(correctionState)){
                     onError("Impossible de reprendre cette page.");return;
                 }
@@ -2602,7 +2605,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             updateRevealButton();
         }
         if(activeSlot!=null)actions.addView(Ui.roundAction(this,"","Reporter cette page",v->{
-            if (!sameRenderedCorrectionStep(state)) return;
+            if (!isCurrentCorrectionRender(generation)) return;
             if(!correctionStore.deferPage(correctionState)){
                 onError("Impossible de reporter cette page.");return;
             }
@@ -2611,9 +2614,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }));
     }
 
-    private boolean sameRenderedCorrectionStep(ActiveReviewCorrectionStore.State rendered) {
-        return correctionState != null && correctionState.date.equals(rendered.date)
-            && correctionState.pageIndex == rendered.pageIndex && correctionState.stage.equals(rendered.stage);
+    private boolean isCurrentCorrectionRender(long generation) {
+        return generation == correctionRenderGeneration && correctionState != null;
     }
 
     private long fragilityTargetMs(){
