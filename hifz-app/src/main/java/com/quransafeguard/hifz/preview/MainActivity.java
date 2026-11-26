@@ -1883,7 +1883,10 @@ public final class MainActivity extends android.app.Activity {
         if(value.contains("Finale Consolidation Itqān"))return "Finale · Itqān";
         if(value.startsWith("Renforcement"))return "Renforcement · Sabqi";
         if(value.startsWith("Consolidation"))return "Consolidation · Itqān";
-        if(value.startsWith("Révision active"))return "Révision active";
+        if(value.startsWith("Révision active")){
+            int separator=value.indexOf(" + ");
+            return separator<0?"Révision active":"Révision active + "+readableScheduleTitle(value.substring(separator+3),postNas);
+        }
         if(value.startsWith("Révision passive"))return "Révision passive";
         return value.split(" · ",2)[0];
     }
@@ -1896,7 +1899,7 @@ public final class MainActivity extends android.app.Activity {
         for(String part:tokens){
             String t=part.trim();
             if(t.matches("séance \\d+/\\d+") || t.matches("\\d+ lignes?")
-                || t.matches("\\d+ pages?") || t.matches("\\d+ min")
+                || t.matches("\\d+ pages?") || t.matches("\\d+ min") || t.matches("Fragilités \\d+ min")
                 || t.matches("×\\d+") || t.equals("à prévoir selon les acquis")
                 || t.equals("aucun passage admissible")
                 || t.equals("par page ×3")) essentials.add(t);
