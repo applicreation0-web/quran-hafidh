@@ -63,12 +63,27 @@ jobs:
               print(folder, ', '.join(f'{name}={sum(int(s.get(name, 0)) for s in suites)}'
                                      for name in ('tests', 'failures', 'errors', 'skipped')))
               for suite in suites:
+                  for case in suite.findall('testcase'):
+                      skipped = case.find('skipped')
+                      if skipped is not None:
+                          print('SKIPPED', suite.get('name'), case.get('name'),
+                                skipped.get('message') or skipped.text or 'No reason in XML; inspect source')
                   if suite.get('name', '').endswith(('ActiveReviewLongRunTest', 'ActiveReviewSlotsTest')):
                       for test in suite.findall('testcase'):
                           verdict = 'FAIL' if test.find('failure') is not None else (
                               'SKIPPED' if test.find('skipped') is not None else 'PASS')
                           print(verdict, suite.get('name').rsplit('.', 1)[-1], test.get('name'))
           PYTHON
+      - name: Retain JVM XML for exact skipped-test and stress-test review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-11723-jvm-evidence
+          path: |
+            hifz-core/build/test-results/test/TEST-*.xml
+            hifz-app/build/test-results/testDebugUnitTest/TEST-*.xml
+            hifz-app/build/test-results/sourceContractTest/TEST-*.xml
+          if-no-files-found: error
       - name: No APK and no private payload
         if: always()
         run: |
