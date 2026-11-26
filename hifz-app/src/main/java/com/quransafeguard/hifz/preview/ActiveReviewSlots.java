@@ -347,6 +347,10 @@ final class ActiveReviewSlots {
     }
 
     boolean complete(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label) {
+        return complete(date,slot,start,next,label,null);
+    }
+
+    boolean complete(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label,String proof) {
         synchronized (LOCK) {
             if (!date.equals(HifzClock.today())) return false;
             Draft saved = draft(date, slot);
@@ -372,6 +376,7 @@ final class ActiveReviewSlots {
                 .putInt(RECEIPT_MINUTES + scope(date, slot), saved.targetMinutes)
                 .remove(DRAFT + scope(date, slot));
             editor.putString(CURSOR, next.toString()).putLong(REVISION, revision() + 1L);
+            ActiveReviewCoverage.append(editor,date,slot,proof);
             return editor.commit();
         }
     }
@@ -381,6 +386,10 @@ final class ActiveReviewSlots {
      * The old complete() path remains available for historical callers.
      */
     boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label) {
+        return completeRecall(date,slot,start,next,label,null);
+    }
+
+    boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label,String proof) {
         synchronized (LOCK) {
             if (!date.equals(HifzClock.today())) return false;
             Draft saved=draft(date,slot);
@@ -390,7 +399,7 @@ final class ActiveReviewSlots {
                     ||label==null||label.isEmpty())return false;
             ActiveReviewCorrectionStore correction=correction(date,slot);
             ActiveReviewCorrectionStore.State state=correction.pending();
-            if(state==null)return complete(date,slot,start,next,label);
+            if(state==null)return complete(date,slot,start,next,label,proof);
             if(!date.toString().equals(state.date)||!start.equals(state.start)
                     ||!saved.end.equals(state.end)||state.activeElapsedMs!=saved.durationMs())return false;
             if(!state.pages.containsAll(correction.revealed(date.toString(),start)))return false;
@@ -399,6 +408,7 @@ final class ActiveReviewSlots {
                 .putInt(RECEIPT_MINUTES+scope(date,slot),saved.targetMinutes)
                 .remove(DRAFT+scope(date,slot))
                 .putString(CURSOR,next.toString()).putLong(REVISION,revision()+1L);
+            ActiveReviewCoverage.append(edit,date,slot,proof);
             return edit.commit();
         }
     }
