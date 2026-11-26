@@ -357,6 +357,12 @@ final class ActiveReviewSlots {
         }
     }
 
+    List<VerseRef> confirmedTraversal(LocalDate date, Slot slot, VerseRef start, VerseRef end) {
+        if (receipt(date, slot) == null) return Collections.emptyList();
+        return ActiveReviewCoverage.restoreTraversal(
+            prefs.getString(ActiveReviewCoverage.KEY + scope(date, slot), null), start, end);
+    }
+
     boolean correctionPending(LocalDate date, Slot slot) {
         return correction(date, slot).pending() != null;
     }

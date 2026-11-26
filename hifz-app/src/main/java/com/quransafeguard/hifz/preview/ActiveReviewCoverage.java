@@ -2,9 +2,12 @@ package com.quransafeguard.hifz.preview;
 
 import android.content.SharedPreferences;
 import com.quransafeguard.hifz.core.VerseRef;
+import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.EligibleCorpus;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.List;
 
 /** Evidence of user-confirmed traversal, never inferred from attendance or elapsed minutes. */
@@ -48,6 +51,23 @@ final class ActiveReviewCoverage {
             previous=end;
         }
         return result;
+    }
+
+    static List<VerseRef> restoreTraversal(String proof, VerseRef start, VerseRef end) {
+        if (proof == null) return Collections.emptyList();
+        BitSet covered = decode(proof);
+        int first = GeometryRepository.ordinal(start);
+        int last = GeometryRepository.ordinal(end);
+        if (!covered.get(first) || !covered.get(last))
+            throw new IllegalArgumentException("Confirmed review proof does not match its endpoints");
+        List<VerseRef> traversal = new ArrayList<>();
+        for (int ordinal = first; ; ordinal = ordinal == QuranCanon.TOTAL_VERSES ? 1 : ordinal + 1) {
+            if (covered.get(ordinal)) traversal.add(QuranCanon.INSTANCE.fromOrdinal(ordinal));
+            if (ordinal == last) break;
+        }
+        if (traversal.size() != covered.cardinality())
+            throw new IllegalArgumentException("Confirmed review proof outside its original traversal");
+        return traversal;
     }
 
     static void append(SharedPreferences.Editor edit,LocalDate date,ActiveReviewSlots.Slot slot,String proof){

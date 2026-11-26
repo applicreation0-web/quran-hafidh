@@ -2025,6 +2025,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         if (receipt != null) {
             if(activeSlot!=null&&correctionState!=null){
+                List<VerseRef> confirmed = activeSlots.confirmedTraversal(sessionDate, activeSlot,
+                    correctionState.start, correctionState.end);
+                if (!confirmed.isEmpty()) setValidatedReviewAnchors(confirmed, correctionState.end);
                 sessionCompleted=false;
                 renderActiveCorrection();
                 return;
@@ -2525,14 +2528,18 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         String label=activeReviewTitle()+" · testé : "+QuranSurahNames.range(murajaahPlan.start,murajaahActualEnd)
             +" · "+lines+"L/"+activeTargetMs()/1000L+"s";
         if(!activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label,confirmedCoverage(),geometry))return false;
-        validatedCorrespondenceVerse=CorrespondenceCases.lastValidatedAnchor(murajaahPlan.traversalVerses,murajaahActualEnd);
-        validatedDiscriminantVerse=null;
-        for(VerseRef verse:murajaahPlan.traversalVerses){
-            if(AtlasDiscriminantCases.indexFor(verse.getSurah(),verse.getAyah())>=0)
-                validatedDiscriminantVerse=verse;
-            if(verse.equals(murajaahActualEnd))break;
-        }
+        setValidatedReviewAnchors(murajaahPlan.traversalVerses, murajaahActualEnd);
         return true;
+    }
+
+    private void setValidatedReviewAnchors(List<VerseRef> traversal, VerseRef end) {
+        validatedCorrespondenceVerse = CorrespondenceCases.lastValidatedAnchor(traversal, end);
+        validatedDiscriminantVerse = null;
+        for (VerseRef verse : traversal) {
+            if (AtlasDiscriminantCases.indexFor(verse.getSurah(), verse.getAyah()) >= 0)
+                validatedDiscriminantVerse = verse;
+            if (verse.equals(end)) break;
+        }
     }
 
     /** Original 15-line QCF page; reread in full before masked recitation. */

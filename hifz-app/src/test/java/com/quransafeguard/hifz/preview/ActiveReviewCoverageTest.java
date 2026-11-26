@@ -17,6 +17,9 @@ public final class ActiveReviewCoverageTest {
         assertTrue(covered.get(GeometryRepository.ordinal(c)));
         assertFalse(covered.get(GeometryRepository.ordinal(d)));
         assertEquals(covered,ActiveReviewCoverage.decode(ActiveReviewCoverage.encode(covered)));
+        assertEquals(Arrays.asList(a, b, c), ActiveReviewCoverage.restoreTraversal(
+            ActiveReviewCoverage.encode(covered), a, c));
+        assertTrue(ActiveReviewCoverage.restoreTraversal(null, a, c).isEmpty());
     }
 
     @Test(expected=IllegalArgumentException.class)
