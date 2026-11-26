@@ -2817,9 +2817,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         if(MURAJAAH_ACTIVE.equals(mode)&&correctionState!=null){
             if("READ".equals(correctionState.stage)){
-                mushaf.clearSemanticCues();
-                mushaf.clearPageLandmarkBoxes();
-                mushaf.show(currentPage,Collections.emptyList(),Collections.emptyList(),0,false);
+                mushaf.showCorrectionVisiblePage(currentPage,geometry.lineIdsOnPage(currentPage));
             }else
                 mushaf.showFullMaskedPreparedPage(currentPage,currentLineIds);
             return;
