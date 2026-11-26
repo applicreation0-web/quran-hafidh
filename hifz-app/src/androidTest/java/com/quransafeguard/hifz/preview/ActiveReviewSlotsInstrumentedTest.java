@@ -69,13 +69,12 @@ public final class ActiveReviewSlotsInstrumentedTest {
                 assertTrue(elapsed(activity) > background);
                 assertNull(prefs.activeReviewSlots().receipt(SUNDAY, AM));
             }
-            // A started, unfinished morning session must remain resumable;
-            // opening evening must not silently reread or claim the same pages.
+            // Sunday evening stays free while the morning draft remains resumable.
             long morningElapsed = prefs.activeReviewSlots().draft(SUNDAY, AM).elapsedMs;
             try (ActivityScenario<HifzSessionActivity> activity = open(context, PM)) {
                 activity.onActivity(a -> assertTrue(
                     ((android.widget.TextView) field(a, "program")).getText()
-                        .toString().contains("en attente")));
+                        .toString().contains("Dimanche soir · libre")));
                 assertNull(prefs.activeReviewSlots().draft(SUNDAY, PM));
                 assertNull(prefs.activeReviewSlots().receipt(SUNDAY, PM));
                 assertEquals(morningElapsed,
@@ -100,6 +99,9 @@ public final class ActiveReviewSlotsInstrumentedTest {
             HifzClock.setClockForTests(Clock.fixed(
                 SUNDAY.atStartOfDay(ZoneOffset.UTC).toInstant(),ZoneOffset.UTC));
             HifzPrefs prefs = fixture(context);
+            // This fixture exercises an already planned Sunday from the older calendar.
+            assertTrue(context.getSharedPreferences("quran_hifz_preview_v1", 0).edit()
+                .putString("activeReviewSundayRestStartV1", SUNDAY.plusDays(1).toString()).commit());
             ActiveReviewSlots slots = prefs.activeReviewSlots();
             GeometryRepository geometry = GeometryRepository.get(context);
             int page = geometry.pageForVerse(START);
@@ -150,6 +152,9 @@ public final class ActiveReviewSlotsInstrumentedTest {
             HifzClock.setClockForTests(Clock.fixed(
                 SUNDAY.atStartOfDay(ZoneOffset.UTC).toInstant(),ZoneOffset.UTC));
             HifzPrefs prefs=fixture(context);
+            // This fixture exercises an already planned Sunday from the older calendar.
+            assertTrue(context.getSharedPreferences("quran_hifz_preview_v1", 0).edit()
+                .putString("activeReviewSundayRestStartV1", SUNDAY.plusDays(1).toString()).commit());
             int page=GeometryRepository.get(context).pageForVerse(START);
             assertTrue(prefs.activeReviewSlots().checkpoint(SUNDAY, PM,
                 START,END,page,600_000L,true,45));
@@ -193,15 +198,18 @@ public final class ActiveReviewSlotsInstrumentedTest {
             assertFalse("A revealed page cannot earn a receipt",slots.complete(
                 monday,AM,START,next,"unearned"));
             assertTrue(correction.begin(monday.toString(),START,END,2_700_000L,revealed,page));
-            while(!"DONE".equals(correction.pending().stage)) {
-                ActiveReviewCorrectionStore.State state=correction.pending();
-                if("READ".equals(state.stage))assertTrue(correction.pageReread(state));
+            String coverage = ActiveReviewCoverage.encode(ActiveReviewCoverage.through(proof.traversal, END));
+            assertTrue("The explicit active confirmation applies to TODAY only",
+                slots.completeRecall(monday, AM, START, next, "Reprise effectuée lundi", coverage));
+            assertNull(slots.receipt(SUNDAY, PM));
+            assertEquals("Reprise effectuée lundi", slots.receipt(monday, AM));
+            while (!"DONE".equals(correction.pending().stage)) {
+                ActiveReviewCorrectionStore.State state = correction.pending();
+                if ("READ".equals(state.stage)) assertTrue(correction.pageReread(state));
                 else assertTrue(correction.pageRecalled(state));
             }
-            assertTrue("Completed visible+masked correction can earn TODAY only",
-                slots.complete(monday,AM,START,next,"Reprise effectuée lundi"));
-            assertNull(slots.receipt(SUNDAY,PM));
-            assertEquals("Reprise effectuée lundi",slots.receipt(monday,AM));
+            assertTrue(slots.finishIndependentCorrection(monday, AM, correction.pending()));
+            assertEquals(next, new HifzPrefs(context).activeMurajaahCursor());
         } finally {
             HifzClock.resetClockForTests();
             HifzBackup.restore(context,original);
