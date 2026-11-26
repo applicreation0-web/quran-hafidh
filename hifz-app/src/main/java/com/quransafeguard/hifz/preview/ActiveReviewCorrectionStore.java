@@ -141,6 +141,24 @@ final class ActiveReviewCorrectionStore {
         if(pending()!=null||pages==null||pages.isEmpty())return false;
         return save(new State(date,start,end,elapsed,pages,originPage,0,"READ",false));
     }
+    /** Reorder ONLY the unprocessed suffix. The settled prefix and deferred
+     * pages remain immutable; moving is never a completion or a new credit. */
+    boolean navigate(State state,int delta){
+        if(!isCurrent(state)||"DONE".equals(state.stage)||delta==0)return false;
+        int count=state.pages.size()-state.pageIndex;
+        if(count<2)return false;
+        List<Integer> order=new ArrayList<>(state.pages);
+        Collections.rotate(order.subList(state.pageIndex,order.size()),delta>0?-1:1);
+        return save(new State(state.date,state.start,state.end,state.activeElapsedMs,order,
+            state.originPage,state.pageIndex,"READ",false,state.correctionElapsedMs,state.deferred));
+    }
+
+    /** A new fully masked attempt starts only after stopping all aids. */
+    boolean remask(State state){
+        return isCurrent(state)&&!"DONE".equals(state.stage)
+            &&save(state.move(state.pageIndex,"RECALL",false));
+    }
+
     boolean pageReread(State state){
         return isCurrent(state)&&"READ".equals(state.stage)
             &&save(state.move(state.pageIndex,"RECALL",false));
