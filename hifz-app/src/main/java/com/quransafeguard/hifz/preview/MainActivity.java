@@ -945,7 +945,7 @@ public final class MainActivity extends android.app.Activity {
             // not lead into a blocked new morning session.
             if (reviews.draft(today,ActiveReviewSlots.Slot.MORNING)==null
                     && reviews.draft(today,ActiveReviewSlots.Slot.EVENING)!=null
-                    && reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null)
+                    && reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null && reviews.scheduled(today,ActiveReviewSlots.Slot.EVENING))
                 return ActiveReviewSlots.Slot.EVENING.mode;
             return ActiveReviewSlots.Slot.MORNING.mode;
         }
@@ -955,7 +955,7 @@ public final class MainActivity extends android.app.Activity {
                 if ((HifzSessionActivity.LEARNING_CONSOLIDATION.equals(lesson)
                         || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(lesson)
                         || HifzSessionActivity.CONSOLIDATION_FINAL.equals(lesson))
-                        && reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null)
+                        && reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null && reviews.scheduled(today,ActiveReviewSlots.Slot.EVENING))
                     return ActiveReviewSlots.Slot.EVENING.mode;
                 return lesson;
             }
@@ -964,10 +964,10 @@ public final class MainActivity extends android.app.Activity {
                 prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
             String evening=action==CadenceAction.LEARNING?eveningLearningMode(today)
                 :action==CadenceAction.STABILIZATION?eveningStabilizationMode(today):null;
-            if(evening!=null) return reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null
+            if(evening!=null) return reviews.scheduled(today,ActiveReviewSlots.Slot.EVENING)&&reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null
                 ?ActiveReviewSlots.Slot.EVENING.mode:evening;
         }
-        return reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null
+        return reviews.scheduled(today,ActiveReviewSlots.Slot.EVENING)&&reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null
             ?ActiveReviewSlots.Slot.EVENING.mode:null;
     }
 
@@ -1215,6 +1215,7 @@ public final class MainActivity extends android.app.Activity {
 
     private void addActiveReviewToday(List<TodaySession> out,LocalDate today,ActiveReviewSlots.Slot slot,
             ActiveReviewSlots reviews,String nextMode){
+        if(!reviews.scheduled(today,slot))return;
         int minutes=reviews.targetMinutes(today,slot,prefs.activeReviewMinutes(geometry));
         addToday(out,slot.title()+" · "+minutes+" min · Fragilités "+ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min",
             slot.mode,today,reviews.receipt(today,slot)!=null,nextMode);
