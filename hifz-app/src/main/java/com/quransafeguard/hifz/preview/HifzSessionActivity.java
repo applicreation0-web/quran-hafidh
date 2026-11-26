@@ -246,6 +246,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         murajaahActualEnd = prefs.murajaahActualEnd();
         clock = new SessionClock(persistedSessionElapsed(), elapsed -> {
+            if(activeSlot!=null&&correctionState!=null&&activeReceiptLabel()!=null)return;
             if (activeSlot != null && !sessionCompleted && correctionState==null
                     && !carryActiveOverMidnight()) {
                 expireActiveReview();
@@ -544,7 +545,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Display-only guard: an inactive/blocked/error state is not a completed lesson.
      * Reads existing dated receipts; never creates or modifies a credit. */
     private boolean hasAuthenticClosingReceipt() {
-        if (sessionRenderFailed || !sessionCompleted || awaitingValidation) return false;
+        if (sessionRenderFailed || !sessionCompleted || awaitingValidation || correctionState!=null) return false;
         String date = sessionDate.toString();
         if (SABQI.equals(mode)) return date.equals(prefs.lastSabqiDate());
         if (SABQI_TODAY_REVIEW.equals(mode)) return date.equals(prefs.lastSabqiTodayReviewDate());
@@ -1975,6 +1976,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             correctionState = correctionStore.pending();
         }
         if (receipt != null) {
+            if(activeSlot!=null&&correctionState!=null){
+                sessionCompleted=false;
+                renderActiveCorrection();
+                return;
+            }
             if(activeSlot==null&&!correctionStore.clear())
                 throw new IllegalStateException("Validated correction checkpoint could not be cleared");
             correctionState=null;
@@ -2029,6 +2035,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 throw new IllegalStateException("Correction and active Hifz endpoint mismatch");
             murajaahActualEnd=correctionState.end;
             clock.pause();
+            if(activeSlot!=null&&correctionState.activeElapsedMs==activeTargetMs()
+                    &&!commitIndependentRecall())
+                throw new IllegalStateException("Unable to preserve active recall before correction");
             renderActiveCorrection();
             return;
         }
@@ -2273,7 +2282,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void finishMurajaah(){
         if (activeSlot != null && (!carryActiveOverMidnight()
                 || clock.elapsedMs() < activeTargetMs())) return;
-        if (!StructuredSessionPolicy.murajaahCanValidate(murajaahActualEnd != null)) {
+        if (!StructuredSessionPolicy.murajaahCanValidate(murajaahActualEnd != null
+                && (activeSlot==null||murajaahPlan.traversalVerses.contains(murajaahActualEnd)))) {
             Toast.makeText(this, "Touchez d’abord le dernier verset réellement révisé.", Toast.LENGTH_LONG).show();
             return;
         }
@@ -2309,11 +2319,26 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean active = MURAJAAH_ACTIVE.equals(mode);
         if (activeSlot != null && correctionState == null
                 && clock.elapsedMs() < activeTargetMs()) return;
+        if(activeSlot!=null&&correctionState!=null&&activeReceiptLabel()!=null){
+            if(!"DONE".equals(correctionState.stage)
+                    && correctionState.correctionElapsedMs<fragilityTargetMs())return;
+            if(!activeSlots.finishIndependentCorrection(sessionDate,activeSlot,correctionState)){
+                onError("Impossible de clôturer les fragilités ; la révision est déjà sauvegardée.");return;
+            }
+            stopFragilityClock();
+            correctionState=null;
+            closeClockForCompletedSession();
+            renderMode();
+            return;
+        }
         if(active && correctionState==null){
             if(activeSlot!=null&&!carryActiveOverMidnight())return;
             if (!checkpointMurajaah(clock.elapsedMs())) {
                 onError("Impossible de sauvegarder la révision avant validation.");
                 return;
+            }
+            if(activeSlot!=null&&!activeSlots.settleOtherCorrections(sessionDate,activeSlot)){
+                onError("Impossible de reporter les anciennes fragilités.");return;
             }
             List<Integer> revealedPages=activeSlot==null?ActiveReviewCorrectionPlan.select(
                 correctionStore.revealed(sessionDate.toString(),murajaahPlan.start))
@@ -2327,6 +2352,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 }
                 correctionState=correctionStore.pending();
                 clock.pause();
+                if(activeSlot!=null&&!commitIndependentRecall()){
+                    onError("Impossible de sauvegarder la révision ; reprise conservée.");return;
+                }
                 renderActiveCorrection();
                 return;
             }
@@ -2390,6 +2418,18 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
+    private boolean commitIndependentRecall(){
+        if(activeSlot==null||correctionState==null||murajaahPlan==null||murajaahActualEnd==null
+                ||!murajaahPlan.traversalVerses.contains(murajaahActualEnd))return false;
+        if(activeReceiptLabel()!=null)return true;
+        if(!carryActiveOverMidnight())return false;
+        int lines=countMurajaahLinesThrough(murajaahActualEnd);
+        VerseRef next=prefs.activeMurajaahCorpus().next(murajaahActualEnd);
+        String label=activeReviewTitle()+" · testé : "+QuranSurahNames.range(murajaahPlan.start,murajaahActualEnd)
+            +" · "+lines+"L/"+activeTargetMs()/1000L+"s";
+        return activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label);
+    }
+
     /** Original 15-line QCF page; reread in full before masked recitation. */
     private void renderActiveCorrection() {
         fragilityPageReady=false;
@@ -2419,6 +2459,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions.removeAllViews();
         if("READ".equals(state.stage)){
             actions.addView(Ui.roundAction(this,"","Page relue",v->{
+                if(!fragilityPageReady&&activeSlot!=null)return;
                 if(!correctionStore.pageReread(correctionState)){
                     onError("Impossible de sauvegarder la page relue.");return;
                 }
@@ -2453,6 +2494,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             actions.addView(reveal);
             updateRevealButton();
         }
+        if(activeSlot!=null)actions.addView(Ui.roundAction(this,"","Reporter cette page",v->{
+            if(!correctionStore.deferPage(correctionState)){
+                onError("Impossible de reporter cette page.");return;
+            }
+            correctionState=correctionStore.pending();
+            renderActiveCorrection();
+        }));
     }
 
     private long fragilityTargetMs(){
@@ -2605,8 +2653,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (maintenanceDraft != null) return;
         if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted || correctionState!=null) return;
         EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
-        if (!corpus.contains(verse)) {
-            Toast.makeText(this, "Ce verset n’appartient pas encore au corpus acquis.", Toast.LENGTH_SHORT).show();
+        if (!corpus.contains(verse) || (activeSlot!=null&&!murajaahPlan.traversalVerses.contains(verse))) {
+            Toast.makeText(this, "Ce verset est hors du parcours de révision prévu.", Toast.LENGTH_SHORT).show();
             return;
         }
         murajaahActualEnd=verse;
@@ -3090,7 +3138,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      * the acquired-corpus cursor until an authentic completion.
      */
     private boolean carryActiveOverMidnight() {
-        if (activeSlot == null || sessionDate.equals(HifzClock.today())) return true;
+        if (activeSlot == null || activeReceiptLabel()!=null || sessionDate.equals(HifzClock.today())) return true;
         LocalDate now = HifzClock.today();
         if (sessionDate.isAfter(now) || activeDraft == null || sessionCompleted) return false;
         if (correctionState == null && murajaahPlan != null && clock != null) {
