@@ -145,6 +145,7 @@ final class HifzBackup {
             checkValues(j10);checkValues(gates);
             if(freeMem!=null){checkValues(freeMem);validateFreeMemory(freeMem);}
             validateReceipts(dashboard);
+            validateActiveReview(values);
             synchronized(J10ReviewStore.LEGACY_STORE_LOCK) {
                 SharedPreferences main=context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
                 SharedPreferences ledger=context.getSharedPreferences(DASHBOARD_NAME,Context.MODE_PRIVATE);
@@ -235,6 +236,53 @@ final class HifzBackup {
         JSONObject out=new JSONObject();
         for(Map.Entry<String,?> e:all.entrySet())out.put(e.getKey(),encode(e.getValue()));
         return out;
+    }
+
+    /** Validate the new journals BEFORE the restore transaction touches local progress. */
+    static void validateActiveReview(JSONObject values) throws JSONException {
+        try{
+            Iterator<String> keys=values.keys();
+            while(keys.hasNext()){
+                String key=keys.next();
+                boolean coverage=key.startsWith(ActiveReviewCoverage.KEY+"|");
+                boolean correction=key.equals(ActiveReviewCorrectionStore.KEY_STATE)
+                    ||key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|");
+                boolean queue=key.equals(ActiveReviewCorrectionStore.KEY_QUEUE);
+                if(!coverage&&!correction&&!queue)continue;
+                JSONObject entry=values.getJSONObject(key);
+                if(!"s".equals(entry.getString("t"))||!(entry.get("v") instanceof String))
+                    throw new IllegalArgumentException("Invalid active-review journal type");
+                String raw=entry.getString("v");
+                if(queue){
+                    ActiveReviewCorrectionStore.decodeQueue(raw);
+                }else if(correction){
+                    ActiveReviewCorrectionStore.State state=ActiveReviewCorrectionStore.decodeState(raw);
+                    if(state==null)throw new IllegalArgumentException("Empty correction state");
+                    if(state.correctionElapsedMs>900_000L)
+                        throw new IllegalArgumentException("Correction exceeds maximum duration");
+                    if(key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|")
+                            &&!key.endsWith("|manual")){
+                        String suffix=key.substring(ActiveReviewCorrectionStore.KEY_STATE.length()+1);
+                        String[] parts=suffix.split("\\|",-1);
+                        if(parts.length!=2||!state.date.equals(parts[0]))
+                            throw new IllegalArgumentException("Invalid correction scope");
+                        ActiveReviewSlots.Slot.valueOf(parts[1]);
+                    }
+                }else{
+                    ActiveReviewCoverage.decode(raw);
+                    String suffix=key.substring(ActiveReviewCoverage.KEY.length()+1);
+                    String[] parts=suffix.split("\\|",-1);
+                    if(parts.length!=2)throw new IllegalArgumentException("Invalid coverage scope");
+                    java.time.LocalDate.parse(parts[0]);
+                    ActiveReviewSlots.Slot.valueOf(parts[1]);
+                    JSONObject receipt=values.getJSONObject("activeReviewReceiptV1|"+suffix);
+                    if(!"s".equals(receipt.getString("t"))||receipt.getString("v").isEmpty())
+                        throw new IllegalArgumentException("Coverage without receipt");
+                }
+            }
+        }catch(RuntimeException invalid){
+            throw new JSONException("Journal de révision invalide ; restauration refusée.");
+        }
     }
 
     private static void checkValues(JSONObject values) throws JSONException {
