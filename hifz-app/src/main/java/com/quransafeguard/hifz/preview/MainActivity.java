@@ -1164,7 +1164,7 @@ public final class MainActivity extends android.app.Activity {
 
     private void addActiveReviewToday(List<TodaySession> out,LocalDate today,ActiveReviewSlots.Slot slot,
             ActiveReviewSlots reviews,String nextMode){
-        addToday(out,slot.title()+" · "+reviews.targetMinutes(today,slot,revisionCoverageMinutes())+" min",
+        addToday(out,slot.title()+" · "+reviews.targetMinutes(today,slot,prefs.activeReviewMinutes(geometry))+" min",
             slot.mode,today,reviews.receipt(today,slot)!=null,nextMode);
     }
 
