@@ -27,7 +27,7 @@ final class RevisionSelector {
         for (int i = 0; i < slots.length; i++) {
             ActiveReviewSlots.Slot slot = slots[i];
             boolean done = store.receipt(today, slot) != null;
-            items[i] = slot.title() + " · " + store.targetMinutes(today, slot, proposedMinutes)
+            items[i] = slot.title() + " · " + store.targetMinutes(today, slot, geometry == null ? ActiveReviewSlots.LEGACY_MINUTES : prefs.activeReviewMinutes(geometry))
                 + " min · " + (done ? "fait" : "à faire");
         }
         if (includePassive) items[slots.length] = "Révision passive · " + maintenanceCue
