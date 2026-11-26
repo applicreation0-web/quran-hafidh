@@ -1542,10 +1542,11 @@ public final class MainActivity extends android.app.Activity {
             .setItems(new String[]{"Bilan de la semaine","Lectures cumulatives"},(d,choice)->{
                 if(choice==1){showPostFinalRecap();return;}
                 WeeklyBilan.Summary bilan=WeeklyBilan.calculate(HifzClock.today(),
-                    prefs.programStartDate(),ledger.coverageStartDate(),
+                    prefs.programStartDate(),ledger.coverageStartDate(),prefs.activeReviewSlots().programmeStart(),
                     date->WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
                         prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
-                    (date,mode)->ledger.find(date,mode)!=null);
+                    (date,mode)->ledger.find(date,mode)!=null,
+                    date->prefs.activeReviewSlots().scheduled(date,ActiveReviewSlots.Slot.EVENING));
                 new android.app.AlertDialog.Builder(this)
                     .setTitle("Bilan de la semaine").setMessage(bilan.display())
                     .setPositiveButton("Fermer",null).show();
