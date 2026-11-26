@@ -19,6 +19,7 @@ final class ActiveReviewCorrectionStore {
     private static final String PREFS = "quran_hifz_preview_v1";
     static final String KEY_REVEALED = "activeReviewRevealedPagesV1";
     static final String KEY_STATE = "activeReviewCorrectionV2";
+    static final String KEY_QUEUE = "activeReviewFragilityQueueV1";
     private final SharedPreferences prefs;
     private final String revealedKey;
     private final String stateKey;
@@ -39,7 +40,7 @@ final class ActiveReviewCorrectionStore {
     static final class State {
         final String date;
         final VerseRef start, end;
-        final long activeElapsedMs;
+        final long activeElapsedMs, correctionElapsedMs;
         final List<Integer> pages;
         final int originPage; // Original current page, before visible/masked replay.
         final int pageIndex;
@@ -47,10 +48,15 @@ final class ActiveReviewCorrectionStore {
         final boolean assisted;
         State(String date, VerseRef start, VerseRef end, long elapsed,
               List<Integer> pages, int originPage, int pageIndex, String stage, boolean assisted) {
+            this(date,start,end,elapsed,pages,originPage,pageIndex,stage,assisted,0L);
+        }
+        State(String date,VerseRef start,VerseRef end,long elapsed,List<Integer> pages,
+              int originPage,int pageIndex,String stage,boolean assisted,long correctionElapsedMs) {
             this.date=date;this.start=start;this.end=end;activeElapsedMs=elapsed;
+            this.correctionElapsedMs=correctionElapsedMs;
             this.pages=Collections.unmodifiableList(new ArrayList<>(pages));
             this.originPage=originPage;this.pageIndex=pageIndex;this.stage=stage;this.assisted=assisted;
-            if(date==null||start==null||end==null||elapsed<0
+            if(date==null||start==null||end==null||elapsed<0||correctionElapsedMs<0
                 ||!date.equals(LocalDate.parse(date).toString())
                 ||pages.isEmpty()||pages.size()>604||originPage<1||originPage>604
                 ||pageIndex<0||pageIndex>=pages.size()
@@ -64,7 +70,7 @@ final class ActiveReviewCorrectionStore {
         }
         int page(){return pages.get(pageIndex);}
         State move(int index,String phase,boolean help){
-            return new State(date,start,end,activeElapsedMs,pages,originPage,index,phase,help);
+            return new State(date,start,end,activeElapsedMs,pages,originPage,index,phase,help,correctionElapsedMs);
         }
     }
 
@@ -83,7 +89,8 @@ final class ActiveReviewCorrectionStore {
                 GeometryRepository.parseVerse(doc.getString("end")),
                 strictLong(doc.get("activeElapsedMs")),pages,
                 strictInt(doc.get("originPage")),strictInt(doc.get("pageIndex")),doc.getString("stage"),
-                strictBoolean(doc.get("assisted")));
+                strictBoolean(doc.get("assisted")),
+                doc.has("correctionElapsedMs")?strictLong(doc.get("correctionElapsedMs")):0L);
         }catch(Exception invalid){
             // Never silently delete a damaged checkpoint or advance the Hifz cursor.
             throw new IllegalStateException("État de reprise des pages à vérifier ; données conservées.",invalid);
@@ -141,7 +148,7 @@ final class ActiveReviewCorrectionStore {
         State saved=pending();
         return state!=null&&saved!=null&&state.date.equals(saved.date)
             &&state.start.equals(saved.start)&&state.end.equals(saved.end)
-            &&state.activeElapsedMs==saved.activeElapsedMs&&state.pages.equals(saved.pages)
+            &&state.activeElapsedMs==saved.activeElapsedMs&&state.correctionElapsedMs==saved.correctionElapsedMs&&state.pages.equals(saved.pages)
             &&state.originPage==saved.originPage&&state.pageIndex==saved.pageIndex
             &&state.stage.equals(saved.stage)&&state.assisted==saved.assisted;
     }
@@ -154,6 +161,7 @@ final class ActiveReviewCorrectionStore {
             doc.put("originPage",state.originPage);
             doc.put("pageIndex",state.pageIndex);doc.put("stage",state.stage);
             doc.put("assisted",state.assisted);
+            doc.put("correctionElapsedMs",state.correctionElapsedMs);
             JSONArray array=new JSONArray();
             for(Integer page:state.pages)array.put(page);
             doc.put("pages",array);
@@ -217,6 +225,43 @@ final class ActiveReviewCorrectionStore {
             throw new IllegalStateException("Revealed-page date requires review",invalid);
         }
     }
+    /** Persist a monotonic correction clock without altering the original recall proof. */
+    boolean recordElapsed(State state,long elapsedMs) {
+        if(!isCurrent(state)||elapsedMs<state.correctionElapsedMs||"DONE".equals(state.stage))return false;
+        return save(new State(state.date,state.start,state.end,state.activeElapsedMs,state.pages,
+            state.originPage,state.pageIndex,state.stage,state.assisted,elapsedMs));
+    }
+
+    List<Integer> queuedPages() {
+        try {
+            JSONArray raw=new JSONArray(prefs.getString(KEY_QUEUE,"[]"));
+            LinkedHashSet<Integer> result=new LinkedHashSet<>();
+            for(int i=0;i<raw.length();i++){
+                int page=strictInt(raw.get(i));
+                if(page<1||page>604||!result.add(page))throw new IllegalArgumentException("Invalid fragility queue");
+            }
+            return new ArrayList<>(result);
+        }catch(Exception e){throw new IllegalStateException("File des fragilités à vérifier ; données conservées.",e);}
+    }
+
+    List<Integer> pagesToCorrect(String date,VerseRef start) {
+        LinkedHashSet<Integer> pages=new LinkedHashSet<>(queuedPages());
+        pages.addAll(revealed(date,start));
+        return new ArrayList<>(pages);
+    }
+
+    /** Called with the same editor as the genuine active receipt and cursor. */
+    SharedPreferences.Editor settleQueue(SharedPreferences.Editor editor,State state) {
+        if(state==null)return editor;
+        LinkedHashSet<Integer> remaining=new LinkedHashSet<>(queuedPages());
+        remaining.removeAll(state.pages);
+        if(!"DONE".equals(state.stage))
+            remaining.addAll(state.pages.subList(state.pageIndex,state.pages.size()));
+        JSONArray values=new JSONArray();
+        for(Integer page:remaining)values.put(page);
+        return editor.putString(KEY_QUEUE,values.toString());
+    }
+
     boolean clear(){
         return clear(prefs.edit()).commit();
     }
