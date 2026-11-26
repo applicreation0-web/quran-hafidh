@@ -207,8 +207,8 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout reviewModes = Ui.row(this);
         LinearLayout activeRevision = pathTile(reviewModes, "Révision active", "Récitation masquée",
             v -> showRevisionSelector(false));
-        LinearLayout passiveRevision = pathTile(reviewModes, "Révision passive", "Texte visible",
-            v -> openMode(HifzSessionActivity.MURAJAAH));
+        LinearLayout fragilities = pathTile(reviewModes, "Fragilités", "Passages à renforcer",
+            v -> showFragilityQueue());
         if(wideBoox())path.addView(reviewModes,new LinearLayout.LayoutParams(-1,0,1f));
         else path.addView(reviewModes);
         sabqiQuickAccess = sabqi;
@@ -217,7 +217,7 @@ public final class MainActivity extends android.app.Activity {
         geometryActions.add(sabqi);
         geometryActions.add(itqan);
         geometryActions.add(activeRevision);
-        geometryActions.add(passiveRevision);
+        geometryActions.add(fragilities);
         geometryActions.add(renforcement);
         geometryActions.add(consolidation);
         setGeometryActionsEnabled(false);
@@ -378,6 +378,7 @@ public final class MainActivity extends android.app.Activity {
         if ("Stabilisation".equals(role)) return R.drawable.ic_haafidh_stabilisation;
         if ("Consolidation".equals(role)) return R.drawable.ic_haafidh_consolidation;
         if ("Révision active".equals(role)) return R.drawable.ic_haafidh_revision_active;
+        if ("Fragilités".equals(role)) return R.drawable.ic_haafidh_fragilities;
         if ("Révision passive".equals(role)) return R.drawable.ic_haafidh_revision_passive;
         return 0;
     }
@@ -538,6 +539,7 @@ public final class MainActivity extends android.app.Activity {
             case "Stabilisation": return "Répétitions approfondies";
             case "Consolidation": return "Révision cumulative Itqān";
             case "Révision active": return "Texte masqué";
+            case "Fragilités": return "Passages à renforcer";
             case "Révision passive": return "Texte visible";
             default: return "";
         }
@@ -735,7 +737,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void showRevisionSelector() {
-        showRevisionSelector(true);
+        showRevisionSelector(false);
     }
 
     private void showRevisionSelector(boolean includePassive) {
@@ -743,6 +745,36 @@ public final class MainActivity extends android.app.Activity {
             @Override public void openActiveRevision(ActiveReviewSlots.Slot slot) { openMode(slot.mode); }
             @Override public void openPassiveRevision() { openMode(HifzSessionActivity.MURAJAAH); }
         });
+    }
+
+    private void showFragilityQueue(){
+        try{
+            ActiveReviewSlots slots=prefs.activeReviewSlots();
+            LocalDate date=HifzClock.today();
+            // A real open correction must be resumed, not duplicated by a second reader.
+            for(ActiveReviewSlots.Slot slot:ActiveReviewSlots.Slot.values()){
+                LocalDate resume=slots.dateToResume(date,slot);
+                if(slots.correction(resume,slot).pending()!=null && slots.receipt(resume,slot)==null){
+                    openMode(slot.mode);
+                    return;
+                }
+            }
+            java.util.List<Integer> pages=slots.correction(date,ActiveReviewSlots.Slot.MORNING).queuedPages();
+            android.app.AlertDialog.Builder dialog=new android.app.AlertDialog.Builder(this)
+                .setTitle("Fragilités").setNegativeButton("Fermer",null);
+            if(pages.isEmpty())dialog.setMessage("Aucune page en attente.");
+            else{
+                String[] labels=new String[pages.size()];
+                for(int i=0;i<pages.size();i++)labels[i]="Page "+pages.get(i);
+                dialog.setItems(labels,(d,i)->startActivity(new Intent(this,StudyReaderActivity.class)
+                    .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,pages.get(i))));
+            }
+            dialog.show();
+        }catch(RuntimeException invalid){
+            new android.app.AlertDialog.Builder(this).setTitle("Fragilités")
+                .setMessage("File à vérifier. Les données sont conservées.")
+                .setPositiveButton("Fermer",null).show();
+        }
     }
 
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
@@ -1173,7 +1205,8 @@ public final class MainActivity extends android.app.Activity {
 
     private void addActiveReviewToday(List<TodaySession> out,LocalDate today,ActiveReviewSlots.Slot slot,
             ActiveReviewSlots reviews,String nextMode){
-        addToday(out,slot.title()+" · "+reviews.targetMinutes(today,slot,prefs.activeReviewMinutes(geometry))+" min",
+        int minutes=reviews.targetMinutes(today,slot,prefs.activeReviewMinutes(geometry));
+        addToday(out,slot.title()+" · "+minutes+" min · Fragilités "+ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min",
             slot.mode,today,reviews.receipt(today,slot)!=null,nextMode);
     }
 
