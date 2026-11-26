@@ -76,6 +76,81 @@ public final class FragilityReaderVisualInstrumentedTest {
         }finally{HifzBackup.restore(context,original);}
     }
 
+    @Test public void threePageBatchAdvancesResumesDefersAndReturnsWithoutActiveCredit() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        new HifzPrefs(context);
+        JSONObject original=HifzBackup.export(context);
+        SharedPreferences raw=context.getSharedPreferences("quran_hifz_preview_v1",0);
+        try {
+            assertTrue(raw.edit().clear().commit());
+            HifzPrefs prefs=new HifzPrefs(context);
+            GeometryRepository geo=GeometryRepository.get(context);
+            VerseRef start=new VerseRef(2,1),end=new VerseRef(2,74);
+            assertTrue(prefs.setV6AcquiredRanges(Collections.singletonList(new VerseRange(start,end)),geo));
+            prefs.setActiveMurajaahCursor(start);
+            assertTrue(raw.edit().putString(ActiveReviewCorrectionStore.KEY_QUEUE,"[4,6,10]").commit());
+            int acquired=prefs.acquiredLineCountV6();
+            int receipts=prefs.activeReviewSlots().receipts().size();
+            ActiveReviewCorrectionStore store=prefs.activeReviewSlots().manualCorrection();
+            Intent intent=new Intent(context,HifzSessionActivity.class)
+                .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE)
+                .putExtra(HifzSessionActivity.EXTRA_FRAGILITY_PAGE,6);
+            try(ActivityScenario<HifzSessionActivity> activity=ActivityScenario.launch(intent)){
+                assertPhase(activity,store,6,0,"READ");
+                assertEquals(java.util.Arrays.asList(6,10,4),store.pending().pages);
+                activity.onActivity(a->click(a,"Page relue"));
+                assertPhase(activity,store,6,0,"RECALL");
+                activity.onActivity(a->click(a,"Page récitée sans aide"));
+                assertPhase(activity,store,10,1,"READ");
+                activity.recreate();
+                assertPhase(activity,store,10,1,"READ");
+                activity.onActivity(a->click(a,"Reporter cette page"));
+                assertPhase(activity,store,4,2,"READ");
+                assertEquals(Collections.singletonList(10),store.pending().deferred);
+                activity.onActivity(a->click(a,"Page relue"));
+                assertPhase(activity,store,4,2,"RECALL");
+                activity.onActivity(a->click(a,"Page récitée sans aide"));
+                for(int attempt=0;attempt<40
+                        &&activity.getState()!=androidx.lifecycle.Lifecycle.State.DESTROYED;attempt++)
+                    android.os.SystemClock.sleep(100);
+                assertEquals("Manual batch returns instead of leaving masked completion screen",
+                    androidx.lifecycle.Lifecycle.State.DESTROYED,activity.getState());
+            }
+            assertNull(store.pending());
+            assertEquals(Collections.singletonList(10),store.queuedPages());
+            assertEquals(acquired,prefs.acquiredLineCountV6());
+            assertEquals(start,prefs.activeMurajaahCursor());
+            assertEquals(receipts,prefs.activeReviewSlots().receipts().size());
+            for(int ayah=1;ayah<=74;ayah++)
+                assertTrue(prefs.activeMurajaahCorpus().contains(new VerseRef(2,ayah)));
+        }finally{HifzBackup.restore(context,original);}
+    }
+
+    @Test public void continuationCannotCrossTheMorningEveningBoundary(){
+        assertTrue(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.MORNING,HifzSessionActivity.SABQI));
+        assertTrue(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.MORNING,HifzSessionActivity.ITQAN));
+        assertTrue(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.MORNING,HifzSessionActivity.LEARNING_FINAL));
+        assertFalse(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.MORNING,HifzSessionActivity.CONSOLIDATION_FINAL));
+        assertTrue(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.EVENING,HifzSessionActivity.LEARNING_CONSOLIDATION));
+        assertTrue(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.EVENING,HifzSessionActivity.RECENT_SABQI_REVIEW));
+        assertTrue(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.EVENING,HifzSessionActivity.CONSOLIDATION_FINAL));
+        assertFalse(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.EVENING,HifzSessionActivity.SABQI));
+        assertFalse(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.EVENING,ActiveReviewSlots.Slot.MORNING.mode));
+    }
+
+    private static void assertPhase(ActivityScenario<HifzSessionActivity> activity,
+            ActiveReviewCorrectionStore store,int page,int index,String stage){
+        HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Batch "+page+" "+stage);
+        ActiveReviewCorrectionStore.State pending=store.pending();
+        assertNotNull(pending);
+        assertEquals(page,pending.page());assertEquals(index,pending.pageIndex);assertEquals(stage,pending.stage);
+        activity.onActivity(a->{
+            assertEquals(page,((Integer)field(a,"currentPage")).intValue());
+            assertTrue(((TextView)field(a,"progress")).getText().toString().contains("Page "+(index+1)+"/3"));
+            assertEquals("READ".equals(stage)?0:100,((Integer)field(a,"currentMask")).intValue());
+        });
+    }
+
     /** Pixel proof from the actual screenshot: the central 60% excludes header,
      * footer and most margins. A blank cream page previously passed DOM tests. */
     private static double inkFraction(Context context,String name){
