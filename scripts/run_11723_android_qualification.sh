@@ -60,4 +60,36 @@ fi
 # Both builds share the isolated debug package. Start each visual run with synthetic default state.
 adb shell pm clear com.quransafeguard.hifz.ibnkathirtest || status=1
 run_capture "$candidate" "$evidence/after" || status=1
+
+# Dedicated reader captures, not merely the home/Parcours/Cap screens.
+# Only isolated synthetic debug fixtures, never an installed private package.
+for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
+    size="${viewport%:*}"
+    density="${viewport#*:}"
+    for font in 1.0 1.5; do
+        tag="fragilites-${size}-font${font}"
+        dest="$evidence/after/$tag"
+        mkdir -p "$dest"
+        package=com.quransafeguard.hifz.ibnkathirtest
+        adb shell am force-stop "$package" || { status=1; continue; }
+        adb shell wm size "$size" && adb shell wm density "$density" && \
+            adb shell settings put system font_scale "$font" || { status=1; continue; }
+        adb shell rm -f "/sdcard/Android/data/$package/files/fragilite-visible.png" \
+            "/sdcard/Android/data/$package/files/fragilite-masquee.png" \
+            "/sdcard/Android/data/$package/files/fragilite-reprise.png" || { status=1; continue; }
+        adb shell am instrument -w -r -e class \
+            com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest \
+            "$package.test/androidx.test.runner.AndroidJUnitRunner" >"$dest/result.txt" 2>&1 || status=1
+        cat "$dest/result.txt"
+        grep -Fxq 'OK (1 test)' "$dest/result.txt" || status=1
+        grep -Fxq 'INSTRUMENTATION_CODE: -1' "$dest/result.txt" || status=1
+        for phase in visible masquee reprise; do
+            adb pull "/sdcard/Android/data/$package/files/fragilite-$phase.png" "$dest/" || status=1
+            test -s "$dest/fragilite-$phase.png" || status=1
+        done
+    done
+done
+adb shell wm size reset || status=1
+adb shell wm density reset || status=1
+adb shell settings put system font_scale 1.0 || status=1
 exit "$status"
