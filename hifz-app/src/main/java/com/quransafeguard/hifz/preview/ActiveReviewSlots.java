@@ -22,6 +22,7 @@ final class ActiveReviewSlots {
     private static final String CURSOR = "activeMurajaahCursor";
     private static final String REVISION = "activeReviewCursorRevisionV1";
     private static final String PROGRAMME_START = "activeReviewProgrammeStartV1";
+    private static final String SUNDAY_REST_START = "activeReviewSundayRestStartV1";
     private static final Object LOCK = new Object();
 
     enum Slot {
@@ -67,11 +68,19 @@ final class ActiveReviewSlots {
             if (!prefs.contains(PROGRAMME_START)
                     && !prefs.edit().putString(PROGRAMME_START, today.toString()).commit())
                 throw new IllegalStateException("Impossible d’enregistrer les créneaux de révision.");
+            if(!prefs.contains(SUNDAY_REST_START)&&!prefs.edit().putString(SUNDAY_REST_START,today.toString()).commit())
+                throw new IllegalStateException("Impossible d’enregistrer le calendrier de révision.");
         }
     }
 
     LocalDate programmeStart() {
         return LocalDate.parse(prefs.getString(PROGRAMME_START, HifzClock.today().toString()));
+    }
+
+    boolean scheduled(LocalDate date,Slot slot){
+        LocalDate from=LocalDate.parse(prefs.getString(SUNDAY_REST_START,LocalDate.MAX.toString()));
+        return slot!=Slot.EVENING||date.isBefore(from)||date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY
+            ||receipt(date,slot)!=null||draft(date,slot)!=null;
     }
 
     private static String scope(LocalDate date, Slot slot) { return "|" + date + "|" + slot.name(); }
