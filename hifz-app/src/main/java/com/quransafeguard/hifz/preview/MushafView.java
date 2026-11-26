@@ -74,6 +74,7 @@ public final class MushafView extends WebView {
     /** Lecture free-mask only: block unmasked SVG paint until exact word holes exist. */
     private boolean atomicFreeMaskBoot;
     private boolean atomicFullMaskBoot;
+    private boolean correctionVisibleBoot;
     private JSONArray pageLandmarkBoxes = new JSONArray();
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
@@ -184,6 +185,7 @@ public final class MushafView extends WebView {
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus) {
         atomicFreeMaskBoot = false;
         atomicFullMaskBoot = false;
+        correctionVisibleBoot = false;
         lastContextFocus = contextFocus;
         retried = false;
         load(page, selection, lineIds, maskPercent);
@@ -198,6 +200,7 @@ public final class MushafView extends WebView {
             JSONArray landmarks, JSONArray cues, boolean exactGeometryReady) {
         atomicFreeMaskBoot = exactGeometryReady;
         atomicFullMaskBoot = false;
+        correctionVisibleBoot = false;
         lastContextFocus = false;
         maskFollowsSelection = false;
         landmarkStartLineId = null;
@@ -210,10 +213,32 @@ public final class MushafView extends WebView {
         load(page, Collections.emptyList(), lineIds, exactGeometryReady ? 100 : 0);
     }
 
+    /** Correction READ: a clean, unmasked folio; do not mutate a previous WebView document. */
+    public void showCorrectionVisiblePage(int page,List<String> lineIds) {
+        atomicFreeMaskBoot=false;
+        atomicFullMaskBoot=false;
+        correctionVisibleBoot=true;
+        lastContextFocus=false;
+        maskFollowsSelection=false;
+        landmarkStartLineId=null;
+        landmarkEndLineId=null;
+        pageLandmarkBoxes=new JSONArray();
+        semanticCues=new JSONArray();
+        semanticAnchorMaskMode=false;
+        semanticHighlightEnabled=false;
+        retried=false;
+        if(lineIds==null||lineIds.isEmpty()){
+            showFailure("Géométrie de la page visible indisponible");
+            return;
+        }
+        load(page,Collections.emptyList(),lineIds,0);
+    }
+
     /** Corrective recall: hide the SVG until a complete mask with no word holes is painted. */
     public void showFullMaskedPreparedPage(int page,List<String> lineIds) {
         atomicFreeMaskBoot = false;
         atomicFullMaskBoot = true;
+        correctionVisibleBoot = false;
         lastContextFocus = false;
         maskFollowsSelection = false;
         landmarkStartLineId = null;
@@ -542,6 +567,16 @@ public final class MushafView extends WebView {
 
     private void report(String message) { post(() -> { if (listener != null) listener.onError(message); }); }
 
+    private void acknowledgePaint(int page){
+        pageShown=true;
+        long renderMs=Math.max(1L,SystemClock.elapsedRealtime()-loadStartedAtMs);
+        observedRenderMs=updateObservedRender(observedRenderMs,renderMs);
+        removeCallbacks(watchdog);
+        setContentDescription("Mushaf page "+page);
+        eink.page(this,prefs);
+        if(listener!=null)listener.onPageShown(page);
+    }
+
     private final class Bridge {
         @JavascriptInterface public void setMarkerDialogOpen(boolean open) {
             markerDialogOpen = open;
@@ -588,13 +623,17 @@ public final class MushafView extends WebView {
         @JavascriptInterface public void pageShown(int page, long generation) {
             post(() -> {
                 if (generation != renderGeneration || page != requestedPage) return;
-                pageShown = true;
-                long renderMs = Math.max(1L, SystemClock.elapsedRealtime() - loadStartedAtMs);
-                observedRenderMs = updateObservedRender(observedRenderMs, renderMs);
-                removeCallbacks(watchdog);
-                setContentDescription("Mushaf page " + page);
-                eink.page(MushafView.this, prefs);
-                if (listener != null) listener.onPageShown(page);
+                if(correctionVisibleBoot||atomicFullMaskBoot){
+                    // DOM acknowledgement is not a rendered Android frame. Wait for
+                    // Chromium's visual-state fence before enabling correction controls.
+                    postVisualStateCallback(generation,new WebView.VisualStateCallback(){
+                        @Override public void onComplete(long requestId){
+                            if(requestId==renderGeneration&&page==requestedPage&&!pageShown)
+                                acknowledgePaint(page);
+                        }
+                    });
+                    invalidate();
+                }else acknowledgePaint(page);
             });
         }
     }
