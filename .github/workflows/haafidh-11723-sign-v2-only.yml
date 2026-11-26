@@ -1,0 +1,85 @@
+name: Haafidh 1.17.23 — historical APK v2 signature metadata only
+on:
+  push:
+    branches: [sign/haafidh-11723-offline-v2]
+    paths: [.github/workflows/haafidh-11723-sign-v2-only.yml]
+  pull_request:
+    branches: [work/haafidh-11723-active-review-fragilities]
+    paths: [.github/workflows/haafidh-11723-sign-v2-only.yml]
+permissions:
+  contents: read
+jobs:
+  sign-v2-data:
+    if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'sign/haafidh-11723-offline-v2')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Sign only fixed Android v2 metadata using verified historical key
+        shell: bash
+        env:
+          HIFZ_KEYSTORE_BASE64: ${{ secrets.HIFZ_KEYSTORE_BASE64 }}
+          HIFZ_KEYSTORE_PASSWORD: ${{ secrets.HIFZ_KEYSTORE_PASSWORD }}
+          HIFZ_KEY_PASSWORD: ${{ secrets.HIFZ_KEY_PASSWORD }}
+          HIFZ_KEY_ALIAS: ${{ secrets.HIFZ_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$(mktemp -d "$RUNNER_TEMP/haafidh-sign.XXXXXXXX")"
+          trap 'rm -rf "$work"' EXIT
+          test -n "$HIFZ_KEYSTORE_BASE64"
+          test -n "$HIFZ_KEYSTORE_PASSWORD"
+          test -n "$HIFZ_KEY_PASSWORD"
+          test -n "$HIFZ_KEY_ALIAS"
+          printf '%s' "$HIFZ_KEYSTORE_BASE64" | base64 -d > "$work/official.jks"
+          printf '%s' 'LAAAACgAAAADAQAAIAAAAN2D2yYkA+ulC7RRayBSjonGyqj2nATX1/wCMKz1v62HcQUAAG0FAAAwggVpMIIDUaADAgECAgga6Rat8+G80zANBgkqhkiG9w0BAQwFADBiMQswCQYDVQQGEwJGUjELMAkGA1UECBMCTkExCzAJBgNVBAcTAk5BMREwDwYDVQQKEwhQZXJzb25hbDERMA8GA1UECxMIUGVyc29uYWwxEzARBgNVBAMTClF1cmFuIEhpZnowIBcNMjYwOTE3MTgwMTMyWhgPMjA1NDAyMDIxODAxMzJaMGIxCzAJBgNVBAYTAkZSMQswCQYDVQQIEwJOQTELMAkGA1UEBxMCTkExETAPBgNVBAoTCFBlcnNvbmFsMREwDwYDVQQLEwhQZXJzb25hbDETMBEGA1UEAxMKUXVyYW4gSGlmejCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBANMz1121q7syoc6ydus657m/s9yIrVa6XVazWSYg4LsGg09O2t2WfacbNpI6FTrBK6RDlo94Cyx+lCqZKDpFrWhW3p3GvoLRejJPyQaGWEmYM9cG4JH/isqwKbv+H/Ma74PUjBIAELJF5sy3T3JTEO3eb+r/NWuv13DJsrhTT54j5rfJbJifHXAoyB4tq1ouADgANLezDWBaFPdOy0R7mIcEjCG4l02f26o+CztxEJI2OGQLe1Qkez0gHvYWa5ZeogtZqixSj5rkfUg0f4lgna+L09jtdubX6r7U1c0UrLXjGzs7ebqpS+QCZe1qoeprKwzwCMXDNqHC336wRtvqpBaskOTBBTYKL5ZRAgIqJ6L2WWMN9zYFci4usWMapI6YmdL1qtxIgVHbmbHO1CHByXTP7UkRChrB4YqumNoMZJgRoA1CkR9vPx9YbBOqOkh2l/gdJetwIomirJLKifevsbBB6mdiqkDf1xBnJFwjhWkzrxDDGoY/tXt6GwOagIMbpt4XR66AHsbePp+/q8QR1nj95Nh2uEFzz+MTRMjo8l92Xwaiv+M2t7pOC+60LSa5/dJVZ0GBkS+xoKy+l0hNRC/8JyosbWKEGCV0ZbDZZmVOpJDkgYt8+7EvfpCn71JVqKjtZlpsXXnF90AIlRdx+maeTrkQRSkO05pzA2XHdE5fAgMBAAGjITAfMB0GA1UdDgQWBBT/EYCAs3mR61NCoKKBiKo+E7PtiDANBgkqhkiG9w0BAQwFAAOCAgEApDtH9F7tXhHDztS3ek6YBUvsOhot3xB+3OaUGNrvXxSMlDialShxtWXBPVG9V9v/t386aaZ5xr65rhfVOn83roLbK85h26i3RWDtNWREEHsPEeRX354lm2eavHGeEFP87pZLiDIWHGl0vWNBANL7RdADR3APe6oooR64QRz2uVV4FlAFALTBkZuRaK9ex6Q6AKDl6BrDysy5lNudhGz6kPY13HDKk0IL/gkXTUA2NTBQ472ypf+ga9NX3K/UOaPKxkPH+cR4EHgOJQxqm/0HE9T/0ltKJCPM8v2mLlFtRwhei5vq6nAyCu3e8jG/fgmDiGZ/vOg8Ks91XDfAHt3BNk6qOr6iXLWtgCGRR0H2Y7EOlRa/gRFGWIV4lvimwewW+YS35qHsBkAhoik6ORhKEDztqspGOENjkzQ6J6JbgMBQZOlvVJd3ZbbZwU465BxaouHcNBkaaP+Cb+uw6+KqKhfU7bJLNqy9LH2pmPJDgqQ4YsDLdAkEBbXDCR/Pa5D2uOGCnpUisTryymW+HulhjJtZRCkp/JJLsumaMzgZhnquWRQFgdXoYIVgwoVd3oYLHD6uYhIvNemqgdlsfrxrzwqE/7MRqKmU3yXbVBUXIJc7T0uL5NiYB3Ldy3EqRCxBoKe1YK+J3sHaNfEI/qh2SOnPf4AeJPVgOwR8YlEI0okAAAAA' | base64 -d > "$work/signed_data.bin"
+          echo '2e6acdc1d7447002b7def1e35bc895217b51dd8543b77887047a289e66fbbab6  '"$work/signed_data.bin" | sha256sum -c -
+          cat > "$work/SignOfflineApkV2.java" <<'JAVA'
+          import java.nio.file.*;
+          import java.security.*;
+          import java.security.cert.Certificate;
+          import java.util.HexFormat;
+          import java.util.Base64;
+          import java.nio.*;
+          import java.util.Arrays;
+          public class SignOfflineApkV2 {
+              static final String CERT = "66adc4f0dcf70d716a8050fd4b0195266307576aa2f9bd54c9cbf2851a330e14";
+              static final String DATA = "2e6acdc1d7447002b7def1e35bc895217b51dd8543b77887047a289e66fbbab6";
+              static String sha(byte[] b) throws Exception { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(b)); }
+              static ByteBuffer lp(ByteBuffer b) {
+                  int n=b.getInt();
+                  if(n<0 || n>b.remaining()) throw new SecurityException("invalid length");
+                  ByteBuffer r=b.slice().order(ByteOrder.LITTLE_ENDIAN);r.limit(n);b.position(b.position()+n);return r;
+              }
+              public static void main(String[] args) throws Exception {
+                  byte[] input=Files.readAllBytes(Path.of(args[0]));
+                  if(input.length!=1449 || !sha(input).equals(DATA))throw new SecurityException("wrong transaction");
+                  KeyStore ks=KeyStore.getInstance(Path.of(args[1]).toFile(),System.getenv("HIFZ_KEYSTORE_PASSWORD").toCharArray());
+                  String alias=System.getenv("HIFZ_KEY_ALIAS");
+                  Certificate cert=ks.getCertificate(alias);
+                  if(cert==null || !sha(cert.getEncoded()).equals(CERT))throw new SecurityException("wrong certificate");
+                  ByteBuffer d=ByteBuffer.wrap(input).order(ByteOrder.LITTLE_ENDIAN);
+                  ByteBuffer digests=lp(d), digest=lp(digests);
+                  if(digest.getInt()!=0x0103 || lp(digest).remaining()!=32 || digest.hasRemaining() || digests.hasRemaining())throw new SecurityException("wrong digest format");
+                  ByteBuffer certs=lp(d), leaf=lp(certs);byte[] c=new byte[leaf.remaining()];leaf.get(c);
+                  if(!Arrays.equals(c,cert.getEncoded()) || certs.hasRemaining() || lp(d).hasRemaining() || d.hasRemaining())throw new SecurityException("wrong metadata");
+                  PrivateKey key=(PrivateKey)ks.getKey(alias,System.getenv("HIFZ_KEY_PASSWORD").toCharArray());
+                  Signature signer=Signature.getInstance("SHA256withRSA");signer.initSign(key);signer.update(input);byte[] sig=signer.sign();
+                  Signature verifier=Signature.getInstance("SHA256withRSA");verifier.initVerify(cert);verifier.update(input);
+                  if(!verifier.verify(sig)||sig.length!=512)throw new SecurityException("signature verification failed");
+                  Files.writeString(Path.of(args[2]),Base64.getEncoder().encodeToString(sig)+"\n");
+                  System.out.println("PASS: historical certificate; signature verified; signedData="+sha(input)+"; signature="+sha(sig));
+              }
+          }
+          JAVA
+          java "$work/SignOfflineApkV2.java" "$work/signed_data.bin" "$work/official.jks" "$work/signature.b64"
+          install -m 0644 "$work/signature.b64" signature-11723.b64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-11723-official-v2-signature-only
+          path: signature-11723.b64
+          if-no-files-found: error
+          retention-days: 1
