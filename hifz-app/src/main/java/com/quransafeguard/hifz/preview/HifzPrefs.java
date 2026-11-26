@@ -1371,6 +1371,19 @@ public final class HifzPrefs {
      * material that hasn't finished its own repetitions yet is discouraging, not constructive; passive
      * Entretien is unaffected and keeps reading everything (murajaahCorpus), fresh material included.
      */
+    /** Count the effective active corpus, including historical ranges, only once per physical line. */
+    int activeReviewMinutes(GeometryRepository geometry) {
+        java.util.BitSet lines = new java.util.BitSet(geometry.lineCount());
+        for (VerseRange range : activeMurajaahCorpus().getRanges()) {
+            int first = geometry.firstLineIndex(range.getStart());
+            int last = geometry.lastLineIndex(range.getEndInclusive());
+            if (first < 0 || last < first || last >= geometry.lineCount())
+                throw new IllegalStateException("Invalid active corpus geometry");
+            lines.set(first, last + 1);
+        }
+        return ActiveReviewDurationPolicy.activeMinutes(lines.cardinality(), geometry.lineCount());
+    }
+
     public EligibleCorpus activeMurajaahCorpus() {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(legacyMurajaahPromotedRanges());
