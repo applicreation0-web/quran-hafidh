@@ -4365,6 +4365,10 @@ public final class HifzPrefs {
             .commit();
     }
 
+    String activeCoverageSummary(){
+        return ActiveReviewCoverage.summary(p,activeReviewSlots(),activeMurajaahCorpus(),HifzClock.today());
+    }
+
     ActiveReviewSlots activeReviewSlots() { return new ActiveReviewSlots(p); }
 
     /** Closes a correction that began under the historical single-review protocol. */
