@@ -42,12 +42,12 @@ public final class FragilityReaderVisualInstrumentedTest {
                     assertEquals("Fragilités",((TextView)field(a,"program")).getText().toString());
                     assertEquals(0,((Integer)field(a,"currentMask")).intValue());
                     assertTrue((Boolean)field(a,"fragilityPageReady"));
-                    assertNotNull(control((View)field(a,"actions"),"Page relue"));
+                    assertNotNull(control((View)field(a,"actions"),"Masquer la page"));
                 });
                 HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("fragilite-visible.png");
                 double visibleInk=inkFraction(context,"fragilite-visible.png");
                 assertTrue("Visible folio is blank or not fully painted: "+visibleInk,visibleInk>0.02);
-                activity.onActivity(a->click(a,"Page relue"));
+                activity.onActivity(a->click(a,"Masquer la page"));
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Fragilité masquée");
                 activity.onActivity(a->{
                     assertEquals(100,((Integer)field(a,"currentMask")).intValue());
@@ -98,8 +98,38 @@ public final class FragilityReaderVisualInstrumentedTest {
             try(ActivityScenario<HifzSessionActivity> activity=ActivityScenario.launch(intent)){
                 assertPhase(activity,store,6,0,"READ");
                 assertEquals(java.util.Arrays.asList(6,10,4),store.pending().pages);
-                activity.onActivity(a->click(a,"Page relue"));
+                activity.onActivity(a->click(a,"Page suivante"));
+                assertPhase(activity,store,10,0,"READ");
+                activity.onActivity(a->click(a,"Page précédente"));
+                assertPhase(activity,store,6,0,"READ");
+                assertEquals(java.util.Arrays.asList(6,10,4),store.pending().pages);
+                activity.onActivity(a->assertEquals("Libre",((TextView)field(a,"timerText")).getText().toString()));
+                activity.onActivity(a->click(a,"Masquer la page"));
                 assertPhase(activity,store,6,0,"RECALL");
+                activity.onActivity(a->click(a,"Afficher la page"));
+                assertPhase(activity,store,6,0,"READ");
+                activity.onActivity(a->click(a,"Masquer la page"));
+                assertPhase(activity,store,6,0,"RECALL");
+                VerseRef aid=null;
+                for(WordGeometryRepository.WordBox w:WordGeometryRepository.shared(context).wordsForPage(6)){
+                    aid=new VerseRef(w.surah,w.ayah);break;
+                }
+                assertNotNull(aid);
+                final VerseRef selected=aid;
+                activity.onActivity(a->{
+                    a.onVerseTap(selected);
+                    assertTrue(store.pending().assisted);
+                    assertFalse(control((View)field(a,"actions"),"Page récitée sans aide").isEnabled());
+                    assertNotNull(control((View)field(a,"actions"),"Masquer la page"));
+                });
+                activity.recreate();
+                assertPhase(activity,store,6,0,"RECALL");
+                activity.onActivity(a->{
+                    assertFalse(control((View)field(a,"actions"),"Page récitée sans aide").isEnabled());
+                    click(a,"Masquer la page");
+                });
+                assertPhase(activity,store,6,0,"RECALL");
+                assertFalse(store.pending().assisted);
                 activity.onActivity(a->click(a,"Page récitée sans aide"));
                 assertPhase(activity,store,10,1,"READ");
                 activity.recreate();
@@ -107,7 +137,7 @@ public final class FragilityReaderVisualInstrumentedTest {
                 activity.onActivity(a->click(a,"Reporter cette page"));
                 assertPhase(activity,store,4,2,"READ");
                 assertEquals(Collections.singletonList(10),store.pending().deferred);
-                activity.onActivity(a->click(a,"Page relue"));
+                activity.onActivity(a->click(a,"Masquer la page"));
                 assertPhase(activity,store,4,2,"RECALL");
                 activity.onActivity(a->click(a,"Page récitée sans aide"));
                 for(int attempt=0;attempt<40
@@ -146,7 +176,7 @@ public final class FragilityReaderVisualInstrumentedTest {
         assertEquals(page,pending.page());assertEquals(index,pending.pageIndex);assertEquals(stage,pending.stage);
         activity.onActivity(a->{
             assertEquals(page,((Integer)field(a,"currentPage")).intValue());
-            assertTrue(((TextView)field(a,"progress")).getText().toString().contains("Page "+(index+1)+"/3"));
+            assertTrue(((TextView)field(a,"progress")).getText().toString().contains("Page "+page+" · "+index+"/3 traitées"));
             assertEquals("READ".equals(stage)?0:100,((Integer)field(a,"currentMask")).intValue());
         });
     }
