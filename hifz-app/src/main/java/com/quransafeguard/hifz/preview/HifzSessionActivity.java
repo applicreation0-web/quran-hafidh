@@ -124,6 +124,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean activeCorrectionRecoveryRequired;
     private boolean sessionRenderFailed; // Recovery failure is not a validated session.
     private boolean correctionMaskedPageReady;
+    private SessionClock fragilityClock;
+    private boolean fragilityPageReady, fragilityTimeoutPosted, fragilityClockFailed;
     private Button correctionPageDoneButton;
     private LocalDate sessionDate;
     /** Today's date is captured once on entry; never silently changes mid-session. */
@@ -2312,8 +2314,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 onError("Impossible de sauvegarder la révision avant validation.");
                 return;
             }
-            List<Integer> revealedPages=ActiveReviewCorrectionPlan.select(
-                correctionStore.revealed(sessionDate.toString(),murajaahPlan.start));
+            List<Integer> revealedPages=activeSlot==null?ActiveReviewCorrectionPlan.select(
+                correctionStore.revealed(sessionDate.toString(),murajaahPlan.start))
+                :correctionStore.pagesToCorrect(sessionDate.toString(),murajaahPlan.start);
             if(!revealedPages.isEmpty()){
                 // Freeze the original cursor and time. These repeated pages earn no new credit.
                 if(!correctionStore.begin(sessionDate.toString(),murajaahPlan.start,
@@ -2327,8 +2330,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 return;
             }
         }
-        if(active&&correctionState!=null&&!"DONE".equals(correctionState.stage)){
-            onError("Relisez puis récitez en masqué toutes les pages dévoilées.");return;
+        if(active&&correctionState!=null&&!"DONE".equals(correctionState.stage)
+                &&(activeSlot==null||correctionState.correctionElapsedMs<fragilityTargetMs())){
+            onError("Relisez puis récitez en masqué les pages fragiles.");return;
         }
         if (activeSlot != null && correctionState != null && !carryActiveOverMidnight()) {
             onError("La correction est conservée. Vérifiez le créneau de reprise.");
@@ -2349,6 +2353,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
             }
+            stopFragilityClock();
             // Return to the genuine pre-correction reading location; no fake cursor movement.
             if(correctionState!=null){
                 currentPage=correctionState.originPage;
@@ -2386,6 +2391,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     /** Original 15-line QCF page; reread in full before masked recitation. */
     private void renderActiveCorrection() {
+        fragilityPageReady=false;
+        if(fragilityClock!=null)fragilityClock.pause();
         ActiveReviewCorrectionStore.State state=correctionState;
         if(state==null)return;
         if("DONE".equals(state.stage)){completeMurajaahValidation();return;}
@@ -2397,7 +2404,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask="READ".equals(state.stage)?0:100;
         currentSelection=Collections.emptyList();
         currentLineIds=currentMask==100?geometry.lineIdsOnPage(currentPage):Collections.emptyList();
-        program.setText(activeReviewTitle() + " · pages dévoilées");
+        program.setText(activeSlot==null?activeReviewTitle()+" · pages dévoilées":"Fragilités");
+        if(activeSlot!=null) {
+            if(fragilityClock==null) fragilityClock=new SessionClock(state.correctionElapsedMs,this::onFragilityTick);
+            showFragilityTime(state.correctionElapsedMs);
+        }
         mushaf.setHighlightVerses(Collections.emptyList());
         progress.setText("Page "+(state.pageIndex+1)+"/"+state.pages.size()
             +("READ".equals(state.stage)
@@ -2441,6 +2452,54 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             actions.addView(reveal);
             updateRevealButton();
         }
+    }
+
+    private long fragilityTargetMs(){
+        return ActiveReviewDurationPolicy.fragilityMinutes(targetMinutes())*60_000L;
+    }
+
+    private void showFragilityTime(long elapsed){
+        if(timerText!=null)timerText.setText(SessionClock.format(Math.max(0L,fragilityTargetMs()-elapsed)));
+    }
+
+    private void onFragilityTick(long elapsed){
+        if(activeSlot==null||correctionState==null||sessionCompleted||fragilityClockFailed
+                ||"DONE".equals(correctionState.stage))return;
+        long bounded=Math.min(elapsed,fragilityTargetMs());
+        if(bounded>correctionState.correctionElapsedMs){
+            if(!correctionStore.recordElapsed(correctionState,bounded)){
+                fragilityClockFailed=true;
+                if(fragilityClock!=null)fragilityClock.pause();
+                onError("Impossible de sauvegarder le temps des fragilités.");
+                return;
+            }
+            correctionState=correctionStore.pending();
+        }
+        showFragilityTime(bounded);
+        if(bounded>=fragilityTargetMs()&&sessionResumed&&!fragilityTimeoutPosted){
+            fragilityTimeoutPosted=true;
+            timerText.post(()->{
+                fragilityTimeoutPosted=false;
+                if(sessionResumed&&!sessionCompleted&&correctionState!=null
+                        &&correctionState.correctionElapsedMs>=fragilityTargetMs())
+                    completeMurajaahValidation();
+            });
+        }
+    }
+
+    private void resumeFragilityClock(){
+        if(fragilityClock==null||correctionState==null||!sessionResumed
+                ||!fragilityPageReady||sessionCompleted||fragilityClockFailed)return;
+        if(correctionState.correctionElapsedMs>=fragilityTargetMs())
+            onFragilityTick(correctionState.correctionElapsedMs);
+        else fragilityClock.resume();
+    }
+
+    private void stopFragilityClock(){
+        SessionClock stopped=fragilityClock;
+        fragilityClock=null;
+        fragilityClockFailed=true;
+        if(stopped!=null)stopped.dispose();
     }
 
     /**
@@ -2958,6 +3017,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 correctionPageDoneButton.setEnabled(correctionMaskedPageReady
                     &&!correctionState.assisted);
         }
+        if(activeSlot!=null&&correctionState!=null&&page==correctionState.page()){
+            fragilityPageReady="READ".equals(correctionState.stage)||correctionMaskedPageReady;
+            resumeFragilityClock();
+        }
         boolean titleTargets=(isMurajaahMode()&&correctionState==null) || (ITQAN.equals(mode) && currentMask==100
             && itqanUnit!=null && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime,prefs.itqanRep()));
         if(titleTargets)AyahThemesReviewDisplay.apply(this,mushaf,ayahThemesTitles,page);
@@ -2992,7 +3055,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             correspondenceSelectorVerse=null;
             correspondenceSelectorClockWasRunning=false;
         }
-        resumeSessionClock();
+        if(correctionState!=null)resumeFragilityClock();
+        else resumeSessionClock();
     }
 
     private long persistedSessionElapsed() {
@@ -3069,12 +3133,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override protected void onPause(){
         sessionResumed=false;
         if(clock==null){super.onPause();return;}
+        if(fragilityClock!=null)fragilityClock.pause();
         long elapsed=clock.pause();
         if (activeSlot != null) checkpointMurajaah(elapsed);
         else if(sessionCompleted&&!awaitingValidation&&!sessionRenderFailed)prefs.setElapsedFor(mode,0L);
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){stopFragilityClock();if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(correctionState!=null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }
