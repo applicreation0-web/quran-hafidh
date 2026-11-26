@@ -909,13 +909,21 @@ public final class MainActivity extends android.app.Activity {
         }
         if (due!=null) {
             String lesson=nextCadenceMode(due.getScheduledDate(),today,due.getAction());
-            if(lesson!=null)return lesson;
+            if(lesson!=null) {
+                if ((HifzSessionActivity.LEARNING_CONSOLIDATION.equals(lesson)
+                        || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(lesson)
+                        || HifzSessionActivity.CONSOLIDATION_FINAL.equals(lesson))
+                        && reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null)
+                    return ActiveReviewSlots.Slot.EVENING.mode;
+                return lesson;
+            }
         } else {
             CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),
                 prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
             String evening=action==CadenceAction.LEARNING?eveningLearningMode(today)
                 :action==CadenceAction.STABILIZATION?eveningStabilizationMode(today):null;
-            if(evening!=null)return evening;
+            if(evening!=null) return reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null
+                ?ActiveReviewSlots.Slot.EVENING.mode:evening;
         }
         return reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null
             ?ActiveReviewSlots.Slot.EVENING.mode:null;
@@ -1090,38 +1098,35 @@ public final class MainActivity extends android.app.Activity {
     private List<TodaySession> todaySessions(LocalDate today,String nextMode,LocalDate nextScheduled){
         ArrayList<TodaySession> out=new ArrayList<>();
         String todayStr=today.toString();
-        final int revisionMinutes=revisionCoverageMinutes();
-        String eveningLessonDetail=todayRow!=null?stripDone(compactSession(todayRow.evening)):null;
-        // Preserve the exact 5-line/Itqan range from the EVENING row, not revisions.
-        if(eveningLessonDetail!=null && eveningLessonDetail.contains(" + "))
-            eveningLessonDetail=eveningLessonDetail.substring(0,eveningLessonDetail.indexOf(" + "));
+        String eveningLessonDetail=null;
+        if(todayRow!=null){
+            String planned=todayRow.morning;
+            int separator=planned.indexOf(" + ");
+            if(separator>=0) eveningLessonDetail=stripDone(compactSession(planned.substring(separator+3)));
+        }
         if(nextScheduled!=null&&nextScheduled.isBefore(today)&&!isTodayAnchoredMode(nextMode)){
             out.add(new TodaySession("Report "+nextScheduled+" · "+modeTitle(nextMode),nextMode,nextScheduled,false,true));
         }
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         ActiveReviewSlots reviews = prefs.activeReviewSlots();
         addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING,reviews,nextMode);
-        if(today.getDayOfWeek()!=DayOfWeek.SUNDAY) {
-            addToday(out,"Révision passive · matin · "+revisionMinutes+" min"+revisionPassiveDetail()+" · facultative",
-                HifzSessionActivity.MURAJAAH,today,
-                todayStr.equals(prefs.lastMurajaahDate()),nextMode);
-        }
         if(recommendedSunday(today)){
             // No seventh ordinary Itqan lesson on Sunday.
             if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
                 addToday(out,"Finale Sabqi · matin",HifzSessionActivity.LEARNING_FINAL,
                     today,learningFinalResolved(today),nextMode);
+            addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
             if(!prefs.itqanPostNasMaintenance()
                     && (!prefs.stabilizationSnowballFinalUnits(today).isEmpty()
                         || todayStr.equals(prefs.lastRecentSabqiReviewDate())))
                 addToday(out,"Finale Itqān · soir",HifzSessionActivity.CONSOLIDATION_FINAL,
                     today,consolidationFinalResolved(today),nextMode);
-            addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
             return out;
         }
         switch(action){
             case LEARNING:
                 addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Apprentissage",HifzSessionActivity.SABQI,today,modeComplete(today,HifzSessionActivity.SABQI),nextMode);
+                addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
                 EveningReviewDisplay.Status learningEvening=EveningReviewDisplay.forDay(
                     modeComplete(today,HifzSessionActivity.SABQI),
                     modeComplete(today,HifzSessionActivity.LEARNING_CONSOLIDATION),
@@ -1132,8 +1137,12 @@ public final class MainActivity extends android.app.Activity {
                         learningEvening==EveningReviewDisplay.Status.COMPLETED,nextMode);
                 break;
             case STABILIZATION:
-                if(prefs.weeklyItqanPageClosed(today))break;
+                if(prefs.weeklyItqanPageClosed(today)){
+                    addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
+                    break;
+                }
                 addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Stabilisation",HifzSessionActivity.ITQAN,today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
+                addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
                 EveningReviewDisplay.Status stabilizationEvening=EveningReviewDisplay.forDay(
                     modeComplete(today,HifzSessionActivity.ITQAN),
                     modeComplete(today,HifzSessionActivity.RECENT_SABQI_REVIEW),
@@ -1146,14 +1155,14 @@ public final class MainActivity extends android.app.Activity {
             case REVISION:
                 if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
                     addToday(out,"Finale Sabqi · révision par page ×3",HifzSessionActivity.LEARNING_FINAL,today,learningFinalResolved(today),nextMode);
+                addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
                 if(!prefs.itqanPostNasMaintenance()
                         && (!prefs.stabilizationSnowballFinalUnits(today).isEmpty()
                             || todayStr.equals(prefs.lastRecentSabqiReviewDate())))
                     addToday(out,"Finale Itqān · révision par page ×3",HifzSessionActivity.CONSOLIDATION_FINAL,today,consolidationFinalResolved(today),nextMode);
                 break;
-            default:break;
+            default:addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);break;
         }
-        addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
         return out;
     }
 
