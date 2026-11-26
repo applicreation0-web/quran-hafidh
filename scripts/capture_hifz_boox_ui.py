@@ -15,7 +15,7 @@ PACKAGE = "com.quransafeguard.hifz.ibnkathirtest"
 ACTIVITY = PACKAGE + "/com.quransafeguard.hifz.preview.MainActivity"
 DUMP = "/data/local/tmp/haafidh-boox-ui.xml"
 TITLES = ("Apprendre", "Renforcement", "Stabiliser",
-          "Consolidation", "Révision active", "Révision passive")
+          "Consolidation", "Révision active", "Fragilités")
 
 
 def adb(*args: str, check=True, timeout=30):
@@ -110,7 +110,7 @@ def verify_boox_parcours_icon_sizes(root, width):
     with the separate (Maintien) subtitle at fontScale 150%."""
     floor = max(44, int(width * .05))
     for label in ("Apprentissage", "Renforcement", "Stabilisation",
-                  "Consolidation", "Révision active", "Révision passive"):
+                  "Consolidation", "Révision active", "Fragilités"):
         node = next((n for n in root.iter("node")
                      if n.get("package") == PACKAGE
                      and any(value == label or value.startswith(label + " · ")
