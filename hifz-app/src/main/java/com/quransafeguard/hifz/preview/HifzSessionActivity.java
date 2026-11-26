@@ -2012,7 +2012,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
         EligibleCorpus corpus = prefs.activeMurajaahCorpus();
-        int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
+        double planningSeconds=activeSlot==null?speedStore.maintenanceSecondsPerLine():8.0;
+        int lines = HifzCadence.targetLines(targetMinutes(), planningSeconds);
         VerseRef start = prefs.activeMurajaahCursor();
         if (activeDraft != null) start = activeDraft.start;
         murajaahPlan = geometry.planEligibleLines(start, lines, corpus);
