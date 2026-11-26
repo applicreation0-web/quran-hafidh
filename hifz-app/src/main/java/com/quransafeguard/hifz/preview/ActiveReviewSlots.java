@@ -87,7 +87,7 @@ final class ActiveReviewSlots {
             int minutes = doc.has("targetMinutes")
                 ? Math.toIntExact(integral(doc.get("targetMinutes"))) : LEGACY_MINUTES;
             if (page < 1 || page > 604 || elapsed < 0L || elapsed > minutes * 60_000L
-                    || revision < 0L || minutes < LEGACY_MINUTES || minutes % 15 != 0)
+                    || revision < 0L || !ActiveReviewDurationPolicy.validPersistedMinutes(minutes))
                 throw new IllegalArgumentException("Invalid active-review checkpoint");
             String end = doc.getString("end");
             return new Draft(GeometryRepository.parseVerse(doc.getString("start")),
@@ -266,7 +266,7 @@ final class ActiveReviewSlots {
 
     private boolean save(LocalDate date, Slot slot, VerseRef start, VerseRef end, int page,
             long elapsed, long revision, boolean paused, int minutes) {
-        if (minutes < LEGACY_MINUTES || minutes % 15 != 0) return false;
+        if (!ActiveReviewDurationPolicy.validPersistedMinutes(minutes)) return false;
         if (start == null || page < 1 || page > 604 || elapsed < 0L) return false;
         try {
             JSONObject doc = encode(start, end, page, elapsed, revision, paused, minutes);
