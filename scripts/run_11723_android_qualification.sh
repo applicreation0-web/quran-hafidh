@@ -68,6 +68,10 @@ fi
 # Both builds share the isolated debug package. Start each visual run with synthetic default state.
 adb shell pm clear com.quransafeguard.hifz.ibnkathirtest || status=1
 run_capture "$candidate" "$evidence/after" || status=1
+# Reinstall instrumentation after removing the isolated debug target.
+mapfile -t visual_test_apks < <(find hifz-app/build/outputs/apk/androidTest/debug -name '*.apk' -type f)
+[[ ${#visual_test_apks[@]} -eq 1 ]] || exit 1
+adb install -r "${visual_test_apks[0]}" || exit 1
 
 # Dedicated reader captures, not merely the home/Parcours/Cap screens.
 # Only isolated synthetic debug fixtures, never an installed private package.
