@@ -101,7 +101,9 @@ public final class ActiveReviewSlotsInstrumentedTest {
             HifzPrefs prefs = fixture(context);
             // This fixture exercises an already planned Sunday from the older calendar.
             assertTrue(context.getSharedPreferences("quran_hifz_preview_v1", 0).edit()
-                .putString("activeReviewSundayRestStartV1", SUNDAY.plusDays(1).toString()).commit());
+                .putString("activeReviewSundayRestStartV1", SUNDAY.plusDays(1).toString())
+                .putString("legacyMurajaahPromotedRanges",
+                    "[{\"start\":\"2:1\",\"end\":\"2:74\"}]").commit());
             ActiveReviewSlots slots = prefs.activeReviewSlots();
             GeometryRepository geometry = GeometryRepository.get(context);
             int page = geometry.pageForVerse(START);
@@ -124,6 +126,9 @@ public final class ActiveReviewSlotsInstrumentedTest {
             assertEquals("Reçu du matin", restoredSlots.receipt(SUNDAY, AM));
             assertNull(restoredSlots.receipt(SUNDAY, PM));
             assertEquals(next, restored.activeMurajaahCursor());
+            for (int ayah = 1; ayah <= 74; ayah++)
+                assertTrue("Historical first hizb verse " + ayah,
+                    restored.activeMurajaahCorpus().contains(new VerseRef(2, ayah)));
             ActiveReviewCorrectionStore correction = restoredSlots.correction(SUNDAY, PM);
             assertEquals("RECALL", correction.pending().stage);
             assertTrue(correction.pending().assisted);

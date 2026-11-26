@@ -99,7 +99,11 @@ jobs:
           test ! -d hifz-app/src/private114/assets
           test -z "${HIFZ_KEYSTORE_PATH:-}"
           test -z "${HIFZ_KEYSTORE_BASE64:-}"
-          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
           test -c /dev/kvm
           sudo chown "$(id -u):$(id -g)" /dev/kvm
           git worktree add --detach "$RUNNER_TEMP/haafidh-base" 5365c3827798411852969e25ec0f3cd4ffdac23e
@@ -124,6 +128,6 @@ jobs:
           path: |
             haafidh-evidence/**/*.png
             haafidh-evidence/**/build.txt
-            haafidh-evidence/**/result.txt
+            haafidh-evidence/**/*result.txt
             hifz-app/build/outputs/androidTest-results/
           if-no-files-found: warn
