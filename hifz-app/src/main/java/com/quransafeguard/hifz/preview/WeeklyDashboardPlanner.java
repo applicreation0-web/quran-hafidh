@@ -264,11 +264,12 @@ final class WeeklyDashboardPlanner {
             ActiveReviewSlots.Slot am=ActiveReviewSlots.Slot.MORNING;
             ActiveReviewSlots.Slot pm=ActiveReviewSlots.Slot.EVENING;
             boolean morningDone=ledger.find(date,am.mode)!=null;
-            boolean eveningDone=ledger.find(date,pm.mode)!=null;
+            boolean eveningScheduled=prefs.activeReviewSlots().scheduled(date,pm);
+            boolean eveningDone=!eveningScheduled||ledger.find(date,pm.mode)!=null;
             String activeMorning=activeReviewLabel(am,morningDone,prefs.activeReviewSlots().targetMinutes(date,am,duration));
             String activeEvening=activeReviewLabel(pm,eveningDone,prefs.activeReviewSlots().targetMinutes(date,pm,duration));
             morning=joinSessions(activeMorning,morning);
-            evening=joinSessions(activeEvening,evening);
+            if(eveningScheduled)evening=joinSessions(activeEvening,evening);
             if(!morningDone)state="À faire";
             else if(!eveningDone&&("Validé".equals(state)||"Aucune finale à valider".equals(state)))
                 state="Soir à faire";
