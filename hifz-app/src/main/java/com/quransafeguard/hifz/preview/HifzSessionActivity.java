@@ -2443,7 +2443,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
             boolean committed = activeSlot == null
                 ? prefs.completeActiveMurajaah(next, sessionDate.toString(), label)
-                : activeSlots.complete(sessionDate, activeSlot, murajaahPlan.start, next, label);
+                : activeSlots.complete(sessionDate, activeSlot, murajaahPlan.start, next, label, confirmedCoverage());
             if (!committed) {
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
@@ -2484,6 +2484,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
+    private String confirmedCoverage(){
+        return ActiveReviewCoverage.encode(ActiveReviewCoverage.through(murajaahPlan.traversalVerses,murajaahActualEnd));
+    }
+
     private boolean commitIndependentRecall(){
         if(activeSlot==null||correctionState==null||murajaahPlan==null||murajaahActualEnd==null
                 ||!murajaahPlan.traversalVerses.contains(murajaahActualEnd))return false;
@@ -2493,7 +2497,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef next=prefs.activeMurajaahCorpus().next(murajaahActualEnd);
         String label=activeReviewTitle()+" · testé : "+QuranSurahNames.range(murajaahPlan.start,murajaahActualEnd)
             +" · "+lines+"L/"+activeTargetMs()/1000L+"s";
-        if(!activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label))return false;
+        if(!activeSlots.completeRecall(sessionDate,activeSlot,murajaahPlan.start,next,label,confirmedCoverage()))return false;
         validatedCorrespondenceVerse=CorrespondenceCases.lastValidatedAnchor(murajaahPlan.traversalVerses,murajaahActualEnd);
         validatedDiscriminantVerse=null;
         for(VerseRef verse:murajaahPlan.traversalVerses){
