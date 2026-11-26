@@ -18,7 +18,8 @@ final class RevisionSelector {
                       HifzSpeedStore speedStore, boolean includePassive, Choice choice) {
         LocalDate today = HifzClock.today();
         ActiveReviewSlots store = prefs.activeReviewSlots();
-        ActiveReviewSlots.Slot[] slots = ActiveReviewSlots.Slot.values();
+        ActiveReviewSlots.Slot[] slots = java.util.Arrays.stream(ActiveReviewSlots.Slot.values())
+            .filter(slot->store.scheduled(today,slot)).toArray(ActiveReviewSlots.Slot[]::new);
         String[] items = new String[slots.length + (includePassive ? 1 : 0)];
         int proposedMinutes = geometry == null ? ActiveReviewSlots.LEGACY_MINUTES
             : MaintenanceCoveragePolicy.minutes(
