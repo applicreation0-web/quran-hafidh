@@ -356,6 +356,8 @@ final class Ui {
         if (s.equals("révision passive") || s.equals("entretien")) return R.drawable.ic_palace_mirror;
         if (s.equals("révision")) return R.drawable.ic_ui_revision;
         if (s.equals("lecture cumulative")) return R.drawable.ic_ui_revision;
+        if (s.equals("continuer")) return R.drawable.ic_ui_next;
+        if (s.equals("masquer la page") || s.equals("afficher la page")) return R.drawable.ic_ui_reveal;
         if (s.equals("page récitée")) return R.drawable.ic_ui_validate;
         if (s.equals("page relue") || s.equals("page récitée sans aide")) return R.drawable.ic_ui_validate;
         if (s.equals("reporter cette page")) return R.drawable.ic_ui_next;
