@@ -367,6 +367,60 @@ final class ActiveReviewSlots {
         }
     }
 
+    /** A genuine completed recall is independent from its subsequent correction.
+     * The receipt, cursor and every revealed page are committed in one transaction.
+     * The old complete() path remains available for historical callers.
+     */
+    boolean completeRecall(LocalDate date, Slot slot, VerseRef start, VerseRef next, String label) {
+        synchronized (LOCK) {
+            if (!date.equals(HifzClock.today())) return false;
+            Draft saved=draft(date,slot);
+            if(saved==null||!saved.start.equals(start)||saved.end==null||next==null
+                    ||saved.elapsedMs!=saved.durationMs()||receipt(date,slot)!=null
+                    ||!canOpen(date,slot)||!isCurrent(saved,currentCursor(start))
+                    ||label==null||label.isEmpty())return false;
+            ActiveReviewCorrectionStore correction=correction(date,slot);
+            ActiveReviewCorrectionStore.State state=correction.pending();
+            if(state==null)return complete(date,slot,start,next,label);
+            if(!date.toString().equals(state.date)||!start.equals(state.start)
+                    ||!saved.end.equals(state.end)||state.activeElapsedMs!=saved.durationMs())return false;
+            if(!state.pages.containsAll(correction.revealed(date.toString(),start)))return false;
+            SharedPreferences.Editor edit=correction.enqueue(prefs.edit(),state)
+                .putString(RECEIPT+scope(date,slot),label)
+                .putInt(RECEIPT_MINUTES+scope(date,slot),saved.targetMinutes)
+                .remove(DRAFT+scope(date,slot))
+                .putString(CURSOR,next.toString()).putLong(REVISION,revision()+1L);
+            return edit.commit();
+        }
+    }
+
+    /** Close old independent corrections before a new batch snapshots the queue.
+     * No cursor, receipt or acquisition is changed. */
+    boolean settleOtherCorrections(LocalDate date,Slot slot) {
+        synchronized(LOCK){
+            for(String key:prefs.getAll().keySet()){
+                if(!key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|"))continue;
+                String[] parts=key.split("\\\\|",-1);
+                if(parts.length!=3)continue;
+                LocalDate old=LocalDate.parse(parts[1]);
+                Slot oldSlot=Slot.valueOf(parts[2]);
+                if(old.equals(date)&&oldSlot==slot)continue;
+                if(receipt(old,oldSlot)==null)continue;
+                ActiveReviewCorrectionStore store=correction(old,oldSlot);
+                ActiveReviewCorrectionStore.State state=store.pending();
+                if(state!=null&&!store.finishIndependent(state))return false;
+            }
+            return true;
+        }
+    }
+
+    boolean finishIndependentCorrection(LocalDate date,Slot slot,ActiveReviewCorrectionStore.State state){
+        synchronized(LOCK){
+            if(receipt(date,slot)==null||state==null||!date.toString().equals(state.date))return false;
+            return correction(date,slot).finishIndependent(state);
+        }
+    }
+
     private VerseRef currentCursor(VerseRef start) {
         return GeometryRepository.parseVerse(prefs.getString(CURSOR, start.toString()));
     }
