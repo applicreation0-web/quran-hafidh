@@ -751,23 +751,27 @@ public final class MainActivity extends android.app.Activity {
         try{
             ActiveReviewSlots slots=prefs.activeReviewSlots();
             LocalDate date=HifzClock.today();
+            ActiveReviewCorrectionStore.State manual=slots.manualCorrection().pending();
+            if(manual!=null){
+                openManualFragility(manual.page());
+                return;
+            }
             // A real open correction must be resumed, not duplicated by a second reader.
             for(ActiveReviewSlots.Slot slot:ActiveReviewSlots.Slot.values()){
                 LocalDate resume=slots.dateToResume(date,slot);
-                if(slots.correction(resume,slot).pending()!=null && slots.receipt(resume,slot)==null){
+                if(slots.correction(resume,slot).pending()!=null){
                     openMode(slot.mode);
                     return;
                 }
             }
             java.util.List<Integer> pages=slots.correction(date,ActiveReviewSlots.Slot.MORNING).queuedPages();
             android.app.AlertDialog.Builder dialog=new android.app.AlertDialog.Builder(this)
-                .setTitle("Fragilités").setNegativeButton("Fermer",null);
+                .setTitle("Fragilités · "+pages.size()+" page(s) en attente").setNegativeButton("Fermer",null);
             if(pages.isEmpty())dialog.setMessage("Aucune page en attente.");
             else{
                 String[] labels=new String[pages.size()];
                 for(int i=0;i<pages.size();i++)labels[i]="Page "+pages.get(i);
-                dialog.setItems(labels,(d,i)->startActivity(new Intent(this,StudyReaderActivity.class)
-                    .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,pages.get(i))));
+                dialog.setItems(labels,(d,i)->openManualFragility(pages.get(i)));
             }
             dialog.show();
         }catch(RuntimeException invalid){
@@ -775,6 +779,12 @@ public final class MainActivity extends android.app.Activity {
                 .setMessage("File à vérifier. Les données sont conservées.")
                 .setPositiveButton("Fermer",null).show();
         }
+    }
+
+    private void openManualFragility(int page){
+        startActivity(new Intent(this,HifzSessionActivity.class)
+            .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE)
+            .putExtra(HifzSessionActivity.EXTRA_FRAGILITY_PAGE,page));
     }
 
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
