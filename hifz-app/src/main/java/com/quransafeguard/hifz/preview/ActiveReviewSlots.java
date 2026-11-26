@@ -400,7 +400,7 @@ final class ActiveReviewSlots {
         synchronized(LOCK){
             for(String key:prefs.getAll().keySet()){
                 if(!key.startsWith(ActiveReviewCorrectionStore.KEY_STATE+"|"))continue;
-                String[] parts=key.split("\\\\|",-1);
+                String[] parts=key.split("\\|",-1);
                 if(parts.length!=3)continue;
                 LocalDate old=LocalDate.parse(parts[1]);
                 Slot oldSlot=Slot.valueOf(parts[2]);
