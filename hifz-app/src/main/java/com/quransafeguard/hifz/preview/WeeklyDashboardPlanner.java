@@ -291,7 +291,7 @@ final class WeeklyDashboardPlanner {
     }
 
     private static String activeReviewLabel(ActiveReviewSlots.Slot slot,boolean done,int minutes){
-        return (done?"✓ ":"")+slot.title()+" · "+minutes+" min";
+        return (done?"✓ ":"")+slot.title()+" · "+minutes+" min · Fragilités "+ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min";
     }
 
     private static String joinSessions(String first,String second){
