@@ -255,6 +255,28 @@ public final class MushafView extends WebView {
         load(page,Collections.emptyList(),lineIds,100);
     }
 
+    /** Assisted correction: load a fresh document with the selected verse's exact
+     * word holes already present at first paint. Avoid incremental SVG mask-cache
+     * updates, which failed on the normal-font BOOX/phone screenshots. */
+    public void showCorrectionVersePreparedPage(int page,List<String> lineIds,JSONArray boxes){
+        if(lineIds==null||lineIds.isEmpty()||boxes==null||boxes.length()==0){
+            showFailure("Géométrie du verset indisponible");return;
+        }
+        atomicFreeMaskBoot=false;
+        atomicFullMaskBoot=true;
+        correctionVisibleBoot=false;
+        lastContextFocus=false;
+        maskFollowsSelection=false;
+        landmarkStartLineId=null;
+        landmarkEndLineId=null;
+        pageLandmarkBoxes=boxes;
+        semanticCues=new JSONArray();
+        semanticAnchorMaskMode=true;
+        semanticHighlightEnabled=false;
+        retried=false;
+        load(page,Collections.emptyList(),lineIds,100);
+    }
+
     private void load(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
         removeCallbacks(watchdog);
         requestedPage = page;
@@ -283,7 +305,10 @@ public final class MushafView extends WebView {
                 final String callback = "N?.pageShown(currentPage,Number(boot.renderGeneration||0));";
                 if (!javascript.contains(callback)) throw new IllegalStateException("reader page callback missing");
                 String invalidMask = atomicFullMaskBoot
-                    ? "mask!==100||!prepared||!prepared.children.length||protectedWordBoxes().length!==0"
+                    ? (semanticAnchorMaskMode
+                        ? "mask!==100||!prepared||!prepared.children.length||protectedWordBoxes().length!=="
+                            +pageLandmarkBoxes.length()+"||!prepared.querySelector('#hifz-exact-word-holes')"
+                        : "mask!==100||!prepared||!prepared.children.length||protectedWordBoxes().length!==0")
                     : "!prepared||!prepared.querySelector('#hifz-exact-word-holes')";
                 javascript = javascript.replace(callback,
                     "var prepared=window.document.querySelector('#mushaf svg g.masklayer');"
