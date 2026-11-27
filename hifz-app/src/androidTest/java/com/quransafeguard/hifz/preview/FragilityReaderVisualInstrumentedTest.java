@@ -76,6 +76,11 @@ public final class FragilityReaderVisualInstrumentedTest {
                     assertTrue(prefs.activeReviewSlots().manualCorrection().pending().assisted);
                     assertFalse(control((View)field(a,"actions"),"Page récitée sans aide").isEnabled());
                 });
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Atomic targeted verse paint");
+                activity.onActivity(a->{
+                    assertTrue((Boolean)field(a,"fragilityPageReady"));
+                    assertFalse(control((View)field(a,"actions"),"Page récitée sans aide").isEnabled());
+                });
                 HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("fragilite-cible.png");
                 double partialInk=inkFraction(context,"fragilite-cible.png");
                 assertTrue("Targeted verse must reveal actual ink",partialInk>maskedInk+0.0002);
