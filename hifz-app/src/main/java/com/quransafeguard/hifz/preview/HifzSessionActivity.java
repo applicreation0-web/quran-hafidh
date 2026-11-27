@@ -2697,8 +2697,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             audioPlayer=new HifzAudioDialog(this,mushaf,Collections.singletonList(verse));
             audioPlayer.attachInline(audioHost);
         }else if(currentMask==100){
-            mushaf.setPageLandmarkBoxes(boxes);
-            mushaf.setSemanticCues(new org.json.JSONArray(),true,false);
+            fragilityPageReady=false;
+            correctionMaskedPageReady=false;
+            mushaf.showCorrectionVersePreparedPage(currentPage,currentLineIds,boxes);
         }else mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsOnPage(currentPage));
     }
 
