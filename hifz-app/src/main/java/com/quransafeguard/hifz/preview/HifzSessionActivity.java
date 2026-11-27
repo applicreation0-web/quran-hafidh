@@ -142,6 +142,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private ConsolidationCycleEngine.Session consolidationSession;
     private PostFinalRecallStore postFinalStore;
     private PostFinalRecallStore.Review currentPostFinalReview;
+    private boolean postFinalRecallFinished;
     private String requestedPostFinalFamily;
 
     @Override protected void onCreate(Bundle state) {
@@ -611,9 +612,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (LEARNING_FINAL.equals(mode)) return date.equals(prefs.lastLearningConsolidationDate());
         if (MURAJAAH.equals(mode)) return date.equals(prefs.lastMurajaahDate());
         if (MURAJAAH_ACTIVE.equals(mode)) return activeReceiptLabel()!=null;
-        // Post-final recall owns no Hifz credit; use only its verified completion label.
-        return POST_FINAL_RECALL.equals(mode) && program != null
-            && program.getText().toString().contains(" · terminée");
+        // A finished post-final recall can close the reader without issuing Hifz credit.
+        return POST_FINAL_RECALL.equals(mode) && postFinalRecallFinished;
     }
 
     private void showClosingFatiha() {
@@ -1269,6 +1269,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void renderPostFinalRecall(){
+        postFinalRecallFinished = false;
         try {
             postFinalStore.repairLegacyPendingFamilyPlans(
                 geometry,prefs.progressionSnapshotV6().acquired);
@@ -1290,6 +1291,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 ?postFinalStore.hasBlockedLegacyFamily(family)
                 :postFinalStore.hasBlockedLegacyFamily(PostFinalRecallStore.SABQI)
                     ||postFinalStore.hasBlockedLegacyFamily(PostFinalRecallStore.ITQAN);
+            postFinalRecallFinished = !blocked;
             program.setText(blocked?"Lecture cumulative · provenance à vérifier"
                 :"Lecture cumulative · terminée");
             progress.setText(blocked
