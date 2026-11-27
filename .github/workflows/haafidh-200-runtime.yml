@@ -1,0 +1,59 @@
+name: Haafidh 2.0 development checks
+
+on:
+  push:
+    branches: [work/haafidh-200-universal]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: haafidh-200-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Install SDK and prepare Android emulator
+        run: |
+          set -euo pipefail
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          test -c /dev/kvm
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
+          test ! -d hifz-app/src/private114/assets
+      - name: Re-run historical and new JVM tests
+        run: |
+          gradle --no-daemon --init-script scripts/no_apk.init.gradle \
+            :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Instrument Android locale and Fragilités
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          emulator-options: -no-window -no-snapshot -no-audio -no-boot-anim -gpu swiftshader_indirect
+          script: bash scripts/run_200_runtime_checks.sh
+      - name: Retain synthetic test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-200-test-evidence
+          path: |
+            hifz-app/build/test-results/
+            hifz-app/build/outputs/androidTest-results/
+            haafidh-runtime-evidence/
+          if-no-files-found: warn
