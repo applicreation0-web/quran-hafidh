@@ -45,6 +45,17 @@ verify_process_death() {
     run_process_death_phase b_verifyFixtureAfterExternalForceStop
 }
 
+# Emulator-only isolation: prevent the nonessential launcher from monopolizing
+# the screen with an ANR dialog during the repeated display-size changes.
+# Do not suppress app ANRs or bypass any test assertion.
+if [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" != "1" ]]; then
+    echo "Refusing visual qualification outside an emulator" >&2
+    exit 1
+fi
+launcher="com.google.android.apps.nexuslauncher"
+if adb shell pm path "$launcher" | grep -q '^package:'; then
+    adb shell am force-stop "$launcher"
+fi
 status=0
 gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
     -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#threePageBatchAdvancesResumesDefersAndReturnsWithoutActiveCredit,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#continuationCannotCrossTheMorningEveningBoundary \
@@ -84,6 +95,9 @@ for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
         mkdir -p "$dest"
         package=com.quransafeguard.hifz.ibnkathirtest
         adb shell am force-stop "$package" || { status=1; continue; }
+        if adb shell pm path "$launcher" | grep -q '^package:'; then
+            adb shell am force-stop "$launcher" || { status=1; continue; }
+        fi
         adb shell wm size "$size" && adb shell wm density "$density" && \
             adb shell settings put system font_scale "$font" || { status=1; continue; }
         adb shell rm -f "/sdcard/Android/data/$package/files/fragilite-visible.png" \
@@ -94,6 +108,8 @@ for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
             com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#standaloneVisibleMaskedAndDeferredPreserveAllAcquisitionAndActiveEvidence \
             "$package.test/androidx.test.runner.AndroidJUnitRunner" >"$dest/result.txt" 2>&1 || status=1
         cat "$dest/result.txt"
+        adb exec-out screencap -p >"$dest/end-screen.png" || status=1
+        adb shell dumpsys activity activities >"$dest/activity.txt" || status=1
         grep -Fxq 'OK (1 test)' "$dest/result.txt" || status=1
         grep -Fxq 'INSTRUMENTATION_CODE: -1' "$dest/result.txt" || status=1
         for phase in visible masquee cible reprise; do
