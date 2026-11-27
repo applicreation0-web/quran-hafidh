@@ -74,6 +74,7 @@ public final class MushafView extends WebView {
     /** Lecture free-mask only: block unmasked SVG paint until exact word holes exist. */
     private boolean atomicFreeMaskBoot;
     private boolean atomicFullMaskBoot;
+    private boolean correctionOpaqueBoot;
     private boolean correctionVisibleBoot;
     private JSONArray pageLandmarkBoxes = new JSONArray();
     private JSONArray semanticCues = new JSONArray();
@@ -185,6 +186,7 @@ public final class MushafView extends WebView {
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus) {
         atomicFreeMaskBoot = false;
         atomicFullMaskBoot = false;
+        correctionOpaqueBoot = false;
         correctionVisibleBoot = false;
         lastContextFocus = contextFocus;
         retried = false;
@@ -200,6 +202,7 @@ public final class MushafView extends WebView {
             JSONArray landmarks, JSONArray cues, boolean exactGeometryReady) {
         atomicFreeMaskBoot = exactGeometryReady;
         atomicFullMaskBoot = false;
+        correctionOpaqueBoot = false;
         correctionVisibleBoot = false;
         lastContextFocus = false;
         maskFollowsSelection = false;
@@ -217,6 +220,7 @@ public final class MushafView extends WebView {
     public void showCorrectionVisiblePage(int page,List<String> lineIds) {
         atomicFreeMaskBoot=false;
         atomicFullMaskBoot=false;
+        correctionOpaqueBoot=false;
         correctionVisibleBoot=true;
         lastContextFocus=false;
         maskFollowsSelection=false;
@@ -236,8 +240,17 @@ public final class MushafView extends WebView {
 
     /** Corrective recall: hide the SVG until a complete mask with no word holes is painted. */
     public void showFullMaskedPreparedPage(int page,List<String> lineIds) {
+        showFullMaskedPreparedPage(page,lineIds,false);
+    }
+
+    public void showCorrectionFullPreparedPage(int page,List<String> lineIds){
+        showFullMaskedPreparedPage(page,lineIds,true);
+    }
+
+    private void showFullMaskedPreparedPage(int page,List<String> lineIds,boolean correction){
         atomicFreeMaskBoot = false;
         atomicFullMaskBoot = true;
+        correctionOpaqueBoot = correction;
         correctionVisibleBoot = false;
         lastContextFocus = false;
         maskFollowsSelection = false;
@@ -264,6 +277,7 @@ public final class MushafView extends WebView {
         }
         atomicFreeMaskBoot=false;
         atomicFullMaskBoot=true;
+        correctionOpaqueBoot=true;
         correctionVisibleBoot=false;
         lastContextFocus=false;
         maskFollowsSelection=false;
@@ -304,12 +318,13 @@ public final class MushafView extends WebView {
                 html = html.replace("</style>", "#mushaf{visibility:hidden}\n</style>");
                 final String callback = "N?.pageShown(currentPage,Number(boot.renderGeneration||0));";
                 if (!javascript.contains(callback)) throw new IllegalStateException("reader page callback missing");
-                String invalidMask = atomicFullMaskBoot
-                    ? (semanticAnchorMaskMode
-                        ? "mask!==100||!prepared||!prepared.children.length||protectedWordBoxes().length!=="
-                            +pageLandmarkBoxes.length()+"||!prepared.querySelector('#hifz-exact-word-holes')"
-                        : "mask!==100||!prepared||!prepared.children.length||protectedWordBoxes().length!==0")
-                    : "!prepared||!prepared.querySelector('#hifz-exact-word-holes')";
+                String invalidMask = correctionOpaqueBoot
+                    ? "mask!==100||!prepared||prepared.getAttribute('data-correction-opaque')!=='1'"
+                        +"||!prepared.querySelector('.correction-cover')||protectedWordBoxes().length!=="
+                        +pageLandmarkBoxes.length()
+                    : atomicFullMaskBoot
+                        ? "mask!==100||!prepared||!prepared.children.length||protectedWordBoxes().length!==0"
+                        : "!prepared||!prepared.querySelector('#hifz-exact-word-holes')";
                 javascript = javascript.replace(callback,
                     "var prepared=window.document.querySelector('#mushaf svg g.masklayer');"
                     +"if("+invalidMask+"){"
@@ -332,6 +347,7 @@ public final class MushafView extends WebView {
                 .put("maskEntropy", maskEntropy)
                 .put("eink", eink.isEink(prefs))
                 .put("contextFocus", contextFocus)
+                .put("correctionOpaque", correctionOpaqueBoot)
                 .put("highlights", highlights)
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
@@ -360,6 +376,12 @@ public final class MushafView extends WebView {
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setMask(" + Math.max(0, Math.min(100, maskPercent)) + ");",
             ignored -> post(() -> eink.mask(this, prefs))));
+    }
+
+    /** Visible correction highlight only; keep the complete physical page scope. */
+    public void highlightCorrectionVerse(VerseRef verse,List<String> pageLines){
+        if(!correctionVisibleBoot||lastMask!=0||pageLines==null||pageLines.isEmpty())return;
+        setSelection(Collections.singletonList(verse),pageLines);
     }
 
     public void setSelection(List<VerseRef> selection, List<String> lineIds) {
