@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Locale;
 
 /** Structured Apprentissage / Stabilisation / Révision session using the independent domain engine. */
-public final class HifzSessionActivity extends android.app.Activity implements MushafView.Listener {
+public final class HifzSessionActivity extends HaafidhActivity implements MushafView.Listener {
     public static final String EXTRA_MODE = "mode";
     public static final String EXTRA_SCHEDULED_DATE = "scheduled_date";
     public static final String EXTRA_FRAGILITY_PAGE = "fragility_page";
@@ -647,6 +647,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int startLimit = geometry.firstLineIndex(prefs.sabqiStart());
         int endLimit = geometry.lastLineIndex(prefs.sabqiEnd());
         int cursor = prefs.sabqiLineCursor();
+        if (prefs.universalProfile()) {
+            UniversalLearningRoute.Span span = prefs.universalLearningRoute(geometry).at(prefs.universalLearningRangeIndex());
+            if (span == null) {
+                sessionCompleted = true;
+                program.setText(R.string.setup_no_lesson);
+                return;
+            }
+            startLimit = span.first;
+            endLimit = span.last;
+            if (cursor < startLimit) {
+                cursor = startLimit;
+                prefs.setSabqiLineCursor(cursor);
+            }
+        }
         if (cursor < 0) { cursor = startLimit; prefs.setSabqiLineCursor(cursor); }
         if (cursor < startLimit || cursor > endLimit) {
             sessionCompleted = true;
@@ -2595,22 +2609,38 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask="READ".equals(state.stage)?0:100;
         currentSelection=Collections.emptyList();
         currentLineIds=currentMask==100?geometry.lineIdsOnPage(currentPage):Collections.emptyList();
-        program.setText("Fragilités");
+        program.setText(R.string.fragility_title);
         timerText.setTextSize(getResources().getConfiguration().smallestScreenWidthDp>=600?19f:15f);
         timerText.setTextColor(Ui.INK);
-        if(standaloneFragility)timerText.setText("Libre");
+        if(standaloneFragility)timerText.setText(R.string.fragility_free);
         else if(activeSlot!=null){
             if(fragilityClock==null)fragilityClock=new SessionClock(state.correctionElapsedMs,this::onFragilityTick);
             showFragilityTime(state.correctionElapsedMs);
         }
         mushaf.setHighlightVerses(Collections.emptyList());
-        progress.setText("Page "+state.page() +" · "+state.pageIndex+"/"+state.pages.size()+" traitées"
-            +(state.assisted?" · avec aide":currentMask==100?" · masquée":" · visible"));
+        int visibility = state.assisted ? R.string.fragility_assisted
+            : currentMask == 100 ? R.string.fragility_masked : R.string.fragility_visible;
+        progress.setText(getString(R.string.fragility_progress, state.page(), state.pageIndex,
+            state.pages.size(), getString(visibility)));
         actions.removeAllViews();
+        LinearLayout primary = actions;
+        LinearLayout secondary = actions;
+        if (getResources().getConfiguration().screenWidthDp < 370) {
+            LinearLayout wrapped = Ui.column(this);
+            primary = Ui.row(this);
+            secondary = Ui.row(this);
+            primary.setGravity(Gravity.CENTER);
+            secondary.setGravity(Gravity.CENTER);
+            wrapped.addView(primary);
+            wrapped.addView(secondary);
+            actions.addView(wrapped);
+        }
         int remaining=state.pages.size()-state.pageIndex;
-        Button previous=Ui.iconButton(this,R.drawable.ic_ui_previous,"Page précédente",v->navigateFragility(generation,-1));
-        previous.setEnabled(remaining>1);actions.addView(previous);
-        fragilityMaskButton=Ui.iconButton(this,R.drawable.ic_ui_reveal,currentMask==0?"Masquer la page":"Afficher la page",v->{
+        Button previous=Ui.iconButton(this,R.drawable.ic_ui_previous,getString(R.string.fragility_previous),v->navigateFragility(generation,-1));
+        previous.setEnabled(remaining>1);primary.addView(previous);
+        boolean hidingPage = currentMask == 0 || state.assisted;
+        fragilityMaskButton=Ui.iconButton(this,hidingPage ? R.drawable.ic_ui_hide_page : R.drawable.ic_ui_reveal,
+            getString(hidingPage ? R.string.fragility_hide : R.string.fragility_show),v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityPageReady||!fragilityHasTime())return;
             boolean saved=currentMask==0
                 ?correctionStore.pageReread(correctionState)
@@ -2619,11 +2649,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if(!saved){onError("Impossible de sauvegarder le masquage.");return;}
             correctionState=correctionStore.pending();renderActiveCorrection();
         });
-        if(state.assisted)Ui.setIconDescription(fragilityMaskButton,"Masquer la page");
-        actions.addView(fragilityMaskButton);
-        actions.addView(Ui.iconButton(this,R.drawable.ic_ui_focus,"Révéler un verset",v->chooseFragilityVerse(generation,false)));
-        actions.addView(Ui.iconButton(this,R.drawable.ic_ui_play,"Audio ciblé",v->chooseFragilityVerse(generation,true)));
-        correctionPageDoneButton=Ui.iconButton(this,R.drawable.ic_ui_validate,"Page récitée sans aide",v->{
+        primary.addView(fragilityMaskButton);
+        primary.addView(Ui.iconButton(this,R.drawable.ic_ui_focus,getString(R.string.fragility_reveal_verse),v->chooseFragilityVerse(generation,false)));
+        primary.addView(Ui.iconButton(this,R.drawable.ic_ui_play,getString(R.string.fragility_audio),v->chooseFragilityVerse(generation,true)));
+        correctionPageDoneButton=Ui.iconButton(this,R.drawable.ic_ui_validate,getString(R.string.fragility_validate),v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
             if(!correctionMaskedPageReady||correctionState.assisted||audioPlayer!=null){
                 onError("Masquez toute la page et récitez-la sans aide avant de valider.");return;
@@ -2633,16 +2662,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             }
             correctionState=correctionStore.pending();renderActiveCorrection();
         });
-        correctionPageDoneButton.setEnabled(false);actions.addView(correctionPageDoneButton);
-        actions.addView(Ui.iconButton(this,R.drawable.ic_hifz_catchup_clock,"Reporter cette page",v->{
+        correctionPageDoneButton.setEnabled(false);secondary.addView(correctionPageDoneButton);
+        secondary.addView(Ui.iconButton(this,R.drawable.ic_hifz_catchup_clock,getString(R.string.fragility_defer),v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
             if(!correctionStore.deferPage(correctionState)){
                 onError("Impossible de reporter cette page.");return;
             }
             correctionState=correctionStore.pending();renderActiveCorrection();
         }));
-        Button next=Ui.iconButton(this,R.drawable.ic_ui_next,"Page suivante",v->navigateFragility(generation,1));
-        next.setEnabled(remaining>1);actions.addView(next);
+        Button next=Ui.iconButton(this,R.drawable.ic_ui_next,getString(R.string.fragility_next),v->navigateFragility(generation,1));
+        next.setEnabled(remaining>1);secondary.addView(next);
         showCurrent();
     }
 
@@ -2693,7 +2722,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             }
             correctionState=correctionStore.pending();
             if(correctionPageDoneButton!=null)correctionPageDoneButton.setEnabled(false);
-            if(fragilityMaskButton!=null)Ui.setIconDescription(fragilityMaskButton,"Masquer la page");
+            if(fragilityMaskButton!=null) {
+                Ui.setIconDescription(fragilityMaskButton,getString(R.string.fragility_hide));
+                Ui.setButtonIcon(fragilityMaskButton,R.drawable.ic_ui_hide_page);
+            }
             progress.setText("Page "+currentPage+" · "+correctionState.pageIndex+"/"+correctionState.pages.size()+" traitées · avec aide");
         }
         closeAudio();

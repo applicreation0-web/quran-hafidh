@@ -58,10 +58,10 @@ public final class BooxPortraitHomeSourceContractTest {
             && home.contains("tile.addView(caption);"));
         assertFalse(home.contains("tile.addView(title);"));
         assertTrue(home.contains("booxIconDp(2, 112)"));
-        assertTrue(home.contains("primaryTile(practiceRow, \"Parcours Hifz\", \"Parcours\""));
-        assertTrue(home.contains("primaryTile(practiceRow, \"Progression\", \"Progression\""));
-        assertTrue(home.contains("primaryTile(readingRow, \"Lecture\", \"Lecture\""));
-        assertTrue(home.contains("primaryTile(readingRow, \"Atlas\", \"Atlas\""));
+        assertTrue(home.contains("primaryTile(practiceRow, R.drawable.ic_haafidh_parcours, getString(R.string.nav_plan)"));
+        assertTrue(home.contains("primaryTile(practiceRow, R.drawable.ic_haafidh_progression, getString(R.string.nav_progress)"));
+        assertTrue(home.contains("primaryTile(readingRow, R.drawable.ic_haafidh_lecture, getString(R.string.nav_read)"));
+        assertTrue(home.contains("primaryTile(readingRow, R.drawable.ic_haafidh_atlas, getString(R.string.nav_atlas)"));
         // All four home destinations must be presented identically, without a visual divider.
         int practiceEnd = home.indexOf("addHomeAccessRow(root, practiceRow)");
         int readingEnd = home.indexOf("addHomeAccessRow(root, readingRow)");

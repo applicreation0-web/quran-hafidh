@@ -51,6 +51,6 @@ public final class V6AcquiredBootstrapSourceContractTest {
                 + "                prefs.reconcileV6AcquiredBootstrap(loaded);\n"
                 + "                prefs.repairStraddlingAcquiredVerses(loaded);\n"
                 + "                prefs.releaseRevisionCursorsFromFatiha();\n"
-                + "                prefs.currentAnchoringEntry(loaded);"));
+                + "                if (!prefs.universalProfile()) prefs.currentAnchoringEntry(loaded);"));
     }
 }

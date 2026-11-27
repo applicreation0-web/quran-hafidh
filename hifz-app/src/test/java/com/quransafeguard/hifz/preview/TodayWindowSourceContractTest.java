@@ -25,7 +25,7 @@ public final class TodayWindowSourceContractTest {
         assertTrue("Dated active slots remain selectable until their pending corrections close",
             main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING")
             && main.contains("addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING")
-            && main.contains("slot.mode,today,reviews.receipt(today,slot)!=null&&!reviews.correctionPending(today,slot),nextMode);"));
+            && main.contains("slot.mode,today,reviews.receipt(today,slot)!=null&&!reviews.correctionPending(today,slot),nextMode,slot,false);"));
         org.junit.Assert.assertFalse("Passive reading is no longer a scheduled session",
             main.contains("addToday(out,\"Révision passive"));
         assertTrue("each line carries its state and the next one due is marked",

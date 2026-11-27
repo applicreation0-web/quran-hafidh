@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="setup_learning"/>
+    <item type="id" name="setup_declared"/>
+    <item type="id" name="setup_days"/>
+    <item type="id" name="setup_deep_ranges"/>
+    <item type="id" name="setup_deep"/>
+    <item type="id" name="setup_maintenance"/>
+</resources>

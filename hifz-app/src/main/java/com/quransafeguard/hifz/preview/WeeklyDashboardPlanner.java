@@ -66,6 +66,8 @@ final class WeeklyDashboardPlanner {
         // Treat each read-only forecast as independent. A damaged old Itqān
         // cursor must not prevent actual Sabqi and revision receipts showing.
         int sabqiCursor=-1;
+        int learningRangeIndex=prefs.universalLearningRangeIndex();
+        UniversalLearningRoute route = prefs.universalProfile() ? prefs.universalLearningRoute(geometry) : null;
         try { sabqiCursor=currentSabqiCursor(); }
         catch(RuntimeException problem) {
             android.util.Log.e("QuranHifz","Weekly Sabqi cursor unavailable",problem);
@@ -73,7 +75,8 @@ final class WeeklyDashboardPlanner {
 
         int duration=-1;
         try {
-            duration=prefs.activeReviewMinutes(geometry);
+            if (!prefs.universalProfile() || prefs.hasUniversalReviewMaterial())
+                duration=prefs.activeReviewMinutes(geometry);
         } catch(RuntimeException problem) {
             android.util.Log.e("QuranHifz","Weekly active revision projection unavailable",problem);
         }
@@ -119,12 +122,18 @@ final class WeeklyDashboardPlanner {
                 case LEARNING:{
                     DashboardLedger.Record morningActual=ledger.find(date,HifzSessionActivity.SABQI);
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.LEARNING_CONSOLIDATION);
-                    GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
+                    UniversalLearningRoute.Span span = route == null ? null : route.at(learningRangeIndex);
+                    GeometryRepository.FiveLineBlock block=route == null ? safeSabqi(sabqiCursor)
+                        : span == null ? null : geometry.fiveLineBlock(Math.max(sabqiCursor, span.first), span.last);
                     if(morningActual!=null)morning="✓ "+compact(morningActual.label);
                     else if(block==null)morning="Apprentissage · plage à vérifier";
                     else{
                         morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
                         sabqiCursor=block.endLineIndex+1;
+                        if (span != null && block.endLineIndex == span.last) {
+                            UniversalLearningRoute.Span upcoming = route.at(++learningRangeIndex);
+                            if (upcoming != null) sabqiCursor=upcoming.first;
+                        }
                     }
                     boolean lessonDone=morningActual!=null;
                     // No dated evening receipt means NOT completed. In particular, a
@@ -151,6 +160,15 @@ final class WeeklyDashboardPlanner {
                         break;
                     }
                     else if(date.isBefore(today))morning="Stabilisation";
+                    else if (prefs.universalProfile()) {
+                        if (!prefs.universalItqanAvailable(date, geometry)) {
+                            morning="Aucune séance prévue";
+                            state="Aucune séance prévue";
+                            break;
+                        }
+                        morning=prefs.universalMaintenanceDue(date)
+                            ? "Maintien · "+JuzMaintenanceStore.CUE : "Stabilisation · consolidation approfondie";
+                    }
                     else if(fourDates!=null || (fourDates=prefs.previewWeeklyItqan(geometry,date))!=null) {
                         int count = fourDates.sessions.size();
                         while(nextFourDateSlot<count && fourDates.sessions.get(nextFourDateSlot).blocks.isEmpty())
@@ -261,19 +279,21 @@ final class WeeklyDashboardPlanner {
                 }
                 default:throw new IllegalStateException("Action de cadence inconnue");
             }
-            ActiveReviewSlots.Slot am=ActiveReviewSlots.Slot.MORNING;
-            ActiveReviewSlots.Slot pm=ActiveReviewSlots.Slot.EVENING;
-            boolean morningDone=ledger.find(date,am.mode)!=null;
-            boolean eveningScheduled=prefs.activeReviewSlots().scheduled(date,pm);
-            boolean eveningDone=!eveningScheduled||ledger.find(date,pm.mode)!=null;
-            String activeMorning=activeReviewLabel(am,morningDone,prefs.activeReviewSlots().targetMinutes(date,am,duration));
-            String activeEvening=activeReviewLabel(pm,eveningDone,prefs.activeReviewSlots().targetMinutes(date,pm,duration));
-            morning=joinSessions(activeMorning,morning);
-            if(eveningScheduled)evening=joinSessions(activeEvening,evening);
-            if(!morningDone)state="À faire";
-            else if(!eveningDone&&("Validé".equals(state)||"Aucune finale à valider".equals(state)))
-                state="Soir à faire";
-            else if(eveningDone&&"Aucune finale à valider".equals(state))state="Validé";
+            if (!prefs.universalProfile() || duration >= 0) {
+                ActiveReviewSlots.Slot am=ActiveReviewSlots.Slot.MORNING;
+                ActiveReviewSlots.Slot pm=ActiveReviewSlots.Slot.EVENING;
+                boolean morningDone=ledger.find(date,am.mode)!=null;
+                boolean eveningScheduled=prefs.activeReviewSlots().scheduled(date,pm);
+                boolean eveningDone=!eveningScheduled||ledger.find(date,pm.mode)!=null;
+                String activeMorning=activeReviewLabel(am,morningDone,prefs.activeReviewSlots().targetMinutes(date,am,duration));
+                String activeEvening=activeReviewLabel(pm,eveningDone,prefs.activeReviewSlots().targetMinutes(date,pm,duration));
+                morning=joinSessions(activeMorning,morning);
+                if(eveningScheduled)evening=joinSessions(activeEvening,evening);
+                if(!morningDone)state="À faire";
+                else if(!eveningDone&&("Validé".equals(state)||"Aucune finale à valider".equals(state)))
+                    state="Soir à faire";
+                else if(eveningDone&&"Aucune finale à valider".equals(state))state="Validé";
+            }
             out.add(new Row(date,day(date,today),morning,evening,state));
             } catch(RuntimeException invalidForecast){
                 // One problematic historical OPEN state or future unit never kills
@@ -331,7 +351,7 @@ final class WeeklyDashboardPlanner {
 
     private int currentSabqiCursor(){
         int cursor=prefs.sabqiLineCursor();
-        return cursor<0?geometry.firstLineIndex(prefs.sabqiStart()):cursor;
+        return cursor<0 && !prefs.universalProfile()?geometry.firstLineIndex(prefs.sabqiStart()):cursor;
     }
 
     private GeometryRepository.FiveLineBlock safeSabqi(int cursor){

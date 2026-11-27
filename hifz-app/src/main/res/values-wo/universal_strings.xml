@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="app_language">Làkk</string>
+  <string name="setup_title">Tëral sa njàng</string>
+  <string name="setup_ranges_help">Bindal pàcc yi nii: saar:aaya-saar:aaya. Teqale leen ak wirgul. Misaal: 112:1-112:4.</string>
+  <string name="setup_learning_ranges">Pàcc yi ngay mokkal</string>
+  <string name="setup_declared_ranges">Pàcc yi nga mokkal ba noppi (boo bëggee)</string>
+  <string name="setup_learning_days">Bési njàng ci ayu-bés bi</string>
+  <string name="setup_save">Denc sa tëralinu njàng</string>
+  <string name="setup_restore">Delloo sa dencukaay</string>
+  <string name="setup_save_error">Mëneesul denc sa tànneef yi.</string>
+  <string name="setup_ranges_error">Seetal aaya yi ak diggali rëdd yi ci Mus-haaf bi. Sa tëralin soxla na benn pàcc.</string>
+  <string name="setup_no_lesson">Amul pàcc bu des nga mokkal ci tëralin bii.</string>
+  <string name="setup_no_review">Amul pàcc bu nga mokkal ba noppi ngir nafar ko.</string>
+  <string name="nav_plan">Tëralinu njàng</string>
+  <string name="nav_progress">Jéego yi</string>
+  <string name="nav_read">Jàng</string>
+  <string name="nav_atlas">Atlas</string>
+  <string name="nav_settings">Tànneef yi</string>
+  <string name="nav_shortcuts">Jàllukaay yi</string>
+  <string name="nav_close">Tëj</string>
+  <string name="setup_deep_ranges">Pàcc yi nga mokkal te bëgg a dëgëral</string>
+  <string name="setup_deep">Dëgëral bu xóot</string>
+  <string name="setup_maintenance">Wéyal nafar</string>
+  <string name="setup_no_itqan">Amul pàcc bu mën a jaar ci Itqān tey.</string>
+  <string name="fragility_title">Pàcc yu jafe</string>
+  <string name="fragility_free">Amul digu diir</string>
+  <string name="fragility_progress">Xët %1$d · %2$d/%3$d yu ñu seet · %4$s</string>
+  <string name="fragility_assisted">ak ndimbal</string>
+  <string name="fragility_masked">nëbb nañu ko</string>
+  <string name="fragility_visible">feeñ na</string>
+  <string name="fragility_previous">Xët wi jiitu</string>
+  <string name="fragility_next">Xët wi topp</string>
+  <string name="fragility_hide">Nëbb xët wi</string>
+  <string name="fragility_show">Wone xët wi</string>
+  <string name="fragility_reveal_verse">Wone ab aaya</string>
+  <string name="fragility_audio">Déglu ab aaya</string>
+  <string name="fragility_validate">Tari xët wi te amul ndimbal</string>
+  <string name="fragility_defer">Bayyi xët wii ba beneen yoon</string>
+  <string name="setup_keep_finished_ranges">Tëjal njàng mi ubbeeku te bàyyi pàcc yi nga tàmbalee ci seen toftale.</string>
+</resources>

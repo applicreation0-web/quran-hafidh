@@ -47,7 +47,7 @@ public final class PreDebugVisualRestorationSourceContractTest {
         assertTrue("The four equal home destinations must retain their visible frozen pictograms",
             home.contains("ImageView icon = new ImageView(this);")
             && home.contains("icon.setImageResource(drawable);")
-            && home.contains("int drawable = largeIconFor(role);")
+            && home.contains("private LinearLayout primaryTile(LinearLayout parent, int drawable")
             && !home.contains("icon.setColorFilter(Ui.INK);")
             && home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 36))")
             && home.contains("booxIconDp(2, 112)")

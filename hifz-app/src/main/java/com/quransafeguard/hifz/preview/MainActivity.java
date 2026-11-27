@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Quran Hifz personal home. No Safeguard/blocking API is linked here. */
-public final class MainActivity extends android.app.Activity {
+public final class MainActivity extends HaafidhActivity {
     private HifzPrefs prefs;
     private PostFinalRecallStore postFinalStore;
     private HifzSpeedStore speedStore;
@@ -63,7 +63,11 @@ public final class MainActivity extends android.app.Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         SemanticPassageRepository.preloadAsync(this);
-        prefs = new HifzPrefs(this);
+        prefs = new HifzPrefs(this, true);
+        if (prefs.universalSetupPending()) {
+            showUniversalSetup();
+            return;
+        }
         postFinalStore = new PostFinalRecallStore(this);
         speedStore = new HifzSpeedStore(this);
         ledger = new DashboardLedger(this);
@@ -92,7 +96,7 @@ public final class MainActivity extends android.app.Activity {
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
         header.addView(title);
-        header.addView(Ui.iconButton(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class))));
+        header.addView(Ui.iconButton(this, R.drawable.ic_ui_settings, getString(R.string.nav_settings), v -> startActivity(new Intent(this, SettingsActivity.class))));
         root.addView(header);
         root.addView(Ui.divider(this));
 
@@ -107,7 +111,7 @@ public final class MainActivity extends android.app.Activity {
         recentSabqiAdvisory.setVisibility(View.GONE);
         root.addView(recentSabqiAdvisory);
 
-        TextView destinationsLabel = Ui.notebookTitle(this, "Accès directs", 17f);
+        TextView destinationsLabel = Ui.notebookTitle(this, getString(R.string.nav_shortcuts), 17f);
         if (wideBoox()) destinationsLabel.setTextSize(compactBooxHome() ? 18f : 21f);
         destinationsLabel.setPadding(0, Ui.dp(this, compactBooxHome() ? 5 : 18),
             0, Ui.dp(this, compactBooxHome() ? 3 : 8));
@@ -115,17 +119,17 @@ public final class MainActivity extends android.app.Activity {
         // Two rows with one visual grammar: practice + follow-up, reading + understanding.
         // No separator: Progression is an equal navigation destination, not a footer.
         LinearLayout practiceRow = Ui.row(this);
-        LinearLayout parcours = primaryTile(practiceRow, "Parcours Hifz", "Parcours", v -> showParcours());
-        LinearLayout progress = primaryTile(practiceRow, "Progression", "Progression",
+        LinearLayout parcours = primaryTile(practiceRow, R.drawable.ic_haafidh_parcours, getString(R.string.nav_plan), v -> showParcours());
+        LinearLayout progress = primaryTile(practiceRow, R.drawable.ic_haafidh_progression, getString(R.string.nav_progress),
             v -> startActivity(new Intent(this, ProgressMapActivity.class)));
         addHomeAccessRow(root, practiceRow);
 
         LinearLayout readingRow = Ui.row(this);
         // Eight dp of breathing room groups the two related pairs without drawing a rule.
         readingRow.setPadding(0, Ui.dp(this, compactBooxHome() ? 0 : 8), 0, 0);
-        LinearLayout study = primaryTile(readingRow, "Lecture", "Lecture",
+        LinearLayout study = primaryTile(readingRow, R.drawable.ic_haafidh_lecture, getString(R.string.nav_read),
             v -> startActivity(new Intent(this, StudyReaderActivity.class)));
-        LinearLayout semanticMap = primaryTile(readingRow, "Atlas", "Atlas",
+        LinearLayout semanticMap = primaryTile(readingRow, R.drawable.ic_haafidh_atlas, getString(R.string.nav_atlas),
             v -> startActivity(new Intent(this, AtlasMapActivity.class)));
         addHomeAccessRow(root, readingRow);
 
@@ -247,7 +251,7 @@ public final class MainActivity extends android.app.Activity {
                 prefs.reconcileV6AcquiredBootstrap(loaded);
                 prefs.repairStraddlingAcquiredVerses(loaded);
                 prefs.releaseRevisionCursorsFromFatiha();
-                prefs.currentAnchoringEntry(loaded);
+                if (!prefs.universalProfile()) prefs.currentAnchoringEntry(loaded);
                 // Rebase only old 1.17.7 pending post-final plans whose previous
                 // pages came from global Acquis. No Hifz credits are changed.
                 try {
@@ -281,6 +285,68 @@ public final class MainActivity extends android.app.Activity {
                 });
             }
         });
+    }
+
+    private void showUniversalSetup() {
+        LinearLayout root = page();
+        root.addView(Ui.notebookTitle(this, getString(R.string.setup_title), 24f));
+        root.addView(Ui.settingRow(this, getString(R.string.app_language), LANGUAGE_LABELS[languageIndex(this)],
+            view -> chooseLanguage()));
+        root.addView(Ui.text(this, getString(R.string.setup_ranges_help), 16f, false));
+        android.widget.EditText learning = rangeInput(root, R.string.setup_learning_ranges, R.id.setup_learning);
+        android.widget.EditText declared = rangeInput(root, R.string.setup_declared_ranges, R.id.setup_declared);
+        android.widget.EditText deepRanges = rangeInput(root, R.string.setup_deep_ranges, R.id.setup_deep_ranges);
+        android.widget.CheckBox deep = new android.widget.CheckBox(this);
+        deep.setText(R.string.setup_deep);
+        deep.setId(R.id.setup_deep);
+        root.addView(deep);
+        android.widget.CheckBox maintenance = new android.widget.CheckBox(this);
+        maintenance.setText(R.string.setup_maintenance);
+        maintenance.setId(R.id.setup_maintenance);
+        root.addView(maintenance);
+        root.addView(Ui.text(this, getString(R.string.setup_learning_days), 16f, true));
+        android.widget.Spinner days = new android.widget.Spinner(this);
+        days.setId(R.id.setup_days);
+        android.widget.ArrayAdapter<Integer> choices = new android.widget.ArrayAdapter<>(
+            this, android.R.layout.simple_spinner_dropdown_item, new Integer[]{0,1,2,3,4,5,6});
+        days.setAdapter(choices);
+        days.setSelection(3);
+        root.addView(days);
+        root.addView(Ui.button(this, getString(R.string.setup_save), view -> {
+            try {
+                GeometryRepository geo = GeometryRepository.get(this);
+                boolean saved = prefs.configureNewProfile(
+                    UniversalLearningRoute.parse(learning.getText().toString()),
+                    UniversalLearningRoute.parse(declared.getText().toString()),
+                    UniversalLearningRoute.parse(deepRanges.getText().toString()), deep.isChecked(),
+                    maintenance.isChecked(), days.getSelectedItemPosition(), geo);
+                if (saved) recreate();
+                else showSetupMessage(R.string.setup_save_error);
+            } catch (IllegalArgumentException invalid) {
+                showSetupMessage(R.string.setup_ranges_error);
+            } catch (RuntimeException unavailable) {
+                showSetupMessage(R.string.setup_save_error);
+            }
+        }));
+        root.addView(Ui.button(this, getString(R.string.setup_restore),
+            view -> startActivity(new Intent(this, SettingsActivity.class)
+                .putExtra(SettingsActivity.EXTRA_INITIAL_RESTORE, true))));
+        setContentView(scrollOf(root));
+    }
+
+    private android.widget.EditText rangeInput(LinearLayout root, int label, int id) {
+        TextView caption = Ui.text(this, getString(label), 16f, true);
+        caption.setLabelFor(id);
+        root.addView(caption);
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setId(id);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        root.addView(input);
+        return input;
+    }
+
+    private void showSetupMessage(int resourceId) {
+        android.widget.Toast.makeText(this, resourceId, android.widget.Toast.LENGTH_LONG).show();
     }
 
     private void setGeometryActionsEnabled(boolean enabled) {
@@ -434,7 +500,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     /** Four equal-size home destinations in a 2×2 BOOX grid, without cards or separators. */
-    private LinearLayout primaryTile(LinearLayout parent, String role, String display,
+    private LinearLayout primaryTile(LinearLayout parent, int drawable, String display,
                                     View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
         tile.setPadding(Ui.dp(this, 3), Ui.dp(this, compactBooxHome() ? 0 : 12),
@@ -444,8 +510,6 @@ public final class MainActivity extends android.app.Activity {
             ? Math.min(booxIconDp(2, 112), spaciousBooxHome() ? 112 : 52)
             : booxIconDp(2, 112);
         if (!wideBoox()) tile.setMinimumHeight(Ui.dp(this, sideDp + 36));
-        int drawable = largeIconFor(role);
-        if (drawable == 0) drawable = Ui.iconFor(role, role);
         if (drawable != 0) {
             ImageView icon = new ImageView(this);
             icon.setImageResource(drawable);
@@ -588,6 +652,10 @@ public final class MainActivity extends android.app.Activity {
     @Override protected void onResume() {
         super.onResume();
         prefs = new HifzPrefs(this);
+        if (today == null) {
+            if (!prefs.universalSetupPending()) recreate();
+            return;
+        }
         speedStore = new HifzSpeedStore(this);
         if (ledger == null) ledger = new DashboardLedger(this);
         ledger.capture(prefs);
@@ -741,6 +809,10 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void showRevisionSelector(boolean includePassive) {
+        if (prefs.universalProfile() && !prefs.hasUniversalReviewMaterial()) {
+            showSetupMessage(R.string.setup_no_review);
+            return;
+        }
         RevisionSelector.show(this, prefs, geometry, speedStore, includePassive, new RevisionSelector.Choice() {
             @Override public void openActiveRevision(ActiveReviewSlots.Slot slot) { openMode(slot.mode); }
             @Override public void openPassiveRevision() { openMode(HifzSessionActivity.MURAJAAH); }
@@ -792,6 +864,16 @@ public final class MainActivity extends android.app.Activity {
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
 
     private void openMode(String mode,LocalDate scheduledDate) {
+        if (prefs.universalProfile() && HifzSessionActivity.SABQI.equals(mode)
+                && prefs.sabqiLinesRemaining(geometry)==0) {
+            showSetupMessage(R.string.setup_no_lesson);
+            return;
+        }
+        if (prefs.universalProfile() && HifzSessionActivity.ITQAN.equals(mode)
+                && !prefs.universalItqanAvailable(scheduledDate, geometry)) {
+            showSetupMessage(R.string.setup_no_itqan);
+            return;
+        }
         if (HifzSessionActivity.SABQI.equals(mode) || HifzSessionActivity.ITQAN.equals(mode)) {
             // Date/weekday and durable completion receipts gate real work;
             // old misses stay recorded but do not authorize retroactive credits.
@@ -836,7 +918,7 @@ public final class MainActivity extends android.app.Activity {
             // bypass the existing prerequisite for a snowball session.
             List<TodaySession> rows=todaySessions(current,null,null);
             for(TodaySession row:rows){
-                if(!row.done&&!row.label.contains("en attente")
+                if(!row.done&&!row.waiting
                         &&current.equals(row.scheduled)&&isSameSlotContinuation(slot,row.mode)){
                     openMode(row.mode,row.scheduled);
                     return;
@@ -985,6 +1067,10 @@ public final class MainActivity extends android.app.Activity {
     private String computeNextMode(ScheduledCadence due){
         LocalDate today=HifzClock.today();
         ActiveReviewSlots reviews=prefs.activeReviewSlots();
+        if (prefs.universalProfile() && !prefs.hasUniversalReviewMaterial()) {
+            if (due != null) return nextCadenceMode(due.getScheduledDate(), today, due.getAction());
+            return eveningLearningMode(today);
+        }
         if (reviews.receipt(today,ActiveReviewSlots.Slot.MORNING)==null) {
             // A skipped morning has no draft. If the evening was already
             // started instead, Continue must reopen that reserved passage,
@@ -1033,9 +1119,13 @@ public final class MainActivity extends android.app.Activity {
         }
         switch(action){
             case LEARNING:
+                if (prefs.universalProfile() && prefs.sabqiLinesRemaining(geometry)==0)
+                    return isToday?eveningLearningMode(today):null;
                 if(!modeComplete(date,HifzSessionActivity.SABQI))return HifzSessionActivity.SABQI;
                 return isToday?eveningLearningMode(today):null;
             case STABILIZATION:
+                if (prefs.universalProfile() && !prefs.universalItqanAvailable(date, geometry))
+                    return isToday?eveningStabilizationMode(today):null;
                 if(prefs.weeklyItqanPageClosed(date))return null;
                 if(!modeComplete(date,HifzSessionActivity.ITQAN))return HifzSessionActivity.ITQAN;
                 return isToday?eveningStabilizationMode(today):null;
@@ -1110,7 +1200,7 @@ public final class MainActivity extends android.app.Activity {
             LocalDate dated=LocalDate.parse(learningEvening);
             if(!dated.isAfter(today))
                 addToday(out,"Reprendre Renforcement Sabqi du "+dated+" · soir",
-                    HifzSessionActivity.LEARNING_CONSOLIDATION,dated,false,null);
+                    HifzSessionActivity.LEARNING_CONSOLIDATION,dated,false,null,ActiveReviewSlots.Slot.EVENING,false);
         }
         // A frozen Itqan evening has its own slot and original calendar date,
         // just like Renforcement Sabqi. Without this entry, "Aujourd'hui"
@@ -1123,7 +1213,7 @@ public final class MainActivity extends android.app.Activity {
             LocalDate dated=LocalDate.parse(itqanEvening);
             if(!dated.isAfter(today))
                 addToday(out,"Reprendre Consolidation Itqān du "+dated+" · soir",
-                    HifzSessionActivity.RECENT_SABQI_REVIEW,dated,false,null);
+                    HifzSessionActivity.RECENT_SABQI_REVIEW,dated,false,null,ActiveReviewSlots.Slot.EVENING,false);
         }
         String sabqiFinal=prefs.unfinishedConsolidationSessionDate(
             ConsolidationCycleEngine.Family.LEARNING,"learning-final-");
@@ -1131,7 +1221,7 @@ public final class MainActivity extends android.app.Activity {
             LocalDate dated=LocalDate.parse(sabqiFinal);
             if(!dated.isAfter(today))
                 addToday(out,"Reprendre finale Sabqi du "+dated+" · matin",
-                    HifzSessionActivity.LEARNING_FINAL,dated,false,null);
+                    HifzSessionActivity.LEARNING_FINAL,dated,false,null,ActiveReviewSlots.Slot.MORNING,false);
         }
         String itqanFinal=prefs.unfinishedConsolidationSessionDate(
             ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-final-");
@@ -1139,7 +1229,7 @@ public final class MainActivity extends android.app.Activity {
             LocalDate dated=LocalDate.parse(itqanFinal);
             if(!dated.isAfter(today))
                 addToday(out,"Reprendre finale Itqān du "+dated+" · soir",
-                    HifzSessionActivity.CONSOLIDATION_FINAL,dated,false,null);
+                    HifzSessionActivity.CONSOLIDATION_FINAL,dated,false,null,ActiveReviewSlots.Slot.EVENING,false);
         }
         // Non-crediting cumulative recall survives day changes and process death.
         // It never replaces an unfinished original Sunday finale.
@@ -1154,7 +1244,7 @@ public final class MainActivity extends android.app.Activity {
                 +(PostFinalRecallStore.SABQI.equals(family)?"Sabqi":"Itqān")
                 +" · "+(recall.position+1)+"/"+recall.total+" · masquée",
                 HifzSessionActivity.POST_FINAL_RECALL,LocalDate.parse(recall.date),
-                false,false,family));
+                false,false,family,null,false));
         }
         // The learning final may have been BLOCKED before it could open. Give
         // access to the actual preceding Sunday rather than silently dropping
@@ -1164,7 +1254,7 @@ public final class MainActivity extends android.app.Activity {
                 && !sunday.toString().equals(prefs.lastLearningConsolidationDate())
                 && !prefs.learningSnowballFinalUnits(sunday).isEmpty()) {
             addToday(out,"Finale Sabqi du "+sunday+" · matin",
-                HifzSessionActivity.LEARNING_FINAL,sunday,false,null);
+                HifzSessionActivity.LEARNING_FINAL,sunday,false,null,ActiveReviewSlots.Slot.MORNING,false);
         }
         return out;
     }
@@ -1173,12 +1263,17 @@ public final class MainActivity extends android.app.Activity {
     static final class TodaySession {
         final String label; final String mode; final LocalDate scheduled; final boolean done; final boolean next;
         final String postFinalFamily;
+        final ActiveReviewSlots.Slot slot;
+        final boolean waiting;
         TodaySession(String label,String mode,LocalDate scheduled,boolean done,boolean next){
-            this(label,mode,scheduled,done,next,null);
+            this(label,mode,scheduled,done,next,null,null,false);
         }
-        TodaySession(String label,String mode,LocalDate scheduled,boolean done,boolean next,String postFinalFamily){
+        TodaySession(String label,String mode,LocalDate scheduled,boolean done,boolean next,
+                String postFinalFamily,ActiveReviewSlots.Slot slot,boolean waiting){
             this.label=label;this.mode=mode;this.scheduled=scheduled;this.done=done;this.next=next;
             this.postFinalFamily=postFinalFamily;
+            this.slot=slot;
+            this.waiting=waiting;
         }
     }
 
@@ -1207,17 +1302,22 @@ public final class MainActivity extends android.app.Activity {
             // No seventh ordinary Itqan lesson on Sunday.
             if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
                 addToday(out,"Finale Sabqi · matin",HifzSessionActivity.LEARNING_FINAL,
-                    today,learningFinalResolved(today),nextMode);
+                    today,learningFinalResolved(today),nextMode,ActiveReviewSlots.Slot.MORNING,false);
             addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
             if(!prefs.itqanPostNasMaintenance()
                     && (!prefs.stabilizationSnowballFinalUnits(today).isEmpty()
                         || todayStr.equals(prefs.lastRecentSabqiReviewDate())))
                 addToday(out,"Finale Itqān · soir",HifzSessionActivity.CONSOLIDATION_FINAL,
-                    today,consolidationFinalResolved(today),nextMode);
+                    today,consolidationFinalResolved(today),nextMode,ActiveReviewSlots.Slot.EVENING,false);
             return out;
         }
         switch(action){
             case LEARNING:
+                if (prefs.universalProfile() && prefs.sabqiLinesRemaining(geometry)==0
+                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,today)) {
+                    addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
+                    break;
+                }
                 addToday(out,eveningLessonDetail!=null?eveningLessonDetail:"Apprentissage",HifzSessionActivity.SABQI,today,modeComplete(today,HifzSessionActivity.SABQI),nextMode);
                 addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
                 EveningReviewDisplay.Status learningEvening=EveningReviewDisplay.forDay(
@@ -1227,10 +1327,13 @@ public final class MainActivity extends android.app.Activity {
                 if(learningEvening!=EveningReviewDisplay.Status.NO_NEW_UNITS)
                     addToday(out,EveningReviewDisplay.learningTodayLabel(learningEvening),
                         HifzSessionActivity.LEARNING_CONSOLIDATION,today,
-                        learningEvening==EveningReviewDisplay.Status.COMPLETED,nextMode);
+                        learningEvening==EveningReviewDisplay.Status.COMPLETED,nextMode,null,
+                        learningEvening==EveningReviewDisplay.Status.WAITING_FOR_LESSON);
                 break;
             case STABILIZATION:
-                if(prefs.weeklyItqanPageClosed(today)){
+                if(prefs.weeklyItqanPageClosed(today)
+                        || prefs.universalProfile() && !prefs.universalItqanAvailable(today, geometry)
+                            && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today)){
                     addActiveReviewToday(out,today,ActiveReviewSlots.Slot.EVENING,reviews,nextMode);
                     break;
                 }
@@ -1243,7 +1346,8 @@ public final class MainActivity extends android.app.Activity {
                 if(stabilizationEvening!=EveningReviewDisplay.Status.NO_NEW_UNITS)
                     addToday(out,EveningReviewDisplay.stabilizationTodayLabel(stabilizationEvening),
                         HifzSessionActivity.RECENT_SABQI_REVIEW,today,
-                        stabilizationEvening==EveningReviewDisplay.Status.COMPLETED,nextMode);
+                        stabilizationEvening==EveningReviewDisplay.Status.COMPLETED,nextMode,null,
+                        stabilizationEvening==EveningReviewDisplay.Status.WAITING_FOR_LESSON);
                 break;
             case REVISION:
                 if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
@@ -1267,14 +1371,20 @@ public final class MainActivity extends android.app.Activity {
     private void addActiveReviewToday(List<TodaySession> out,LocalDate today,ActiveReviewSlots.Slot slot,
             ActiveReviewSlots reviews,String nextMode){
         if(!reviews.scheduled(today,slot))return;
+        if (prefs.universalProfile() && !prefs.hasUniversalReviewMaterial()) return;
         int minutes=reviews.targetMinutes(today,slot,prefs.activeReviewMinutes(geometry));
         addToday(out,slot.title()+" · "+minutes+" min · Fragilités "+ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min",
-            slot.mode,today,reviews.receipt(today,slot)!=null&&!reviews.correctionPending(today,slot),nextMode);
+            slot.mode,today,reviews.receipt(today,slot)!=null&&!reviews.correctionPending(today,slot),nextMode,slot,false);
     }
 
     private void addToday(List<TodaySession> out,String label,String mode,LocalDate scheduled,boolean done,String nextMode){
+        addToday(out,label,mode,scheduled,done,nextMode,null,false);
+    }
+
+    private void addToday(List<TodaySession> out,String label,String mode,LocalDate scheduled,boolean done,
+            String nextMode,ActiveReviewSlots.Slot slot,boolean waiting){
         for(TodaySession existing:out)if(existing.mode.equals(mode))return;
-        out.add(new TodaySession(label,mode,scheduled,done,!done&&mode.equals(nextMode)));
+        out.add(new TodaySession(label,mode,scheduled,done,!done&&mode.equals(nextMode),null,slot,waiting));
     }
 
     private String revisionPassiveDetail(){
@@ -1300,14 +1410,14 @@ public final class MainActivity extends android.app.Activity {
         String[] items=new String[sessions.size()];
         for(int i=0;i<items.length;i++){
             TodaySession s=sessions.get(i);
-            String slot=s.label.contains("· matin")?"MATIN · ":
-                s.label.contains("· soir")?"SOIR · ":"";
+            String slot=s.slot==ActiveReviewSlots.Slot.MORNING?"MATIN · ":
+                s.slot==ActiveReviewSlots.Slot.EVENING?"SOIR · ":"";
             String title=readableScheduleTitle(s.label,prefs.itqanEntretienActive());
             String essential=readableScheduleEssentials(s.label);
             // Completed finales are identified independently from the Itqān
             // line geometry. Never present a Sabqi finale as Itqān repetition.
             items[i]=(s.done?"✓ ":s.next?"▸ ":"  ")+slot+title+
-                (s.label.contains("en attente")?" · En attente":
+                (s.waiting?" · En attente":
                     (s.done?" · Terminé":s.mode.equals(HifzSessionActivity.MURAJAAH)
                         ?" · Facultative":" · À faire"))+
                 ("Détails disponibles".equals(essential) || "Terminée".equals(essential)
@@ -1337,7 +1447,7 @@ public final class MainActivity extends android.app.Activity {
             .setTitle("Aujourd’hui · Choisir une séance")
             .setAdapter(adapter,(dialog,which)->{
                 TodaySession session=sessions.get(which);
-                if(session.label.contains("en attente") && !session.done) {
+                if(session.waiting && !session.done) {
                     new android.app.AlertDialog.Builder(this)
                         .setTitle("Séance en attente")
                         .setMessage("Termine d’abord la séance du jour avant la révision cumulative du soir.")

@@ -88,10 +88,22 @@ final class JuzMaintenanceStore {
         return new Plan(juz, lines);
     }
 
+    static boolean hasDraft(SharedPreferences prefs) { return prefs.contains(DRAFT); }
+
+    boolean hasEligibleJuz(GeometryRepository geometry, EligibleCorpus acquired) {
+        Draft draft = read();
+        if (draft != null) return plan(draft.juz, geometry, acquired) != null;
+        for (int juz = 1; juz <= 30; juz++)
+            if (plan(juz, geometry, acquired) != null) return true;
+        return false;
+    }
+
     Draft open(LocalDate today, GeometryRepository geometry, EligibleCorpus acquired) {
         synchronized (prefs) {
-            if (!today.equals(HifzClock.today()) || !ItqanRegimeStore.postNasMaintenance(prefs)
-                    || !afterLastReceipt(today)) return null;
+            boolean enabled = prefs.contains(HifzPrefs.UNIVERSAL_LEARNING)
+                ? HifzPrefs.universalMaintenanceFor(prefs, today)
+                : ItqanRegimeStore.postNasMaintenance(prefs);
+            if (!today.equals(HifzClock.today()) || !enabled || !afterLastReceipt(today)) return null;
             Draft saved = read();
             if (saved != null) return saved;
             int start = prefs.getInt(NEXT, 1);

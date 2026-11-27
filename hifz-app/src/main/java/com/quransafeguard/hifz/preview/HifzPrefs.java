@@ -66,12 +66,22 @@ public final class HifzPrefs {
         }
     }
 
+    static final String UNIVERSAL_LEARNING = "universalLearningRangesV1";
+    private static final String UNIVERSAL_LEARNING_INDEX = "universalLearningRangeIndexV1";
+    private static final String UNIVERSAL_DEEP = "universalItqanDeepV1";
+    private static final String UNIVERSAL_MAINTENANCE = "universalItqanMaintenanceV1";
+    private static final String UNIVERSAL_SETUP = "universalSetupPendingV1";
+
     public HifzPrefs(Context context) {
+        this(context, false);
+    }
+
+    HifzPrefs(Context context, boolean startUniversalProfile) {
         geometryContext = context.getApplicationContext();
         testGeometry = null;
         p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
         boolean firstInstall=p.getInt("schema",0)==0;
-        ensureSchema(context);
+        ensureSchema(context, firstInstall && startUniversalProfile);
         migrateLegacyGates(context);
         ensureSevenDayProgramme(HifzClock.today(),firstInstall);
         activeReviewSlots().ensureProgramme(HifzClock.today());
@@ -150,7 +160,7 @@ public final class HifzPrefs {
             : geometryContext != null ? GeometryRepository.get(geometryContext) : null;
     }
 
-    private void ensureSchema(Context context) {
+    private void ensureSchema(Context context, boolean universalFirstInstall) {
         int schema = p.getInt("schema", 0);
         if (schema == 0) {
             SharedPreferences.Editor e = p.edit()
@@ -231,6 +241,13 @@ public final class HifzPrefs {
                 .putString("v6UnknownDueLineIds", "[]")
                 .putString("v6LegacyImportedLineIds", "[]")
                 .putString("v6LegacyOrphanJ10Dates", "{}");
+            if (universalFirstInstall) {
+                e.putBoolean(UNIVERSAL_SETUP, true)
+                    .putString(UNIVERSAL_LEARNING, "[]")
+                    .putString("promotedRanges", "[]")
+                    .putString("unconsolidatedPromotedRanges", "[]")
+                    .putString("roadmapMode", RoadmapMode.MANUAL.name());
+            }
             if (!e.commit()) throw new IllegalStateException("Unable to initialize Hifz schema");
             return;
         }
@@ -717,7 +734,90 @@ public final class HifzPrefs {
      * default start of 2:75, that includes all of Al-Fatiha, which was never part of the
      * Apprentissage walk to begin with.
      */
+    boolean universalProfile() { return p.contains(UNIVERSAL_LEARNING); }
+
+    int universalLearningRangeIndex() { return p.getInt(UNIVERSAL_LEARNING_INDEX, 0); }
+
+    boolean universalSetupPending() { return p.getBoolean(UNIVERSAL_SETUP, false); }
+
+    UniversalLearningRoute universalLearningRoute(GeometryRepository geometry) {
+        return UniversalLearningRoute.of(parseRangesAllowEmpty(UNIVERSAL_LEARNING), geometry);
+    }
+
+    boolean hasUniversalReviewMaterial() {
+        return !itqanRanges().isEmpty() || !consolidatedPromotedRanges().isEmpty()
+            || !v6LineIdSet("v6AcquiredCreditLineIds").isEmpty();
+    }
+
+    boolean configureNewProfile(List<VerseRange> learning, List<VerseRange> declared,
+            List<VerseRange> deepRanges, boolean deep, boolean maintenance, int days, GeometryRepository geometry) {
+        synchronized (V6_STATE_LOCK) {
+            if (!universalSetupPending()) return false;
+            if (days < 0 || days > 6 - (deep ? 1 : 0) - (maintenance ? 1 : 0)
+                    || !learning.isEmpty() && days == 0)
+                throw new IllegalArgumentException("Invalid weekly cadence");
+            validateV6ManualRanges(declared, learning);
+            validateV6ManualRanges(declared, deepRanges);
+            validateV6ManualRanges(learning, deepRanges);
+            if (learning.isEmpty() && declared.isEmpty() && deepRanges.isEmpty()
+                    || deep && deepRanges.isEmpty() || maintenance && declared.isEmpty())
+                throw new IllegalArgumentException("A study or review range is required");
+            UniversalLearningRoute.of(learning, geometry);
+            UniversalLearningRoute.of(deepRanges, geometry);
+            List<VerseRange> ordered = sortRangesPreservingBoundaries(learning);
+            SharedPreferences.Editor editor = p.edit()
+                .putString(UNIVERSAL_LEARNING, rangesJson(learning))
+                .putInt(UNIVERSAL_LEARNING_INDEX, 0)
+                .putString("itqanRanges", rangesJson(sortRangesPreservingBoundaries(declared)))
+                .putString("promotedRanges", rangesJson(sortRangesPreservingBoundaries(deepRanges)))
+                .putString("unconsolidatedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(deepRanges)))
+                .putBoolean(UNIVERSAL_DEEP, deep)
+                .putBoolean(UNIVERSAL_MAINTENANCE, maintenance)
+                .putInt("learningDaysPerWeek", days)
+                .putString(WEEKLY_PROGRAM_HISTORY, new JSONArray()
+                    .put(new JSONObject(java.util.Map.of("from", programStartDate().toString(),
+                        "mode", WeeklyProgram.MANUAL_SEVEN.name()))).toString())
+                .remove(UNIVERSAL_SETUP);
+            if (!ordered.isEmpty()) editor.putString("sabqiStart", ordered.get(0).getStart().toString())
+                .putString("sabqiEnd", ordered.get(ordered.size()-1).getEndInclusive().toString());
+            return editor.commit();
+        }
+    }
+
+    List<VerseRange> configuredUniversalLearningRanges() {
+        return parseRangesAllowEmpty(UNIVERSAL_LEARNING);
+    }
+
+    boolean updateUniversalLearning(List<VerseRange> learning, GeometryRepository geometry) {
+        synchronized (V6_STATE_LOCK) {
+            if (!universalProfile() || universalSetupPending()) return false;
+            List<VerseRange> old = configuredUniversalLearningRanges();
+            if (old.equals(learning)) return true;
+            if (sabqiRep() != 0 || !p.getString(SABQI_LESSON_SNAPSHOT, "").isEmpty()) return false;
+            validateV6ManualRanges(itqanRanges(), learning);
+            validateV6ManualRanges(unconsolidatedPromotedRanges(), learning);
+            UniversalLearningRoute nextRoute = UniversalLearningRoute.of(learning, geometry);
+            int index = universalLearningRangeIndex();
+            UniversalLearningRoute.Span current = universalLearningRoute(geometry).at(index);
+            boolean partiallyLearned = current != null && sabqiLineCursor() > current.first;
+            int lockedPrefix = index + (partiallyLearned ? 1 : 0);
+            if (learning.size() < lockedPrefix
+                    || !old.subList(0, lockedPrefix).equals(learning.subList(0, lockedPrefix))) return false;
+            SharedPreferences.Editor editor = p.edit().putString(UNIVERSAL_LEARNING, rangesJson(learning));
+            if (!partiallyLearned) {
+                UniversalLearningRoute.Span next = nextRoute.at(index);
+                editor.putInt("sabqiLineCursor", next == null ? -1 : next.first);
+            }
+            List<VerseRange> bounds = sortRangesPreservingBoundaries(learning);
+            if (!bounds.isEmpty()) editor.putString("sabqiStart", bounds.get(0).getStart().toString())
+                .putString("sabqiEnd", bounds.get(bounds.size()-1).getEndInclusive().toString());
+            return editor.commit();
+        }
+    }
+
     int sabqiLinesRemaining(GeometryRepository geometry) {
+        if (universalProfile())
+            return universalLearningRoute(geometry).remaining(universalLearningRangeIndex(), sabqiLineCursor());
         int first = geometry.firstLineIndex(sabqiStart());
         int last = geometry.lastLineIndex(sabqiEnd());
         int cursor = sabqiLineCursor();
@@ -1136,7 +1236,9 @@ public final class HifzPrefs {
 
         ArrayList<VerseRange> effectiveNext = new ArrayList<>(acquiredNormalized);
         effectiveNext.addAll(promotedNext);
-        if ((itqanRep() > 0 || itqanBlockIndex() > 0) && itqanUnitStart() != null && itqanUnitEnd() != null
+        if ((itqanRep() > 0 || itqanBlockIndex() > 0
+                || universalProfile() && p.contains(ItqanPhysicalProof11711.KEY))
+                && itqanUnitStart() != null && itqanUnitEnd() != null
                 && !rangeCoveredBy(effectiveNext, itqanUnitStart(), itqanUnitEnd())) {
             throw new IllegalStateException("Terminez la Stabilisation en cours avant de retirer sa plage.");
         }
@@ -1729,6 +1831,11 @@ public final class HifzPrefs {
         synchronized(V6_STATE_LOCK) {
             int cursor=sabqiLineCursor();
             int endLimit=geometry.lastLineIndex(sabqiEnd());
+            if (universalProfile()) {
+                UniversalLearningRoute.Span span=universalLearningRoute(geometry).at(universalLearningRangeIndex());
+                if (span==null || cursor<span.first) throw new IllegalStateException("Sabqi cursor outside the route");
+                endLimit=span.last;
+            }
             String raw=p.getString(SABQI_LESSON_SNAPSHOT,"");
             try {
                 if(!raw.isEmpty()) {
@@ -1800,6 +1907,19 @@ public final class HifzPrefs {
                     || lineIds.size()>PreviewConfig.SABQI_LINES
                     || new LinkedHashSet<>(lineIds).size()!=lineIds.size()
                     || safeDate(date,null)==null)return false;
+            int nextProfileRange = 0;
+            int nextPhysicalLine = nextLineCursor;
+            boolean universal = universalProfile();
+            if (universal) {
+                UniversalLearningRoute route = universalLearningRoute(reviewGeometry());
+                nextProfileRange = universalLearningRangeIndex();
+                UniversalLearningRoute.Span span = route.at(nextProfileRange);
+                if (span == null || startLine < span.first || endLine > span.last) return false;
+                if (endLine == span.last) {
+                    UniversalLearningRoute.Span upcoming = route.at(++nextProfileRange);
+                    if (upcoming != null) nextPhysicalLine = upcoming.first;
+                }
+            }
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -1823,7 +1943,7 @@ public final class HifzPrefs {
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
                 .putString("recentSabqi", recentJson(queue))
-                .putInt("sabqiLineCursor", nextLineCursor)
+                .putInt("sabqiLineCursor", nextPhysicalLine)
                 .putInt("sabqiRep", 0).putInt("sabqiAssisted", 0).putLong("sabqiElapsedMs", 0L)
                 .putString("sabqiTodayReviewDate", date).putInt("sabqiTodayReviewStartLine", startLine)
                 .putInt("sabqiTodayReviewEndLine", endLine).putLong("sabqi_today_reviewElapsedMs", 0L)
@@ -1831,6 +1951,7 @@ public final class HifzPrefs {
                 .putString(DAILY_LESSON_RECEIPTS,appendDailyLessonReceipt(
                     ConsolidationCycleEngine.Family.LEARNING,date,lineIds))
                 .remove(SABQI_LESSON_SNAPSHOT);
+            if (universal) e.putInt(UNIVERSAL_LEARNING_INDEX, nextProfileRange);
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             return e.commit();
         }
@@ -1999,6 +2120,7 @@ public final class HifzPrefs {
     }
 
     ItqanFourSessionPolicy.Plan previewWeeklyItqan(GeometryRepository geo, LocalDate date) {
+        if (universalProfile()) return null;
         if (!weeklyItqanDay(date) || weeklyItqanPageClosed(date) || itqanPostNasMaintenance()) return null;
         if (p.contains(ItqanPhysicalProof11711.KEY)) {
             JSONObject proof = ItqanPhysicalProof11711.read(p);
@@ -2061,6 +2183,7 @@ public final class HifzPrefs {
     /** Open the next genuine weekly slot. Reopening on an eligible later date
      * rebinds the receipt date, without changing the frozen lines or repetitions. */
     ItqanFourSessionSnapshot openWeeklyItqan(GeometryRepository geo, LocalDate date) {
+        if (universalProfile()) return null;
         synchronized (V6_STATE_LOCK) {
             synchronized (p) {
                 ItqanFourSessionSnapshot existing = ItqanFourSessionStore.read(p, geo);
@@ -2843,7 +2966,47 @@ public final class HifzPrefs {
         return ItqanRegimeStore.postNasMaintenance(p);
     }
 
+    boolean universalDeepEnabled() { return p.getBoolean(UNIVERSAL_DEEP, false); }
+
+    boolean universalMaintenanceEnabled() { return p.getBoolean(UNIVERSAL_MAINTENANCE, false); }
+
+    boolean setUniversalItqanDisciplines(boolean deep, boolean maintenance) {
+        synchronized (V6_STATE_LOCK) {
+            if (!universalProfile() || learningDaysPerWeek() > 6 - (deep ? 1 : 0) - (maintenance ? 1 : 0))
+                return false;
+            return p.edit().putBoolean(UNIVERSAL_DEEP, deep)
+                .putBoolean(UNIVERSAL_MAINTENANCE, maintenance).commit();
+        }
+    }
+
+    boolean universalMaintenanceDue(LocalDate date) { return universalMaintenanceFor(p, date); }
+
+    boolean universalItqanAvailable(LocalDate date, GeometryRepository geometry) {
+        if (universalMaintenanceDue(date)) {
+            if (!hasUniversalReviewMaterial()) return false;
+            return juzMaintenance().hasEligibleJuz(geometry, activeMurajaahCorpus());
+        }
+        return universalDeepEnabled() && currentUniversalAnchoringEntry(geometry) != null;
+    }
+
+    static boolean universalMaintenanceFor(SharedPreferences store, LocalDate date) {
+        if (!store.getBoolean(UNIVERSAL_MAINTENANCE, false)) return false;
+        if (JuzMaintenanceStore.hasDraft(store)) return true;
+        boolean deep = store.getBoolean(UNIVERSAL_DEEP, false);
+        if (deep && !store.getString("itqanUnitStart", "").isEmpty()) return false;
+        if (!deep) return true;
+        int learningDays = store.getInt("learningDaysPerWeek", HifzSchedule.DEFAULT_LEARNING_DAYS_PER_WEEK);
+        for (int weekday = 6; weekday >= 1; weekday--) {
+            java.time.DayOfWeek day = java.time.DayOfWeek.of(weekday);
+            if (HifzSchedule.INSTANCE.actionFor(day, learningDays)
+                    == com.quransafeguard.hifz.core.CadenceAction.STABILIZATION)
+                return date.getDayOfWeek() == day;
+        }
+        return false;
+    }
+
     boolean usesJuzMaintenance() {
+        if (universalProfile()) return universalMaintenanceFor(p, HifzClock.today());
         return itqanPostNasMaintenance() && !legacyItqanCheckpoint()
             && !p.contains(ItqanPhysicalProof11711.KEY) && !ItqanFourSessionStore.hasPlan(p);
     }
@@ -2934,6 +3097,10 @@ public final class HifzPrefs {
      * for any display that claims to show the current Stabilisation position instead.
      */
     public VerseRef itqanRotationLiveCursor(GeometryRepository geometry) {
+        if (universalProfile()) {
+            AnchoringQueue.Entry current = currentUniversalAnchoringEntry(geometry);
+            return current == null ? null : GeometryRepository.parseVerse(current.start);
+        }
         ensureItqanRotationBootstrapped(geometry);
         return itqanRotationState().cursor;
     }
@@ -2994,7 +3161,7 @@ public final class HifzPrefs {
 
     private SharedPreferences.Editor appendFinalItqanRotation(
             SharedPreferences.Editor editor,boolean finalBlock,VerseRef unitEnd) {
-        if(!finalBlock)return editor;
+        if(!finalBlock || universalProfile())return editor;
         ItqanRotationPolicy.State next=ItqanRotationPolicy.advancedPast(itqanRotationState(),unitEnd);
         return ItqanRegimeStore.appendRotationState(p,editor,next);
     }
@@ -3089,6 +3256,7 @@ public final class HifzPrefs {
      * Stabilisation here, so it inherits this same order for free.
      */
     public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {
+        if (universalProfile()) return currentUniversalAnchoringEntry(geometry);
         // Dashboard/Settings may query this even while a frozen physical-line
         // window is open. Never invoke the old 22-line picker then: at An-Nas
         // it could flip the rotation leg before ×40/V6 completion.
@@ -3168,6 +3336,45 @@ public final class HifzPrefs {
         return selected;
     }
 
+    private AnchoringQueue.Entry currentUniversalAnchoringEntry(GeometryRepository geometry) {
+        if (!universalDeepEnabled() || anchoringDeferredToday()) return null;
+        VerseRef openStart = itqanUnitStart();
+        VerseRef openEnd = itqanUnitEnd();
+        if (openStart != null && openEnd != null) return universalEntry(openStart, openEnd);
+        Set<String> alreadyWorked = v6LineIdSet("v6StabilizedLineIds");
+        alreadyWorked.addAll(v6LineIdSet("v6AcquiredCreditLineIds"));
+        for (VerseRange range : unconsolidatedPromotedRanges()) {
+            EligibleCorpus corpus = EligibleCorpus.Companion.of(Collections.singletonList(range));
+            VerseRef cursor = range.getStart();
+            while (range.contains(cursor)) {
+                GeometryRepository.VerseUnit unit =
+                    geometry.eligibleWeeklyStabilizationUnit(cursor, range.getEndInclusive(), corpus);
+                List<String> lines = universalOwnedLineIds(unit.start, unit.end, geometry);
+                if (!lines.isEmpty() && Collections.disjoint(alreadyWorked, lines))
+                    return universalEntry(unit.start, unit.end);
+                VerseRef next = QuranCanon.INSTANCE.next(cursor);
+                if (next == null || next.compareTo(cursor) <= 0) break;
+                cursor = next;
+            }
+        }
+        return null;
+    }
+
+    private static List<String> universalOwnedLineIds(VerseRef start, VerseRef end, GeometryRepository geometry) {
+        List<String> owned = new ArrayList<>();
+        for (int index = geometry.firstLineIndex(start); index <= geometry.lastLineIndex(end); index++) {
+            GeometryRepository.LineMeta line = geometry.line(index);
+            VerseRef owner = CorpusLinePolicy.ownerVerse(line);
+            if (owner.compareTo(start) >= 0 && owner.compareTo(end) <= 0) owned.add(line.id);
+        }
+        return owned;
+    }
+
+    private static AnchoringQueue.Entry universalEntry(VerseRef start, VerseRef end) {
+        return new AnchoringQueue.Entry(start.toString(), end.toString(), AnchoringQueue.Origin.PROMOTED,
+            ItqanMaintenancePolicy.protocolForNewSession(), 0);
+    }
+
     /** Compatibility at the exact V1 -> ordinary boundary only. Keep the
      * remainder of the containing historical unit instead of rounding up to
      * the next unit's start. No cursor, credit or protocol is written here. */
@@ -3195,6 +3402,7 @@ public final class HifzPrefs {
     /** A V1 page can end inside a verse. Keep only its still-due physical
      * continuation when rendering/restoring the ordinary compatibility unit. */
     List<String> ordinaryItqanLineIds(VerseRef start,VerseRef end,GeometryRepository geometry) {
+        if (universalProfile()) return universalOwnedLineIds(start,end,geometry);
         List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
         AnchoringQueue.Entry remainder=legacyFourDateRemainder(geometry);
         if(remainder==null||!remainder.start.equals(start.toString())||!remainder.end.equals(end.toString()))return owned;
@@ -5105,6 +5313,8 @@ public final class HifzPrefs {
             throw new IllegalArgumentException("Learning days per week must be "
                 + HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK + ".." + HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK);
         }
+        if (universalProfile() && days > 6 - (universalDeepEnabled() ? 1 : 0)
+                - (universalMaintenanceEnabled() ? 1 : 0)) return false;
         return p.edit().putInt("learningDaysPerWeek", days).commit();
     }
 
@@ -5299,7 +5509,7 @@ static List<RecentSabqi> withoutRecentBlocks(List<RecentSabqi> source, List<Rece
         } catch (Exception error) {
             throw new IllegalStateException("Corrupt range list: " + key, error);
         }
-        return sortRangesPreservingBoundaries(out);
+        return UNIVERSAL_LEARNING.equals(key) ? out : sortRangesPreservingBoundaries(out);
     }
 
     private static List<VerseRange> normalizeRanges(List<VerseRange> ranges) {
@@ -5448,8 +5658,9 @@ static List<RecentSabqi> withoutRecentBlocks(List<RecentSabqi> source, List<Rece
     }
 
     public void resetPreviewState() {
-        p.edit().clear().commit();
-        ensureSchema(null);
+        boolean universal = universalProfile();
+        if (!p.edit().clear().commit()) throw new IllegalStateException("Unable to reset Hifz preferences");
+        ensureSchema(null, universal);
     }
 
     private VerseRef ref(String key) { return GeometryRepository.parseVerse(required(key)); }

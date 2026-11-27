@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="app_language">Language</string>
+  <string name="setup_title">Set up your study plan</string>
+  <string name="setup_ranges_help">Enter passages as surah:verse-surah:verse, separated by commas. For example: 112:1-112:4.</string>
+  <string name="setup_learning_ranges">Passages to memorize</string>
+  <string name="setup_declared_ranges">Already memorized passages (optional)</string>
+  <string name="setup_learning_days">Learning days per week</string>
+  <string name="setup_save">Save study plan</string>
+  <string name="setup_restore">Restore a backup</string>
+  <string name="setup_save_error">Could not save your settings.</string>
+  <string name="setup_ranges_error">Check the references, overlaps and Mushaf line boundaries. Your plan needs at least one passage.</string>
+  <string name="setup_no_lesson">This plan has no remaining passages to memorize.</string>
+  <string name="setup_no_review">There are no memorized passages to review.</string>
+  <string name="nav_plan">Study plan</string>
+  <string name="nav_progress">Progress</string>
+  <string name="nav_read">Read</string>
+  <string name="nav_atlas">Atlas</string>
+  <string name="nav_settings">Settings</string>
+  <string name="nav_shortcuts">Shortcuts</string>
+  <string name="nav_close">Close</string>
+  <string name="setup_deep_ranges">Memorized passages to consolidate</string>
+  <string name="setup_deep">Intensive consolidation</string>
+  <string name="setup_maintenance">Retention maintenance</string>
+  <string name="setup_no_itqan">No eligible passages for today’s Itqān.</string>
+  <string name="fragility_title">Weak spots</string>
+  <string name="fragility_free">Untimed</string>
+  <string name="fragility_progress">Page %1$d · %2$d/%3$d reviewed · %4$s</string>
+  <string name="fragility_assisted">with help</string>
+  <string name="fragility_masked">hidden</string>
+  <string name="fragility_visible">visible</string>
+  <string name="fragility_previous">Previous page</string>
+  <string name="fragility_next">Next page</string>
+  <string name="fragility_hide">Hide the page</string>
+  <string name="fragility_show">Show the page</string>
+  <string name="fragility_reveal_verse">Reveal a verse</string>
+  <string name="fragility_audio">Listen to one verse</string>
+  <string name="fragility_validate">Page recited without help</string>
+  <string name="fragility_defer">Defer this page</string>
+  <string name="setup_keep_finished_ranges">Finish the open session and keep the ranges you have already started in their current order.</string>
+</resources>

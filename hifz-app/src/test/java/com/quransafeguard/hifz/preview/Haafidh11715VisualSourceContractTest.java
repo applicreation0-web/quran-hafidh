@@ -76,8 +76,8 @@ public final class Haafidh11715VisualSourceContractTest {
     }
     @Test public void buildIdentityIsOnlyIncrement()throws Exception{
         String gradle=source("hifz-app/build.gradle.kts");
-        assertTrue(gradle.contains("versionCode = 62"));
-        assertTrue(gradle.contains("versionName = \"1.17.24\""));
+        assertTrue(gradle.contains("versionCode = 63"));
+        assertTrue(gradle.contains("versionName = \"2.0.0\""));
         assertTrue(gradle.contains("applicationId = \"com.quransafeguard.hifz\""));
     }
 }

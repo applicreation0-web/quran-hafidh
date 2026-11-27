@@ -259,11 +259,12 @@ val verifyHifzConvergenceRules by tasks.registering {
         val correctionEnd = session.indexOf("private boolean isCurrentCorrectionRender", correctionStart)
         check(correctionStart >= 0 && correctionEnd > correctionStart)
         val ordinarySession = session.substring(0, correctionStart) + session.substring(correctionEnd)
-        check(!ordinarySession.contains("Page suivante") && !ordinarySession.contains("Page précédente")) {
+        check(!ordinarySession.contains("Page suivante") && !ordinarySession.contains("Page précédente")
+            && !ordinarySession.contains("R.string.fragility_next") && !ordinarySession.contains("R.string.fragility_previous")) {
             "Ordinary Hifz sessions must retain swipe/hardware page turns."
         }
         val fragilityReader = session.substring(correctionStart, correctionEnd)
-        check(fragilityReader.contains("Page suivante") && fragilityReader.contains("Page précédente")
+        check(fragilityReader.contains("R.string.fragility_next") && fragilityReader.contains("R.string.fragility_previous")
             && fragilityReader.contains("navigateFragility(generation,1)")
             && fragilityReader.contains("navigateFragility(generation,-1)")) {
             "Only the correction queue may offer explicit previous/next actions."
@@ -353,8 +354,8 @@ android {
         applicationId = "com.quransafeguard.hifz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 62
-        versionName = "1.17.24"
+        versionCode = 63
+        versionName = "2.0.0"
         if (boox1175Preview) versionName = "1.17.15"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

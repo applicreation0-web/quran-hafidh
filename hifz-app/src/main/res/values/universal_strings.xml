@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="app_language">Langue</string>
+  <string name="setup_title">Configurer le parcours</string>
+  <string name="setup_ranges_help">Indiquez chaque passage au format sourate:verset-sourate:verset, séparé par une virgule. Exemple : 112:1-112:4.</string>
+  <string name="setup_learning_ranges">Passages à apprendre</string>
+  <string name="setup_declared_ranges">Passages déjà mémorisés (facultatif)</string>
+  <string name="setup_learning_days">Jours d’apprentissage par semaine</string>
+  <string name="setup_save">Enregistrer le parcours</string>
+  <string name="setup_restore">Restaurer une sauvegarde</string>
+  <string name="setup_save_error">Impossible d’enregistrer les réglages.</string>
+  <string name="setup_ranges_error">Vérifiez les références, les chevauchements et les limites des lignes du Mushaf. Un parcours doit comporter au moins un passage.</string>
+  <string name="setup_no_lesson">Aucun passage à apprendre dans ce parcours.</string>
+  <string name="setup_no_review">Aucun passage mémorisé à réviser.</string>
+  <string name="nav_plan">Parcours</string>
+  <string name="nav_progress">Progression</string>
+  <string name="nav_read">Lecture</string>
+  <string name="nav_atlas">Atlas</string>
+  <string name="nav_settings">Paramètres</string>
+  <string name="nav_shortcuts">Accès directs</string>
+  <string name="nav_close">Fermer</string>
+  <string name="setup_deep_ranges">Passages mémorisés à consolider</string>
+  <string name="setup_deep">Consolidation approfondie</string>
+  <string name="setup_maintenance">Maintien de la maîtrise</string>
+  <string name="setup_no_itqan">Aucun passage admissible pour l’Itqān prévu aujourd’hui.</string>
+  <string name="fragility_title">Fragilités</string>
+  <string name="fragility_free">Libre</string>
+  <string name="fragility_progress">Page %1$d · %2$d/%3$d traitées · %4$s</string>
+  <string name="fragility_assisted">avec aide</string>
+  <string name="fragility_masked">masquée</string>
+  <string name="fragility_visible">visible</string>
+  <string name="fragility_previous">Page précédente</string>
+  <string name="fragility_next">Page suivante</string>
+  <string name="fragility_hide">Masquer la page</string>
+  <string name="fragility_show">Afficher la page</string>
+  <string name="fragility_reveal_verse">Révéler un verset</string>
+  <string name="fragility_audio">Audio ciblé</string>
+  <string name="fragility_validate">Page récitée sans aide</string>
+  <string name="fragility_defer">Reporter cette page</string>
+  <string name="setup_keep_finished_ranges">Terminez la séance ouverte et conservez les plages déjà commencées dans leur ordre actuel.</string>
+</resources>

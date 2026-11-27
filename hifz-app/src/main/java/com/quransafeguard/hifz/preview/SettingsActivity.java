@@ -29,7 +29,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 /** BOOX-oriented configuration. Rotation anchor is editable; live cursors are read-only. */
-public final class SettingsActivity extends android.app.Activity {
+public final class SettingsActivity extends HaafidhActivity {
+    static final String EXTRA_INITIAL_RESTORE = "initialRestore";
     private static final int REQUEST_AUDIO_ZIP = 4103;
     private static final int REQUEST_BACKUP_EXPORT = 4104;
     private static final int REQUEST_BACKUP_IMPORT = 4105;
@@ -49,6 +50,12 @@ public final class SettingsActivity extends android.app.Activity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = new HifzPrefs(this);
+        if (getIntent().getBooleanExtra(EXTRA_INITIAL_RESTORE, false) && prefs.universalSetupPending()) {
+            LinearLayout restore = subScreen(null, getString(R.string.setup_restore));
+            restore.addView(Ui.button(this, getString(R.string.setup_restore), view -> confirmImportBackup()));
+            showScreen(restore);
+            return;
+        }
         speedStore = new HifzSpeedStore(this);
         try {
             geometry = GeometryRepository.get(this);
@@ -59,7 +66,9 @@ public final class SettingsActivity extends android.app.Activity {
 
         // Spec UI pass 2 (§6): a six-line root; each rubric opens its own short sub-screen. Every
         // row below is the same as before — only where it is shown changed.
-        LinearLayout root = subScreen(null, "Paramètres");
+        LinearLayout root = subScreen(null, getString(R.string.nav_settings));
+        root.addView(Ui.settingRow(this, getString(R.string.app_language), LANGUAGE_LABELS[languageIndex(this)],
+            view -> chooseLanguage()));
         LinearLayout parcours = subScreen(root, "Parcours");
         LinearLayout corpus = subScreen(root, "Plages & corpus");
         LinearLayout revision = subScreen(root, "Révision");
@@ -88,7 +97,13 @@ public final class SettingsActivity extends android.app.Activity {
         TextView itqanRegimeInfo=Ui.text(this,
             "Itqān : consolidation avant An-Nās, maintien de la maîtrise après An-Nās. "
                 +"Bascule automatique ; séances déjà ouvertes préservées.",16f,false);
-        parcours.addView(itqanRegimeInfo);parcours.addView(Ui.divider(this));
+        if (prefs.universalProfile()) {
+            addUniversalDisciplineSwitch(parcours, R.string.setup_deep, true);
+            addUniversalDisciplineSwitch(parcours, R.string.setup_maintenance, false);
+        } else {
+            parcours.addView(itqanRegimeInfo);
+        }
+        parcours.addView(Ui.divider(this));
         learningDaysSetting=Ui.settingRow(this,"Apprentissage / semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
         learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL
             && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
@@ -112,6 +127,15 @@ public final class SettingsActivity extends android.app.Activity {
         parcours.addView(sabqiStartRow);parcours.addView(Ui.divider(this));
         sabqiEndRow=Ui.settingRow(this,"Fin Apprentissage",prefs.sabqiEnd().toString(),v->chooseVerse("Fin de la plage d’Apprentissage",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
         parcours.addView(sabqiEndRow);
+        if (prefs.universalProfile()) {
+            sabqiStartRow.setVisibility(View.GONE);
+            sabqiEndRow.setVisibility(View.GONE);
+            weeklyProgramSetting.setVisibility(View.GONE);
+            parcours.addView(Ui.settingRow(this, getString(R.string.setup_learning_ranges), "",
+                view -> editUniversalLearning()));
+            roadmapModeRow.setVisibility(View.GONE);
+            roadmapLimit.setVisibility(View.GONE);
+        }
         sabqiStatus=Ui.text(this,"",16f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));parcours.addView(sabqiStatus);
 
         section(corpus,"Plages à stabiliser");
@@ -451,6 +475,10 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshSabqi(){
+        if (prefs.universalProfile()) {
+            sabqiStatus.setText(prefs.sabqiLinesRemaining(geometry)+" lignes à apprendre");
+            return;
+        }
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());
         int total=last-first+1;
         boolean aligned=total>0&&(total%PreviewConfig.SABQI_LINES==0
@@ -459,6 +487,29 @@ public final class SettingsActivity extends android.app.Activity {
         TextView startValue=Ui.settingValue(sabqiStartRow),endValue=Ui.settingValue(sabqiEndRow);
         if(startValue!=null)startValue.setText(prefs.sabqiStart().toString());
         if(endValue!=null)endValue.setText(prefs.sabqiEnd().toString());
+    }
+
+    private void editUniversalLearning() {
+        List<String> ranges = new ArrayList<>();
+        for (VerseRange range : prefs.configuredUniversalLearningRanges())
+            ranges.add(range.getStart()+"-"+range.getEndInclusive());
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setText(android.text.TextUtils.join(", ", ranges));
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        new AlertDialog.Builder(this)
+            .setTitle(R.string.setup_learning_ranges)
+            .setMessage(R.string.setup_ranges_help)
+            .setView(input)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.setup_save, (dialog, button) -> {
+                try {
+                    if (prefs.updateUniversalLearning(UniversalLearningRoute.parse(input.getText().toString()), geometry))
+                        refreshSabqi();
+                    else Toast.makeText(this, R.string.setup_keep_finished_ranges, Toast.LENGTH_LONG).show();
+                } catch (IllegalArgumentException invalid) {
+                    Toast.makeText(this, R.string.setup_ranges_error, Toast.LENGTH_LONG).show();
+                }
+            }).show();
     }
 
     private void setSabqiBound(boolean isStart,VerseRef verse){
@@ -551,7 +602,7 @@ public final class SettingsActivity extends android.app.Activity {
         boolean rotationInvalid=!prefs.isRotationStartValid();
         boolean itqanInvalid=!prefs.isItqanCursorValid();
         boolean murajaahInvalid=!prefs.isMurajaahCursorValid();
-        if(rotationInvalid||itqanInvalid||murajaahInvalid){
+        if(!prefs.effectiveItqanRanges().isEmpty() && (rotationInvalid||itqanInvalid||murajaahInvalid)){
             new AlertDialog.Builder(this).setTitle("Position à vérifier")
                 .setMessage("Une borne est hors du nouveau corpus. Aucun déplacement automatique n’a été effectué : Répétition et Révision resteront bloquées tant que la position n’est pas corrigée.")
                 .setNegativeButton("Garder",null)
@@ -574,6 +625,21 @@ public final class SettingsActivity extends android.app.Activity {
         }
     }
 
+    private void addUniversalDisciplineSwitch(LinearLayout screen, int label, boolean deep) {
+        Switch control = new Switch(this);
+        control.setText(label);
+        control.setChecked(deep ? prefs.universalDeepEnabled() : prefs.universalMaintenanceEnabled());
+        control.setMinHeight(Ui.dp(this, 48));
+        control.setOnCheckedChangeListener((button, enabled) -> {
+            if (!prefs.setUniversalItqanDisciplines(deep ? enabled : prefs.universalDeepEnabled(),
+                    deep ? prefs.universalMaintenanceEnabled() : enabled)) {
+                Toast.makeText(this, R.string.setup_save_error, Toast.LENGTH_LONG).show();
+                recreate();
+            }
+        });
+        screen.addView(control);
+    }
+
     private void refreshItqan(){
         TextView rotationValue=Ui.settingValue(rotationSetting);if(rotationValue!=null)rotationValue.setText(prefs.itqanRotationStart().toString());
         // Reported directly: this used to show the legacy itqanCursor field, only ever moved by
@@ -581,7 +647,8 @@ public final class SettingsActivity extends android.app.Activity {
         // could silently diverge from where Stabilisation actually is. itqanRotationLiveCursor
         // reads the real perpetual-rotation position instead (see HifzPrefs for the full story).
         VerseRef liveItqanCursor=prefs.itqanRotationLiveCursor(geometry);
-        boolean invalid=!prefs.itqanWorkCorpus().contains(liveItqanCursor)||!prefs.isMurajaahCursorValid();
+        boolean invalid=liveItqanCursor!=null&&!prefs.itqanWorkCorpus().contains(liveItqanCursor)
+            ||!prefs.isMurajaahCursorValid();
         itqanStatus.setText((invalid?"⚠ ":"")+"Position Stabilisation · "+liveItqanCursor+"   ·   Révision · "+prefs.murajaahCursor());
         itqanStatus.setTextColor(Ui.MUTED);
         itqanStatus.setVisibility(View.VISIBLE);
@@ -785,7 +852,8 @@ public final class SettingsActivity extends android.app.Activity {
                 pending.dismiss();
                 if(failure==null){
                     Toast.makeText(this,"Sauvegarde restaurée ("+count+" entrées).",Toast.LENGTH_LONG).show();
-                    recreate();
+                    if (getIntent().getBooleanExtra(EXTRA_INITIAL_RESTORE, false)) finish();
+                    else recreate();
                 }else{
                     Toast.makeText(this,"Échec de l’import : "+failure,Toast.LENGTH_LONG).show();
                 }

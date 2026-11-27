@@ -138,7 +138,7 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue("Free memorisation remains reachable as a preserved advanced tool",
             advanced.contains("Ui.settingRow(this,\"Mémorisation ponctuelle\"")
             && advanced.contains("new Intent(this,FreeMemActivity.class)"));
-        assertTrue(main.contains("\"Paramètres\""));
+        assertTrue(main.contains("getString(R.string.nav_settings)"));
         assertTrue(free.contains("Retirer une répétition"));
         assertTrue(free.contains("Ajouter une répétition"));
         assertTrue(free.contains("Remettre à zéro"));

@@ -32,7 +32,7 @@ public final class BooxLargeIconsSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue(main.contains("booxIconDp(2, 112)"));
         assertTrue(main.contains("booxIconDp(2, 124)"));
-        assertTrue(main.contains("largeIconFor(role)"));
+        assertTrue(main.contains("primaryTile(practiceRow, R.drawable.ic_haafidh_parcours"));
         assertTrue(main.contains("largeIconFor(label)"));
         assertFalse(main.contains("icon.setColorFilter(Ui.INK)"));
         assertFalse(main.contains("name.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Ui.INK))"));

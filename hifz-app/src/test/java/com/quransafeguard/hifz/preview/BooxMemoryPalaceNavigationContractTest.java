@@ -33,7 +33,7 @@ public final class BooxMemoryPalaceNavigationContractTest {
         String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue(main.contains("booxIconDp(2, 112)"));
         assertTrue(main.contains("booxIconDp(2, 124)"));
-        assertTrue(main.contains("primaryTile(practiceRow, \"Progression\""));
+        assertTrue(main.contains("primaryTile(practiceRow, R.drawable.ic_haafidh_progression"));
         assertTrue("Four compact visible captions, still no boxed cards",
             main.contains("TextView caption = Ui.bookText(this, display")
             && main.contains("tile.addView(caption)")
