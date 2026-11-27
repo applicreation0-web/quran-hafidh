@@ -58,7 +58,7 @@ if adb shell pm path "$launcher" | grep -q '^package:'; then
 fi
 status=0
 gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
-    -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#threePageBatchAdvancesResumesDefersAndReturnsWithoutActiveCredit,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#continuationCannotCrossTheMorningEveningBoundary \
+    -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#threePageBatchAdvancesResumesDefersAndReturnsWithoutActiveCredit,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#continuationCannotCrossTheMorningEveningBoundary,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#programmedBudgetsExpireWithoutCreditOrLosingAnyOfTwelvePages \
     || status=1
 verify_process_death || status=1
 # The candidate now has a higher versionCode. Android refuses an ordinary
@@ -100,6 +100,12 @@ for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
         fi
         adb shell wm size "$size" && adb shell wm density "$density" && \
             adb shell settings put system font_scale "$font" || { status=1; continue; }
+        actual_font="$(adb shell settings get system font_scale | tr -d '\r')"
+        if [[ "$actual_font" != "$font" ]]; then
+            echo "Unexpected font scale: $actual_font (expected $font)" | tee "$dest/result.txt"
+            status=1
+            continue
+        fi
         adb shell rm -f "/sdcard/Android/data/$package/files/fragilite-visible.png" \
             "/sdcard/Android/data/$package/files/fragilite-masquee.png" \
             "/sdcard/Android/data/$package/files/fragilite-cible.png" \
@@ -116,6 +122,24 @@ for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
             adb pull "/sdcard/Android/data/$package/files/fragilite-$phase.png" "$dest/" || status=1
             test -s "$dest/fragilite-$phase.png" || status=1
         done
+        python3 - "$dest" "$size" <<'PYTHON' | tee -a "$dest/result.txt" || status=1
+from pathlib import Path
+from struct import unpack
+import sys
+
+folder = Path(sys.argv[1])
+expected = tuple(map(int, sys.argv[2].split("x")))
+for phase in ("visible", "masquee", "cible", "reprise"):
+    path = folder / f"fragilite-{phase}.png"
+    with path.open("rb") as stream:
+        header = stream.read(24)
+    if len(header) != 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+        raise SystemExit(f"Invalid screenshot: {path}")
+    actual = unpack(">II", header[16:24])
+    if actual != expected:
+        raise SystemExit(f"{path}: actual {actual}, expected {expected}")
+print(f"Verified four real screenshots at {expected[0]}x{expected[1]}")
+PYTHON
     done
 done
 adb shell wm size reset || status=1

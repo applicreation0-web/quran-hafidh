@@ -133,7 +133,8 @@ jobs:
           api-level: 35
           arch: x86_64
           target: google_apis
-          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect -accel on
+          profile: pixel_6
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -skin 1080x2400 -gpu swiftshader_indirect -accel on
           script: bash scripts/run_11723_android_qualification.sh "$RUNNER_TEMP/haafidh-base"
       - name: Retain synthetic captures and test results
         if: always()
@@ -144,5 +145,6 @@ jobs:
             haafidh-evidence/**/*.png
             haafidh-evidence/**/build.txt
             haafidh-evidence/**/*result.txt
+            haafidh-evidence/**/activity.txt
             hifz-app/build/outputs/androidTest-results/
           if-no-files-found: warn

@@ -186,6 +186,78 @@ public final class FragilityReaderVisualInstrumentedTest {
         }finally{HifzBackup.restore(context,original);}
     }
 
+    @Test public void programmedBudgetsExpireWithoutCreditOrLosingAnyOfTwelvePages() throws Exception {
+        Context context = ApplicationProvider.getApplicationContext();
+        new HifzPrefs(context);
+        JSONObject original = HifzBackup.export(context);
+        SharedPreferences raw = context.getSharedPreferences("quran_hifz_preview_v1", 0);
+        java.time.LocalDate date = java.time.LocalDate.of(2026, 11, 23);
+        ActiveReviewSlots.Slot slot = ActiveReviewSlots.Slot.MORNING;
+        GeometryRepository geometry = GeometryRepository.get(context);
+        VerseRef start = new VerseRef(2, 1);
+        VerseRef end = new VerseRef(2, 74);
+        int firstPage = geometry.pageForVerse(new VerseRef(2, 6));
+        java.util.List<Integer> pages = new java.util.ArrayList<>();
+        for (int page = firstPage; page < firstPage + 12; page++) pages.add(page);
+
+        try {
+            HifzClock.setClockForTests(java.time.Clock.fixed(
+                date.atTime(6, 0).toInstant(java.time.ZoneOffset.UTC), java.time.ZoneOffset.UTC));
+            for (int[] band : new int[][]{{40, 5}, {60, 10}, {70, 15}}) {
+                assertTrue(raw.edit().clear().commit());
+                HifzPrefs prefs = new HifzPrefs(context);
+                assertTrue(prefs.setV6AcquiredRanges(Collections.singletonList(new VerseRange(start, end)), geometry));
+                prefs.setActiveMurajaahCursor(start);
+                int acquired = prefs.acquiredLineCountV6();
+                ActiveReviewSlots slots = prefs.activeReviewSlots();
+                long activeMs = band[0] * 60_000L;
+                long budgetMs = band[1] * 60_000L;
+                ActiveReviewCorrectionStore store = slots.correction(date, slot);
+                assertTrue(slots.checkpoint(date, slot, start, start, firstPage, activeMs, false, band[0]));
+                assertTrue(store.begin(date.toString(), start, start, activeMs, pages, firstPage));
+                VerseRef next = prefs.activeMurajaahCorpus().next(start);
+                assertTrue(slots.completeRecall(date, slot, start, next, "Révision fixture"));
+
+                Intent intent = new Intent(context, HifzSessionActivity.class)
+                    .putExtra(HifzSessionActivity.EXTRA_MODE, slot.mode);
+                try (ActivityScenario<HifzSessionActivity> activity = ActivityScenario.launch(intent)) {
+                    HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity, "mushaf", "Programmed fragility");
+                    activity.onActivity(a -> {
+                        String label = ((TextView) field(a, "timerText")).getContentDescription().toString();
+                        long elapsed = ((SessionClock) field(a, "fragilityClock")).elapsedMs();
+                        long shown = Long.parseLong(label.substring(label.length() - 5, label.length() - 3)) * 60L
+                            + Long.parseLong(label.substring(label.length() - 2));
+                        assertTrue(Math.abs(shown - (budgetMs - elapsed) / 1000L) <= 2);
+                        assertEquals(firstPage, store.pending().page());
+                        if (band[1] == 10) click(a, "Page suivante");
+                    });
+                    if (band[1] == 10) {
+                        HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity, "mushaf", "Next unresolved page");
+                        assertEquals(firstPage + 1, store.pending().page());
+                    }
+                    activity.onActivity(a -> {
+                        ((SessionClock) field(a, "fragilityClock")).syncPersistedElapsed(budgetMs);
+                        View previous = control((View) field(a, "actions"), "Page précédente");
+                        if (previous != null) previous.performClick();
+                    });
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                    activity.onActivity(a -> assertNotNull(control((View) field(a, "actions"), "Continuer")));
+                }
+
+                assertNull(store.pending());
+                java.util.List<Integer> remaining = slots.manualCorrection().queuedPages();
+                assertEquals(pages.size(), remaining.size());
+                assertTrue(remaining.containsAll(pages));
+                assertEquals(acquired, prefs.acquiredLineCountV6());
+                assertEquals(next, prefs.activeMurajaahCursor());
+                assertEquals(1, slots.receipts().size());
+            }
+        } finally {
+            HifzClock.resetClockForTests();
+            HifzBackup.restore(context, original);
+        }
+    }
+
     @Test public void continuationCannotCrossTheMorningEveningBoundary(){
         assertTrue(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.MORNING,HifzSessionActivity.SABQI));
         assertTrue(MainActivity.isSameSlotContinuation(ActiveReviewSlots.Slot.MORNING,HifzSessionActivity.ITQAN));
