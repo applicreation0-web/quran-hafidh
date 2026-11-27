@@ -3,9 +3,11 @@ package com.quransafeguard.hifz.preview;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.os.Build;
 import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
@@ -311,12 +313,21 @@ public final class MushafView extends WebView {
             String geometry = needsGeometry ? GeometryRepository.get(getContext()).pageGeometryJson(page) : null;
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             if (!html.contains("'nonce-" + INLINE_NONCE + "'")) throw new IllegalStateException("reader CSP nonce missing");
+            boolean correction = correctionVisibleBoot || correctionOpaqueBoot;
+            final String callback = "N?.pageShown(currentPage,Number(boot.renderGeneration||0));";
+            if (correction) {
+                if (!javascript.contains(callback)) throw new IllegalStateException("reader page callback missing");
+                javascript = javascript.replace(callback,
+                    "requestAnimationFrame(()=>requestAnimationFrame(()=>{"
+                    + "const folio=document.getElementById('mushaf').getBoundingClientRect();"
+                    + "if(folio.width>0&&folio.height>0){" + callback + "}"
+                    + "}));");
+            }
             if (atomicFreeMaskBoot || atomicFullMaskBoot) {
                 // Hide raw Mushaf SVG BEFORE HTML parsing paints any Arabic glyph.
                 // The verified 100% mask alone may reveal this same folio later.
                 if (!html.contains("</style>")) throw new IllegalStateException("reader CSS missing");
                 html = html.replace("</style>", "#mushaf{visibility:hidden}\n</style>");
-                final String callback = "N?.pageShown(currentPage,Number(boot.renderGeneration||0));";
                 if (!javascript.contains(callback)) throw new IllegalStateException("reader page callback missing");
                 String invalidMask = correctionOpaqueBoot
                     ? "mask!==100||!prepared||prepared.getAttribute('data-correction-opaque')!=='1'"
@@ -362,13 +373,30 @@ public final class MushafView extends WebView {
                 .put("rubMark", rubMarkFor(page));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
-            html = html.replace(SCRIPT_TAG, inline).replace(SVG_SLOT, svg);
+            String document = html.replace(SCRIPT_TAG, inline).replace(SVG_SLOT, svg);
             markerDialogOpen = false;
-            loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+            if (correction) loadCorrectionAfterLayout(document, currentGeneration);
+            else loadDataWithBaseURL(null, document, "text/html", "UTF-8", null);
             postDelayed(watchdog, timeoutAfterObservedRender(observedRenderMs));
         } catch (Throwable error) {
             showFailure("Erreur Mushaf page " + page + " : " + safeMessage(error));
         }
+    }
+
+    private void loadCorrectionAfterLayout(String document, long generation) {
+        getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override public boolean onPreDraw() {
+                if (generation != renderGeneration || (getWidth() > 0 && getHeight() > 0)) {
+                    getViewTreeObserver().removeOnPreDrawListener(this);
+                    post(() -> {
+                        if (generation == renderGeneration)
+                            loadDataWithBaseURL(null, document, "text/html", "UTF-8", null);
+                    });
+                }
+                return true;
+            }
+        });
+        postInvalidateOnAnimation();
     }
 
     public void setMask(int maskPercent) {
@@ -675,8 +703,17 @@ public final class MushafView extends WebView {
                     // Chromium's visual-state fence before enabling correction controls.
                     postVisualStateCallback(generation,new WebView.VisualStateCallback(){
                         @Override public void onComplete(long requestId){
-                            if(requestId==renderGeneration&&page==requestedPage&&!pageShown)
-                                acknowledgePaint(page);
+                            if (requestId != renderGeneration || page != requestedPage || pageShown) return;
+                            if ((correctionVisibleBoot || correctionOpaqueBoot)
+                                    && Build.VERSION.SDK_INT >= 29 && isHardwareAccelerated()) {
+                                // Chromium's callback only promises what WebView will draw next.
+                                // Unlock the controls after the Android window submits that frame.
+                                getViewTreeObserver().registerFrameCommitCallback(() -> post(() -> {
+                                    if (requestId == renderGeneration && page == requestedPage && !pageShown)
+                                        acknowledgePaint(page);
+                                }));
+                                postInvalidateOnAnimation();
+                            } else acknowledgePaint(page);
                         }
                     });
                     invalidate();
