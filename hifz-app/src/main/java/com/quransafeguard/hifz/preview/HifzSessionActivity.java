@@ -2697,7 +2697,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         closeAudio();
         if(audio){
             audioPlayer=new HifzAudioDialog(this,mushaf,Collections.singletonList(verse));
-            audioPlayer.attachInline(audioHost);
+            audioPlayer.attachInline(audioHost, true);
         }else if(currentMask==100){
             fragilityPageReady=false;
             correctionMaskedPageReady=false;
@@ -3412,5 +3412,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         super.onPause();
     }
     @Override protected void onDestroy(){if(fragilityVersePicker!=null)fragilityVersePicker.dismiss();stopFragilityClock();if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        int code = event.getKeyCode();
+        if (correctionState != null && (code == KeyEvent.KEYCODE_PAGE_UP || code == KeyEvent.KEYCODE_PAGE_DOWN)) {
+            // The reader WebView can consume page keys before Activity.onKeyDown.
+            if (event.getAction() == KeyEvent.ACTION_DOWN)
+                navigateFragility(correctionRenderGeneration, code == KeyEvent.KEYCODE_PAGE_UP ? -1 : 1);
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(correctionState!=null){if(code==KeyEvent.KEYCODE_PAGE_UP||code==KeyEvent.KEYCODE_PAGE_DOWN){navigateFragility(correctionRenderGeneration,code==KeyEvent.KEYCODE_PAGE_UP?-1:1);return true;}return super.onKeyDown(code,e);}if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

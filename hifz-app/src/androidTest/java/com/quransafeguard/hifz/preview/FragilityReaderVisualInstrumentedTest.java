@@ -1,8 +1,11 @@
 package com.quransafeguard.hifz.preview;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.MediaPlayer;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -10,6 +13,11 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import com.quransafeguard.hifz.core.VerseRef;
 import com.quransafeguard.hifz.core.VerseRange;
+import java.io.File;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collections;
 import org.json.JSONObject;
 import org.junit.Test;
@@ -130,7 +138,8 @@ public final class FragilityReaderVisualInstrumentedTest {
                 assertEquals(java.util.Arrays.asList(6,10,4),store.pending().pages);
                 activity.onActivity(a->click(a,"Page suivante"));
                 assertPhase(activity,store,10,0,"READ");
-                activity.onActivity(a->click(a,"Page précédente"));
+                activity.onActivity(a->assertTrue(a.dispatchKeyEvent(
+                    new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_UP))));
                 assertPhase(activity,store,6,0,"READ");
                 assertEquals(java.util.Arrays.asList(6,10,4),store.pending().pages);
                 activity.onActivity(a->assertEquals("Libre",((TextView)field(a,"timerText")).getText().toString()));
@@ -196,7 +205,10 @@ public final class FragilityReaderVisualInstrumentedTest {
         GeometryRepository geometry = GeometryRepository.get(context);
         VerseRef start = new VerseRef(2, 1);
         VerseRef end = new VerseRef(2, 74);
-        int firstPage = geometry.pageForVerse(new VerseRef(2, 6));
+        VerseRef audioVerse = new VerseRef(2, 6);
+        int firstPage = geometry.pageForVerse(audioVerse);
+        File audioFolder = new File(context.getFilesDir(), "audio/husary-muallim");
+        assertFalse("The test requires an isolated Android fixture without an audio pack", audioFolder.exists());
         java.util.List<Integer> pages = new java.util.ArrayList<>();
         for (int page = firstPage; page < firstPage + 12; page++) pages.add(page);
 
@@ -218,6 +230,7 @@ public final class FragilityReaderVisualInstrumentedTest {
                 VerseRef next = prefs.activeMurajaahCorpus().next(start);
                 assertTrue(slots.completeRecall(date, slot, start, next, "Révision fixture"));
 
+                if (band[1] == 15) seedSyntheticAudio(audioFolder);
                 Intent intent = new Intent(context, HifzSessionActivity.class)
                     .putExtra(HifzSessionActivity.EXTRA_MODE, slot.mode);
                 try (ActivityScenario<HifzSessionActivity> activity = ActivityScenario.launch(intent)) {
@@ -235,13 +248,46 @@ public final class FragilityReaderVisualInstrumentedTest {
                         HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity, "mushaf", "Next unresolved page");
                         assertEquals(firstPage + 1, store.pending().page());
                     }
+                    if (band[1] != 10) {
+                        activity.onActivity(a -> click(a, "Masquer la page"));
+                        HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity, "mushaf", "Full mask");
+                        activity.onActivity(a -> selectAudioVerse(a, audioVerse));
+                        if (band[1] == 5) {
+                            activity.onActivity(a -> {
+                                assertNull(field(a, "audioPlayer"));
+                                assertFalse(store.pending().assisted);
+                                a.onVerseTap(audioVerse);
+                                assertTrue(store.pending().assisted);
+                            });
+                            HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity, "mushaf", "First targeted reveal");
+                            activity.onActivity(a -> a.onVerseTap(new VerseRef(2, 7)));
+                        } else {
+                            activity.onActivity(a -> {
+                                assertEquals(Collections.singletonList(audioVerse),
+                                    field(field(a, "audioPlayer"), "queue"));
+                                assertTrue(store.pending().assisted);
+                                assertFalse(control((View) field(a, "actions"), "Page récitée sans aide").isEnabled());
+                                View audio = (View) field(a, "audioHost");
+                                assertNull(control(audio, "Verset suivant"));
+                                assertNull(control(audio, "Verset précédent"));
+                                assertTrue(control(audio, "Lire").performClick());
+                            });
+                            awaitPlayback(activity);
+                            activity.onActivity(a -> assertTrue(control((View) field(a, "audioHost"), "Répéter le verset").performClick()));
+                            awaitPlayback(activity);
+                        }
+                    }
                     activity.onActivity(a -> {
                         ((SessionClock) field(a, "fragilityClock")).syncPersistedElapsed(budgetMs);
                         View previous = control((View) field(a, "actions"), "Page précédente");
                         if (previous != null) previous.performClick();
                     });
                     androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-                    activity.onActivity(a -> assertNotNull(control((View) field(a, "actions"), "Continuer")));
+                    activity.onActivity(a -> {
+                        assertNotNull(control((View) field(a, "actions"), "Continuer"));
+                        assertNull(field(a, "audioPlayer"));
+                        assertEquals(View.GONE, ((View) field(a, "audioHost")).getVisibility());
+                    });
                 }
 
                 assertNull(store.pending());
@@ -253,9 +299,56 @@ public final class FragilityReaderVisualInstrumentedTest {
                 assertEquals(1, slots.receipts().size());
             }
         } finally {
+            File[] audioFiles = audioFolder.listFiles();
+            if (audioFiles != null) {
+                for (File file : audioFiles) Files.delete(file.toPath());
+                Files.delete(audioFolder.toPath());
+            }
             HifzClock.resetClockForTests();
             HifzBackup.restore(context, original);
         }
+    }
+
+    private static void selectAudioVerse(HifzSessionActivity activity, VerseRef verse) {
+        click(activity, "Audio ciblé");
+        AlertDialog picker = (AlertDialog) field(activity, "fragilityVersePicker");
+        android.widget.ListView verses = picker.getListView();
+        for (int row = 0; row < verses.getCount(); row++) {
+            if (("Verset " + verse).equals(verses.getAdapter().getItem(row))) {
+                assertTrue(verses.performItemClick(verses.getChildAt(row), row, row));
+                return;
+            }
+        }
+        fail("Missing audio verse " + verse);
+    }
+
+    private static void awaitPlayback(ActivityScenario<HifzSessionActivity> activity) {
+        java.util.concurrent.atomic.AtomicBoolean playing = new java.util.concurrent.atomic.AtomicBoolean();
+        for (int attempt = 0; attempt < 40; attempt++) {
+            activity.onActivity(a -> {
+                MediaPlayer player = (MediaPlayer) field(field(a, "audioPlayer"), "player");
+                playing.set(player != null && !((Boolean) field(field(a, "audioPlayer"), "preparing")) && player.isPlaying());
+            });
+            if (playing.get()) return;
+            android.os.SystemClock.sleep(100);
+        }
+        fail("Synthetic Android playback did not start");
+    }
+
+    /** A generated PCM clip exercises MediaPlayer without copying the private recitation pack. */
+    private static void seedSyntheticAudio(File folder) throws Exception {
+        Files.createDirectories(folder.toPath());
+        for (String file : new String[]{".verified-6236-v1", "source.json", "sha256.txt", "001001.mp3", "114006.mp3"})
+            Files.write(folder.toPath().resolve(file), new byte[]{1});
+        int sampleRate = 8000;
+        int pcmBytes = sampleRate * 2 * 8;
+        ByteBuffer wave = ByteBuffer.allocate(44 + pcmBytes).order(ByteOrder.LITTLE_ENDIAN);
+        wave.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + pcmBytes);
+        wave.put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII)).putInt(16);
+        wave.putShort((short) 1).putShort((short) 1).putInt(sampleRate).putInt(sampleRate * 2);
+        wave.putShort((short) 2).putShort((short) 16);
+        wave.put("data".getBytes(StandardCharsets.US_ASCII)).putInt(pcmBytes);
+        Files.write(folder.toPath().resolve("002006.mp3"), wave.array());
     }
 
     @Test public void continuationCannotCrossTheMorningEveningBoundary(){
