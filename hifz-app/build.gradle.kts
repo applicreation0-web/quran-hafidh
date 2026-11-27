@@ -254,8 +254,19 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(session.contains("prêt à valider") && session.contains("validateSabqi") && session.contains("validateItqan")) {
             "Leçon neuve and Ancrage completion must require explicit persisted validation."
         }
-        check(!session.contains("Page suivante") && !session.contains("Page précédente")) {
-            "Tablet Hifz sessions must use swipe/hardware page turns, not permanent page buttons."
+        // Explicit exception approved for the finite Fragilités queue only.
+        val correctionStart = session.indexOf("private void renderActiveCorrection()")
+        val correctionEnd = session.indexOf("private boolean isCurrentCorrectionRender", correctionStart)
+        check(correctionStart >= 0 && correctionEnd > correctionStart)
+        val ordinarySession = session.substring(0, correctionStart) + session.substring(correctionEnd)
+        check(!ordinarySession.contains("Page suivante") && !ordinarySession.contains("Page précédente")) {
+            "Ordinary Hifz sessions must retain swipe/hardware page turns."
+        }
+        val fragilityReader = session.substring(correctionStart, correctionEnd)
+        check(fragilityReader.contains("Page suivante") && fragilityReader.contains("Page précédente")
+            && fragilityReader.contains("navigateFragility(generation,1)")
+            && fragilityReader.contains("navigateFragility(generation,-1)")) {
+            "Only the correction queue may offer explicit previous/next actions."
         }
         check(!session.contains("heading = Ui.bookText")) {
             "Structured Hifz modes must not waste Mushaf height on a separate mode title."
@@ -342,8 +353,8 @@ android {
         applicationId = "com.quransafeguard.hifz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 61
-        versionName = "1.17.23"
+        versionCode = 62
+        versionName = "1.17.24"
         if (boox1175Preview) versionName = "1.17.15"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

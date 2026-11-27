@@ -810,7 +810,51 @@ public final class MainActivity extends android.app.Activity {
         }
         Intent intent=new Intent(this,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,mode);
         if(scheduledDate!=null)intent.putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,scheduledDate.toString());
-        startActivity(intent);
+        if(ActiveReviewSlots.Slot.fromMode(mode)!=null)
+            startActivityForResult(intent,ACTIVE_REVIEW_CONTINUATION);
+        else startActivity(intent);
+    }
+
+    private static final int ACTIVE_REVIEW_CONTINUATION=1724;
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=ACTIVE_REVIEW_CONTINUATION||resultCode!=RESULT_OK||data==null||geometry==null)return;
+        LocalDate current=HifzClock.today();
+        if(!current.toString().equals(data.getStringExtra(HifzSessionActivity.EXTRA_FINISHED_ACTIVE_DATE)))return;
+        String slotName=data.getStringExtra(HifzSessionActivity.EXTRA_FINISHED_ACTIVE_SLOT);
+        ActiveReviewSlots.Slot slot;
+        if("MORNING".equals(slotName))slot=ActiveReviewSlots.Slot.MORNING;
+        else if("EVENING".equals(slotName))slot=ActiveReviewSlots.Slot.EVENING;
+        else return;
+        try{
+            prefs=new HifzPrefs(this);
+            ledger.capture(prefs);
+            ActiveReviewSlots reviews=prefs.activeReviewSlots();
+            if(reviews.receipt(current,slot)==null||reviews.correctionPending(current,slot))return;
+            // Reuse the real day planner, never open a different half-day or
+            // bypass the existing prerequisite for a snowball session.
+            List<TodaySession> rows=todaySessions(current,null,null);
+            for(TodaySession row:rows){
+                if(!row.done&&!row.label.contains("en attente")
+                        &&current.equals(row.scheduled)&&isSameSlotContinuation(slot,row.mode)){
+                    openMode(row.mode,row.scheduled);
+                    return;
+                }
+            }
+        }catch(RuntimeException unavailable){
+            android.util.Log.w("QuranHifz","Next activity unavailable; receipts retained",unavailable);
+        }
+    }
+
+    static boolean isSameSlotContinuation(ActiveReviewSlots.Slot slot,String mode){
+        if(slot==ActiveReviewSlots.Slot.MORNING)
+            return HifzSessionActivity.SABQI.equals(mode)||HifzSessionActivity.ITQAN.equals(mode)
+                ||HifzSessionActivity.LEARNING_FINAL.equals(mode);
+        return slot==ActiveReviewSlots.Slot.EVENING
+            &&(HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode)
+                ||HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
+                ||HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode));
     }
 
     private boolean modeComplete(LocalDate date,String mode){

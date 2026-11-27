@@ -30,26 +30,50 @@ run_process_death_phase() {
     grep -Fxq 'OK (1 test)' "$output" && grep -Fxq 'INSTRUMENTATION_CODE: -1' "$output"
 }
 
-verify_process_death() {
+verify_upgrade_and_process_death() {
     local package="com.quransafeguard.hifz.ibnkathirtest"
+    local before after before_install after_install
     local -a app_apk test_apk
     mapfile -t app_apk < <(find hifz-app/build/outputs/apk/debug -name '*.apk' -type f)
     mapfile -t test_apk < <(find hifz-app/build/outputs/apk/androidTest/debug -name '*.apk' -type f)
     [[ ${#app_apk[@]} -eq 1 && ${#test_apk[@]} -eq 1 ]] || return 1
-    adb install -r "${app_apk[0]}" && adb install -r "${test_apk[0]}" || return 1
+
+    # The reference capture installed code 61. Seed its real stores before replacing it.
+    before="$(adb shell dumpsys package "$package")" || return 1
+    grep -Eq '^[[:space:]]+versionCode=61([[:space:]]|$)' <<<"$before" || return 1
+    before_install="$(awk -F= '/firstInstallTime=/{ print $2; exit }' <<<"$before")"
+    [[ -n "$before_install" ]] || return 1
+    adb install -r "${test_apk[0]}" || return 1
     run_process_death_phase a_prepareFixtureForExternalForceStop || return 1
     adb shell am force-stop "$package" || return 1
+
+    adb install -r "${app_apk[0]}" || return 1
+    after="$(adb shell dumpsys package "$package")" || return 1
+    grep -Eq '^[[:space:]]+versionCode=62([[:space:]]|$)' <<<"$after" || return 1
+    after_install="$(awk -F= '/firstInstallTime=/{ print $2; exit }' <<<"$after")"
+    [[ "$before_install" == "$after_install" ]] || return 1
     adb shell am start -W -n "$package/com.quransafeguard.hifz.preview.MainActivity" \
         | tee "$evidence/after/restart-result.txt" | grep '^Status: ok' || return 1
     adb shell am force-stop "$package" || return 1
-    run_process_death_phase b_verifyFixtureAfterExternalForceStop
+    run_process_death_phase b_verifyFixtureAfterExternalForceStop || return 1
+    echo "PASS: isolated debug upgrade 61 -> 62, same installation and persisted fixture."
 }
 
+# Emulator-only isolation: prevent the nonessential launcher from monopolizing
+# the screen with an ANR dialog during the repeated display-size changes.
+# Do not suppress app ANRs or bypass any test assertion.
+if [[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" != "1" ]]; then
+    echo "Refusing visual qualification outside an emulator" >&2
+    exit 1
+fi
+launcher="com.google.android.apps.nexuslauncher"
+if adb shell pm path "$launcher" | grep -q '^package:'; then
+    adb shell am force-stop "$launcher"
+fi
 status=0
 gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
-    -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest \
+    -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#threePageBatchAdvancesResumesDefersAndReturnsWithoutActiveCredit,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#continuationCannotCrossTheMorningEveningBoundary,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#programmedBudgetsExpireWithoutCreditOrLosingAnyOfTwelvePages \
     || status=1
-verify_process_death || status=1
 # The candidate now has a higher versionCode. Android refuses an ordinary
 # install -r of the older reference. Remove ONLY the disposable emulator's
 # synthetic debug package before reference capture; never touch a real device.
@@ -65,7 +89,10 @@ if ! run_capture "$reference" "$evidence/before"; then
     done
     test -s "$evidence/before/phone-font100-home.png" || status=1
 fi
-# Both builds share the isolated debug package. Start each visual run with synthetic default state.
+if ! verify_upgrade_and_process_death 2>&1 | tee "$evidence/after/debug-upgrade-result.txt"; then
+    status=1
+fi
+# Reset synthetic data only after the in-place upgrade and its persistence assertions.
 adb shell pm clear com.quransafeguard.hifz.ibnkathirtest || status=1
 run_capture "$candidate" "$evidence/after" || status=1
 # Reinstall instrumentation after removing the isolated debug target.
@@ -84,21 +111,51 @@ for viewport in 900x1200:220 1404x1872:240 1080x2400:440; do
         mkdir -p "$dest"
         package=com.quransafeguard.hifz.ibnkathirtest
         adb shell am force-stop "$package" || { status=1; continue; }
+        if adb shell pm path "$launcher" | grep -q '^package:'; then
+            adb shell am force-stop "$launcher" || { status=1; continue; }
+        fi
         adb shell wm size "$size" && adb shell wm density "$density" && \
             adb shell settings put system font_scale "$font" || { status=1; continue; }
+        actual_font="$(adb shell settings get system font_scale | tr -d '\r')"
+        if [[ "$actual_font" != "$font" ]]; then
+            echo "Unexpected font scale: $actual_font (expected $font)" | tee "$dest/result.txt"
+            status=1
+            continue
+        fi
         adb shell rm -f "/sdcard/Android/data/$package/files/fragilite-visible.png" \
             "/sdcard/Android/data/$package/files/fragilite-masquee.png" \
+            "/sdcard/Android/data/$package/files/fragilite-cible.png" \
             "/sdcard/Android/data/$package/files/fragilite-reprise.png" || { status=1; continue; }
         adb shell am instrument -w -r -e class \
-            com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest \
+            com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#standaloneVisibleMaskedAndDeferredPreserveAllAcquisitionAndActiveEvidence \
             "$package.test/androidx.test.runner.AndroidJUnitRunner" >"$dest/result.txt" 2>&1 || status=1
         cat "$dest/result.txt"
+        adb exec-out screencap -p >"$dest/end-screen.png" || status=1
+        adb shell dumpsys activity activities >"$dest/activity.txt" || status=1
         grep -Fxq 'OK (1 test)' "$dest/result.txt" || status=1
         grep -Fxq 'INSTRUMENTATION_CODE: -1' "$dest/result.txt" || status=1
-        for phase in visible masquee reprise; do
+        for phase in visible masquee cible reprise; do
             adb pull "/sdcard/Android/data/$package/files/fragilite-$phase.png" "$dest/" || status=1
             test -s "$dest/fragilite-$phase.png" || status=1
         done
+        python3 - "$dest" "$size" <<'PYTHON' | tee -a "$dest/result.txt" || status=1
+from pathlib import Path
+from struct import unpack
+import sys
+
+folder = Path(sys.argv[1])
+expected = tuple(map(int, sys.argv[2].split("x")))
+for phase in ("visible", "masquee", "cible", "reprise"):
+    path = folder / f"fragilite-{phase}.png"
+    with path.open("rb") as stream:
+        header = stream.read(24)
+    if len(header) != 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+        raise SystemExit(f"Invalid screenshot: {path}")
+    actual = unpack(">II", header[16:24])
+    if actual != expected:
+        raise SystemExit(f"{path}: actual {actual}, expected {expected}")
+print(f"Verified four real screenshots at {expected[0]}x{expected[1]}")
+PYTHON
     done
 done
 adb shell wm size reset || status=1

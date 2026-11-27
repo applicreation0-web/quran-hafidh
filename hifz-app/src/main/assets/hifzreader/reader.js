@@ -800,6 +800,37 @@ function semanticCueLayer(svg){
   return g;
 }
 
+// Fragilités uses a complete opaque folio cover, not partial line masks or a
+// composited SVG mask. All openings are exact QCF word boxes supplied by native
+// code; failure to build the cover leaves the first-paint gate closed.
+function correctionOpaqueLayer(svg,lines){
+  const vb=svg.viewBox&&svg.viewBox.baseVal;
+  if(!vb||!Number.isFinite(vb.x)||!Number.isFinite(vb.y)||!(vb.width>0&&vb.height>0))return null;
+  const full=[vb.x,vb.y,vb.x+vb.width,vb.y+vb.height];
+  const raw=protectedWordBoxes();
+  const shown=raw.map(b=>wordBoxInSvgSpace(b,svg)).filter(Boolean);
+  if(shown.length!==raw.length)return null;
+  if(shown.some(b=>b[0]<full[0]||b[1]<full[1]||b[2]>full[2]||b[3]>full[3]))return null;
+  const group=document.createElementNS(NS,'g');
+  group.setAttribute('class','masklayer');
+  const cover=document.createElementNS(NS,'g');
+  cover.setAttribute('class','correction-cover');
+  const rects=rectMinus([full],shown);
+  if(!rects.length)return null;
+  function paint(r){
+    const node=document.createElementNS(NS,'rect');
+    node.setAttribute('class','maskcell');
+    node.setAttribute('x',r[0]);node.setAttribute('y',r[1]);
+    node.setAttribute('width',r[2]-r[0]);node.setAttribute('height',r[3]-r[1]);
+    cover.appendChild(node);
+  }
+  rects.forEach(paint);
+  group.appendChild(cover);
+  group.appendChild(markerLayer(svg,[],lines));
+  group.setAttribute('data-correction-opaque','1');
+  return group;
+}
+
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
@@ -826,7 +857,10 @@ function render(){
 
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
   lineInkBands=clamped&&lines.length?computeLineInkBands(lines,svg):new Map();
-  if(clamped&&pageGeo&&lineIds.length&&lines.length){
+  if(boot.correctionOpaque===true&&clamped===100){
+    const layer=correctionOpaqueLayer(svg,lines);
+    if(layer)svg.appendChild(layer);
+  }else if(clamped&&pageGeo&&lineIds.length&&lines.length){
     const polys=maskFollowsSelection?selectedPolygons(svg):[],cells=maskCandidates(lines,polys);
     if(cells.length){
       const segments=sealFullEraseSeams(randomSegmentsForCells(cells,clamped,currentRandomOrder(cells)),lines);

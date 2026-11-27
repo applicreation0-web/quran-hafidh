@@ -116,6 +116,43 @@ public final class ActiveReviewCorrectionStoreTest {
         for(String key:before.keySet())assertEquals(before.get(key),disk.getAll().get(key));
     }
 
+    @Test public void navigationCannotEarnCreditOrResetGlobalBudget(){
+        disk.edit().putString(ActiveReviewCorrectionStore.KEY_QUEUE,"[408,407,406]").commit();
+        assertTrue(store.begin("2026-10-29",start,end,2400000L,Arrays.asList(408,407,406),409));
+        assertTrue(store.recordElapsed(store.pending(),123456L));
+        assertTrue(store.navigate(store.pending(),1));
+        assertEquals(407,store.pending().page());
+        assertEquals(0,store.pending().pageIndex);
+        assertEquals(123456L,store.pending().correctionElapsedMs);
+        assertTrue(store.navigate(store.pending(),-1));
+        assertEquals(Arrays.asList(408,407,406),store.pending().pages);
+        assertTrue(store.remask(store.pending()));
+        assertTrue(store.revealDuringControl(store.pending()));
+        assertFalse(store.pageRecalled(store.pending()));
+        assertTrue(store.remask(store.pending()));
+        assertTrue(store.pageRecalled(store.pending()));
+        assertEquals(1,store.pending().pageIndex);
+        assertTrue(store.navigate(store.pending(),1));
+        assertEquals(Arrays.asList(408,406,407),store.pending().pages);
+        assertTrue(store.deferPage(store.pending()));
+        assertEquals(407,store.pending().page());
+        assertEquals(Arrays.asList(406),store.pending().deferred);
+        assertTrue(store.recordElapsed(store.pending(),300000L));
+        assertTrue(store.finishIndependent(store.pending()));
+        assertNull(store.pending());
+        assertEquals(Arrays.asList(407,406),store.queuedPages());
+    }
+
+    @Test public void everyUnprocessedPageSurvivesBudgetExpirationAfterNavigation(){
+        assertTrue(store.begin("2026-10-29",start,end,2400000L,Arrays.asList(408,407,406),409));
+        assertTrue(store.navigate(store.pending(),1));
+        assertTrue(store.recordElapsed(store.pending(),300000L));
+        assertTrue(store.finishIndependent(store.pending()));
+        assertEquals(new java.util.HashSet<>(Arrays.asList(408,407,406)),
+            new java.util.HashSet<>(store.queuedPages()));
+        assertEquals(3,store.queuedPages().size());
+    }
+
     @Test public void failedCheckpointDoesNotAdvanceOrExposeAnUnrecordedReveal() {
         FaultInjectingPrefs faults=new FaultInjectingPrefs();
         ActiveReviewCorrectionStore guarded=new ActiveReviewCorrectionStore(faults);
