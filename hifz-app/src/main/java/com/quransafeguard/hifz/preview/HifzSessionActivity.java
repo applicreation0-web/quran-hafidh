@@ -2606,9 +2606,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             +(state.assisted?" · avec aide":currentMask==100?" · masquée":" · visible"));
         actions.removeAllViews();
         int remaining=state.pages.size()-state.pageIndex;
-        Button previous=Ui.iconButton(this,"","Page précédente",v->navigateFragility(generation,-1));
+        Button previous=Ui.iconButton(this,R.drawable.ic_ui_previous,"Page précédente",v->navigateFragility(generation,-1));
         previous.setEnabled(remaining>1);actions.addView(previous);
-        fragilityMaskButton=Ui.iconButton(this,"",currentMask==0?"Masquer la page":"Afficher la page",v->{
+        fragilityMaskButton=Ui.iconButton(this,R.drawable.ic_ui_reveal,currentMask==0?"Masquer la page":"Afficher la page",v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityPageReady||!fragilityHasTime())return;
             boolean saved=currentMask==0
                 ?correctionStore.pageReread(correctionState)
@@ -2619,9 +2619,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         });
         if(state.assisted)Ui.setIconDescription(fragilityMaskButton,"Masquer la page");
         actions.addView(fragilityMaskButton);
-        actions.addView(Ui.iconButton(this,"","Révéler un verset",v->chooseFragilityVerse(generation,false)));
-        actions.addView(Ui.iconButton(this,"","Audio ciblé",v->chooseFragilityVerse(generation,true)));
-        correctionPageDoneButton=Ui.iconButton(this,"","Page récitée sans aide",v->{
+        actions.addView(Ui.iconButton(this,R.drawable.ic_ui_focus,"Révéler un verset",v->chooseFragilityVerse(generation,false)));
+        actions.addView(Ui.iconButton(this,R.drawable.ic_ui_play,"Audio ciblé",v->chooseFragilityVerse(generation,true)));
+        correctionPageDoneButton=Ui.iconButton(this,R.drawable.ic_ui_validate,"Page récitée sans aide",v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
             if(!correctionMaskedPageReady||correctionState.assisted||audioPlayer!=null){
                 onError("Masquez toute la page et récitez-la sans aide avant de valider.");return;
@@ -2632,14 +2632,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             correctionState=correctionStore.pending();renderActiveCorrection();
         });
         correctionPageDoneButton.setEnabled(false);actions.addView(correctionPageDoneButton);
-        actions.addView(Ui.iconButton(this,"","Reporter cette page",v->{
+        actions.addView(Ui.iconButton(this,R.drawable.ic_hifz_catchup_clock,"Reporter cette page",v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
             if(!correctionStore.deferPage(correctionState)){
                 onError("Impossible de reporter cette page.");return;
             }
             correctionState=correctionStore.pending();renderActiveCorrection();
         }));
-        Button next=Ui.iconButton(this,"","Page suivante",v->navigateFragility(generation,1));
+        Button next=Ui.iconButton(this,R.drawable.ic_ui_next,"Page suivante",v->navigateFragility(generation,1));
         next.setEnabled(remaining>1);actions.addView(next);
         showCurrent();
     }

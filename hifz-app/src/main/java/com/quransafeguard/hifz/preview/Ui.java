@@ -80,6 +80,13 @@ final class Ui {
 
     /** 48dp hit target with a quiet 24dp pictogram and no permanent visible circle. */
     static Button iconButton(Context context, String symbol, String description, View.OnClickListener listener) {
+        return iconButton(context, iconFor(description, symbol), description, listener);
+    }
+
+    static Button iconButton(Context context, int iconRes, String description, View.OnClickListener listener) {
+        if (iconRes == 0) {
+            throw new IllegalArgumentException("Unmapped compact icon role: " + description);
+        }
         Button button = new Button(context);
         button.setAllCaps(false);
         button.setGravity(Gravity.CENTER);
@@ -103,13 +110,6 @@ final class Ui {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
         params.setMargins(dp(context, 1), 0, dp(context, 1), 0);
         button.setLayoutParams(params);
-        int iconRes = iconFor(description, symbol);
-        // All icon-only controls must have an explicit mapped vector: never
-        // substitute a platform-dependent Unicode glyph or silently mislabel
-        // a button. Unknown roles are rejected during J6 source-contract CI.
-        if (iconRes == 0) {
-            throw new IllegalArgumentException("Unmapped compact icon role: " + description);
-        }
         setButtonIcon(button, iconRes);
         return button;
     }
