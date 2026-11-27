@@ -2610,8 +2610,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         previous.setEnabled(remaining>1);actions.addView(previous);
         fragilityMaskButton=Ui.iconButton(this,"",currentMask==0?"Masquer la page":"Afficher la page",v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityPageReady||!fragilityHasTime())return;
-            boolean saved=currentMask==0||correctionState.assisted
-                ?correctionStore.remask(correctionState):correctionStore.restartPage(correctionState);
+            boolean saved=currentMask==0
+                ?correctionStore.pageReread(correctionState)
+                :correctionState.assisted?correctionStore.remask(correctionState)
+                :correctionStore.restartPage(correctionState);
             if(!saved){onError("Impossible de sauvegarder le masquage.");return;}
             correctionState=correctionStore.pending();renderActiveCorrection();
         });
@@ -2700,7 +2702,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             fragilityPageReady=false;
             correctionMaskedPageReady=false;
             mushaf.showCorrectionVersePreparedPage(currentPage,currentLineIds,boxes);
-        }else mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsOnPage(currentPage));
+        }else mushaf.highlightCorrectionVerse(verse,geometry.lineIdsOnPage(currentPage));
     }
 
     private boolean isCurrentCorrectionRender(long generation) {
@@ -2862,7 +2864,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (maintenanceDraft != null) return;
         if(correctionState!=null){
             if(currentMask==100)applyFragilityAid(correctionRenderGeneration,verse,false);
-            else mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsOnPage(currentPage));
+            else mushaf.highlightCorrectionVerse(verse,geometry.lineIdsOnPage(currentPage));
             return;
         }
         if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted) return;
@@ -2912,7 +2914,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if("READ".equals(correctionState.stage)){
                 mushaf.showCorrectionVisiblePage(currentPage,geometry.lineIdsOnPage(currentPage));
             }else
-                mushaf.showFullMaskedPreparedPage(currentPage,currentLineIds);
+                mushaf.showCorrectionFullPreparedPage(currentPage,currentLineIds);
             return;
         }
         if(MURAJAAH_ACTIVE.equals(mode)) {
