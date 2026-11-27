@@ -30,19 +30,33 @@ run_process_death_phase() {
     grep -Fxq 'OK (1 test)' "$output" && grep -Fxq 'INSTRUMENTATION_CODE: -1' "$output"
 }
 
-verify_process_death() {
+verify_upgrade_and_process_death() {
     local package="com.quransafeguard.hifz.ibnkathirtest"
+    local before after before_install after_install
     local -a app_apk test_apk
     mapfile -t app_apk < <(find hifz-app/build/outputs/apk/debug -name '*.apk' -type f)
     mapfile -t test_apk < <(find hifz-app/build/outputs/apk/androidTest/debug -name '*.apk' -type f)
     [[ ${#app_apk[@]} -eq 1 && ${#test_apk[@]} -eq 1 ]] || return 1
-    adb install -r "${app_apk[0]}" && adb install -r "${test_apk[0]}" || return 1
+
+    # The reference capture installed code 61. Seed its real stores before replacing it.
+    before="$(adb shell dumpsys package "$package")" || return 1
+    grep -Eq '^[[:space:]]+versionCode=61([[:space:]]|$)' <<<"$before" || return 1
+    before_install="$(awk -F= '/firstInstallTime=/{ print $2; exit }' <<<"$before")"
+    [[ -n "$before_install" ]] || return 1
+    adb install -r "${test_apk[0]}" || return 1
     run_process_death_phase a_prepareFixtureForExternalForceStop || return 1
     adb shell am force-stop "$package" || return 1
+
+    adb install -r "${app_apk[0]}" || return 1
+    after="$(adb shell dumpsys package "$package")" || return 1
+    grep -Eq '^[[:space:]]+versionCode=62([[:space:]]|$)' <<<"$after" || return 1
+    after_install="$(awk -F= '/firstInstallTime=/{ print $2; exit }' <<<"$after")"
+    [[ "$before_install" == "$after_install" ]] || return 1
     adb shell am start -W -n "$package/com.quransafeguard.hifz.preview.MainActivity" \
         | tee "$evidence/after/restart-result.txt" | grep '^Status: ok' || return 1
     adb shell am force-stop "$package" || return 1
-    run_process_death_phase b_verifyFixtureAfterExternalForceStop
+    run_process_death_phase b_verifyFixtureAfterExternalForceStop || return 1
+    echo "PASS: isolated debug upgrade 61 -> 62, same installation and persisted fixture."
 }
 
 # Emulator-only isolation: prevent the nonessential launcher from monopolizing
@@ -60,7 +74,6 @@ status=0
 gradle --no-daemon :hifz-app:connectedDebugAndroidTest \
     -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ActiveReviewSlotsInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.SundayFinalPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.BackupSchemaRejectedInstrumentedTest,com.quransafeguard.hifz.preview.CapHifzReadOnlyInstrumentedTest,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#threePageBatchAdvancesResumesDefersAndReturnsWithoutActiveCredit,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#continuationCannotCrossTheMorningEveningBoundary,com.quransafeguard.hifz.preview.FragilityReaderVisualInstrumentedTest#programmedBudgetsExpireWithoutCreditOrLosingAnyOfTwelvePages \
     || status=1
-verify_process_death || status=1
 # The candidate now has a higher versionCode. Android refuses an ordinary
 # install -r of the older reference. Remove ONLY the disposable emulator's
 # synthetic debug package before reference capture; never touch a real device.
@@ -76,7 +89,10 @@ if ! run_capture "$reference" "$evidence/before"; then
     done
     test -s "$evidence/before/phone-font100-home.png" || status=1
 fi
-# Both builds share the isolated debug package. Start each visual run with synthetic default state.
+if ! verify_upgrade_and_process_death 2>&1 | tee "$evidence/after/debug-upgrade-result.txt"; then
+    status=1
+fi
+# Reset synthetic data only after the in-place upgrade and its persistence assertions.
 adb shell pm clear com.quransafeguard.hifz.ibnkathirtest || status=1
 run_capture "$candidate" "$evidence/after" || status=1
 # Reinstall instrumentation after removing the isolated debug target.
