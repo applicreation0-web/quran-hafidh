@@ -124,7 +124,8 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.LEARNING_CONSOLIDATION);
                     UniversalLearningRoute.Span span = route == null ? null : route.at(learningRangeIndex);
                     GeometryRepository.FiveLineBlock block=route == null ? safeSabqi(sabqiCursor)
-                        : span == null ? null : geometry.fiveLineBlock(Math.max(sabqiCursor, span.first), span.last);
+                        : span == null ? null : prefs.forecastUniversalSabqiBlock(geometry,
+                            Math.max(sabqiCursor, span.first), span.last);
                     if(morningActual!=null)morning="✓ "+compact(morningActual.label);
                     else if(block==null)morning="Apprentissage · plage à vérifier";
                     else{

@@ -72,6 +72,7 @@ public final class HifzPrefs {
     static final String UNIVERSAL_MAINTENANCE = "universalItqanMaintenanceV1";
     static final String UNIVERSAL_SETUP = "universalSetupPendingV1";
     static final String UNIVERSAL_REVIEW_MINUTES = "universalActiveReviewMinutesV1";
+    static final String UNIVERSAL_LEARNING_LINES = "universalLearningLinesPerSessionV1";
 
     public HifzPrefs(Context context) {
         this(context, false);
@@ -752,10 +753,17 @@ public final class HifzPrefs {
 
     boolean configureNewProfile(List<VerseRange> learning, List<VerseRange> declared,
             List<VerseRange> deepRanges, boolean deep, boolean maintenance, int days, GeometryRepository geometry) {
+        return configureNewProfile(learning, declared, deepRanges, deep, maintenance, days,
+            PreviewConfig.SABQI_LINES, geometry);
+    }
+
+    boolean configureNewProfile(List<VerseRange> learning, List<VerseRange> declared,
+            List<VerseRange> deepRanges, boolean deep, boolean maintenance, int days, int linesPerLesson,
+            GeometryRepository geometry) {
         synchronized (V6_STATE_LOCK) {
             if (!universalSetupPending()) return false;
             if (days < 0 || days > 6 - (deep ? 1 : 0) - (maintenance ? 1 : 0)
-                    || !learning.isEmpty() && days == 0)
+                    || !learning.isEmpty() && days == 0 || !validLearningVolume(linesPerLesson))
                 throw new IllegalArgumentException("Invalid weekly cadence");
             validateV6ManualRanges(declared, learning);
             // A declared passage may also be assigned to deep consolidation. The
@@ -775,6 +783,7 @@ public final class HifzPrefs {
                 .putString("unconsolidatedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(deepRanges)))
                 .putBoolean(UNIVERSAL_DEEP, deep)
                 .putBoolean(UNIVERSAL_MAINTENANCE, maintenance)
+                .putInt(UNIVERSAL_LEARNING_LINES, linesPerLesson)
                 .putInt("learningDaysPerWeek", days)
                 .putString(WEEKLY_PROGRAM_HISTORY, new JSONArray()
                     .put(new JSONObject(java.util.Map.of("from", programStartDate().toString(),
@@ -788,6 +797,29 @@ public final class HifzPrefs {
 
     List<VerseRange> configuredUniversalLearningRanges() {
         return parseRangesAllowEmpty(UNIVERSAL_LEARNING);
+    }
+
+    static boolean validLearningVolume(int lines) { return lines >= 1 && lines <= PreviewConfig.SABQI_LINES; }
+
+    int learningLinesPerSession() {
+        return universalProfile() ? p.getInt(UNIVERSAL_LEARNING_LINES, PreviewConfig.SABQI_LINES)
+            : PreviewConfig.SABQI_LINES;
+    }
+
+    boolean setUniversalLearningLines(int lines) {
+        if (!universalProfile() || !validLearningVolume(lines)) return false;
+        return p.edit().putInt(UNIVERSAL_LEARNING_LINES, lines).commit();
+    }
+
+    GeometryRepository.FiveLineBlock forecastUniversalSabqiBlock(GeometryRepository geometry, int start, int endLimit) {
+        if (start == sabqiLineCursor() && !p.getString(SABQI_LESSON_SNAPSHOT, "").isEmpty())
+            return frozenSabqiBlock(geometry, endLimit);
+        return configuredSabqiBlock(geometry, start, endLimit);
+    }
+
+    private GeometryRepository.FiveLineBlock configuredSabqiBlock(
+            GeometryRepository geometry, int start, int endLimit) {
+        return geometry.fiveLineBlock(start, Math.min(endLimit, start + learningLinesPerSession() - 1));
     }
 
     boolean updateUniversalLearning(List<VerseRange> learning, GeometryRepository geometry) {
@@ -1874,7 +1906,8 @@ public final class HifzPrefs {
                 }
                 if(sabqiRep()!=0 || sabqiAssisted()!=0)
                     throw new IllegalStateException("Legacy Sabqi repetition date is unverified");
-                GeometryRepository.FiveLineBlock block=geometry.fiveLineBlock(cursor,endLimit);
+                GeometryRepository.FiveLineBlock block=universalProfile()
+                    ? configuredSabqiBlock(geometry,cursor,endLimit) : geometry.fiveLineBlock(cursor,endLimit);
                 JSONObject snapshot=new JSONObject().put("version",SabqiFortyFiveRecoveryPolicy.VERSION)
                     .put("date",day.toString()).put("sessionId",UUID.randomUUID().toString())
                     .put("reps",0).put("assisted",0).put("passReveals",0)

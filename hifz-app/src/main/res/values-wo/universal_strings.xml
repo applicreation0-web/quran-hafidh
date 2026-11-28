@@ -104,7 +104,7 @@
   <string name="setup_next">Wéyal</string>
   <string name="setup_previous">Dellusi</string>
   <string name="setup_none">Amul</string>
-  <string name="setup_summary">Li nga bëgg a mokkal: %1$s\nLi nga wax ne mokkal nga ko: %2$s\nLi nga bëgg a dëgëral: %3$s\nBési mokkal ci ayubés: %4$d\nPàcci Itqān yi nga tànn: %5$s</string>
+  <string name="setup_summary">Li nga bëgg a mokkal: %1$s\nLi nga wax ne mokkal nga ko: %2$s\nLi nga bëgg a dëgëral: %3$s\nBési mokkal ci ayubés: %4$d\nPàcci Itqān yi nga tànn: %5$s\nRëddi mokkal ci jotaay : %6$d</string>
   <string name="nav_hifdh_plan">Yoonu mokkal</string>
   <string name="nav_week_jump">NASUM AYUBÉS BI ↓</string>
   <string name="nav_week_accessibility">Dem ci nasum ayubés bi</string>
@@ -132,4 +132,33 @@
   <string name="backup_restoring_message">Seet ak jëlaat li nga denc…</string>
   <string name="backup_import_error">Dugal dencukaay bi antuwul: %1$s</string>
   <string name="backup_restored">Dencukaay bi dellu na (%1$d mbir).</string>
+  <string name="maintenance_completed">Sàmm li nga mokkal · jotaay bi jeex na</string>
+  <string name="maintenance_no_material">Sàmm li nga mokkal · amul juz bu mat</string>
+  <string name="maintenance_cue">Jàngal benn juz, nga tari ko ci sa xel. Jubbantil xët yi nga wone ci mujj gi.</string>
+  <string name="maintenance_program">Sàmm li nga mokkal · juz %1$d · %2$s</string>
+  <string name="maintenance_visible">Jàng xët wi</string>
+  <string name="maintenance_hidden">Tari ci sa xel</string>
+  <string name="maintenance_correct_read">Jubbanti · jàng xët wi</string>
+  <string name="maintenance_correct_recall">Jubbanti · tari te amul ndimbal</string>
+  <string name="maintenance_page_read">Jàngaat naa xët wi</string>
+  <string name="maintenance_page_recalled">Tari naa xët wi</string>
+  <string name="maintenance_retry">Tambaliwaat xët wi</string>
+  <string name="maintenance_page_save_error">Mëneesul denc xët wi.</string>
+  <string name="recall_review_am">Nafar gumba · suba</string>
+  <string name="recall_review_pm">Nafar gumba · ngoon</string>
+  <string name="session_completed">%1$s · jotaay bi dëgg na</string>
+  <string name="session_pending">%1$s · dafay xaar</string>
+  <string name="session_check_draft">%1$s · seetal jotaay bi nga dencoon</string>
+  <string name="session_ended">%1$s · waxtu wi jeex na</string>
+  <string name="setup_learning_volume">Rëddi mokkal ci jotaay</string>
+  <plurals name="learning_lines_per_session">
+    <item quantity="one">%d rëdd</item>
+    <item quantity="other">%d rëdd</item>
+  </plurals>
+  <string name="setup_pick_range">Tànn pàcc</string>
+  <string name="setup_range_first">Fu pàcc bi tàmbalee</string>
+  <string name="setup_range_last">Fu pàcc bi yam</string>
+  <string name="setup_range_ayah">Nimero aaya bi</string>
+  <string name="setup_add_range">Yokk pàcc bi</string>
+  <string name="setup_range_order_error">Mujj gi war na topp ndorteel li.</string>
 </resources>

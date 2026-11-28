@@ -104,7 +104,7 @@
   <string name="setup_next">Continue</string>
   <string name="setup_previous">Back</string>
   <string name="setup_none">None</string>
-  <string name="setup_summary">To learn: %1$s\nDeclared memorized: %2$s\nFor deeper practice: %3$s\nLearning days per week: %4$d\nEnabled Itqān disciplines: %5$s</string>
+  <string name="setup_summary">To learn: %1$s\nDeclared memorized: %2$s\nFor deeper practice: %3$s\nLearning days per week: %4$d\nEnabled Itqān disciplines: %5$s\nLearning volume per session : %6$d</string>
   <string name="nav_hifdh_plan">Hifdh programme</string>
   <string name="nav_week_jump">WEEKLY PLAN ↓</string>
   <string name="nav_week_accessibility">Go to the weekly plan</string>
@@ -132,4 +132,33 @@
   <string name="backup_restoring_message">Checking and restoring the backup…</string>
   <string name="backup_import_error">Import failed: %1$s</string>
   <string name="backup_restored">Backup restored (%1$d entries).</string>
+  <string name="maintenance_completed">Retention · session complete</string>
+  <string name="maintenance_no_material">Retention · no complete memorized juz</string>
+  <string name="maintenance_cue">Read 1 juz, then recite the same juz from memory. Correct pages you revealed at the end.</string>
+  <string name="maintenance_program">Retention · juz %1$d · %2$s</string>
+  <string name="maintenance_visible">Read with the page visible</string>
+  <string name="maintenance_hidden">Recite from memory</string>
+  <string name="maintenance_correct_read">Correction · read the page</string>
+  <string name="maintenance_correct_recall">Correction · recite without help</string>
+  <string name="maintenance_page_read">Page read</string>
+  <string name="maintenance_page_recalled">Page recited</string>
+  <string name="maintenance_retry">Retry the page</string>
+  <string name="maintenance_page_save_error">Could not save this retention page.</string>
+  <string name="recall_review_am">Recall practice · morning</string>
+  <string name="recall_review_pm">Recall practice · evening</string>
+  <string name="session_completed">%1$s · session confirmed</string>
+  <string name="session_pending">%1$s · waiting</string>
+  <string name="session_check_draft">%1$s · check saved session</string>
+  <string name="session_ended">%1$s · time slot ended</string>
+  <string name="setup_learning_volume">Learning volume per session</string>
+  <plurals name="learning_lines_per_session">
+    <item quantity="one">%d line</item>
+    <item quantity="other">%d lines</item>
+  </plurals>
+  <string name="setup_pick_range">Choose a passage</string>
+  <string name="setup_range_first">Start of the passage</string>
+  <string name="setup_range_last">End of the passage</string>
+  <string name="setup_range_ayah">Verse number</string>
+  <string name="setup_add_range">Add passage</string>
+  <string name="setup_range_order_error">The end must come after the start.</string>
 </resources>

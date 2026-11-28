@@ -133,6 +133,9 @@ public final class SettingsActivity extends HaafidhActivity {
             weeklyProgramSetting.setVisibility(View.GONE);
             parcours.addView(Ui.settingRow(this, getString(R.string.setup_learning_ranges), "",
                 view -> editUniversalLearning()));
+            LinearLayout learningVolume = Ui.settingRow(this,getString(R.string.setup_learning_volume),
+                learningVolumeLabel(prefs.learningLinesPerSession()), view -> chooseLearningVolume((LinearLayout)view));
+            parcours.addView(learningVolume);
             roadmapModeRow.setVisibility(View.GONE);
             roadmapLimit.setVisibility(View.GONE);
         }
@@ -488,10 +491,16 @@ public final class SettingsActivity extends HaafidhActivity {
         android.widget.EditText input = new android.widget.EditText(this);
         input.setText(android.text.TextUtils.join(", ", ranges));
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        LinearLayout form = Ui.column(this);
+        int gap = Ui.dp(this,16);
+        form.setPadding(gap,0,gap,0);
+        form.addView(input);
+        form.addView(Ui.button(this,getString(R.string.setup_pick_range),
+            view -> QuranRangePicker.show(this,range -> QuranRangePicker.appendTo(input,range))));
         new AlertDialog.Builder(this)
             .setTitle(R.string.setup_learning_ranges)
             .setMessage(R.string.setup_ranges_help)
-            .setView(input)
+            .setView(form)
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.setup_save, (dialog, button) -> {
                 try {
@@ -502,6 +511,22 @@ public final class SettingsActivity extends HaafidhActivity {
                     Toast.makeText(this, R.string.setup_ranges_error, Toast.LENGTH_LONG).show();
                 }
             }).show();
+    }
+
+    private String learningVolumeLabel(int lines) {
+        return getResources().getQuantityString(R.plurals.learning_lines_per_session, lines, lines);
+    }
+
+    private void chooseLearningVolume(LinearLayout row) {
+        String[] options = new String[PreviewConfig.SABQI_LINES];
+        for (int i = 0; i < options.length; i++) options[i] = learningVolumeLabel(i+1);
+        new AlertDialog.Builder(this).setTitle(R.string.setup_learning_volume)
+            .setSingleChoiceItems(options,prefs.learningLinesPerSession()-1,(dialog,selected) -> {
+                if (prefs.setUniversalLearningLines(selected+1))
+                    Ui.settingValue(row).setText(learningVolumeLabel(prefs.learningLinesPerSession()));
+                else Toast.makeText(this,R.string.setup_save_error,Toast.LENGTH_LONG).show();
+                dialog.dismiss();
+            }).setNegativeButton(R.string.ui_close,null).show();
     }
 
     private void setSabqiBound(boolean isStart,VerseRef verse){
@@ -966,7 +991,7 @@ public final class SettingsActivity extends HaafidhActivity {
         if(remaining==0)return "à jour";
         int sabqiDays=prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
             ?3:effectiveLearningDaysPerWeek();
-        int weeklyPace=PreviewConfig.SABQI_LINES*Math.max(0,sabqiDays);
+        int weeklyPace=prefs.learningLinesPerSession()*Math.max(0,sabqiDays);
         if(weeklyPace==0)return remaining+" ligne(s) restante(s) · aucun jour Sabqi programmé";
         int weeks=(remaining+weeklyPace-1)/weeklyPace;
         return remaining+" ligne(s) restante(s) · estimation ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);

@@ -39,7 +39,7 @@ Les propositions wolof sont destinées à une revue humaine. Le sens d’un term
 
 - Le décret fixe la graphie et la séparation des mots. Il ne fixe pas les noms des disciplines de mémorisation.
 - La terminologie du MEN atteste le sens pédagogique général de *nafar*, *tari*, *baamtu* et *ndëgëral*. Le passage à une discipline coranique spécialisée reste une décision éditoriale.
-- Les entrées de *Ay Baati Wolof* et du dictionnaire de Fal, Santos et Doneux n’ont pas été consultées intégralement. Les catalogues en documentent les références bibliographiques. [Institut français du Sénégal](https://mediatheque.ifs.sn/index.php?id=33889&lvl=notice_display) · [Université de Columbia](https://guides.library.columbia.edu/wolof-language)
+- Certaines entrées de *Ay Baati Wolof* sont détaillées ci-dessous. Pour Fal, Santos et Doneux, la recherche s’appuie sur une notice bibliographique. [Institut français du Sénégal](https://mediatheque.ifs.sn/index.php?id=33889&lvl=notice_display) · [Université de Columbia](https://guides.library.columbia.edu/wolof-language)
 - La recherche de l’expression exacte *nafar gumba* n’a pas fourni d’attestation de daara vérifiable. Pour les écrans d’essai, son statut reste « proposition ». Faire distinguer par les relecteurs le titre d’une séance, la récitation sans support et la commande qui masque le folio.
 - Les ressources `values-wo` sont des libellés de développement. Revoir en contexte la longueur des commandes et la lisibilité des formes accentuées sur écran étroit.
 
@@ -100,3 +100,16 @@ Présenter séparément des écrans entièrement en wolof et les scénarios ci-d
 ## Formes historiques et usage actuel
 
 L’extrait indexé de Diakhaté et Samb, p. 616, décrit deux étapes successives. *Ñajji* désigne un travail dans l’ordre canonique. *Gëndel* intervient ensuite pour combler les lacunes. Les deux termes sont écartés des libellés par défaut à ce stade, conformément au retour sur leur faible usage dans l’environnement de l’utilisateur. Le même passage mentionne *wanñ* comme technique historique de raccourcis et de signes mémo­riels. Cette forme doit rester distincte de *wàññi*, attesté dans le sens de réduire, et des propositions pour les versets qui se ressemblent. La consultation intégrale du PDF original a échoué. Le dossier consigne la page de l’extrait et la limite de preuve. [Diakhaté et Samb, p. 616](https://dspace.univ-guelma.dz/jspui/bitstream/123456789/14083/1/ARTICLE%2030.pdf)
+
+## Recoupement lexicographique à l’UCLA
+
+Les entrées de l’édition révisée de *Ay Baati Wolof* de Pamela Munro et Dieynaba Gaye ont été consultées dans le PDF indexé de l’UCLA.
+
+| Entrée | Page | Sens lexical utile | Arbitrage encore ouvert |
+|---|---:|---|---|
+| mokkal | 115 | État d’un élève prêt qui connaît sa leçon, avec un emploi intransitif donné dans l’ouvrage | Comparer `Njàng mu bees` pour commencer de nouvelles lignes et `Mokkal` quand il s’agit d’une leçon déjà connue. Les occurrences en daara de Dramé, p. 256, complètent le sens lexical |
+| nafar | 123 | Étudier, revoir, se préparer à une récitation ou à une évaluation | Le verbe convient au champ de la révision. Le contexte doit préciser l’exercice, avec ou sans Mushaf |
+| gumbë, variante gumba | 71 | Adjectif verbal et nom liés à l’absence de vision | L’ouvrage confirme la variation vocalique. Il reste à vérifier l’expression `Nafar gumba` en usage coranique, son registre et les paraphrases retenues |
+| sàmm | 170 | Garder ou prendre soin. L’ouvrage donne notamment un exemple sur les parents et des formules de protection | Le passage de ce sens à la préservation de passages mémorisés reste une composition à faire juger en situation |
+
+*Gaqq*, *niroo* et *dëgëral* n’ont pas été retrouvés sous ces graphies exactes dans l’index du PDF UCLA. Cette limite de recherche laisse valables les attestations distinctes de l’UCAD, du MEN et les sources lexicales déjà relevées. La segmentation proposée par les locuteurs pour « Degerek li nga mokal » reste à recueillir avant tout choix d’orthographe ou passage à une commande d’interface. [Munro et Gaye, UCLA](https://linguistics.ucla.edu/publications/opl_19.pdf)

@@ -104,7 +104,7 @@
   <string name="setup_next">Continuer</string>
   <string name="setup_previous">Retour</string>
   <string name="setup_none">Aucun</string>
-  <string name="setup_summary">À apprendre : %1$s\nDéclaré mémorisé : %2$s\nÀ approfondir : %3$s\nJours d’apprentissage par semaine : %4$d\nDisciplines Itqān activées : %5$s</string>
+  <string name="setup_summary">À apprendre : %1$s\nDéclaré mémorisé : %2$s\nÀ approfondir : %3$s\nJours d’apprentissage par semaine : %4$d\nDisciplines Itqān activées : %5$s\nVolume d’apprentissage par séance : %6$d</string>
   <string name="nav_hifdh_plan">Parcours Hifdh</string>
   <string name="nav_week_jump">PLANNING DE LA SEMAINE ↓</string>
   <string name="nav_week_accessibility">Aller au planning de la semaine</string>
@@ -132,4 +132,33 @@
   <string name="backup_restoring_message">Vérification et restauration de la sauvegarde…</string>
   <string name="backup_import_error">Échec de l’import : %1$s</string>
   <string name="backup_restored">Sauvegarde restaurée (%1$d entrées).</string>
+  <string name="maintenance_completed">Maintien · séance terminée</string>
+  <string name="maintenance_no_material">Maintien · aucun juz acquis en entier</string>
+  <string name="maintenance_cue">1 juz visible, puis le même juz masqué. Pages dévoilées à corriger à la fin.</string>
+  <string name="maintenance_program">Maintien · juz %1$d · %2$s</string>
+  <string name="maintenance_visible">Lecture visible</string>
+  <string name="maintenance_hidden">Récitation masquée</string>
+  <string name="maintenance_correct_read">Correction · lecture visible</string>
+  <string name="maintenance_correct_recall">Correction · récitation sans aide</string>
+  <string name="maintenance_page_read">Page relue</string>
+  <string name="maintenance_page_recalled">Page récitée</string>
+  <string name="maintenance_retry">Recommencer la page</string>
+  <string name="maintenance_page_save_error">La page du Maintien n’a pas été enregistrée.</string>
+  <string name="recall_review_am">Révision active · matin</string>
+  <string name="recall_review_pm">Révision active · soir</string>
+  <string name="session_completed">%1$s · séance validée</string>
+  <string name="session_pending">%1$s · en attente</string>
+  <string name="session_check_draft">%1$s · reprise à vérifier</string>
+  <string name="session_ended">%1$s · créneau terminé</string>
+  <string name="setup_learning_volume">Volume d’apprentissage par séance</string>
+  <plurals name="learning_lines_per_session">
+    <item quantity="one">%d ligne</item>
+    <item quantity="other">%d lignes</item>
+  </plurals>
+  <string name="setup_pick_range">Choisir un passage</string>
+  <string name="setup_range_first">Début du passage</string>
+  <string name="setup_range_last">Fin du passage</string>
+  <string name="setup_range_ayah">Numéro du verset</string>
+  <string name="setup_add_range">Ajouter le passage</string>
+  <string name="setup_range_order_error">La fin doit suivre le début.</string>
 </resources>

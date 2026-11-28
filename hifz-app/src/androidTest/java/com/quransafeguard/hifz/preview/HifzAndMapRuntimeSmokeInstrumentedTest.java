@@ -341,7 +341,7 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
         }
     }
 
-    private static Object reflect(Object owner,String name) {
+    static Object reflect(Object owner,String name) {
         try {
             Field f=owner.getClass().getDeclaredField(name);
             f.setAccessible(true);

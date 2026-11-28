@@ -148,7 +148,8 @@ final class HifzBackup {
             validateActiveReview(values);
             if (values.has(HifzPrefs.UNIVERSAL_LEARNING) || values.has(HifzPrefs.UNIVERSAL_LEARNING_INDEX)
                     || values.has(HifzPrefs.UNIVERSAL_SETUP) || values.has(HifzPrefs.UNIVERSAL_DEEP)
-                    || values.has(HifzPrefs.UNIVERSAL_MAINTENANCE) || values.has(HifzPrefs.UNIVERSAL_REVIEW_MINUTES))
+                    || values.has(HifzPrefs.UNIVERSAL_MAINTENANCE) || values.has(HifzPrefs.UNIVERSAL_REVIEW_MINUTES)
+                    || values.has(HifzPrefs.UNIVERSAL_LEARNING_LINES))
                 validateUniversalProfile(values, GeometryRepository.get(context));
             synchronized(J10ReviewStore.LEGACY_STORE_LOCK) {
                 SharedPreferences main=context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
@@ -199,9 +200,11 @@ final class HifzBackup {
             boolean deep = (Boolean) typedUniversalValue(values, HifzPrefs.UNIVERSAL_DEEP, "b", Boolean.class, false);
             boolean maintenance = (Boolean) typedUniversalValue(values, HifzPrefs.UNIVERSAL_MAINTENANCE, "b", Boolean.class, false);
             int reviewMinutes = (Integer) typedUniversalValue(values, HifzPrefs.UNIVERSAL_REVIEW_MINUTES, "i", Integer.class, 0);
+            int lines = (Integer) typedUniversalValue(values, HifzPrefs.UNIVERSAL_LEARNING_LINES,
+                "i", Integer.class, PreviewConfig.SABQI_LINES);
             var ranges = HifzPrefs.decodeRanges(raw);
             var span = UniversalLearningRoute.of(ranges, geometry).at(index);
-            if (!ActiveReviewDurationPolicy.validProfileMinutes(reviewMinutes)
+            if (!ActiveReviewDurationPolicy.validProfileMinutes(reviewMinutes) || !HifzPrefs.validLearningVolume(lines)
                     || cursor < -1 || cursor > geometry.lineCount()
                     || span != null && cursor != -1 && (cursor < span.first || cursor > span.last)
                     || pending && (!ranges.isEmpty() || cursor != -1 || deep || maintenance))

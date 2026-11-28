@@ -59,6 +59,7 @@ public final class MainActivity extends HaafidhActivity {
     private List<HifzBacklog.Due> backlogPending = java.util.Collections.emptyList();
     private boolean showingParcours;
     private int setupStep;
+    private android.app.AlertDialog setupRangePicker;
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle state) {
@@ -329,6 +330,16 @@ public final class MainActivity extends HaafidhActivity {
         days.setAdapter(choices);
         days.setSelection(3);
         schedule.addView(days);
+        TextView volumeLabel = Ui.text(this,getString(R.string.setup_learning_volume),16f,true);
+        volumeLabel.setLabelFor(R.id.setup_volume);
+        schedule.addView(volumeLabel);
+        android.widget.Spinner volume = new android.widget.Spinner(this);
+        volume.setId(R.id.setup_volume);
+        List<Integer> volumes = new ArrayList<>();
+        for (int lines = 1; lines <= PreviewConfig.SABQI_LINES; lines++) volumes.add(lines);
+        volume.setAdapter(new android.widget.ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,volumes));
+        volume.setSelection(volumes.size()-1);
+        schedule.addView(volume);
         language.addView(Ui.settingRow(this, getString(R.string.setup_template), "", view ->
             chooseStudyTemplate(declared, deep, maintenance, days)));
         language.addView(Ui.button(this, getString(R.string.setup_restore),
@@ -344,7 +355,7 @@ public final class MainActivity extends HaafidhActivity {
                     UniversalLearningRoute.parse(learning.getText().toString(), geo),
                     UniversalLearningRoute.parse(declared.getText().toString(), geo),
                     UniversalLearningRoute.parse(deepRanges.getText().toString(), geo), deep.isChecked(),
-                    maintenance.isChecked(), days.getSelectedItemPosition(), geo);
+                    maintenance.isChecked(), days.getSelectedItemPosition(), (Integer)volume.getSelectedItem(), geo);
                 if (saved) recreate();
                 else showSetupMessage(R.string.setup_save_error);
             } catch (IllegalArgumentException invalid) {
@@ -376,7 +387,8 @@ public final class MainActivity extends HaafidhActivity {
                     .filter(item -> !item.isEmpty()).collect(java.util.stream.Collectors.joining(" · "));
                 summary.setText(getString(R.string.setup_summary,
                     setupRangeSummary(learning), setupRangeSummary(declared), setupRangeSummary(deepRanges),
-                    days.getSelectedItemPosition(), enabled.isEmpty() ? getString(R.string.setup_none) : enabled));
+                    days.getSelectedItemPosition(), enabled.isEmpty() ? getString(R.string.setup_none) : enabled,
+                    (Integer)volume.getSelectedItem()));
             }
             viewport.scrollTo(0, 0);
         };
@@ -418,6 +430,8 @@ public final class MainActivity extends HaafidhActivity {
         input.setId(id);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         root.addView(input);
+        root.addView(Ui.button(this,getString(R.string.setup_pick_range),
+            view -> setupRangePicker = QuranRangePicker.show(this,range -> QuranRangePicker.appendTo(input,range))));
         return input;
     }
 
@@ -2204,6 +2218,7 @@ public final class MainActivity extends HaafidhActivity {
     }
 
     @Override protected void onDestroy() {
+        if (setupRangePicker != null) setupRangePicker.dismiss();
         localLoader.shutdownNow();
         super.onDestroy();
     }

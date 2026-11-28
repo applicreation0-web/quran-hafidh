@@ -59,15 +59,7 @@ public final class FragilityReaderVisualInstrumentedTest {
                 String[] tags={"fr","en","wo"};
                 String[] labels={"Fragilités","Weak spots","Pàcc yu jafe"};
                 for(int language:new int[]{1,2,0,2,1,0}){
-                    activity.onActivity(a->{
-                        View languageButton=control(a.getWindow().getDecorView(),a.getString(R.string.app_language));
-                        assertNotNull(languageButton);
-                        assertTrue(languageButton.performClick());
-                        AlertDialog picker=(AlertDialog)field(a,"fragilityLanguagePicker");
-                        android.widget.ListView choices=picker.getListView();
-                        assertEquals(HaafidhActivity.LANGUAGE_LABELS[language], choices.getAdapter().getItem(language));
-                        assertTrue(choices.performItemClick(null,language,choices.getItemIdAtPosition(language)));
-                    });
+                    activity.onActivity(a->chooseLanguage(a,language));
                     androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                     HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Recreated weak spot");
                     var pending = store.pending();
@@ -93,6 +85,68 @@ public final class FragilityReaderVisualInstrumentedTest {
             assertTrue(HaafidhActivity.setLanguage(context,originalLanguage));
             HifzBackup.restore(context,original);
         }
+    }
+
+    @Test public void languageRecreationKeepsPausedTimedRecall() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        new HifzPrefs(context);
+        JSONObject original=HifzBackup.export(context);
+        int originalLanguage=HaafidhActivity.languageIndex(context);
+        SharedPreferences raw=context.getSharedPreferences("quran_hifz_preview_v1",0);
+        java.time.LocalDate day=java.time.LocalDate.of(2026,11,28);
+        ActiveReviewSlots.Slot slot=ActiveReviewSlots.Slot.MORNING;
+        try {
+            HifzClock.setClockForTests(java.time.Clock.fixed(
+                day.atTime(6,0).toInstant(java.time.ZoneOffset.UTC),java.time.ZoneOffset.UTC));
+            assertTrue(raw.edit().clear().commit());
+            assertTrue(HaafidhActivity.setLanguage(context,0));
+            HifzPrefs prefs=new HifzPrefs(context);
+            GeometryRepository geo=GeometryRepository.get(context);
+            VerseRef start=new VerseRef(2,1);
+            assertTrue(prefs.setV6AcquiredRanges(Collections.singletonList(
+                new VerseRange(start,new VerseRef(2,74))),geo));
+            prefs.setActiveMurajaahCursor(start);
+            ActiveReviewSlots slots=prefs.activeReviewSlots();
+            int page=geo.pageForVerse(start);
+            long elapsed=30_000L;
+            assertTrue(slots.checkpoint(day,slot,start,start,page,elapsed,true,40));
+            Intent intent=new Intent(context,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,slot.mode);
+            try(ActivityScenario<HifzSessionActivity> activity=ActivityScenario.launch(intent)) {
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Paused timed review");
+                for(int language:new int[]{1,2,0,2,1,0}) {
+                    activity.onActivity(a->chooseLanguage(a,language));
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                    HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Recreated timed review");
+                    activity.onActivity(a->{
+                        assertTrue((Boolean)field(a,"activeClockPaused"));
+                        assertEquals(elapsed,((SessionClock)field(a,"clock")).elapsedMs());
+                        assertEquals(100,((Integer)field(a,"currentMask")).intValue());
+                    });
+                    var saved=slots.draft(day,slot);
+                    assertNotNull(saved);
+                    assertTrue(saved.paused);
+                    assertEquals(elapsed,saved.elapsedMs);
+                    assertEquals(40,saved.targetMinutes);
+                    assertEquals(start,saved.start);
+                    assertEquals(start,prefs.activeMurajaahCursor());
+                    assertTrue(slots.receipts().isEmpty());
+                }
+            }
+        } finally {
+            HifzClock.resetClockForTests();
+            assertTrue(HaafidhActivity.setLanguage(context,originalLanguage));
+            HifzBackup.restore(context,original);
+        }
+    }
+
+    private static void chooseLanguage(HifzSessionActivity activity,int language) {
+        View languageButton=control(activity.getWindow().getDecorView(),activity.getString(R.string.app_language));
+        assertNotNull(languageButton);
+        assertTrue(languageButton.performClick());
+        AlertDialog picker=(AlertDialog)field(activity,"fragilityLanguagePicker");
+        android.widget.ListView choices=picker.getListView();
+        assertEquals(HaafidhActivity.LANGUAGE_LABELS[language],choices.getAdapter().getItem(language));
+        assertTrue(choices.performItemClick(null,language,choices.getItemIdAtPosition(language)));
     }
 
     private static void assertFragilityTargetsFit(HifzSessionActivity activity) {

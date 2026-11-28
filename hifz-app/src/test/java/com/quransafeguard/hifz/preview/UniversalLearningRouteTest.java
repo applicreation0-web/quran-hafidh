@@ -118,6 +118,32 @@ public final class UniversalLearningRouteTest {
         assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
     }
 
+    @Test public void shorterLearningVolumeDoesNotResizeTheOpenPhysicalLesson() {
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putString("programStartDate","2026-11-27").putBoolean(HifzPrefs.UNIVERSAL_SETUP,true)
+            .putInt("sabqiLineCursor",-1).commit();
+        HifzPrefs prefs = new HifzPrefs(raw,geometry);
+        assertEquals(5,prefs.learningLinesPerSession());
+        assertFalse(prefs.setUniversalLearningLines(1));
+        assertTrue(prefs.configureNewProfile(UniversalLearningRoute.parse("2:84-2:88"),
+            Collections.emptyList(),Collections.emptyList(),false,false,3,3,geometry));
+        var range = prefs.universalLearningRoute(geometry).at(0);
+        prefs.setSabqiLineCursor(range.first);
+        LocalDate date=LocalDate.of(2026,11,27);
+        assertEquals(3,prefs.forecastUniversalSabqiBlock(geometry,range.first,range.last).lineIds.size());
+        assertEquals(date,prefs.openSabqiLesson(geometry,date));
+        var token = prefs.sabqiLessonToken();
+        assertTrue(prefs.setUniversalLearningLines(1));
+        assertEquals(token,prefs.sabqiLessonToken());
+        assertEquals(3,prefs.forecastUniversalSabqiBlock(geometry,range.first,range.last).lineIds.size());
+        var opened=prefs.frozenSabqiBlock(geometry,range.last);
+        assertTrue(MorningProtocolFixture.completeSabqi(prefs,opened.startLineIndex,opened.endLineIndex,
+            opened.endLineIndex+1,opened.lineIds,date.toString(),"synthetic"));
+        assertEquals(3,prefs.progressionSnapshotV6().learned.size());
+        assertEquals(1,prefs.forecastUniversalSabqiBlock(geometry,prefs.sabqiLineCursor(),range.last).lineIds.size());
+        assertFalse(prefs.setUniversalLearningLines(0));
+    }
+
     @Test public void configuredMaintenanceCanOpenAndResumeWithoutAnyAnNasLatch() {
         LocalDate day = LocalDate.of(2026, 11, 28);
         HifzClock.setClockForTests(Clock.fixed(day.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));

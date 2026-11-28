@@ -346,7 +346,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         program.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
         program.setMaxLines(2);
         top.addView(program);
-        if (standaloneFragility)
+        if (MURAJAAH_ACTIVE.equals(mode))
             top.addView(Ui.iconButton(this, R.drawable.ic_ui_language, getString(R.string.app_language),
                 view -> {
                     if (audioHost.getVisibility() == View.VISIBLE
@@ -1645,8 +1645,8 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             sessionCompleted = true;
             clock.pause();
             program.setText(today.toString().equals(prefs.lastItqanDate())
-                ? "Maintien · séance terminée" : "Maintien · aucun juz acquis en entier");
-            progress.setText(JuzMaintenanceStore.CUE);
+                ? R.string.maintenance_completed : R.string.maintenance_no_material);
+            progress.setText(R.string.maintenance_cue);
             return;
         }
         maintenancePlan = JuzMaintenanceStore.plan(maintenanceDraft.juz, geometry, acquired);
@@ -1661,30 +1661,31 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         sessionCompleted = false;
         maintenancePageReady = false;
         annotationOverlay.setVisibility(View.GONE);
-        String step;
+        int step;
         switch (phase) {
-            case READ: step = "Lecture visible"; break;
-            case RECALL: step = "Récitation masquée"; break;
-            case CORRECT_READ: step = "Correction · lecture visible"; break;
-            case CORRECT_RECALL: step = "Correction · récitation sans aide"; break;
+            case READ: step = R.string.maintenance_visible; break;
+            case RECALL: step = R.string.maintenance_hidden; break;
+            case CORRECT_READ: step = R.string.maintenance_correct_read; break;
+            case CORRECT_RECALL: step = R.string.maintenance_correct_recall; break;
             default: throw new IllegalStateException("Unknown maintenance phase");
         }
-        program.setText("Maintien · juz " + maintenanceDraft.juz + " · " + step);
+        program.setText(getString(R.string.maintenance_program, maintenanceDraft.juz, getString(step)));
         progress.setText((maintenanceDraft.index + 1) + "/"
             + (phase.correction() ? maintenanceDraft.revealed.size() : maintenancePlan.pages.size()));
-        String label = !phase.masked() ? "Page relue" : maintenanceDraft.correctionAssisted
-            ? "Recommencer la page" : phase.correction() ? "Page récitée sans aide" : "Page récitée";
-        LinearLayout action = Ui.roundAction(this, "", label, view -> runValidationSafely(() -> {
+        boolean retry = phase.masked() && maintenanceDraft.correctionAssisted;
+        int label = !phase.masked() ? R.string.maintenance_page_read : retry ? R.string.maintenance_retry
+            : phase.correction() ? R.string.fragility_validate : R.string.maintenance_page_recalled;
+        int icon = retry ? R.drawable.ic_ui_repeat : R.drawable.ic_ui_validate;
+        maintenancePageAction = Ui.iconButton(this, icon, getString(label), view -> runValidationSafely(() -> {
             if (!maintenancePageReady) return;
             if (!store.advance(maintenanceDraft, maintenancePlan, HifzClock.today())) {
-                onError("La page du Maintien n’a pas été enregistrée.");
+                onError(getString(R.string.maintenance_page_save_error));
                 return;
             }
             renderMode();
         }));
-        maintenancePageAction = (Button) action.getChildAt(0);
         maintenancePageAction.setEnabled(false);
-        actions.addView(action);
+        actions.addView(maintenancePageAction);
         if (phase.masked()) {
             LinearLayout reveal = Ui.roundAction(this, "", "Révéler", null);
             revealButton = (Button) reveal.getChildAt(0);
@@ -2068,6 +2069,12 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         return activeSlot == null ? "Révision active" : activeSlot.title();
     }
 
+    private String activeReviewDisplayTitle() {
+        if (activeSlot == null) return getString(R.string.path_active_review);
+        return getString(activeSlot == ActiveReviewSlots.Slot.MORNING
+            ? R.string.recall_review_am : R.string.recall_review_pm);
+    }
+
     /** Each active slot tests the settled corpus with the page masked from the start. */
     private void renderMurajaahActive(){
         if(activeCorrectionRecoveryRequired)
@@ -2104,7 +2111,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                 throw new IllegalStateException("Validated correction checkpoint could not be cleared");
             correctionState=null;
             sessionCompleted = true;
-            program.setText(activeReviewTitle() + " · séance validée");
+            program.setText(getString(R.string.session_completed, activeReviewDisplayTitle()));
             progress.setText(receipt.isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(receipt));
             updateActiveClockAction();
             if(activeSlot!=null&&sessionDate.equals(HifzClock.today()))
@@ -2139,7 +2146,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         // Never show the same passage as two independent sessions.
         if (activeSlot != null && !activeSlots.canOpen(sessionDate, activeSlot)) {
             sessionCompleted = true;
-            program.setText(activeReviewTitle() + " · en attente");
+            program.setText(getString(R.string.session_pending, activeReviewDisplayTitle()));
             progress.setText("Terminez d’abord l’autre révision active commencée aujourd’hui.");
             updateActiveClockAction();
             return;
@@ -2149,7 +2156,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         if (activeSlot != null && activeDraft != null && correctionState == null
                 && !activeSlots.isCurrent(activeDraft, prefs.activeMurajaahCursor())) {
             sessionCompleted = true;
-            program.setText(activeReviewTitle() + " · reprise à vérifier");
+            program.setText(getString(R.string.session_check_draft, activeReviewDisplayTitle()));
             progress.setText("Ancienne séance conservée. Le contenu a déjà avancé.");
             updateActiveClockAction();
             return;
@@ -2202,7 +2209,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         // Activities opened quickly can start at the same uncredited verse.
         if (activeSlot != null && !checkpointMurajaah(clock.elapsedMs())) {
             sessionCompleted = true;
-            program.setText(activeReviewTitle() + " · en attente");
+            program.setText(getString(R.string.session_pending, activeReviewDisplayTitle()));
             progress.setText("Une autre révision active est en cours. Aucun nouveau passage lancé.");
             updateActiveClockAction();
             return;
@@ -2210,7 +2217,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         currentSelection = Collections.emptyList();
         currentMask = 100;
         currentLineIds = applyActiveLandmarks(currentPage);
-        program.setText(activeReviewTitle() + " · " + murajaahObjectiveLabel());
+        program.setText(activeReviewDisplayTitle() + " · " + murajaahObjectiveLabel());
         updateMurajaahProgress();
         mushaf.setHighlightVerses(Collections.emptyList());
         showCurrent();
@@ -3451,7 +3458,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         sessionCompleted = true;
         clock.pause();
         actions.removeAllViews();
-        program.setText(activeReviewTitle() + " · créneau terminé");
+        program.setText(getString(R.string.session_ended, activeReviewDisplayTitle()));
         progress.setText("Ouvrez la révision active du jour.");
         updateActiveClockAction();
     }

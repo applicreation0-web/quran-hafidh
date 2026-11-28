@@ -9,4 +9,9 @@
     <item type="id" name="setup_next"/>
     <item type="id" name="setup_previous"/>
     <item type="id" name="setup_confirm"/>
+    <item type="id" name="setup_volume"/>
+    <item type="id" name="setup_range_first_surah"/>
+    <item type="id" name="setup_range_first_ayah"/>
+    <item type="id" name="setup_range_last_surah"/>
+    <item type="id" name="setup_range_last_ayah"/>
 </resources>
