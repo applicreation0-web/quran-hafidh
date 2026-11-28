@@ -47,9 +47,9 @@ public final class BooxPortraitHomeSourceContractTest {
     @Test public void homeShowsDominantSessionAndFourEqualDestinations() throws Exception {
         String home=read(MAIN);
         assertTrue(home.contains("todayAction = todayLine()"));
-        assertTrue(home.contains("Ui.bookText(this, \"AUJOURD’HUI\", 17f, true)"));
+        assertTrue(home.contains("Ui.bookText(this, getString(R.string.today_title), 17f, true)"));
         assertTrue(home.contains("Ui.bookText(this, \"…\", 23f, true)"));
-        assertTrue(home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)"));
+        assertTrue(home.contains("Ui.bookText(this, getString(R.string.today_continue), 20f, true)"));
         assertTrue("Captions require bounded icon row and sufficient text height",
             home.contains("tile.setMinimumHeight(Ui.dp(this, sideDp + 36))")
             && home.contains("TextView caption = Ui.bookText(this, display"));

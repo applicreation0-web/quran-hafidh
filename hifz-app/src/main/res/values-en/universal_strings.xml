@@ -100,4 +100,14 @@
   <string name="fragility_time_remaining">Total time remaining: %1$s</string>
   <string name="fragility_time_save_error">Could not save time spent on weak spots.</string>
   <string name="ui_close">Close</string>
+  <string name="fragility_language_after_aid">Close the verse picker or audio player before changing language.</string>
+  <string name="setup_next">Continue</string>
+  <string name="setup_previous">Back</string>
+  <string name="setup_none">None</string>
+  <string name="setup_summary">To learn: %1$s\nDeclared memorized: %2$s\nFor deeper practice: %3$s\nLearning days per week: %4$d\nEnabled Itqān disciplines: %5$s</string>
+  <string name="nav_hifdh_plan">Hifdh programme</string>
+  <string name="nav_week_jump">WEEKLY PLAN ↓</string>
+  <string name="nav_week_accessibility">Go to the weekly plan</string>
+  <string name="nav_next_week">Next seven days</string>
+  <string name="today_title">TODAY</string>
 </resources>

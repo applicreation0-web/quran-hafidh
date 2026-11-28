@@ -52,6 +52,14 @@ public final class EveryScreenContractualIconTest {
                 local++;
                 labels.add(label);
             }
+            Matcher explicit = Pattern.compile("Ui\\.iconButton\\([^,]+,\\s*R\\.drawable\\.(\\w+)").matcher(java);
+            while (explicit.find()) {
+                String drawable = explicit.group(1);
+                assertTrue("No vector for " + drawable,
+                    Files.exists(repo("hifz-app/src/main/res/drawable/" + drawable + ".xml")));
+                local++;
+                labels.add(drawable);
+            }
             assertTrue("No icon actions parsed in " + screen, local > 0);
             matches += local;
         }

@@ -95,3 +95,7 @@ Présenter séparément des écrans entièrement en wolof et les scénarios ci-d
 5. Déclarer un acquis, reporter une page, interrompre une séance, exporter puis restaurer une sauvegarde. Demander au locuteur de prédire l’effet de chaque bouton avant d’y toucher.
 
 Évaluer chaque candidat après les entretiens sur une échelle de 0 à 4 par critère. Pondérations du mandat: fidélité 30 %, naturel 25 %, usage attesté 20 %, compréhension 15 %, concision 10 %. Conserver les notes brutes et les citations autorisées dans le dossier privé. Toute ambiguïté qui peut conduire à la mauvaise discipline ou à une validation accidentelle bloque le choix même si son score est élevé. État actuel de la revue humaine: en attente.
+
+## Formes historiques et usage actuel
+
+L’extrait indexé de Diakhaté et Samb, p. 616, décrit deux étapes successives. *Ñajji* désigne un travail dans l’ordre canonique. *Gëndel* intervient ensuite pour combler les lacunes. Les deux termes sont écartés des libellés par défaut à ce stade, conformément au retour sur leur faible usage dans l’environnement de l’utilisateur. Le même passage mentionne *wanñ* comme technique historique de raccourcis et de signes mémo­riels. Cette forme doit rester distincte de *wàññi*, attesté dans le sens de réduire, et des propositions pour les versets qui se ressemblent. La consultation intégrale du PDF original a échoué. Le dossier consigne la page de l’extrait et la limite de preuve. [Diakhaté et Samb, p. 616](https://dspace.univ-guelma.dz/jspui/bitstream/123456789/14083/1/ARTICLE%2030.pdf)

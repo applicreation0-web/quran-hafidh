@@ -42,7 +42,7 @@ public final class PreDebugVisualRestorationSourceContractTest {
         assertTrue("Selected icon must be dark on light background",ui.contains(
             "shape(SURFACE, LINE, dp(context, 6), Math.max(1, dp(context, 1)))"));
         assertTrue("The compact Today action must keep a readable text CTA and a 120dp minimum touch area",
-            home.contains("Ui.bookText(this, \"CONTINUER  ›\", 20f, true)")
+            home.contains("Ui.bookText(this, getString(R.string.today_continue), 20f, true)")
             && home.contains("line.setMinimumHeight(Ui.dp(this, 120))"));
         assertTrue("The four equal home destinations must retain their visible frozen pictograms",
             home.contains("ImageView icon = new ImageView(this);")

@@ -37,6 +37,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
     private int standaloneMinutes;
     private Button generalAudioButton, fragilityMaskButton;
     private AlertDialog fragilityVersePicker;
+    private AlertDialog fragilityLanguagePicker;
     public static final String SABQI = "SABQI";
     public static final String SABQI_TODAY_REVIEW = "SABQI_TODAY_REVIEW";
     public static final String ITQAN = "ITQAN";
@@ -334,7 +335,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
     private void buildUi() {
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);
-        top.addView(Ui.iconButton(this,"","Retour",v->finish()));
+        top.addView(Ui.iconButton(this,R.drawable.ic_ui_back,getString(R.string.setup_previous),v->finish()));
         boolean wideBoox = getResources().getConfiguration().smallestScreenWidthDp >= 600;
         program = Ui.text(this,"Chargement…",wideBoox ? 16f : 12.5f,true);
         Ui.weight(program,1f);
@@ -342,6 +343,16 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         program.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
         program.setMaxLines(2);
         top.addView(program);
+        if (standaloneFragility)
+            top.addView(Ui.iconButton(this, R.drawable.ic_ui_language, getString(R.string.app_language),
+                view -> {
+                    if (audioHost.getVisibility() == View.VISIBLE
+                            || fragilityVersePicker != null && fragilityVersePicker.isShowing()) {
+                        onError(getString(R.string.fragility_language_after_aid));
+                        return;
+                    }
+                    fragilityLanguagePicker = chooseLanguage();
+                }));
         root.addView(top);
 
         LinearLayout meta = Ui.row(this);
@@ -3468,7 +3479,18 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){if(fragilityVersePicker!=null)fragilityVersePicker.dismiss();stopFragilityClock();if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();if(correspondenceSelector!=null)correspondenceSelector.dismiss();if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){
+        if(fragilityLanguagePicker!=null)fragilityLanguagePicker.dismiss();
+        if(fragilityVersePicker!=null)fragilityVersePicker.dismiss();
+        stopFragilityClock();
+        if(murajaahPartialValidationDialog!=null)murajaahPartialValidationDialog.dismiss();
+        if(correspondenceSelector!=null)correspondenceSelector.dismiss();
+        if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
+        closeAudio();
+        if(clock!=null)clock.dispose();
+        if(mushaf!=null)mushaf.destroySafely();
+        super.onDestroy();
+    }
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         int code = event.getKeyCode();
         if (correctionState != null && (code == KeyEvent.KEYCODE_PAGE_UP || code == KeyEvent.KEYCODE_PAGE_DOWN)) {

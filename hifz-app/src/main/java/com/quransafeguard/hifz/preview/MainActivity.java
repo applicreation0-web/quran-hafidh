@@ -58,6 +58,7 @@ public final class MainActivity extends HaafidhActivity {
     private TextView backlogParcoursRow;
     private List<HifzBacklog.Due> backlogPending = java.util.Collections.emptyList();
     private boolean showingParcours;
+    private int setupStep;
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle state) {
@@ -65,7 +66,7 @@ public final class MainActivity extends HaafidhActivity {
         SemanticPassageRepository.preloadAsync(this);
         prefs = new HifzPrefs(this, true);
         if (prefs.universalSetupPending()) {
-            showUniversalSetup();
+            showUniversalSetup(state);
             return;
         }
         postFinalStore = new PostFinalRecallStore(this);
@@ -152,8 +153,8 @@ public final class MainActivity extends HaafidhActivity {
         parcoursScroll = wideBoox() ? fixedBooxParcours(path) : scrollOf(path);
         LinearLayout pathHeader = Ui.row(this);
         pathHeader.setGravity(Gravity.CENTER_VERTICAL);
-        pathHeader.addView(Ui.iconButton(this, "‹", "Retour", v -> showHome()));
-        TextView pathTitle = Ui.notebookTitle(this, "Parcours Hifdh", 24f);
+        pathHeader.addView(Ui.iconButton(this, R.drawable.ic_ui_back, getString(R.string.setup_previous), v -> showHome()));
+        TextView pathTitle = Ui.notebookTitle(this, getString(R.string.nav_hifdh_plan), 24f);
         if (wideBoox()) pathTitle.setTextSize(22f);
         pathTitle.setGravity(Gravity.CENTER);
         Ui.weight(pathTitle, 1f);
@@ -165,10 +166,10 @@ public final class MainActivity extends HaafidhActivity {
         if(!wideBoox())path.addView(backlogParcoursRow);
         // The full weekly planner follows the six large pictograms. This direct
         // text link makes it reachable in one tap without shrinking those icons.
-        TextView jumpToWeek = Ui.bookText(this, "PLANNING DE LA SEMAINE ↓", 16f, true);
+        TextView jumpToWeek = Ui.bookText(this, getString(R.string.nav_week_jump), 16f, true);
         if (wideBoox()) jumpToWeek.setTextSize(20f);
         jumpToWeek.setPadding(Ui.dp(this, 5), Ui.dp(this, wideBoox() ? 6 : 12), Ui.dp(this, 5), Ui.dp(this, wideBoox() ? 6 : 12));
-        jumpToWeek.setContentDescription("Aller au planning de la semaine");
+        jumpToWeek.setContentDescription(getString(R.string.nav_week_accessibility));
         jumpToWeek.setClickable(true);
         jumpToWeek.setFocusable(true);
         jumpToWeek.setOnClickListener(v ->
@@ -226,7 +227,7 @@ public final class MainActivity extends HaafidhActivity {
         geometryActions.add(consolidation);
         setGeometryActionsEnabled(false);
 
-        dashboardTitle = Ui.bookText(this, "7 prochains jours", 20, true);
+        dashboardTitle = Ui.bookText(this, getString(R.string.nav_next_week), 20, true);
         if (wideBoox()) dashboardTitle.setTextSize(18f);
         dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, wideBoox()?5:14), 0, Ui.dp(this, 3));
         dashboardTitle.setOnClickListener(v -> {
@@ -287,34 +288,56 @@ public final class MainActivity extends HaafidhActivity {
         });
     }
 
-    private void showUniversalSetup() {
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putInt("setupStep", setupStep);
+        super.onSaveInstanceState(state);
+    }
+
+    private void showUniversalSetup(Bundle state) {
         LinearLayout root = page();
         root.addView(Ui.notebookTitle(this, getString(R.string.setup_title), 24f));
-        root.addView(Ui.settingRow(this, getString(R.string.app_language), LANGUAGE_LABELS[languageIndex(this)],
+        android.widget.ViewFlipper panels = new android.widget.ViewFlipper(this);
+        LinearLayout language = Ui.column(this);
+        LinearLayout acquired = Ui.column(this);
+        LinearLayout goal = Ui.column(this);
+        LinearLayout disciplines = Ui.column(this);
+        LinearLayout schedule = Ui.column(this);
+        LinearLayout confirmation = Ui.column(this);
+        for (LinearLayout panel : new LinearLayout[]{language, acquired, goal, disciplines, schedule, confirmation})
+            panels.addView(panel);
+        root.addView(panels);
+        language.addView(Ui.settingRow(this, getString(R.string.app_language), LANGUAGE_LABELS[languageIndex(this)],
             view -> chooseLanguage()));
-        root.addView(Ui.text(this, getString(R.string.setup_ranges_help), 16f, false));
-        android.widget.EditText learning = rangeInput(root, R.string.setup_learning_ranges, R.id.setup_learning);
-        android.widget.EditText declared = rangeInput(root, R.string.setup_declared_ranges, R.id.setup_declared);
-        android.widget.EditText deepRanges = rangeInput(root, R.string.setup_deep_ranges, R.id.setup_deep_ranges);
+        acquired.addView(Ui.text(this, getString(R.string.setup_ranges_help), 16f, false));
+        android.widget.EditText declared = rangeInput(acquired, R.string.setup_declared_ranges, R.id.setup_declared);
+        goal.addView(Ui.text(this, getString(R.string.setup_ranges_help), 16f, false));
+        android.widget.EditText learning = rangeInput(goal, R.string.setup_learning_ranges, R.id.setup_learning);
+        android.widget.EditText deepRanges = rangeInput(disciplines, R.string.setup_deep_ranges, R.id.setup_deep_ranges);
         android.widget.CheckBox deep = new android.widget.CheckBox(this);
         deep.setText(R.string.setup_deep);
         deep.setId(R.id.setup_deep);
-        root.addView(deep);
+        disciplines.addView(deep);
         android.widget.CheckBox maintenance = new android.widget.CheckBox(this);
         maintenance.setText(R.string.setup_maintenance);
         maintenance.setId(R.id.setup_maintenance);
-        root.addView(maintenance);
-        root.addView(Ui.text(this, getString(R.string.setup_learning_days), 16f, true));
+        disciplines.addView(maintenance);
+        schedule.addView(Ui.text(this, getString(R.string.setup_learning_days), 16f, true));
         android.widget.Spinner days = new android.widget.Spinner(this);
         days.setId(R.id.setup_days);
         android.widget.ArrayAdapter<Integer> choices = new android.widget.ArrayAdapter<>(
             this, android.R.layout.simple_spinner_dropdown_item, new Integer[]{0,1,2,3,4,5,6});
         days.setAdapter(choices);
         days.setSelection(3);
-        root.addView(days);
-        root.addView(Ui.settingRow(this, getString(R.string.setup_template), "", view ->
+        schedule.addView(days);
+        language.addView(Ui.settingRow(this, getString(R.string.setup_template), "", view ->
             chooseStudyTemplate(declared, deep, maintenance, days)));
-        root.addView(Ui.button(this, getString(R.string.setup_save), view -> {
+        language.addView(Ui.button(this, getString(R.string.setup_restore),
+            view -> startActivity(new Intent(this, SettingsActivity.class)
+                .putExtra(SettingsActivity.EXTRA_INITIAL_RESTORE, true))));
+
+        TextView summary = Ui.text(this, "", 17f, false);
+        confirmation.addView(summary);
+        android.widget.Button save = Ui.button(this, getString(R.string.setup_save), view -> {
             try {
                 GeometryRepository geo = GeometryRepository.get(this);
                 boolean saved = prefs.configureNewProfile(
@@ -329,11 +352,44 @@ public final class MainActivity extends HaafidhActivity {
             } catch (RuntimeException unavailable) {
                 showSetupMessage(R.string.setup_save_error);
             }
-        }));
-        root.addView(Ui.button(this, getString(R.string.setup_restore),
-            view -> startActivity(new Intent(this, SettingsActivity.class)
-                .putExtra(SettingsActivity.EXTRA_INITIAL_RESTORE, true))));
-        setContentView(scrollOf(root));
+        });
+        save.setId(R.id.setup_confirm);
+        confirmation.addView(save);
+
+        ScrollView viewport = scrollOf(root);
+        android.widget.Button back = Ui.button(this, getString(R.string.setup_previous), null);
+        android.widget.Button next = Ui.button(this, getString(R.string.setup_next), null);
+        back.setId(R.id.setup_previous);
+        next.setId(R.id.setup_next);
+        root.addView(next);
+        root.addView(back);
+        int finalStep = panels.getChildCount() - 1;
+        setupStep = state == null ? 0 : Math.min(finalStep, Math.max(0, state.getInt("setupStep")));
+        Runnable showStep = () -> {
+            panels.setDisplayedChild(setupStep);
+            back.setVisibility(setupStep > 0 ? View.VISIBLE : View.GONE);
+            next.setVisibility(setupStep < finalStep ? View.VISIBLE : View.GONE);
+            if (setupStep == finalStep) {
+                String enabled = java.util.stream.Stream.of(
+                    deep.isChecked() ? getString(R.string.setup_deep) : "",
+                    maintenance.isChecked() ? getString(R.string.setup_maintenance) : "")
+                    .filter(item -> !item.isEmpty()).collect(java.util.stream.Collectors.joining(" · "));
+                summary.setText(getString(R.string.setup_summary,
+                    setupRangeSummary(learning), setupRangeSummary(declared), setupRangeSummary(deepRanges),
+                    days.getSelectedItemPosition(), enabled.isEmpty() ? getString(R.string.setup_none) : enabled));
+            }
+            viewport.scrollTo(0, 0);
+        };
+        back.setOnClickListener(view -> { setupStep--; showStep.run(); });
+        next.setOnClickListener(view -> { setupStep++; showStep.run(); });
+        setContentView(viewport);
+        showStep.run();
+        if (state != null) viewport.post(showStep);
+    }
+
+    private String setupRangeSummary(android.widget.EditText input) {
+        String value = input.getText().toString().trim();
+        return value.isEmpty() ? getString(R.string.setup_none) : value;
     }
 
     private void chooseStudyTemplate(android.widget.EditText declaration, android.widget.CheckBox deep,
@@ -421,7 +477,7 @@ public final class MainActivity extends HaafidhActivity {
         int inset = compactBooxHome() ? 4 : 10;
         line.setPadding(Ui.dp(this, 18), Ui.dp(this, inset), Ui.dp(this, 18), Ui.dp(this, inset));
         // Typographic reading surface, not a bordered card.
-        todayHeading = Ui.bookText(this, "AUJOURD’HUI", 17f, true);
+        todayHeading = Ui.bookText(this, getString(R.string.today_title), 17f, true);
         if (wideBoox()) todayHeading.setTextSize(compactBooxHome() ? 17f : 22f);
         line.addView(todayHeading);
         TextView value = Ui.bookText(this, "…", 23f, true);
@@ -438,7 +494,7 @@ public final class MainActivity extends HaafidhActivity {
         todayObjective.setMaxLines(3);
         todayObjective.setEllipsize(android.text.TextUtils.TruncateAt.END);
         line.addView(todayObjective);
-        TextView action = Ui.bookText(this, "CONTINUER  ›", 20f, true);
+        TextView action = Ui.bookText(this, getString(R.string.today_continue), 20f, true);
         if (wideBoox()) action.setTextSize(compactBooxHome() ? 19f : 24f);
         action.setGravity(Gravity.END);
         line.addView(action);

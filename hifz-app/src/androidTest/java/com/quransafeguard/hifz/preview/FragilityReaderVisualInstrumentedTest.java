@@ -59,8 +59,16 @@ public final class FragilityReaderVisualInstrumentedTest {
                 String[] tags={"fr","en","wo"};
                 String[] labels={"Fragilités","Weak spots","Pàcc yu jafe"};
                 for(int language:new int[]{1,2,0,2,1,0}){
-                    assertTrue(HaafidhActivity.setLanguage(context,language));
-                    activity.recreate();
+                    activity.onActivity(a->{
+                        View languageButton=control(a.getWindow().getDecorView(),a.getString(R.string.app_language));
+                        assertNotNull(languageButton);
+                        assertTrue(languageButton.performClick());
+                        AlertDialog picker=(AlertDialog)field(a,"fragilityLanguagePicker");
+                        android.widget.ListView choices=picker.getListView();
+                        assertEquals(HaafidhActivity.LANGUAGE_LABELS[language], choices.getAdapter().getItem(language));
+                        assertTrue(choices.performItemClick(null,language,choices.getItemIdAtPosition(language)));
+                    });
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                     HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Recreated weak spot");
                     var pending = store.pending();
                     assertNotNull(pending);

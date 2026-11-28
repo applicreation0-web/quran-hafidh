@@ -100,4 +100,14 @@
   <string name="fragility_time_remaining">Temps global restant : %1$s</string>
   <string name="fragility_time_save_error">Impossible de sauvegarder le temps des fragilités.</string>
   <string name="ui_close">Fermer</string>
+  <string name="fragility_language_after_aid">Fermez le choix du verset ou le lecteur audio avant de changer de langue.</string>
+  <string name="setup_next">Continuer</string>
+  <string name="setup_previous">Retour</string>
+  <string name="setup_none">Aucun</string>
+  <string name="setup_summary">À apprendre : %1$s\nDéclaré mémorisé : %2$s\nÀ approfondir : %3$s\nJours d’apprentissage par semaine : %4$d\nDisciplines Itqān activées : %5$s</string>
+  <string name="nav_hifdh_plan">Parcours Hifdh</string>
+  <string name="nav_week_jump">PLANNING DE LA SEMAINE ↓</string>
+  <string name="nav_week_accessibility">Aller au planning de la semaine</string>
+  <string name="nav_next_week">7 prochains jours</string>
+  <string name="today_title">AUJOURD’HUI</string>
 </resources>

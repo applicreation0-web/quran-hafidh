@@ -39,8 +39,8 @@ public abstract class HaafidhActivity extends Activity {
         if (displayedLanguage != languageIndex(this)) recreate();
     }
 
-    final void chooseLanguage() {
-        new android.app.AlertDialog.Builder(this)
+    final android.app.AlertDialog chooseLanguage() {
+        return new android.app.AlertDialog.Builder(this)
             .setTitle(R.string.app_language)
             .setSingleChoiceItems(LANGUAGE_LABELS, languageIndex(this), (dialog, index) -> {
                 dialog.dismiss();
@@ -48,7 +48,7 @@ public abstract class HaafidhActivity extends Activity {
                 if (setLanguage(this, index)) recreate();
                 else android.widget.Toast.makeText(this, R.string.setup_save_error, android.widget.Toast.LENGTH_LONG).show();
             })
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.ui_close, null)
             .show();
     }
 }

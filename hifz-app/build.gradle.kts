@@ -304,8 +304,12 @@ val verifyHifzConvergenceRules by tasks.registering {
         }) {
             "Grand Palais, Parcours and Atlas boussole must be distinct real vectors."
         }
-        check(manifest.contains("android:icon=\"@drawable/ic_quran_hifz_header\"")
-                && manifest.contains("android:roundIcon=\"@drawable/ic_quran_hifz_header\"")
+        val launcher = file("src/main/res/mipmap-anydpi-v26/ic_haafidh_launcher.xml").readText()
+        val launcherForeground = file("src/main/res/drawable/ic_haafidh_launcher_foreground.xml").readText()
+        check(manifest.contains("android:icon=\"@mipmap/ic_haafidh_launcher\"")
+                && manifest.contains("android:roundIcon=\"@mipmap/ic_haafidh_launcher\"")
+                && launcher.contains("@drawable/ic_haafidh_launcher_foreground")
+                && launcherForeground.contains("@drawable/ic_quran_hifz_header")
                 && file("src/main/res/drawable/ic_quran_hifz_header.xml").exists()
                 && main.contains("appEmblem.setImageResource(R.drawable.ic_quran_hifz_header)")) {
             "Quran Hifz launcher and Home must share the clean Mushaf/rehal vector identity."

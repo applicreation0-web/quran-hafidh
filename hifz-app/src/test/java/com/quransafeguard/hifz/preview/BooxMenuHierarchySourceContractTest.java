@@ -50,8 +50,12 @@ public final class BooxMenuHierarchySourceContractTest {
         String manifest = source("hifz-app/src/main/AndroidManifest.xml");
         String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String asset = source("hifz-app/src/main/res/drawable/ic_quran_hifz_header.xml");
-        assertTrue(manifest.contains("android:icon=\"@drawable/ic_quran_hifz_header\""));
-        assertTrue(manifest.contains("android:roundIcon=\"@drawable/ic_quran_hifz_header\""));
+        String launcher = source("hifz-app/src/main/res/mipmap-anydpi-v26/ic_haafidh_launcher.xml");
+        String foreground = source("hifz-app/src/main/res/drawable/ic_haafidh_launcher_foreground.xml");
+        assertTrue(manifest.contains("android:icon=\"@mipmap/ic_haafidh_launcher\""));
+        assertTrue(manifest.contains("android:roundIcon=\"@mipmap/ic_haafidh_launcher\""));
+        assertTrue(launcher.contains("<adaptive-icon") && launcher.contains("@drawable/ic_haafidh_launcher_foreground"));
+        assertTrue(foreground.contains("@drawable/ic_quran_hifz_header"));
         assertTrue(main.contains("appEmblem.setImageResource(R.drawable.ic_quran_hifz_header)"));
         assertTrue(asset.contains("<vector") && asset.contains("android:pathData="));
         assertFalse(asset.contains("<bitmap"));

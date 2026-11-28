@@ -100,4 +100,14 @@
   <string name="fragility_time_remaining">Diir bi des: %1$s</string>
   <string name="fragility_time_save_error">Mëneesul denc diir bi nga liggéey ci pàcc yi la jafe.</string>
   <string name="ui_close">Tëj</string>
+  <string name="fragility_language_after_aid">Tëjal tànneefu aaya bi walla jumtukaayu déglu bi bala ngay soppi làkk wi.</string>
+  <string name="setup_next">Wéyal</string>
+  <string name="setup_previous">Dellusi</string>
+  <string name="setup_none">Amul</string>
+  <string name="setup_summary">Li nga bëgg a mokkal: %1$s\nLi nga wax ne mokkal nga ko: %2$s\nLi nga bëgg a dëgëral: %3$s\nBési mokkal ci ayubés: %4$d\nPàcci Itqān yi nga tànn: %5$s</string>
+  <string name="nav_hifdh_plan">Yoonu mokkal</string>
+  <string name="nav_week_jump">NASUM AYUBÉS BI ↓</string>
+  <string name="nav_week_accessibility">Dem ci nasum ayubés bi</string>
+  <string name="nav_next_week">Juróom ñaari fan yi ñëw</string>
+  <string name="today_title">TEY</string>
 </resources>

@@ -6,4 +6,7 @@
     <item type="id" name="setup_deep_ranges"/>
     <item type="id" name="setup_deep"/>
     <item type="id" name="setup_maintenance"/>
+    <item type="id" name="setup_next"/>
+    <item type="id" name="setup_previous"/>
+    <item type="id" name="setup_confirm"/>
 </resources>
