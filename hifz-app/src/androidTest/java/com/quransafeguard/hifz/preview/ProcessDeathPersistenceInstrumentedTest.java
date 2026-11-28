@@ -249,7 +249,9 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         try {
             // The full-suite run may still share one process; the external
             // two-phase runner kills the app before starting this verifier.
-            HifzBackup.recoverIfNecessary(context);
+            boolean strictUpdate = "true".equals(androidx.test.platform.app.InstrumentationRegistry.getArguments()
+                .getString("strictAndroidUpdate"));
+            if (!strictUpdate) HifzBackup.recoverIfNecessary(context);
             assertTrue("Interrupted import must revert staged main-store mutation",
                 !context.getSharedPreferences(HIFZ_PREFS,Context.MODE_PRIVATE)
                     .contains("p0-incomplete-restore-probe"));
@@ -260,6 +262,12 @@ public final class ProcessDeathPersistenceInstrumentedTest {
                 !new HifzPrefs(context,true).universalSetupPending());
             assertPersistedFixture(context);
             assertBackupLedgerAndJ10(context);
+            SharedPreferences free = context.getSharedPreferences(FREE_MEM, Context.MODE_PRIVATE);
+            assertEquals(17, free.getInt("page",-1));
+            assertEquals(4, free.getInt("count",-1));
+            assertEquals(75, free.getInt("mask",-1));
+            assertEquals("2:1", free.getString("start",null));
+            assertEquals("2:2", free.getString("end",null));
         } finally {
             context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
             context.getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE).edit().clear().commit();

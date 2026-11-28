@@ -206,6 +206,29 @@ final class HifzBackup {
                     || span != null && cursor != -1 && (cursor < span.first || cursor > span.last)
                     || pending && (!ranges.isEmpty() || cursor != -1 || deep || maintenance))
                 throw new IllegalArgumentException("Inconsistent learning checkpoint");
+            var acquired = HifzPrefs.decodeRanges((String) typedUniversalValue(values, "itqanRanges", "s", String.class, "[]"));
+            var legacy = HifzPrefs.decodeRanges((String) typedUniversalValue(values, "legacyMurajaahPromotedRanges", "s", String.class, "[]"));
+            var promoted = HifzPrefs.decodeRanges((String) typedUniversalValue(values, "promotedRanges", "s", String.class, "[]"));
+            var outstanding = HifzPrefs.decodeRanges((String) typedUniversalValue(values, "unconsolidatedPromotedRanges", "s", String.class, "[]"));
+            int nextJuz = (Integer) typedUniversalValue(values, JuzMaintenanceStore.NEXT, "i", Integer.class, 1);
+            if (nextJuz < 1 || nextJuz > 30) throw new IllegalArgumentException("Invalid next maintenance juz");
+            String rawDraft = (String) typedUniversalValue(values, JuzMaintenanceStore.DRAFT, "s", String.class, null);
+            if (rawDraft != null) {
+                var draft = JuzMaintenanceStore.decodeDraft(rawDraft);
+                acquired.addAll(legacy);
+                acquired.addAll(HifzPrefs.consolidatedPromotedRanges(promoted, outstanding));
+                JSONArray credited = new JSONArray((String) typedUniversalValue(values,
+                    "v6AcquiredCreditLineIds", "s", String.class, "[]"));
+                java.util.Set<String> lineIds = new java.util.LinkedHashSet<>();
+                for (int i = 0; i < credited.length(); i++) lineIds.add(credited.getString(i));
+                acquired.addAll(HifzPrefs.rangesFromVerses(geometry.allVersesFullyCredited(lineIds)));
+                var corpus = com.quransafeguard.hifz.core.EligibleCorpus.Companion.of(acquired);
+                var plan = JuzMaintenanceStore.plan(draft.juz, geometry, corpus);
+                if (plan == null) throw new IllegalArgumentException("Maintenance juz is outside the acquired corpus");
+                int available = draft.phase.correction() ? draft.revealed.size() : plan.pages.size();
+                if (draft.index >= available || !plan.pages.containsAll(draft.revealed))
+                    throw new IllegalArgumentException("Inconsistent maintenance checkpoint");
+            }
         } catch (RuntimeException failure) {
             throw new JSONException("Parcours universel invalide dans la sauvegarde.");
         }

@@ -21,8 +21,8 @@ import java.util.Set;
 
 /** A dedicated, resumable Itqān rotation over whole acquired juz. */
 final class JuzMaintenanceStore {
-    private static final String DRAFT = "itqanJuzMaintenanceDraftV1";
-    private static final String NEXT = "itqanJuzMaintenanceNextV1";
+    static final String DRAFT = "itqanJuzMaintenanceDraftV1";
+    static final String NEXT = "itqanJuzMaintenanceNextV1";
     private static final String RECEIPT = "itqanJuzMaintenanceReceiptV1|";
     static final String CUE = "1 juz visible, puis le même juz masqué. Pages dévoilées à corriger à la fin.";
 
@@ -122,7 +122,10 @@ final class JuzMaintenanceStore {
 
     Draft read() {
         String raw = prefs.getString(DRAFT, null);
-        if (raw == null) return null;
+        return raw == null ? null : decodeDraft(raw);
+    }
+
+    static Draft decodeDraft(String raw) {
         try {
             JSONObject json = new JSONObject(raw);
             List<Integer> revealed = new ArrayList<>();

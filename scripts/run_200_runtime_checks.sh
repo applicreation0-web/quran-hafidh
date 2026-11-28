@@ -27,8 +27,9 @@ test "${#old_test[@]}" -eq 1
 
 instrument() {
     local tests="$1" count="$2" output="$3"
-    adb shell am instrument -w -r -e class "$tests" "$runner" | tr -d '\r' | tee "$output"
-    grep -Eq "^OK \\($count tests?\\)$" "$output"
+    shift 3
+    adb shell am instrument -w -r -e class "$tests" "$@" "$runner" | tr -d '\r' | tee "$output" || return 1
+    grep -Eq "^OK \\($count tests?\\)$" "$output" || return 1
     grep -Fxq 'INSTRUMENTATION_CODE: -1' "$output"
 }
 
@@ -50,7 +51,7 @@ run_update() {
     adb shell dumpsys package "$target" > "$dest/after.txt"
     grep -Eq '^ *versionCode=63( |$)' "$dest/after.txt"
     test "$first_install" = "$(awk -F= '/firstInstallTime=/{print $2; exit}' "$dest/after.txt")"
-    instrument "$destroy#b_verifyFixtureAfterExternalForceStop" 1 "$dest/verify.txt"
+    instrument "$destroy#b_verifyFixtureAfterExternalForceStop" 1 "$dest/verify.txt" -e strictAndroidUpdate true
 }
 
 run_case() {
@@ -66,11 +67,17 @@ run_case() {
     for screenshot in "$@"; do
         adb shell rm -f "$device_dir/$screenshot.png"
     done
-    instrument "$tests" "$count" "$dest/result.txt"
+    local status=0
+    instrument "$tests" "$count" "$dest/result.txt" || status=1
     for screenshot in "$@"; do
-        adb pull "$device_dir/$screenshot.png" "$dest/"
-        test -s "$dest/$screenshot.png"
+        adb pull "$device_dir/$screenshot.png" "$dest/" || status=1
+        test -s "$dest/$screenshot.png" || status=1
     done
+    if (( status != 0 )); then
+        adb exec-out screencap -p > "$dest/failure-screen.png" || true
+        adb shell dumpsys activity top > "$dest/failure-activity.txt" || true
+    fi
+    return "$status"
 }
 
 frames=(fragilite-visible fragilite-masquee fragilite-cible fragilite-reprise)

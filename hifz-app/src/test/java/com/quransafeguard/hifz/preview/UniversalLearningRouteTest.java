@@ -148,6 +148,39 @@ public final class UniversalLearningRouteTest {
         assertFalse(ItqanRegimeStore.postNasMaintenance(raw));
     }
 
+    @Test public void openMaintenanceReviewRetainsItsEvidenceWhenTheNextWeekStarts() {
+        LocalDate weekOne = LocalDate.of(2026,11,28);
+        LocalDate weekTwo = weekOne.plusWeeks(1);
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putString("programStartDate", "2026-11-27").putBoolean(HifzPrefs.UNIVERSAL_SETUP,true).commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        assertTrue(prefs.configureNewProfile(Collections.emptyList(),
+            UniversalLearningRoute.parse("1:1-114:6"), Collections.emptyList(), false, true, 0, geometry));
+        var first = raw.edit();
+        HifzPrefs.appendPostNasMaintainedUnit(raw, first, weekOne, geometry.lineIdsOnPage(1));
+        assertTrue(first.commit());
+        var units = prefs.stabilizedConsolidationUnits(weekOne);
+        assertEquals(1, units.size());
+        var family = ConsolidationCycleEngine.Family.STABILIZATION;
+        var engine = new ConsolidationCycleEngine();
+        String cycleId = "stabilization-" + weekOne;
+        var open = engine.openSession(engine.startCycle(cycleId, family, units.get(0)), "synthetic");
+        assertTrue(prefs.persistConsolidationSession(open));
+        var second = raw.edit();
+        HifzPrefs.appendPostNasMaintainedUnit(raw, second, weekTwo, geometry.lineIdsOnPage(2));
+        assertTrue(second.commit());
+        assertTrue(prefs.universalMaintenanceReviewDue(weekOne));
+        var resumed = prefs.restoreConsolidationSession(engine,family,cycleId);
+        assertEquals(open.unitIds(),resumed.unitIds());
+        var completed = engine.recordRepetition(resumed);
+        assertTrue(prefs.persistConsolidationSession(completed));
+        assertTrue(prefs.completeSnowballEvening(family,weekOne.toString(),completed));
+        assertFalse(prefs.completeSnowballEvening(family,weekOne.toString(),completed));
+        assertTrue(prefs.universalMaintenanceReviewDue(weekTwo));
+        assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
+        assertFalse(ItqanRegimeStore.postNasMaintenance(raw));
+    }
+
     @Test public void declaredAcquisCanAlsoBeAssignedToDeepConsolidationWithoutEarningCredit() {
         InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
         raw.edit().putInt("schema", 6).putString("programStartDate", "2026-11-27")
@@ -220,6 +253,29 @@ public final class UniversalLearningRouteTest {
         values.put("sabqiLineCursor", new org.json.JSONObject().put("t", "i").put("v", 0));
         assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
         values.remove(HifzPrefs.UNIVERSAL_LEARNING);
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+    }
+
+    @Test public void backupRejectsBadCorporaAndMaintenanceBeforeApplyingThem() throws Exception {
+        var values = new org.json.JSONObject()
+            .put(HifzPrefs.UNIVERSAL_LEARNING, new org.json.JSONObject().put("t","s").put("v","[]"));
+        for (String key : new String[]{"itqanRanges", "promotedRanges", "unconsolidatedPromotedRanges"}) {
+            values.put(key, new org.json.JSONObject().put("t","s").put("v","not json"));
+            assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+            values.remove(key);
+        }
+        var draft = new org.json.JSONObject().put("t","s").put("v","not json");
+        values.put(JuzMaintenanceStore.DRAFT, draft);
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+        var valid = new org.json.JSONObject().put("juz",1).put("opened","2026-11-27")
+            .put("phase","READ").put("index",0).put("revealed",new org.json.JSONArray())
+            .put("correctionAssisted",false);
+        draft.put("v",valid.toString());
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+        values.put("itqanRanges", new org.json.JSONObject().put("t","s")
+            .put("v","[{\"start\":\"1:1\",\"end\":\"114:6\"}]"));
+        HifzBackup.validateUniversalProfile(values, geometry);
+        draft.put("v",valid.put("index",604).toString());
         assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
     }
 

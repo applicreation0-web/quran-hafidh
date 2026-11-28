@@ -1468,8 +1468,12 @@ public final class HifzPrefs {
 
     /** Every promoted range that has already cleared Consolidation — "Pages promues" minus "À stabiliser". */
     public List<VerseRange> consolidatedPromotedRanges() {
-        List<VerseRange> settled = new ArrayList<>(promotedRanges());
-        for (VerseRange pending : unconsolidatedPromotedRanges()) {
+        return consolidatedPromotedRanges(promotedRanges(), unconsolidatedPromotedRanges());
+    }
+
+    static List<VerseRange> consolidatedPromotedRanges(List<VerseRange> promoted, List<VerseRange> outstanding) {
+        List<VerseRange> settled = new ArrayList<>(promoted);
+        for (VerseRange pending : outstanding) {
             settled = subtractCoverage(settled, pending.getStart(), pending.getEndInclusive());
         }
         return settled;
@@ -3738,6 +3742,20 @@ public final class HifzPrefs {
         return Collections.unmodifiableList(units);
     }
 
+    private static boolean maintainedUnitsMatch(LocalDate day, String snapshot,
+            List<ConsolidationCycleEngine.Unit> units) throws org.json.JSONException {
+        String prefix = mondayOf(day) + "|";
+        if (!snapshot.startsWith(prefix)) return false;
+        JSONArray expected = new JSONArray(snapshot.substring(prefix.length()));
+        if (expected.length() != units.size()) return false;
+        for (int i = 0; i < units.size(); i++) {
+            var unit = units.get(i);
+            if (unit.protocol() != ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED
+                    || !unit.id().equals(expected.getString(i))) return false;
+        }
+        return true;
+    }
+
     private JSONArray rolledSnowballUnits(ConsolidationCycleEngine.Family family, LocalDate today) {
         String weekAnchor = mondayOf(today).toString();
         if (!weekAnchor.equals(p.getString(snowballAnchorKey(family), ""))) return new JSONArray();
@@ -4497,17 +4515,20 @@ public final class HifzPrefs {
                 if(unit.protocol()!=ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED)
                     throw new IllegalStateException("Mixed Maintenance weekly protocols");
             synchronized(V6_STATE_LOCK) {
-                String snapshot=postNasConsolidationSnapshot(day);
-                if(snapshot.isEmpty()||!postNasConsolidationPending(day))return false;
-                JSONArray exact=postNasMaintainedHizbs(day);
-                if(exact.length()!=completed.cycle().units().size())
-                    throw new IllegalStateException("Maintien added since weekly snapshot opened");
-                for(int i=0;i<exact.length();i++)
-                    if(!exact.optString(i).equals(completed.cycle().units().get(i).id()))
+                boolean universal = universalProfile();
+                String snapshot = universal ? frozenConsolidationSnapshot(family, id)
+                    : postNasConsolidationSnapshot(day);
+                if (snapshot.isEmpty() || (universal ? snapshot.equals(p.getString(POST_NAS_WEEK_DONE,""))
+                        : !postNasConsolidationPending(day))) return false;
+                try {
+                    if (!maintainedUnitsMatch(day, snapshot, completed.cycle().units()))
                         throw new IllegalStateException("Maintien units changed during weekly consolidation");
+                } catch (org.json.JSONException damaged) {
+                    throw new IllegalStateException("Invalid saved Maintien evidence", damaged);
+                }
                 SharedPreferences.Editor editor = p.edit().putString(POST_NAS_WEEK_DONE,snapshot)
                     .remove(consolidationStateKey(family));
-                if (!universalProfile()) editor.putString("lastStabilizationSnowballEveningDate",date);
+                if (!universal) editor.putString("lastStabilizationSnowballEveningDate",date);
                 return editor.commit();
             }
         }
@@ -4787,6 +4808,17 @@ public final class HifzPrefs {
             // Freeze the source corpus once and KEEP it when saving later repetitions.
             String prior=frozenConsolidationSnapshot(cycle.family(),cycle.cycleId());
             String snapshot=prior;
+            if (universalProfile() && cycle.family() == ConsolidationCycleEngine.Family.STABILIZATION
+                    && cycle.units().get(0).protocol() == ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED) {
+                String prefix = "stabilization-";
+                if (!cycle.cycleId().startsWith(prefix)) return false;
+                LocalDate day = LocalDate.parse(cycle.cycleId().substring(prefix.length()));
+                if (!maintainedUnitsMatch(day, snapshot, cycle.units())) {
+                    snapshot = postNasConsolidationSnapshot(day);
+                    if (!postNasConsolidationPending(day) || !maintainedUnitsMatch(day, snapshot, cycle.units()))
+                        return false;
+                }
+            }
             if(snapshot.isEmpty()) {
                 // NEW first-pass Consolidation sessions can have several ×7
                 // subblocks (or an overdue week + this week's ×1 pass).
@@ -5595,7 +5627,7 @@ static List<RecentSabqi> withoutRecentBlocks(List<RecentSabqi> source, List<Rece
         return out;
     }
 
-    private static List<VerseRange> rangesFromVerses(List<VerseRef> orderedVerses) {
+    static List<VerseRange> rangesFromVerses(List<VerseRef> orderedVerses) {
         ArrayList<VerseRange> additions = new ArrayList<>();
         if (orderedVerses.isEmpty()) return additions;
         VerseRef start = orderedVerses.get(0);

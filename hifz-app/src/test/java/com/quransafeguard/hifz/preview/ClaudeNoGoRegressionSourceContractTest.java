@@ -120,7 +120,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
 
     @Test public void rangeNormalizationNeverSplitsPerSurah() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        String sort = method(prefs, "private static List<VerseRange> sortRangesPreservingBoundaries", "private static List<VerseRange> rangesFromVerses");
+        String sort = method(prefs, "private static List<VerseRange> sortRangesPreservingBoundaries", "static List<VerseRange> rangesFromVerses");
         assertTrue(sort.contains("sameSurahAdjacent"));
         assertFalse(sort.contains("fromOrdinal(segmentStart)"));
     }
