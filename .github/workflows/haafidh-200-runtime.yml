@@ -30,7 +30,11 @@ jobs:
       - name: Install SDK and prepare Android emulator
         run: |
           set -euo pipefail
-          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          sdk_root="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          sdk_manager="$(find "$sdk_root/cmdline-tools" -type f -name sdkmanager -print -quit)"
+          test -x "$sdk_manager"
+          yes | "$sdk_manager" --licenses >/dev/null || true
+          "$sdk_manager" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
           test -c /dev/kvm
           sudo chown "$(id -u):$(id -g)" /dev/kvm
           test ! -d hifz-app/src/private114/assets
