@@ -161,4 +161,15 @@
   <string name="setup_range_ayah">Nimero aaya bi</string>
   <string name="setup_add_range">Yokk pàcc bi</string>
   <string name="setup_range_order_error">Mujj gi war na topp ndorteel li.</string>
+  <string name="setup_learning_days_from">%1$s · dale ko ci %2$s</string>
+  <string name="setup_learning_days_capacity">Bàyyil benn bés ci wàllu Itqān bu nga tàmbali.</string>
+  <string name="setup_week_in_progress">Ayu-bés bii · Sabqi %1$s · Waxtuy Itqān %2$s</string>
+  <string-array name="setup_weekdays">
+    <item>Altine</item>
+    <item>Talaata</item>
+    <item>Àllarba</item>
+    <item>Alxames</item>
+    <item>Àjjuma</item>
+    <item>Gaawu</item>
+  </string-array>
 </resources>

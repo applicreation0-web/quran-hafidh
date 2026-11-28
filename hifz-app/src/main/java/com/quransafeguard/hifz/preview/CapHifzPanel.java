@@ -210,7 +210,7 @@ final class CapHifzPanel extends LinearLayout {
         // A dated Recommended schedule is reconstructible. Old manual ratios were never journaled.
         return CapHifzEvidence.count(from.isBefore(start) ? start : from, through, today, coverage,
             prefs.activeReviewSlots().programmeStart(), day -> WeeklyProgramPolicy.actionFor(
-                day.getDayOfWeek(), prefs.weeklyProgramFor(day), prefs.learningDaysPerWeek()),
+                prefs, day, prefs.learningDaysPerWeek()),
             day -> prefs.weeklyProgramFor(day) == HifzPrefs.WeeklyProgram.RECOMMENDED && !stopped,
             day -> prefs.weeklyProgramFor(day) == HifzPrefs.WeeklyProgram.RECOMMENDED && !prefs.weeklyItqanPageClosed(day),
             received,day->prefs.activeReviewSlots().scheduled(day,ActiveReviewSlots.Slot.EVENING));

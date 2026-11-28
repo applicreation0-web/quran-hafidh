@@ -870,7 +870,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
                 && mainActivity.contains("HifzBacklog.onDate(backlogPending,today)"));
         assertTrue("cadence completion checks must use the configured split (directly or via the P4 "
                 + "Roadmap's effectiveLearningDaysPerWeek(), which falls back to it)",
-            mainActivity.contains("WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek())"));
+            mainActivity.contains("WeeklyProgramPolicy.actionFor(prefs,date,effectiveLearningDaysPerWeek())"));
         assertTrue("today's due-task lookup must respect the split without selecting historical "
                 + "missed dates as compulsory catch-up sessions",
             mainActivity.contains("WeeklyProgramPolicy.nextDue(prefs,todayDate,todayDate,")
@@ -880,7 +880,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
 
         String dashboard = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue("the seven-day dashboard projection must use the configured split too",
-            dashboard.contains("WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),prefs.learningDaysPerWeek())"));
+            dashboard.contains("WeeklyProgramPolicy.actionFor(prefs,date,prefs.learningDaysPerWeek())"));
 
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue("Settings must offer a picker for the weekly split",

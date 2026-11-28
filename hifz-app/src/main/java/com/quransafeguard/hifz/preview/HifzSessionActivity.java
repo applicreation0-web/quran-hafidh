@@ -1682,6 +1682,15 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                 onError(getString(R.string.maintenance_page_save_error));
                 return;
             }
+            if (prefs.universalProfile() && store.read() == null) {
+                sessionCompleted = true;
+                clock.pause();
+                actions.removeAllViews();
+                program.setText(R.string.maintenance_completed);
+                progress.setText(R.string.maintenance_cue);
+                new DashboardLedger(this).capture(prefs);
+                return;
+            }
             renderMode();
         }));
         maintenancePageAction.setEnabled(false);

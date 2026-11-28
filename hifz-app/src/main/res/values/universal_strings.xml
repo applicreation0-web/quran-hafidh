@@ -161,4 +161,15 @@
   <string name="setup_range_ayah">Numéro du verset</string>
   <string name="setup_add_range">Ajouter le passage</string>
   <string name="setup_range_order_error">La fin doit suivre le début.</string>
+  <string name="setup_learning_days_from">%1$s · à partir du %2$s</string>
+  <string name="setup_learning_days_capacity">Libérez un jour pour chaque discipline Itqān activée.</string>
+  <string name="setup_week_in_progress">Cette semaine · Sabqi %1$s · Créneaux Itqān %2$s</string>
+  <string-array name="setup_weekdays">
+    <item>Lundi</item>
+    <item>Mardi</item>
+    <item>Mercredi</item>
+    <item>Jeudi</item>
+    <item>Vendredi</item>
+    <item>Samedi</item>
+  </string-array>
 </resources>

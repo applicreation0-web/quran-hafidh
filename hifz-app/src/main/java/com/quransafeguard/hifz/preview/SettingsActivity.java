@@ -91,7 +91,10 @@ public final class SettingsActivity extends HaafidhActivity {
 
         weeklyProgramSetting=Ui.settingRow(this,"Programme",
             weeklyProgramSummary(),v->chooseWeeklyProgram());
-        parcours.addView(weeklyProgramSetting);parcours.addView(Ui.divider(this));
+        if (!prefs.universalProfile()) {
+            parcours.addView(weeklyProgramSetting);
+            parcours.addView(Ui.divider(this));
+        }
         // Informational only: the real An-Nas latch determines the regime.
         // Never offer a false calendar switch that cannot alter that latch.
         TextView itqanRegimeInfo=Ui.text(this,
@@ -104,12 +107,16 @@ public final class SettingsActivity extends HaafidhActivity {
             parcours.addView(itqanRegimeInfo);
         }
         parcours.addView(Ui.divider(this));
-        learningDaysSetting=Ui.settingRow(this,"Apprentissage / semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
-        learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL
-            && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
+        learningDaysSetting=Ui.settingRow(this,
+            prefs.universalProfile() ? getString(R.string.setup_learning_days) : "Apprentissage / semaine",
+            learningDaysSummary(),v->chooseLearningDaysPerWeek());
+        learningDaysSetting.setEnabled(prefs.universalProfile()
+            || prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL
+                && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
         roadmapModeSwitch.setOnCheckedChangeListener((button,checked)->{
             prefs.setRoadmapMode(checked?HifzPrefs.RoadmapMode.AUTO:HifzPrefs.RoadmapMode.MANUAL);
-            learningDaysSetting.setEnabled(!checked && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
+            learningDaysSetting.setEnabled(prefs.universalProfile()
+                || !checked && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
             refreshWeeklyCadence();
         });
         parcours.addView(learningDaysSetting);parcours.addView(Ui.divider(this));
@@ -320,6 +327,10 @@ public final class SettingsActivity extends HaafidhActivity {
 
     /** Weekday abbreviations (Mon..Sat) currently assigned to the given cadence action, e.g. "Lun/Mer/Ven". */
     private String daysFor(CadenceAction action){
+        if (prefs.universalProfile()) {
+            LocalDate monday = HifzClock.today().with(DayOfWeek.MONDAY);
+            return String.join(" / ", universalWeekdays(monday, action));
+        }
         int days=effectiveLearningDaysPerWeek();
         StringBuilder out=new StringBuilder();
         for(int i=0;i<WEEKDAYS.length;i++){
@@ -338,6 +349,13 @@ public final class SettingsActivity extends HaafidhActivity {
      * dropped entirely rather than showing an empty day list before "· Apprentissage/Stabilisation".
      */
     private String weeklyCadenceSummary(){
+        if (prefs.universalProfile()) {
+            String learning = daysFor(CadenceAction.LEARNING);
+            String stabilization = daysFor(CadenceAction.STABILIZATION);
+            return getString(R.string.setup_week_in_progress,
+                learning.isEmpty() ? getString(R.string.setup_none) : learning,
+                stabilization.isEmpty() ? getString(R.string.setup_none) : stabilization);
+        }
         String learningDays=daysFor(CadenceAction.LEARNING),stabilizationDays=daysFor(CadenceAction.STABILIZATION);
         StringBuilder out=new StringBuilder();
         if(!learningDays.isEmpty())out.append(learningDays).append(" · Apprentissage   ·   ");
@@ -348,6 +366,15 @@ public final class SettingsActivity extends HaafidhActivity {
     }
 
     private String learningDaysSummary(){
+        if (prefs.universalProfile()) {
+            LocalDate monday = prefs.nextLearningWeek();
+            List<String> days = universalWeekdays(monday, CadenceAction.LEARNING);
+            String start = monday.format(java.time.format.DateTimeFormatter
+                .ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)
+                .withLocale(getResources().getConfiguration().getLocales().get(0)));
+            return getString(R.string.setup_learning_days_from,
+                days.isEmpty() ? getString(R.string.setup_none) : String.join(" / ", days), start);
+        }
         int days=effectiveLearningDaysPerWeek();
         String base=prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
             ? "3 jours Apprentissage · 3 jours Stabilisation"
@@ -418,13 +445,59 @@ public final class SettingsActivity extends HaafidhActivity {
                     Ui.showFatal(this,"Impossible de sauvegarder le programme.");
                     return;
                 }
-                learningDaysSetting.setEnabled(modes[choice[0]]==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
-                    && prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL);
+                learningDaysSetting.setEnabled(prefs.universalProfile()
+                    || modes[choice[0]]==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
+                        && prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL);
                 refreshWeeklyCadence();
             }).show();
     }
 
+    private List<String> universalWeekdays(LocalDate monday, CadenceAction action) {
+        List<String> days = new ArrayList<>();
+        String[] labels = getResources().getStringArray(R.array.setup_weekdays);
+        for (int i = 0; i < labels.length; i++) {
+            if (WeeklyProgramPolicy.actionFor(prefs, monday.plusDays(i), prefs.defaultLearningDaysPerWeek()) == action)
+                days.add(labels[i]);
+        }
+        return days;
+    }
+
+    private void chooseUniversalLearningWeekdays() {
+        String[] labels = getResources().getStringArray(R.array.setup_weekdays);
+        LocalDate monday = prefs.nextLearningWeek();
+        boolean[] selected = new boolean[labels.length];
+        for (int i = 0; i < selected.length; i++)
+            selected[i] = WeeklyProgramPolicy.actionFor(prefs, monday.plusDays(i), prefs.defaultLearningDaysPerWeek())
+                == CadenceAction.LEARNING;
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setTitle(R.string.setup_learning_days)
+            .setMultiChoiceItems(labels, selected, (view, i, checked) -> selected[i] = checked)
+            .setNegativeButton(android.R.string.cancel,null)
+            .setPositiveButton(R.string.setup_save,null).create();
+        dialog.show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
+            int mask = 0;
+            for (int i = 0; i < selected.length; i++) if (selected[i]) mask |= 1 << i;
+            int reserved = (prefs.universalDeepEnabled() ? 1 : 0) + (prefs.universalMaintenanceEnabled() ? 1 : 0);
+            if (Integer.bitCount(mask) > labels.length - reserved) {
+                Toast.makeText(this,R.string.setup_learning_days_capacity,Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (!prefs.setUniversalLearningWeekdays(mask)) {
+                Toast.makeText(this,R.string.setup_save_error,Toast.LENGTH_LONG).show();
+                return;
+            }
+            refreshWeeklyCadence();
+            dialog.dismiss();
+        });
+    }
+
     private void chooseLearningDaysPerWeek(){
+        if (prefs.universalProfile()) {
+            chooseUniversalLearningWeekdays();
+            return;
+        }
         int min=HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK,max=HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK;
         int current=prefs.learningDaysPerWeek();
         String[] labels=new String[max-min+1];

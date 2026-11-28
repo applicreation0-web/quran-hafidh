@@ -103,8 +103,10 @@ final class JuzMaintenanceStore {
             boolean enabled = prefs.contains(HifzPrefs.UNIVERSAL_LEARNING)
                 ? HifzPrefs.universalMaintenanceFor(prefs, today)
                 : ItqanRegimeStore.postNasMaintenance(prefs);
-            if (!today.equals(HifzClock.today()) || !enabled || !afterLastReceipt(today)) return null;
+            if (!today.equals(HifzClock.today()) || !enabled) return null;
             Draft saved = read();
+            LocalDate date = saved == null ? today : receiptDate(saved, today);
+            if (today.isBefore(date) || !afterLastReceipt(date)) return null;
             if (saved != null) return saved;
             int start = prefs.getInt(NEXT, 1);
             if (start < 1 || start > 30) throw new IllegalStateException("Invalid maintenance position");
@@ -158,8 +160,9 @@ final class JuzMaintenanceStore {
     boolean advance(Draft expected, Plan plan, LocalDate today) {
         synchronized (prefs) {
             if (!current(expected, plan) || !today.equals(HifzClock.today())
-                    || today.isBefore(expected.opened) || prefs.contains(RECEIPT + today)
-                    || !afterLastReceipt(today)) return false;
+                    || today.isBefore(expected.opened)) return false;
+            LocalDate date = receiptDate(expected, today);
+            if (prefs.contains(RECEIPT + date) || !afterLastReceipt(date)) return false;
             int next = expected.index + 1;
             List<Integer> revealed = expected.revealed;
             Phase phase = expected.phase;
@@ -180,14 +183,18 @@ final class JuzMaintenanceStore {
 
             String label = "Maintien · juz " + expected.juz + " · " + plan.pages.size() + " pages";
             SharedPreferences.Editor editor = prefs.edit().remove(DRAFT).putInt(NEXT, expected.juz % 30 + 1)
-                .putString(RECEIPT + today, label)
-                .putString("lastItqanDate", today.toString()).putString("lastItqanLabel", label)
+                .putString(RECEIPT + date, label)
+                .putString("lastItqanDate", date.toString()).putString("lastItqanLabel", label)
                 .putLong("itqanElapsedMs", 0L);
             List<String> lines = new ArrayList<>();
             for (int page : plan.pages) lines.addAll(plan.linesByPage.get(page));
-            HifzPrefs.appendPostNasMaintainedUnit(prefs,editor,today,lines);
+            HifzPrefs.appendPostNasMaintainedUnit(prefs,editor,date,lines);
             return editor.commit();
         }
+    }
+
+    private LocalDate receiptDate(Draft draft, LocalDate today) {
+        return prefs.contains(HifzPrefs.UNIVERSAL_LEARNING) ? draft.opened : today;
     }
 
     private boolean afterLastReceipt(LocalDate today) {

@@ -7,6 +7,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.LocalDate;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -149,7 +150,9 @@ final class HifzBackup {
             if (values.has(HifzPrefs.UNIVERSAL_LEARNING) || values.has(HifzPrefs.UNIVERSAL_LEARNING_INDEX)
                     || values.has(HifzPrefs.UNIVERSAL_SETUP) || values.has(HifzPrefs.UNIVERSAL_DEEP)
                     || values.has(HifzPrefs.UNIVERSAL_MAINTENANCE) || values.has(HifzPrefs.UNIVERSAL_REVIEW_MINUTES)
-                    || values.has(HifzPrefs.UNIVERSAL_LEARNING_LINES))
+                    || values.has(HifzPrefs.UNIVERSAL_LEARNING_LINES)
+                    || values.has(HifzPrefs.UNIVERSAL_LEARNING_WEEKS)
+                    || values.has(HifzPrefs.UNIVERSAL_ITQAN_HISTORY))
                 validateUniversalProfile(values, GeometryRepository.get(context));
             synchronized(J10ReviewStore.LEGACY_STORE_LOCK) {
                 SharedPreferences main=context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
@@ -202,6 +205,24 @@ final class HifzBackup {
             int reviewMinutes = (Integer) typedUniversalValue(values, HifzPrefs.UNIVERSAL_REVIEW_MINUTES, "i", Integer.class, 0);
             int lines = (Integer) typedUniversalValue(values, HifzPrefs.UNIVERSAL_LEARNING_LINES,
                 "i", Integer.class, PreviewConfig.SABQI_LINES);
+            String weeks = (String) typedUniversalValue(values, HifzPrefs.UNIVERSAL_LEARNING_WEEKS,
+                "s", String.class, "[]");
+            var learningWeeks = WeeklyProgramPolicy.decodeDatedMasks(weeks, "days", 63, true);
+            LocalDate today = HifzClock.today();
+            int allowedDays = 6 - (deep ? 1 : 0) - (maintenance ? 1 : 0);
+            int defaultDays = (Integer) typedUniversalValue(values, "learningDaysPerWeek", "i",
+                Integer.class, com.quransafeguard.hifz.core.HifzSchedule.DEFAULT_LEARNING_DAYS_PER_WEEK);
+            var effectiveWeek = learningWeeks.floorEntry(today);
+            int activeDays = effectiveWeek == null ? defaultDays : Integer.bitCount(effectiveWeek.getValue());
+            if (activeDays < 0 || activeDays > allowedDays)
+                throw new IllegalArgumentException("Active learning calendar exceeds capacity");
+            for (int mask : learningWeeks.tailMap(today, false).values()) {
+                if (Integer.bitCount(mask) > allowedDays)
+                    throw new IllegalArgumentException("Scheduled learning calendar exceeds capacity");
+            }
+            String disciplines = (String) typedUniversalValue(values, HifzPrefs.UNIVERSAL_ITQAN_HISTORY,
+                "s", String.class, "[]");
+            WeeklyProgramPolicy.decodeDatedMasks(disciplines, "disciplines", 3, false);
             var ranges = HifzPrefs.decodeRanges(raw);
             var span = UniversalLearningRoute.of(ranges, geometry).at(index);
             if (!ActiveReviewDurationPolicy.validProfileMinutes(reviewMinutes) || !HifzPrefs.validLearningVolume(lines)

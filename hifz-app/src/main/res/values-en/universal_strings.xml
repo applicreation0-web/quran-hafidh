@@ -161,4 +161,15 @@
   <string name="setup_range_ayah">Verse number</string>
   <string name="setup_add_range">Add passage</string>
   <string name="setup_range_order_error">The end must come after the start.</string>
+  <string name="setup_learning_days_from">%1$s · from %2$s</string>
+  <string name="setup_learning_days_capacity">Leave one day for each enabled Itqān discipline.</string>
+  <string name="setup_week_in_progress">This week · Sabqi %1$s · Itqān slots %2$s</string>
+  <string-array name="setup_weekdays">
+    <item>Monday</item>
+    <item>Tuesday</item>
+    <item>Wednesday</item>
+    <item>Thursday</item>
+    <item>Friday</item>
+    <item>Saturday</item>
+  </string-array>
 </resources>

@@ -1038,7 +1038,7 @@ public final class MainActivity extends HaafidhActivity {
         if(prefs.unfinishedConsolidationSessionDate(
                 ConsolidationCycleEngine.Family.LEARNING,"learning-final-")!=null)
             return HifzSessionActivity.LEARNING_FINAL;
-        CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(prefs,today,effectiveLearningDaysPerWeek());
         return today.getDayOfWeek()==DayOfWeek.SUNDAY && !learningFinalResolved(today)
             ? HifzSessionActivity.LEARNING_FINAL : HifzSessionActivity.LEARNING_CONSOLIDATION;
     }
@@ -1059,7 +1059,7 @@ public final class MainActivity extends HaafidhActivity {
         // post-An-Nās Consolidation finale. Existing pre-An-Nās OPEN finals
         // were checked above and always retain their original date/protocol.
         if(prefs.itqanPostNasMaintenance())return HifzSessionActivity.RECENT_SABQI_REVIEW;
-        CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(prefs,today,effectiveLearningDaysPerWeek());
         return today.getDayOfWeek()==DayOfWeek.SUNDAY && !prefs.itqanPostNasMaintenance()
                 && !consolidationFinalResolved(today)
             ? HifzSessionActivity.CONSOLIDATION_FINAL : HifzSessionActivity.RECENT_SABQI_REVIEW;
@@ -1084,7 +1084,7 @@ public final class MainActivity extends HaafidhActivity {
                 || (learningFinalResolved(date)
                     && (prefs.itqanPostNasMaintenance() || consolidationFinalResolved(date)));
         }
-        CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(prefs,date,effectiveLearningDaysPerWeek());
         switch(action){
             case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI);
             case STABILIZATION:return prefs.weeklyItqanPageClosed(date) || modeComplete(date,HifzSessionActivity.ITQAN);
@@ -1174,8 +1174,7 @@ public final class MainActivity extends HaafidhActivity {
                 return lesson;
             }
         } else {
-            CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),
-                prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+            CadenceAction action=WeeklyProgramPolicy.actionFor(prefs,today,effectiveLearningDaysPerWeek());
             String evening=action==CadenceAction.LEARNING?eveningLearningMode(today)
                 :action==CadenceAction.STABILIZATION?eveningStabilizationMode(today):null;
             if(evening!=null) return reviews.scheduled(today,ActiveReviewSlots.Slot.EVENING)&&reviews.receipt(today,ActiveReviewSlots.Slot.EVENING)==null
@@ -1372,7 +1371,7 @@ public final class MainActivity extends HaafidhActivity {
         if(nextScheduled!=null&&nextScheduled.isBefore(today)&&!isTodayAnchoredMode(nextMode)){
             out.add(new TodaySession("Report "+nextScheduled+" · "+modeTitle(nextMode),nextMode,nextScheduled,false,true));
         }
-        CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(prefs,today,effectiveLearningDaysPerWeek());
         ActiveReviewSlots reviews = prefs.activeReviewSlots();
         addActiveReviewToday(out,today,ActiveReviewSlots.Slot.MORNING,reviews,nextMode);
         if(recommendedSunday(today)){
@@ -1744,8 +1743,7 @@ public final class MainActivity extends HaafidhActivity {
         // Unlike the seven-day forward rail, this balance covers Monday through today.
         WeeklyBilan.Summary bilan=WeeklyBilan.calculate(HifzClock.today(),
             prefs.programStartDate(),ledger.coverageStartDate(),prefs.activeReviewSlots().programmeStart(),
-            date->WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
-                prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
+            date->WeeklyProgramPolicy.lessonActionFor(prefs,date,effectiveLearningDaysPerWeek()),
             (date,mode)->ledger.find(date,mode)!=null,
             date->prefs.activeReviewSlots().scheduled(date,ActiveReviewSlots.Slot.EVENING));
         String balancePreview = "BILAN · "+bilan.validated+"/"+bilan.planned+" contrôlées · "+bilan.dueToday+" à faire"
@@ -1786,8 +1784,7 @@ public final class MainActivity extends HaafidhActivity {
                 if(choice==1){showPostFinalRecap();return;}
                 WeeklyBilan.Summary bilan=WeeklyBilan.calculate(HifzClock.today(),
                     prefs.programStartDate(),ledger.coverageStartDate(),prefs.activeReviewSlots().programmeStart(),
-                    date->WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
-                        prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek()),
+                    date->WeeklyProgramPolicy.lessonActionFor(prefs,date,effectiveLearningDaysPerWeek()),
                     (date,mode)->ledger.find(date,mode)!=null,
                     date->prefs.activeReviewSlots().scheduled(date,ActiveReviewSlots.Slot.EVENING));
                 new android.app.AlertDialog.Builder(this)

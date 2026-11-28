@@ -1,5 +1,6 @@
 package com.quransafeguard.hifz.preview;
 
+import com.quransafeguard.hifz.core.CadenceAction;
 import com.quransafeguard.hifz.core.EligibleCorpus;
 import com.quransafeguard.hifz.core.VerseRef;
 import java.nio.file.Files;
@@ -161,7 +162,8 @@ public final class UniversalLearningRouteTest {
         LocalDate day = LocalDate.of(2026, 11, 28);
         HifzClock.setClockForTests(Clock.fixed(day.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
         InMemoryPrefs raw = new InMemoryPrefs();
-        raw.edit().putString(HifzPrefs.UNIVERSAL_LEARNING, "[]").commit();
+        raw.edit().putString(HifzPrefs.UNIVERSAL_LEARNING, "[]")
+            .putString("programStartDate", day.toString()).commit();
         HifzPrefs prefs = new HifzPrefs(raw, geometry);
         EligibleCorpus acquired = EligibleCorpus.Companion.of(UniversalLearningRoute.parse("1:1-114:6"));
         JuzMaintenanceStore store = prefs.juzMaintenance();
@@ -274,6 +276,120 @@ public final class UniversalLearningRouteTest {
         assertThrows(IllegalArgumentException.class, () -> prefs.setV6AcquiredRanges(future, geometry));
         assertThrows(IllegalArgumentException.class, () -> prefs.setV6StabilizationRanges(future, geometry));
         assertEquals(before, raw.getAll());
+    }
+
+    @Test public void explicitWeekdaysApplyNextMondayAndKeepPastWeeksReadable() {
+        LocalDate saturday = LocalDate.of(2026, 11, 28);
+        HifzClock.setClockForTests(Clock.fixed(saturday.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        InMemoryPrefs raw = new InMemoryPrefs();
+        raw.edit().putInt("schema", 6).putString("programStartDate", "2026-11-23")
+            .putBoolean("universalSetupPendingV1", true).commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        var declared = UniversalLearningRoute.parse("1:1-1:7");
+        assertTrue(prefs.configureNewProfile(UniversalLearningRoute.parse("114:1-114:6"),
+            declared, declared, true, true, 3, geometry));
+        var original = new java.util.HashMap<>(raw.getAll());
+        LocalDate monday = saturday.plusDays(2);
+        assertEquals(monday, prefs.nextLearningWeek());
+        assertFalse(prefs.setUniversalLearningWeekdays(31));
+        assertTrue(prefs.setUniversalLearningWeekdays((1 << 1) | (1 << 5)));
+        var saved = new java.util.HashMap<>(raw.getAll());
+        saved.remove(HifzPrefs.UNIVERSAL_LEARNING_WEEKS);
+        assertEquals(original, saved);
+        assertEquals(3, prefs.learningDaysPerWeek());
+        assertEquals(CadenceAction.STABILIZATION, WeeklyProgramPolicy.actionFor(prefs, saturday, 3));
+        assertEquals(CadenceAction.REVISION, WeeklyProgramPolicy.actionFor(prefs, saturday.plusDays(1), 3));
+        assertEquals(CadenceAction.STABILIZATION, WeeklyProgramPolicy.actionFor(prefs, monday, 3));
+        assertEquals(CadenceAction.LEARNING, WeeklyProgramPolicy.actionFor(prefs, monday.plusDays(1), 3));
+        assertTrue(prefs.universalMaintenanceDue(monday.plusDays(4)));
+        assertFalse(prefs.universalMaintenanceDue(monday.plusDays(5)));
+
+        HifzClock.setClockForTests(Clock.fixed(monday.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        HifzPrefs reopened = new HifzPrefs(raw, geometry);
+        assertEquals(2, reopened.learningDaysPerWeek());
+        assertTrue(reopened.setUniversalLearningWeekdays(1));
+        assertEquals(CadenceAction.LEARNING, WeeklyProgramPolicy.actionFor(reopened, monday.plusDays(1), 2));
+        assertEquals(CadenceAction.LEARNING, WeeklyProgramPolicy.actionFor(reopened, monday.plusWeeks(1), 2));
+        assertEquals(CadenceAction.STABILIZATION, WeeklyProgramPolicy.actionFor(reopened, saturday, 2));
+    }
+
+    @Test public void absentItqanDisciplinesProduceNoDebtAndChangesDoNotRewritePastDates() {
+        LocalDate monday = LocalDate.of(2026, 11, 23);
+        LocalDate tuesday = monday.plusDays(1);
+        HifzClock.setClockForTests(Clock.fixed(tuesday.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        InMemoryPrefs raw = new InMemoryPrefs();
+        raw.edit().putInt("schema", 6).putString("programStartDate", monday.toString())
+            .putBoolean(HifzPrefs.UNIVERSAL_SETUP, true).commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        assertTrue(prefs.configureNewProfile(Collections.emptyList(), UniversalLearningRoute.parse("j1", geometry),
+            Collections.emptyList(), false, false, 0, geometry));
+        HifzBacklog.ActionForDate calendar = date -> WeeklyProgramPolicy.lessonActionFor(prefs, date, 0);
+        assertTrue(HifzBacklog.calculate(monday, monday, tuesday, Collections.emptySet(),
+            Collections.emptySet(), calendar).isEmpty());
+
+        assertTrue(prefs.setUniversalItqanDisciplines(false, true));
+        LocalDate wednesday = tuesday.plusDays(1);
+        HifzClock.setClockForTests(Clock.fixed(wednesday.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        assertTrue(prefs.setUniversalItqanDisciplines(false, false));
+        var late = HifzBacklog.calculate(monday, monday, wednesday, Collections.emptySet(),
+            Collections.emptySet(), calendar);
+        assertEquals(1, late.size());
+        assertEquals(tuesday, late.get(0).date);
+    }
+
+    @Test public void maintenanceReceiptStaysOnItsOriginalSlotWhenFinishedAfterMidnight() {
+        LocalDate saturday = LocalDate.of(2026, 11, 28);
+        HifzClock.setClockForTests(Clock.fixed(saturday.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putInt("schema", 6).putString("programStartDate", saturday.toString())
+            .putBoolean(HifzPrefs.UNIVERSAL_SETUP, true).commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        var declared = UniversalLearningRoute.parse("j1", geometry);
+        assertTrue(prefs.configureNewProfile(Collections.emptyList(), declared, Collections.emptyList(),
+            false, true, 0, geometry));
+        EligibleCorpus acquired = EligibleCorpus.Companion.of(declared);
+        JuzMaintenanceStore store = prefs.juzMaintenance();
+        var opened = store.open(saturday, geometry, acquired);
+        assertNotNull(opened);
+        var plan = JuzMaintenanceStore.plan(opened.juz, geometry, acquired);
+        for (int i = 0; i < 2 * plan.pages.size() - 1; i++)
+            assertTrue(store.advance(store.read(), plan, saturday));
+        var finalPage = store.read();
+        LocalDate sunday = saturday.plusDays(1);
+        HifzClock.setClockForTests(Clock.fixed(sunday.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        assertEquals(finalPage.raw, store.open(sunday, geometry, acquired).raw);
+        assertTrue(store.advance(finalPage, plan, sunday));
+        assertEquals(saturday.toString(), prefs.lastItqanDate());
+        assertTrue(raw.contains("itqanJuzMaintenanceReceiptV1|" + saturday));
+        assertFalse(raw.contains("itqanJuzMaintenanceReceiptV1|" + sunday));
+        assertNull(store.open(sunday, geometry, acquired));
+        assertFalse(store.advance(finalPage, plan, sunday));
+        assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
+    }
+
+    @Test public void backupValidatesDatedWeekdaysBeforeApplyingThem() throws Exception {
+        var values = new org.json.JSONObject()
+            .put(HifzPrefs.UNIVERSAL_LEARNING, new org.json.JSONObject().put("t","s").put("v","[]"));
+        var weeks = new org.json.JSONObject().put("t","s");
+        values.put(HifzPrefs.UNIVERSAL_LEARNING_WEEKS, weeks);
+        for (String invalid : java.util.List.of(
+                "[{\"from\":\"2026-12-01\",\"days\":11}]",
+                "[{\"from\":\"2026-11-30\",\"days\":64}]",
+                "[{\"from\":\"2026-11-30\",\"days\":\"10\"}]",
+                "[{\"from\":\"2026-11-30\",\"days\":10},{\"from\":\"2026-11-30\",\"days\":12}]")) {
+            weeks.put("v", invalid);
+            assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+        }
+        weeks.put("v", "[{\"from\":\"2026-11-30\",\"days\":47}]");
+        HifzBackup.validateUniversalProfile(values, geometry);
+        HifzClock.setClockForTests(Clock.fixed(
+            LocalDate.of(2026, 11, 28).atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        values.put(HifzPrefs.UNIVERSAL_DEEP, new org.json.JSONObject().put("t","b").put("v",true));
+        values.put(HifzPrefs.UNIVERSAL_MAINTENANCE, new org.json.JSONObject().put("t","b").put("v",true));
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+        weeks.put("v", "[{\"from\":\"2026-11-16\",\"days\":63},"
+            + "{\"from\":\"2026-11-23\",\"days\":7},{\"from\":\"2026-11-30\",\"days\":10}]");
+        HifzBackup.validateUniversalProfile(values, geometry);
     }
 
     @Test public void backupRejectsMalformedUniversalRangesAndOutOfBoundsCheckpoint() throws Exception {

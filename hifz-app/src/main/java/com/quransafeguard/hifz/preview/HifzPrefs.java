@@ -73,6 +73,8 @@ public final class HifzPrefs {
     static final String UNIVERSAL_SETUP = "universalSetupPendingV1";
     static final String UNIVERSAL_REVIEW_MINUTES = "universalActiveReviewMinutesV1";
     static final String UNIVERSAL_LEARNING_LINES = "universalLearningLinesPerSessionV1";
+    static final String UNIVERSAL_LEARNING_WEEKS = "universalLearningWeekdaysV1";
+    static final String UNIVERSAL_ITQAN_HISTORY = "universalItqanCalendarV1";
 
     public HifzPrefs(Context context) {
         this(context, false);
@@ -783,6 +785,8 @@ public final class HifzPrefs {
                 .putString("unconsolidatedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(deepRanges)))
                 .putBoolean(UNIVERSAL_DEEP, deep)
                 .putBoolean(UNIVERSAL_MAINTENANCE, maintenance)
+                .putString(UNIVERSAL_ITQAN_HISTORY, new JSONArray().put(new JSONObject(java.util.Map.of(
+                    "from", programStartDate().toString(), "disciplines", itqanMask(deep, maintenance)))).toString())
                 .putInt(UNIVERSAL_LEARNING_LINES, linesPerLesson)
                 .putInt("learningDaysPerWeek", days)
                 .putString(WEEKLY_PROGRAM_HISTORY, new JSONArray()
@@ -1963,8 +1967,7 @@ public final class HifzPrefs {
             if (!creditDate.equals(HifzClock.today()) || creditDate.isBefore(proofDate)
                     || !lastSabqiDate().isEmpty() && !creditDate.isAfter(LocalDate.parse(lastSabqiDate()))
                     || token.isEmpty() || !token.equals(sabqiLessonToken())
-                    || WeeklyProgramPolicy.actionFor(creditDate.getDayOfWeek(),weeklyProgramFor(creditDate),
-                        learningDaysPerWeek()) != com.quransafeguard.hifz.core.CadenceAction.LEARNING) return false;
+                    || WeeklyProgramPolicy.actionFor(this,creditDate,learningDaysPerWeek()) != com.quransafeguard.hifz.core.CadenceAction.LEARNING) return false;
             return completeSabqiBlockV6(block.startLineIndex,block.endLineIndex,block.endLineIndex+1,
                 block.lineIds,proofDate.toString(),creditDate.toString(),label);
         }
@@ -2190,8 +2193,7 @@ public final class HifzPrefs {
     }
 
     private boolean currentItqanDay(LocalDate date) {
-        return WeeklyProgramPolicy.actionFor(date.getDayOfWeek(), weeklyProgramFor(date),
-            learningDaysPerWeek()) == com.quransafeguard.hifz.core.CadenceAction.STABILIZATION;
+        return WeeklyProgramPolicy.actionFor(this,date,learningDaysPerWeek()) == com.quransafeguard.hifz.core.CadenceAction.STABILIZATION;
     }
 
     ItqanFourSessionPolicy.Plan previewWeeklyItqan(GeometryRepository geo, LocalDate date) {
@@ -3047,10 +3049,42 @@ public final class HifzPrefs {
 
     boolean setUniversalItqanDisciplines(boolean deep, boolean maintenance) {
         synchronized (V6_STATE_LOCK) {
-            if (!universalProfile() || learningDaysPerWeek() > 6 - (deep ? 1 : 0) - (maintenance ? 1 : 0))
+            if (!universalProfile() || Math.max(learningDaysPerWeek(), learningDaysPerWeek(nextLearningWeek()))
+                    > 6 - (deep ? 1 : 0) - (maintenance ? 1 : 0))
                 return false;
-            return p.edit().putBoolean(UNIVERSAL_DEEP, deep)
-                .putBoolean(UNIVERSAL_MAINTENANCE, maintenance).commit();
+            try {
+                var history = WeeklyProgramPolicy.decodeDatedMasks(
+                    p.getString(UNIVERSAL_ITQAN_HISTORY, "[]"), "disciplines", 3, false);
+                if (history.isEmpty())
+                    history.put(programStartDate(), itqanMask(universalDeepEnabled(), universalMaintenanceEnabled()));
+                history.tailMap(HifzClock.today(), true).clear();
+                history.put(HifzClock.today(), itqanMask(deep, maintenance));
+                JSONArray calendar = new JSONArray();
+                for (var entry : history.entrySet())
+                    calendar.put(new JSONObject().put("from", entry.getKey().toString())
+                        .put("disciplines", entry.getValue()));
+                return p.edit().putBoolean(UNIVERSAL_DEEP, deep)
+                    .putBoolean(UNIVERSAL_MAINTENANCE, maintenance)
+                    .putString(UNIVERSAL_ITQAN_HISTORY, calendar.toString()).commit();
+            } catch (org.json.JSONException broken) {
+                return false;
+            }
+        }
+    }
+
+    private static int itqanMask(boolean deep, boolean maintenance) {
+        return (deep ? 1 : 0) | (maintenance ? 2 : 0);
+    }
+
+    boolean itqanDisciplineScheduled(LocalDate date) {
+        if (!universalProfile()) return true;
+        try {
+            var transition = WeeklyProgramPolicy.decodeDatedMasks(
+                p.getString(UNIVERSAL_ITQAN_HISTORY, "[]"), "disciplines", 3, false).floorEntry(date);
+            return transition == null ? universalDeepEnabled() || universalMaintenanceEnabled()
+                : transition.getValue() != 0;
+        } catch (org.json.JSONException broken) {
+            throw new IllegalStateException("Unreadable Itqān calendar", broken);
         }
     }
 
@@ -3069,15 +3103,25 @@ public final class HifzPrefs {
         if (JuzMaintenanceStore.hasDraft(store)) return true;
         boolean deep = store.getBoolean(UNIVERSAL_DEEP, false);
         if (deep && !store.getString("itqanUnitStart", "").isEmpty()) return false;
-        if (!deep) return true;
         int learningDays = store.getInt("learningDaysPerWeek", HifzSchedule.DEFAULT_LEARNING_DAYS_PER_WEEK);
+        int mask = universalLearningWeekMask(store, date);
+        if (universalCalendarAction(date.getDayOfWeek(), learningDays, mask)
+                != com.quransafeguard.hifz.core.CadenceAction.STABILIZATION) return false;
+        if (!deep) return true;
         for (int weekday = 6; weekday >= 1; weekday--) {
             java.time.DayOfWeek day = java.time.DayOfWeek.of(weekday);
-            if (HifzSchedule.INSTANCE.actionFor(day, learningDays)
-                    == com.quransafeguard.hifz.core.CadenceAction.STABILIZATION)
+            var action = universalCalendarAction(day, learningDays, mask);
+            if (action == com.quransafeguard.hifz.core.CadenceAction.STABILIZATION)
                 return date.getDayOfWeek() == day;
         }
         return false;
+    }
+
+    private static com.quransafeguard.hifz.core.CadenceAction universalCalendarAction(
+            java.time.DayOfWeek day, int learningDays, int mask) {
+        if (day == java.time.DayOfWeek.SUNDAY) return com.quransafeguard.hifz.core.CadenceAction.REVISION;
+        return mask < 0 ? HifzSchedule.INSTANCE.actionFor(day, learningDays)
+            : WeeklyProgramPolicy.universalAction(day, mask);
     }
 
     boolean usesJuzMaintenance() {
@@ -3745,8 +3789,7 @@ public final class HifzPrefs {
     private boolean postNasConsolidationDay(LocalDate date) {
         if(date.getDayOfWeek()==java.time.DayOfWeek.SUNDAY)return false;
         for(LocalDate next=date.plusDays(1);next.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY;next=next.plusDays(1)){
-            if(WeeklyProgramPolicy.actionFor(next.getDayOfWeek(),weeklyProgramFor(next),
-                    learningDaysPerWeek())==CadenceAction.STABILIZATION)return false;
+            if(WeeklyProgramPolicy.actionFor(this,next,learningDaysPerWeek())==CadenceAction.STABILIZATION)return false;
         }
         return true;
     }
@@ -3836,9 +3879,10 @@ public final class HifzPrefs {
         // A four-date window may have >4 independent surah-local subblocks.
         // Its cap is physical SUBBLOCKS, not the number of Itqan dates. Legacy
         // weekly plans keep their original caps while their OPEN state runs out.
+        int learningDays = learningDaysPerWeek(today);
         int weeklyCap = family == ConsolidationCycleEngine.Family.LEARNING
-            ? learningDaysPerWeek()
-            : ItqanFourSessionStore.hasPlan(p) ? 30 : itqanDaysPerWeek();
+            ? learningDays
+            : ItqanFourSessionStore.hasPlan(p) ? 30 : 6 - learningDays;
         for (List<String> unitLineIds : units) {
             if (current.length() < weeklyCap) current.put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
         }
@@ -4522,8 +4566,7 @@ public final class HifzPrefs {
      * Historical stabilization catch-up on a non-Itqan day retains its original protocol. */
     private boolean eveningLessonEligible(ConsolidationCycleEngine.Family family,
             LocalDate day,String snapshot) {
-        CadenceAction action=WeeklyProgramPolicy.actionFor(day.getDayOfWeek(),
-            weeklyProgramFor(day),learningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(this,day,learningDaysPerWeek());
         if(family==ConsolidationCycleEngine.Family.STABILIZATION
                 && action!=CadenceAction.STABILIZATION)return true;
         return hasDailyLessonReceipt(family,day,snapshot);
@@ -5311,9 +5354,54 @@ public final class HifzPrefs {
      * ConsolidationCycleEngine.maxUnitsFor for the matching weekly-snowball capacity.
      */
     public int learningDaysPerWeek() {
+        return learningDaysPerWeek(HifzClock.today());
+    }
+
+    private int learningDaysPerWeek(LocalDate date) {
+        int saved = universalProfile() ? universalLearningWeekMask(date) : -1;
+        return saved < 0 ? defaultLearningDaysPerWeek() : Integer.bitCount(saved);
+    }
+
+    int defaultLearningDaysPerWeek() {
         int stored = p.getInt("learningDaysPerWeek", HifzSchedule.DEFAULT_LEARNING_DAYS_PER_WEEK);
         return Math.max(HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK,
             Math.min(HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK, stored));
+    }
+
+    int universalLearningWeekMask(LocalDate date) {
+        return universalLearningWeekMask(p,date);
+    }
+
+    private static int universalLearningWeekMask(SharedPreferences store, LocalDate date) {
+        if (!store.contains(UNIVERSAL_LEARNING_WEEKS)) return -1;
+        try {
+            var transition = WeeklyProgramPolicy.decodeDatedMasks(
+                store.getString(UNIVERSAL_LEARNING_WEEKS,"[]"), "days", 63, true).floorEntry(date);
+            return transition == null ? -1 : transition.getValue();
+        } catch (org.json.JSONException broken) {
+            throw new IllegalStateException("Unreadable dated learning configuration", broken);
+        }
+    }
+
+    LocalDate nextLearningWeek() { return mondayOf(HifzClock.today()).plusWeeks(1); }
+
+    boolean setUniversalLearningWeekdays(int mask) {
+        synchronized (V6_STATE_LOCK) {
+            int reserved = (universalDeepEnabled() ? 1 : 0) + (universalMaintenanceEnabled() ? 1 : 0);
+            if (!universalProfile() || mask < 0 || mask > 63 || Integer.bitCount(mask) > 6 - reserved)
+                return false;
+            try {
+                var weeks = WeeklyProgramPolicy.decodeDatedMasks(
+                    p.getString(UNIVERSAL_LEARNING_WEEKS,"[]"), "days", 63, true);
+                weeks.put(nextLearningWeek(),mask);
+                JSONArray schedule = new JSONArray();
+                for (var entry : weeks.entrySet())
+                    schedule.put(new JSONObject().put("from",entry.getKey().toString()).put("days",entry.getValue()));
+                return p.edit().putString(UNIVERSAL_LEARNING_WEEKS,schedule.toString()).commit();
+            } catch (org.json.JSONException broken) {
+                return false;
+            }
+        }
     }
 
     /** Optional programme, stored independently of all schema-6 progression keys. */

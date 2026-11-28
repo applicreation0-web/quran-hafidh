@@ -60,8 +60,7 @@ final class HifzBacklog {
             HifzSessionActivity.ITQAN,first,today));
         return calculate(start,coverage,today,sabqiDone,itqanDone,
             date -> {
-                CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),
-                    prefs.weeklyProgramFor(date),learningDays);
+                CadenceAction action=WeeklyProgramPolicy.lessonActionFor(prefs,date,learningDays);
                 return action==CadenceAction.STABILIZATION && prefs.weeklyItqanPageClosed(date)
                     ? CadenceAction.REVISION : action;
             });

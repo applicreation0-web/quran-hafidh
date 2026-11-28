@@ -80,6 +80,13 @@ run_case() {
     return "$status"
 }
 
+# The disposable Google APIs image may show an ANR from its idle home app
+# during a density change. Keep application ANR reporting enabled.
+launcher=com.google.android.apps.nexuslauncher
+if [[ -n "$(adb shell pm path "$launcher" | tr -d '\r')" ]]; then
+    adb shell pm disable-user --user 0 "$launcher"
+fi
+
 frames=(fragilite-visible fragilite-masquee fragilite-cible fragilite-reprise)
 run_update
 run_case 720x1600 360 1.0 \

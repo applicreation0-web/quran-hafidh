@@ -116,7 +116,7 @@ final class WeeklyDashboardPlanner {
                 continue;
             }
             try {
-            CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),prefs.learningDaysPerWeek());
+            CadenceAction action=WeeklyProgramPolicy.actionFor(prefs,date,prefs.learningDaysPerWeek());
             String morning="—",evening="—",state="À faire";
             switch(action){
                 case LEARNING:{
@@ -157,6 +157,11 @@ final class WeeklyDashboardPlanner {
                     else if(date.equals(today)&&prefs.anchoringDeferredToday())morning="Stabilisation · unité reportée";
                     else if(prefs.weeklyItqanPageClosed(date)) {
                         morning="Stabilisation · page terminée";
+                        state="Aucune séance prévue";
+                        break;
+                    }
+                    else if (!prefs.itqanDisciplineScheduled(date)) {
+                        morning="Aucune séance prévue";
                         state="Aucune séance prévue";
                         break;
                     }

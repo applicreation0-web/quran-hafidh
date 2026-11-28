@@ -51,7 +51,7 @@ public final class RoadmapCadenceWiringSourceContractTest {
         assertTrue("quick access must select only today's family slot",
             main.contains("HifzBacklog.onDate(backlogPending,today)"));
         assertTrue("cadenceComplete must use the shared helper",
-            main.contains("WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek());"));
+            main.contains("WeeklyProgramPolicy.actionFor(prefs,date,effectiveLearningDaysPerWeek());"));
         assertTrue("nextDueCadence must use the shared helper",
             main.contains("WeeklyProgramPolicy.nextDue(prefs,todayDate,todayDate,")
                 && main.contains("java.util.Collections.emptySet(),effectiveLearningDaysPerWeek());"));
@@ -61,8 +61,9 @@ public final class RoadmapCadenceWiringSourceContractTest {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue(settings.contains("private int effectiveLearningDaysPerWeek(){"));
         assertTrue("the manual day-count row must be disabled while AUTO is driving the ratio",
-            settings.contains("learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL")
-                && settings.contains("prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC"));
+            settings.contains("learningDaysSetting.setEnabled(prefs.universalProfile()")
+                && settings.contains("|| prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL")
+                && settings.contains("&& prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN"));
         assertTrue(settings.contains(
             "prefs.setRoadmapMode(checked?HifzPrefs.RoadmapMode.AUTO:HifzPrefs.RoadmapMode.MANUAL);"));
     }
