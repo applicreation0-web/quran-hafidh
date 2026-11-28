@@ -34,8 +34,8 @@ public final class CanonicalProgressUiSourceContractTest {
         assertTrue(settings.contains("private String weeklyCadenceSummary(){"));
         assertTrue(settings.contains("· Apprentissage   ·   \""));
         assertTrue(settings.contains("· Stabilisation   ·   \""));
-        assertTrue(settings.contains("\"Dim · Finales (historique uniquement)\"")
-            && settings.contains("\"Dim · Finales\""));
+        assertTrue(settings.contains("CalendarText.weekday(this,DayOfWeek.SUNDAY,true)")
+            && settings.contains(" · Finales (historique uniquement)"));
         assertTrue("Manual mode must describe Sunday as fixed, not a freely selected weekday",
             settings.contains("jours Stabilisation + finales dimanche"));
         assertTrue("Standard mode must use six weekdays and a reserved Sunday",

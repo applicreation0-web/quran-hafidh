@@ -13,11 +13,9 @@ import android.view.View;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
@@ -40,10 +38,6 @@ final class CapHifzTimelineView extends View {
     private static final float SECOND_ROW = 96f;
     // Keep circular nodes clear of the caption beneath them at BOOX 150%.
     private static final float TRACK_Y = 34f;
-    private static final DateTimeFormatter SHORT_DATE =
-        DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRANCE);
-    private static final DateTimeFormatter GOAL_DATE =
-        DateTimeFormatter.ofPattern("MMM yyyy", Locale.FRANCE);
 
     private final List<CapHifzForecast.Quarter> quarters;
     private final GeometryRepository geometry;
@@ -209,7 +203,7 @@ final class CapHifzTimelineView extends View {
             setContentDescription(forecastAccessibilityDescription
                 + " Jalon sélectionné sur la progression " + (selectedSabqi ? "Acquisition" : "Maîtrise")
                 + " : " + spokenVerse(selectedVerse) + ", fin estimée le "
-                + selectedDate.format(SHORT_DATE) + ".");
+                + CalendarText.date(getContext(),selectedDate) + ".");
         } else {
             setContentDescription(forecastAccessibilityDescription);
         }
@@ -337,10 +331,10 @@ final class CapHifzTimelineView extends View {
         List<CapHifzForecast.Milestone> upcoming = nextMilestones(sabqi);
         for (CapHifzForecast.Milestone point : upcoming)
             spoken.append("Jalon ").append(spokenVerse(point.verse)).append(" le ")
-                .append(point.date.format(SHORT_DATE)).append(". ");
+                .append(CalendarText.date(getContext(),point.date)).append(". ");
         spoken.append("Objectif final ").append(sabqi ? "Al-Fatḥ" : "An-Nās");
         LocalDate end = finish(sabqi);
-        if (end != null) spoken.append(" vers ").append(end.format(GOAL_DATE));
+        if (end != null) spoken.append(" vers ").append(CalendarText.monthYear(getContext(),end));
         else spoken.append(", date indéterminée");
         spoken.append(". ");
     }
@@ -482,7 +476,7 @@ final class CapHifzTimelineView extends View {
                 filled(canvas, markerX, globalY, 3.8f);
             }
         }
-        String goalDate = terminalDate == null ? "date —" : terminalDate.format(SHORT_DATE);
+        String goalDate = terminalDate == null ? "date —" : CalendarText.date(getContext(),terminalDate);
         // Leave a real gap below/left of the final diamond: the last
         // digit of a four-digit year must never sit underneath the symbol.
         drawFitted(canvas, "Objectif · " + terminalText + " · " + goalDate,

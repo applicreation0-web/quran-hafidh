@@ -36,7 +36,7 @@ public final class CapHifzSurahFinishUiContractTest {
         assertTrue(panel.contains("choice.sabqi ? \"Acquisition\" : \"Maîtrise\""));
         assertTrue(panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
         assertTrue(panel.contains("choice.verse.getAyah()"));
-        assertTrue(panel.contains("choice.date.format(FULL_DATE)"));
+        assertTrue(panel.contains("CalendarText.date(context,choice.date)"));
         assertTrue(panel.contains("openMushaf(shownCheckpoints.get(checkpointIndex).verse)"));
         assertTrue(panel.contains("labelNavigator(previousYear, \"‹\", \"\")"));
         assertTrue(panel.contains("labelNavigator(previous, \"‹\", \"JALON\")"));

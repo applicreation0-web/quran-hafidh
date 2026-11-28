@@ -29,12 +29,11 @@ final class WeeklyDashboardPlanner {
 
     static final class Row {
         final LocalDate date;
-        final String day;
         final String morning;
         final String evening;
         final State state;
-        Row(LocalDate date,String day,String morning,String evening,State state){
-            this.date=date;this.day=day;this.morning=morning;this.evening=evening;this.state=state;
+        Row(LocalDate date,String morning,String evening,State state){
+            this.date=date;this.morning=morning;this.evening=evening;this.state=state;
         }
     }
 
@@ -71,7 +70,7 @@ final class WeeklyDashboardPlanner {
     static List<Row> fallbackWeek(LocalDate today){
         ArrayList<Row> rows=new ArrayList<>();
         for(LocalDate date:window(today))
-            rows.add(new Row(date,day(date,today),
+            rows.add(new Row(date,
                 "Matin · détails à vérifier","Soir · détails à vérifier",State.CHECK_PROJECTION));
         return Collections.unmodifiableList(rows);
     }
@@ -127,7 +126,7 @@ final class WeeklyDashboardPlanner {
 
         for(LocalDate date:window(today)){
             if(date.isBefore(prefs.programStartDate())){
-                out.add(new Row(date,day(date,today),"—","—",State.NOT_STARTED));
+                out.add(new Row(date,"—","—",State.NOT_STARTED));
                 continue;
             }
             try {
@@ -316,11 +315,11 @@ final class WeeklyDashboardPlanner {
                     state=State.EVENING_DUE;
                 else if(eveningDone&&state==State.NO_FINALE)state=State.VALIDATED;
             }
-            out.add(new Row(date,day(date,today),morning,evening,state));
+            out.add(new Row(date,morning,evening,state));
             } catch(RuntimeException invalidForecast){
                 // One problematic historical OPEN state or future unit never kills
                 // all seven dates. No advancement, credit, or synthetic completion.
-                out.add(new Row(date,day(date,today),
+                out.add(new Row(date,
                     "Matin · détails à vérifier","Soir · détails à vérifier",
                     State.CHECK_PROJECTION));
             }
@@ -393,17 +392,4 @@ final class WeeklyDashboardPlanner {
         return HifzDisplayVocabulary.canonicalize(label).replace(" · révélations 0","");
     }
 
-    static String day(LocalDate date,LocalDate today){
-        if(date!=null&&date.equals(today))return "Aujourd’hui";
-        switch(date.getDayOfWeek()){
-            case MONDAY:return "Lun";
-            case TUESDAY:return "Mar";
-            case WEDNESDAY:return "Mer";
-            case THURSDAY:return "Jeu";
-            case FRIDAY:return "Ven";
-            case SATURDAY:return "Sam";
-            case SUNDAY:return "Dim";
-            default:return date.getDayOfWeek().toString();
-        }
-    }
 }

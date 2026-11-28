@@ -76,8 +76,8 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertTrue("The selected date alone is underlined, without changing today's ring",
             calendar.contains("if (active) date.setPaintFlags(date.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);"));
         assertTrue("Today and the selected date have separate accessibility labels",
-            calendar.contains("(currentDay?\" · aujourd’hui\":\"\")")
-            && calendar.contains("(active?\" · sélectionné\":\"\")"));
+            calendar.contains("(currentDay?\" · \"+getString(R.string.calendar_today):\"\")")
+            && calendar.contains("(active?\" · \"+getString(R.string.calendar_selected):\"\")"));
         assertTrue("Weekday and date remain separate from the circle",
             calendar.contains("station.addView(day);") && calendar.contains("station.addView(date);"));
     }

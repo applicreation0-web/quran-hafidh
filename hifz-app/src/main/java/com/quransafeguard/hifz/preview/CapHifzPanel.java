@@ -14,13 +14,11 @@ import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiPredicate;
@@ -28,8 +26,6 @@ import java.util.function.BiPredicate;
 import static com.quransafeguard.hifz.preview.CapHifzEvidence.Track;
 
 final class CapHifzPanel extends LinearLayout {
-    private static final DateTimeFormatter FULL_DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.FRANCE);
-    private static final DateTimeFormatter DAY_MONTH = DateTimeFormatter.ofPattern("d MMM", Locale.FRANCE);
     /** Single read-only attendance assumption for Cap Hifdh; not a completion credit. */
     private static final int PROJECTION_ATTENDANCE_PERCENT = 90;
 
@@ -580,7 +576,7 @@ final class CapHifzPanel extends LinearLayout {
                 return;
             }
             AcquiredChoice choice = acquiredLines.get(acquiredIndex);
-            String date = choice.date == null ? "Sans date" : choice.date.format(DAY_MONTH);
+            String date = choice.date == null ? context.getString(R.string.calendar_no_date) : CalendarText.dayMonth(context,choice.date);
             checkpointLabel.setText("Acquis " + (acquiredIndex + 1) + "/"
                 + acquiredLines.size() + " · "
                 + QuranSurahNames.name(choice.verse.getSurah()) + " "
@@ -600,11 +596,11 @@ final class CapHifzPanel extends LinearLayout {
                 : QuranSurahNames.name(currentTailVerse.getSurah())
                     + " v." + currentTailVerse.getAyah();
             boolean nasActuallyFinished = prefs != null && prefs.itqanPostNasMaintenance();
-            checkpointLabel.setText("Aujourd’hui · " + today.format(FULL_DATE)
+            checkpointLabel.setText(context.getString(R.string.calendar_today)+" · " + CalendarText.date(context,today)
                 + "\nAcq. " + sabqi
                 + (nasActuallyFinished ? "" : " · Maîtr. " + itqan));
             checkpointLabel.setContentDescription(
-                "Situation réelle au " + today.format(FULL_DATE)
+                "Situation réelle au " + CalendarText.date(context,today)
                 + ". Position de travail Acquisition : " + sabqi
                 + (nasActuallyFinished ? ". Maîtrise achevée à An-Nās."
                     : ". Position de travail Maîtrise : " + itqan)
@@ -624,12 +620,12 @@ final class CapHifzPanel extends LinearLayout {
             ? "JALONS ▾  " + track + " · " + (checkpointIndex + 1)
                 + "/" + shownCheckpoints.size() + "\n"
                 + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
-                + choice.verse.getAyah() + " · " + choice.date.format(FULL_DATE)
+                + choice.verse.getAyah() + " · " + CalendarText.date(context,choice.date)
             : checkpointDisplay(choice));
         checkpointLabel.setContentDescription((dropdownPreview
             ? "Choisir un jalon dans le menu : " : "Ouvrir le Mushaf depuis Cap Hifdh : ")
             + track + ", "
-            + choice.date.format(FULL_DATE) + ", "
+            + CalendarText.date(context,choice.date) + ", "
             + QuranSurahNames.name(choice.verse.getSurah())
             + " " + choice.verse.getAyah() + ". Prévision, pas acquis.");
         if (timeline != null)
@@ -644,7 +640,7 @@ final class CapHifzPanel extends LinearLayout {
         return lane + " · jalon " + (checkpointIndex + 1) + "/"
             + shownCheckpoints.size() + " · fin prévue\n"
             + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
-            + choice.verse.getAyah() + " · " + choice.date.format(FULL_DATE);
+            + choice.verse.getAyah() + " · " + CalendarText.date(context,choice.date);
     }
 
     /** Screenshot-only comparison variant: every item is the SAME authentic,
@@ -656,7 +652,7 @@ final class CapHifzPanel extends LinearLayout {
         for (MilestoneChoice choice : shownCheckpoints)
             titles.add((choice.sabqi ? "Acquisition" : "Maîtrise") + "  ·  "
                 + QuranSurahNames.name(choice.verse.getSurah()) + " · v."
-                + choice.verse.getAyah() + "  ·  " + choice.date.format(FULL_DATE));
+                + choice.verse.getAyah() + "  ·  " + CalendarText.date(context,choice.date));
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(
                 context, android.R.layout.simple_list_item_1, titles) {
             @Override public View getView(int index, View recycled, ViewGroup parent) {
@@ -766,10 +762,6 @@ final class CapHifzPanel extends LinearLayout {
             }
             updateCheckpointLabel();
         });
-    }
-
-    private static String formatDate(LocalDate value) {
-        return value == null ? "sans date" : value.format(FULL_DATE);
     }
 
     private static LocalDate earlier(LocalDate a, LocalDate b) {

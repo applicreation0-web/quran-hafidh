@@ -113,3 +113,17 @@ Les entrées de l’édition révisée de *Ay Baati Wolof* de Pamela Munro et Di
 | sàmm | 170 | Garder ou prendre soin. L’ouvrage donne notamment un exemple sur les parents et des formules de protection | Le passage de ce sens à la préservation de passages mémorisés reste une composition à faire juger en situation |
 
 *Gaqq*, *niroo* et *dëgëral* n’ont pas été retrouvés sous ces graphies exactes dans l’index du PDF UCLA. Cette limite de recherche laisse valables les attestations distinctes de l’UCAD, du MEN et les sources lexicales déjà relevées. La segmentation proposée par les locuteurs pour « Degerek li nga mokal » reste à recueillir avant tout choix d’orthographe ou passage à une commande d’interface. [Munro et Gaye, UCLA](https://linguistics.ucla.edu/publications/opl_19.pdf)
+
+
+## Jours et dates
+
+Le choix des jours de Sabqi reste limité aux six créneaux du lundi au samedi. L’affichage du calendrier comporte sept libellés complets et sept abréviations dédiées. Les formes courtes sont des choix de place pour l’application. Les descriptions accessibles utilisent les formes complètes.
+
+| Notion | Choix provisoire | Variantes et preuve |
+|---|---|---|
+| Mercredi, jeudi, samedi | Àllarba, Alxames, Gaawu | Les entrées thématiques de Péncum Wolof et la fiche Janga Wolof concordent. Le fichier CLDR emploie Àlarba, Alxamis et Aseer. |
+| Dimanche | Dibéer | Concordance entre les trois références. Le créneau historique est une règle du moteur. |
+| Matin, soir, aujourd’hui | Suba, Ngoon, Tey | Suba peut aussi signifier demain. Le contexte du créneau lève cette ambiguïté. Ngoon recouvre aussi l’après-midi. |
+| Mois | Série basée sur Péncum Wolof | Saŋwiyee, Féewaryee, Màrs, Me et Suweŋ diffèrent notamment des choix CLDR. Les douze noms sont fournis explicitement pour éviter le fallback Android. |
+
+Sources consultées : [Péncum Wolof, dossier temporel et prononciations](https://pencumwolof.com/waat-yi/theme/temps/), [Janga Wolof, jours et dates](https://jangawolof.org/2015/01/05/wolof-time-dates/comment-page-1/), [Unicode CLDR, fichier wo.xml](https://github.com/unicode-org/cldr/blob/main/common/main/wo.xml). La revue contextualisée des exemples et des abréviations reste ouverte.

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string-array name="calendar_weekdays">
+    <item>Altine</item>
+    <item>Talaata</item>
+    <item>Àllarba</item>
+    <item>Alxames</item>
+    <item>Àjjuma</item>
+    <item>Gaawu</item>
+    <item>Dibéer</item>
+  </string-array>
+  <string-array name="calendar_weekdays_short">
+    <item>Alt</item>
+    <item>Tal</item>
+    <item>Àll</item>
+    <item>Alx</item>
+    <item>Àjj</item>
+    <item>Gaa</item>
+    <item>Dib</item>
+  </string-array>
+  <string-array name="calendar_months">
+    <item>Saŋwiyee</item>
+    <item>Féewaryee</item>
+    <item>Màrs</item>
+    <item>Awril</item>
+    <item>Me</item>
+    <item>Suweŋ</item>
+    <item>Sulet</item>
+    <item>Ut</item>
+    <item>Sàttumbar</item>
+    <item>Oktoobar</item>
+    <item>Nowàmbar</item>
+    <item>Desàmbar</item>
+  </string-array>
+  <string name="calendar_today">Tey</string>
+  <string name="calendar_morning">Suba</string>
+  <string name="calendar_evening">Ngoon</string>
+  <string name="calendar_selected">Tànneef bi</string>
+  <string name="calendar_open_details">Ubbil leeralu suba ak ngoon</string>
+  <string name="calendar_no_date">Amul bés</string>
+  <string name="calendar_morning_detail">Leeralu suba</string>
+  <string name="calendar_evening_detail">Leeralu ngoon</string>
+  <string name="calendar_date">%1$d %2$s %3$d</string>
+  <string name="calendar_day_month">%1$d %2$s</string>
+  <string name="calendar_date_weekday">%1$s %2$s</string>
+  <string name="calendar_month_year">%1$s %2$d</string>
+</resources>

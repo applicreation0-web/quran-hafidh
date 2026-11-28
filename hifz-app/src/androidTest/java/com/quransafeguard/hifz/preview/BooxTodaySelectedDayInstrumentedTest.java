@@ -76,8 +76,8 @@ public final class BooxTodaySelectedDayInstrumentedTest {
         assertEquals("Only the consulted date is underlined", selected,
             (date.getPaintFlags() & Paint.UNDERLINE_TEXT_FLAG) != 0);
         String spoken = station.getContentDescription().toString();
-        assertEquals("Today must be spoken separately", today, spoken.contains("aujourd’hui"));
-        assertEquals("Selected status must be spoken separately", selected, spoken.contains("sélectionné"));
+        assertEquals("Today must be spoken separately", today, spoken.contains(station.getContext().getString(R.string.calendar_today)));
+        assertEquals("Selected status must be spoken separately", selected, spoken.contains(station.getContext().getString(R.string.calendar_selected)));
         assertTrue("The seven stations remain clickable", station.isClickable());
     }
     @Test public void todayRingPersistsWhenAFutureDayIsConsulted() {
@@ -90,7 +90,7 @@ public final class BooxTodaySelectedDayInstrumentedTest {
         for (int i = 0; i < 7; i++) {
             LocalDate day = today.plusDays(i);
             rows.add(new WeeklyDashboardPlanner.Row(day,
-                WeeklyDashboardPlanner.day(day, today), "Matin", "Soir",
+                "Matin", "Soir",
                 i == 0 || i == 2 ? WeeklyDashboardPlanner.State.VALIDATED : WeeklyDashboardPlanner.State.DUE)); // Future cannot count as validated.
         }
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
@@ -115,6 +115,45 @@ public final class BooxTodaySelectedDayInstrumentedTest {
                 check(station(a, 1), false, false, false);
             });
             Independent11710ScreensInstrumentedTest.capture("calendar-other-day-consulted-today-stays-ringed");
+        }
+    }
+
+    @Test public void localizedRailShowsSevenDistinctDaysAndSpansTheYearBoundary() {
+        android.content.Context app = androidx.test.core.app.ApplicationProvider.getApplicationContext();
+        int savedLanguage = HaafidhActivity.languageIndex(app);
+        String[] tags = {"fr","en","wo"};
+        String[] abbreviations = {"Lun Mar Mer Jeu Ven Sam Dim","Mon Tue Wed Thu Fri Sat Sun","Alt Tal Àll Alx Àjj Gaa Dib"};
+        LocalDate monday = LocalDate.of(2026,12,28);
+        List<WeeklyDashboardPlanner.Row> rows = new ArrayList<>();
+        for (int i = 0; i < 7; i++) rows.add(new WeeklyDashboardPlanner.Row(monday.plusDays(i),
+            "—", "—", WeeklyDashboardPlanner.State.FORECAST));
+        try {
+            for (int language=0; language<tags.length; language++) {
+                assertTrue(HaafidhActivity.setLanguage(app,language));
+                String tag = tags[language];
+                String[] expected = abbreviations[language].split(" ");
+                try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+                    scenario.onActivity(activity -> {
+                        assertEquals(tag,activity.getResources().getConfiguration().getLocales().get(0).getLanguage());
+                        call(activity,"showParcours");
+                        set(activity,"weekRows",rows);
+                        set(activity,"selectedWeekDate",monday.plusDays(6));
+                        call(activity,"renderSelectedWeekDay");
+                        for (int i = 0; i < 7; i++) {
+                            LinearLayout cell=station(activity,i);
+                            assertEquals(expected[i],((TextView)cell.getChildAt(1)).getText().toString());
+                            assertEquals(Integer.toString(monday.plusDays(i).getDayOfMonth()),
+                                ((TextView)cell.getChildAt(2)).getText().toString());
+                            assertTrue(cell.getContentDescription().toString().startsWith(
+                                CalendarText.dateWithWeekday(activity,monday.plusDays(i),true)));
+                            assertTrue(cell.isClickable());
+                        }
+                    });
+                    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("calendar-"+tag+".png");
+                }
+            }
+        } finally {
+            assertTrue(HaafidhActivity.setLanguage(app,savedLanguage));
         }
     }
 }

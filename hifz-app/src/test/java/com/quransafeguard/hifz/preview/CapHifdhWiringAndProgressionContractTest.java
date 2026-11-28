@@ -65,7 +65,7 @@ public final class CapHifdhWiringAndProgressionContractTest {
         assertTrue(view.contains("ring(canvas, px, annualY, 12f")
             && view.contains("projectedProgress(sabqi)")
             && view.contains("drawMaintenanceLane(canvas")
-            && panel.contains("choice.date.format(FULL_DATE)")
+            && panel.contains("CalendarText.date(context,choice.date)")
             && panel.contains("QuranSurahNames.name(choice.verse.getSurah())"));
         assertFalse(panel.contains("completeDailyLesson("));
     }

@@ -1544,8 +1544,7 @@ public final class MainActivity extends HaafidhActivity {
         if(g==null){setToday("…",todayAction.isEnabled());return;}
         LocalDate current=HifzClock.today();
         if(todayHeading!=null) {
-            String day=current.format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM",java.util.Locale.FRANCE));
-            todayHeading.setText("AUJOURD’HUI · "+day.toUpperCase(java.util.Locale.FRANCE));
+            todayHeading.setText(getString(R.string.today_title)+" · "+CalendarText.dateWithWeekday(this,current,false));
         }
         // A past OPEN finale/renforcement outranks the new day's timetable.
         // Do not redirect the learner into Settings because an old due-day
@@ -1704,8 +1703,7 @@ public final class MainActivity extends HaafidhActivity {
             android.util.Log.e("QuranHifz","Read-only weekly projection failed",error);
             rows = new ArrayList<>();
             for(LocalDate date:WeeklyDashboardPlanner.window(HifzClock.today())){
-                String day=WeeklyDashboardPlanner.day(date,HifzClock.today());
-                rows.add(new WeeklyDashboardPlanner.Row(date,day,
+                rows.add(new WeeklyDashboardPlanner.Row(date,
                     "Matin · détails à vérifier","Soir · détails à vérifier",
                     WeeklyDashboardPlanner.State.CHECK_PROJECTION));
             }
@@ -1801,9 +1799,11 @@ public final class MainActivity extends HaafidhActivity {
         if(selected==null)return;
         final WeeklyDashboardPlanner.Row day=selected;
         new android.app.AlertDialog.Builder(this)
-            .setTitle(day.day+" "+day.date.getDayOfMonth()+" · "+compactState(day.state))
-            .setItems(new String[]{"Matin · détail","Soir · détail"},(dialog,index)->
-                showScheduleDetail(index==0?"Matin":"Soir",index==0?day.morning:day.evening))
+            .setTitle(CalendarText.dateWithWeekday(this,day.date,false)+" · "+compactState(day.state))
+            .setItems(new String[]{getString(R.string.calendar_morning_detail),
+                getString(R.string.calendar_evening_detail)},(dialog,index)->
+                showScheduleDetail(getString(index==0?R.string.calendar_morning:R.string.calendar_evening),
+                    index==0?day.morning:day.evening))
             .setNegativeButton("Fermer",null).show();
     }
 
@@ -1906,7 +1906,6 @@ public final class MainActivity extends HaafidhActivity {
         // A separate date marker identifies today; concentric rings highlight selection.
         // Both may coexist with a genuine completed day's solid fill.
         // This read-only view never changes Hifz receipts, dates, or the weekly programme.
-        String[] initials = {"L", "M", "M", "J", "V", "S", "D"};
         LocalDate realToday = HifzClock.today();
         WeeklyDashboardPlanner.Row chosen = weekRows.get(0);
         FrameLayout timeline = new FrameLayout(this);
@@ -1964,7 +1963,7 @@ public final class MainActivity extends HaafidhActivity {
             }
             station.addView(marker,new LinearLayout.LayoutParams(
                 Ui.dp(this,34),Ui.dp(this,34)));
-            TextView day = Ui.bookText(this,initials[row.date.getDayOfWeek().getValue()-1],
+            TextView day = Ui.bookText(this,CalendarText.weekday(this,row.date.getDayOfWeek(),true),
                 compactBooxHome() ? 12f : wideBoox() ? 17f : 13f, active);
             day.setGravity(Gravity.CENTER);
             station.addView(day);
@@ -1976,17 +1975,13 @@ public final class MainActivity extends HaafidhActivity {
             }
             if (active) date.setPaintFlags(date.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
             station.addView(date);
-            if (row.date.getDayOfWeek() == DayOfWeek.SUNDAY && !wideBoox()) {
-                TextView finale = Ui.text(this,"Finale",wideBoox()?15f:10f,false);
-                finale.setGravity(Gravity.CENTER);
-                station.addView(finale);
-            }
             station.setMinimumHeight(stationHeight);
             station.setClickable(true);
             station.setFocusable(true);
-            station.setContentDescription(row.day+" "+row.date+" · "+status+
-                (currentDay?" · aujourd’hui":"")+
-                (active?" · sélectionné":"")+" · ouvrir le détail matin et soir");
+            station.setContentDescription(CalendarText.dateWithWeekday(this,row.date,true)+" · "+status+
+                (currentDay?" · "+getString(R.string.calendar_today):"")+
+                (active?" · "+getString(R.string.calendar_selected):"")+
+                " · "+getString(R.string.calendar_open_details));
             station.setOnClickListener(v -> {
                 selectedWeekDate = row.date;
                 renderSelectedWeekDay();
@@ -2002,41 +1997,40 @@ public final class MainActivity extends HaafidhActivity {
             // Read-only compact strip; the full morning/evening descriptions
             // open as dialogs, preserving actions without a long scrolling panel.
             TextView summary=Ui.bookText(this,
-                chosen.day+" "+chosen.date.getDayOfMonth()+" · "+
+                CalendarText.dateWithWeekday(this,chosen.date,false)+" · "+
                 compactState(chosen.state),17f,true);
             summary.setGravity(Gravity.CENTER_VERTICAL);
             summary.setSingleLine(true);
             summary.setEllipsize(android.text.TextUtils.TruncateAt.END);
             weekDayPanel.addView(summary);
             TextView morning=Ui.text(this,
-                "MATIN  "+readableScheduleTitle(chosen.morning,prefs.itqanEntretienActive())+"  ›",
+                getString(R.string.calendar_morning)+"  "+readableScheduleTitle(chosen.morning,prefs.itqanEntretienActive())+"  ›",
                 15f,false);
             morning.setSingleLine(true);
             morning.setEllipsize(android.text.TextUtils.TruncateAt.END);
             morning.setContentDescription(scheduleDetail(chosen.morning));
-            morning.setOnClickListener(v->showScheduleDetail("Matin",selected.morning));
+            morning.setOnClickListener(v->showScheduleDetail(getString(R.string.calendar_morning),selected.morning));
             weekDayPanel.addView(morning);
             TextView evening=Ui.text(this,
-                "SOIR  "+readableScheduleTitle(chosen.evening,prefs.itqanEntretienActive())+"  ›",
+                getString(R.string.calendar_evening)+"  "+readableScheduleTitle(chosen.evening,prefs.itqanEntretienActive())+"  ›",
                 15f,false);
             evening.setSingleLine(true);
             evening.setEllipsize(android.text.TextUtils.TruncateAt.END);
             evening.setContentDescription(scheduleDetail(chosen.evening));
-            evening.setOnClickListener(v->showScheduleDetail("Soir",selected.evening));
+            evening.setOnClickListener(v->showScheduleDetail(getString(R.string.calendar_evening),selected.evening));
             weekDayPanel.addView(evening);
             return;
         }
         TextView heading = Ui.bookText(this,
-            chosen.day+" "+chosen.date.getDayOfMonth()+" · "+compactState(chosen.state), 20f, true);
+            CalendarText.dateWithWeekday(this,chosen.date,false)+" · "+compactState(chosen.state), 20f, true);
         weekDayPanel.addView(heading);
-        TextView morning = Ui.text(this, "MATIN", 16f, true);
+        TextView morning = Ui.text(this, getString(R.string.calendar_morning_detail)+" ›", 16f, true);
         morning.setPadding(0, Ui.dp(this, 7), 0, 0);
-        morning.setText("MATIN · détails ›");
-        morning.setContentDescription("Matin · afficher les informations complètes");
+        morning.setContentDescription(getString(R.string.calendar_morning_detail));
         morning.setClickable(true);
         morning.setFocusable(true);
         final String fullMorning = chosen.morning;
-        morning.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
+        morning.setOnClickListener(v -> showScheduleDetail(getString(R.string.calendar_morning), fullMorning));
         weekDayPanel.addView(morning);
         TextView morningTitle=Ui.bookText(this,readableScheduleTitle(chosen.morning,prefs.itqanEntretienActive()),19f,true);
         morningTitle.setPadding(0,Ui.dp(this,5),0,0);
@@ -2048,23 +2042,23 @@ public final class MainActivity extends HaafidhActivity {
         morningPreview.setContentDescription(scheduleDetail(chosen.morning));
         morningPreview.setClickable(true);
         morningPreview.setFocusable(true);
-        morningPreview.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
+        morningPreview.setOnClickListener(v -> showScheduleDetail(getString(R.string.calendar_morning), fullMorning));
         if (hasUsefulSchedulePreview(morningPreview.getText().toString()))
             weekDayPanel.addView(morningPreview);
         String completedFinale=completedFinaleFromPreview(chosen.morning);
         if(!completedFinale.isEmpty()){
             TextView finalStatus=Ui.bookText(this,completedFinale,16f,true);
             finalStatus.setPadding(0,Ui.dp(this,7),0,Ui.dp(this,4));
-            finalStatus.setOnClickListener(v -> showScheduleDetail("Matin", fullMorning));
+            finalStatus.setOnClickListener(v -> showScheduleDetail(getString(R.string.calendar_morning), fullMorning));
             weekDayPanel.addView(finalStatus);
         }
-        TextView evening = Ui.text(this, "SOIR · détails ›", 16f, true);
+        TextView evening = Ui.text(this, getString(R.string.calendar_evening_detail)+" ›", 16f, true);
         evening.setPadding(0, Ui.dp(this, 8), 0, 0);
-        evening.setContentDescription("Soir · afficher les informations complètes");
+        evening.setContentDescription(getString(R.string.calendar_evening_detail));
         evening.setClickable(true);
         evening.setFocusable(true);
         final String fullEvening = chosen.evening;
-        evening.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
+        evening.setOnClickListener(v -> showScheduleDetail(getString(R.string.calendar_evening), fullEvening));
         weekDayPanel.addView(evening);
         TextView eveningTitle=Ui.bookText(this,readableScheduleTitle(chosen.evening,prefs.itqanEntretienActive()),19f,true);
         eveningTitle.setPadding(0,Ui.dp(this,5),0,0);
@@ -2076,7 +2070,7 @@ public final class MainActivity extends HaafidhActivity {
         eveningPreview.setContentDescription(scheduleDetail(chosen.evening));
         eveningPreview.setClickable(true);
         eveningPreview.setFocusable(true);
-        eveningPreview.setOnClickListener(v -> showScheduleDetail("Soir", fullEvening));
+        eveningPreview.setOnClickListener(v -> showScheduleDetail(getString(R.string.calendar_evening), fullEvening));
         if (hasUsefulSchedulePreview(eveningPreview.getText().toString()))
             weekDayPanel.addView(eveningPreview);
     }

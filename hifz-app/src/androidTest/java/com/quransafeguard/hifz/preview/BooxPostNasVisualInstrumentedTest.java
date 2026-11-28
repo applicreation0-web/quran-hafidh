@@ -75,7 +75,7 @@ public final class BooxPostNasVisualInstrumentedTest {
         for (int day = 0; day < 7; day++) {
             LocalDate date = today.plusDays(day);
             days.add(new WeeklyDashboardPlanner.Row(date,
-                WeeklyDashboardPlanner.day(date, today), "Matin", "Soir", WeeklyDashboardPlanner.State.DUE));
+                "Matin", "Soir", WeeklyDashboardPlanner.State.DUE));
         }
         set(activity, "weekRows", days);
         set(activity, "selectedWeekDate", today);

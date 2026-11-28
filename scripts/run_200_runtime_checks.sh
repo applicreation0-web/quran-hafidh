@@ -90,8 +90,8 @@ fi
 frames=(fragilite-visible fragilite-masquee fragilite-cible fragilite-reprise)
 run_update
 run_case 720x1600 360 1.0 \
-    "$package.HaafidhLanguagePersistenceInstrumentedTest,$fragility,$package.FragilityReaderVisualInstrumentedTest#languageRecreationKeepsOutstandingAssistedRecall,$package.FragilityReaderVisualInstrumentedTest#languageRecreationKeepsPausedTimedRecall,$package.FragilityReaderVisualInstrumentedTest#programmedBudgetsExpireWithoutCreditOrLosingAnyOfTwelvePages" 6 \
-    "${frames[@]}" fragility-fr fragility-en fragility-wo setup-summary-en
+    "$package.HaafidhLanguagePersistenceInstrumentedTest,$fragility,$package.FragilityReaderVisualInstrumentedTest#languageRecreationKeepsOutstandingAssistedRecall,$package.FragilityReaderVisualInstrumentedTest#languageRecreationKeepsPausedTimedRecall,$package.FragilityReaderVisualInstrumentedTest#programmedBudgetsExpireWithoutCreditOrLosingAnyOfTwelvePages,$package.BooxTodaySelectedDayInstrumentedTest#localizedRailShowsSevenDistinctDaysAndSpansTheYearBoundary" 7 \
+    "${frames[@]}" fragility-fr fragility-en fragility-wo setup-summary-en calendar-fr calendar-en calendar-wo
 run_case 1080x2400 440 1.0 "$fragility" 1 "${frames[@]}"
 run_case 900x1200 220 1.5 "$fragility" 1 "${frames[@]}"
 run_case 1404x1872 240 1.5 "$fragility" 1 "${frames[@]}"

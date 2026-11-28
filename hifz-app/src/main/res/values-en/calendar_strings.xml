@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string-array name="calendar_weekdays">
+    <item>Monday</item>
+    <item>Tuesday</item>
+    <item>Wednesday</item>
+    <item>Thursday</item>
+    <item>Friday</item>
+    <item>Saturday</item>
+    <item>Sunday</item>
+  </string-array>
+  <string-array name="calendar_weekdays_short">
+    <item>Mon</item>
+    <item>Tue</item>
+    <item>Wed</item>
+    <item>Thu</item>
+    <item>Fri</item>
+    <item>Sat</item>
+    <item>Sun</item>
+  </string-array>
+  <string-array name="calendar_months">
+    <item>January</item>
+    <item>February</item>
+    <item>March</item>
+    <item>April</item>
+    <item>May</item>
+    <item>June</item>
+    <item>July</item>
+    <item>August</item>
+    <item>September</item>
+    <item>October</item>
+    <item>November</item>
+    <item>December</item>
+  </string-array>
+  <string name="calendar_today">Today</string>
+  <string name="calendar_morning">Morning</string>
+  <string name="calendar_evening">Evening</string>
+  <string name="calendar_selected">Selected</string>
+  <string name="calendar_open_details">Open morning and evening details</string>
+  <string name="calendar_no_date">No date</string>
+  <string name="calendar_morning_detail">Morning details</string>
+  <string name="calendar_evening_detail">Evening details</string>
+  <string name="calendar_date">%1$d %2$s %3$d</string>
+  <string name="calendar_day_month">%1$d %2$s</string>
+  <string name="calendar_date_weekday">%1$s %2$s</string>
+  <string name="calendar_month_year">%1$s %2$d</string>
+</resources>

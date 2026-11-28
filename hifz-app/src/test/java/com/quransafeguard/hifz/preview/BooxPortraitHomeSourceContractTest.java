@@ -238,9 +238,9 @@ public final class BooxPortraitHomeSourceContractTest {
             && timeline.contains("ring(canvas, px, annualY, 7.4f")
             && timeline.contains("filled(canvas, px, annualY, 3.8f")
             && !timeline.contains("selected.date.format(SHORT_DATE)")
-            && panel.contains("choice.date.format(FULL_DATE)")
+            && panel.contains("CalendarText.date(context,choice.date)")
             && panel.contains("checkpointDisplay(choice)")
-            && timeline.contains("DateTimeFormatter.ofPattern(\"d MMM yyyy\"")
+            && timeline.contains("CalendarText.date(getContext(),point.date)")
             && timeline.contains("width * .86f"));
         assertTrue("Accessibility uses complete Quran positions, not Juz/Hizb numbers",
             timeline.contains("spokenVerse(point.verse)")

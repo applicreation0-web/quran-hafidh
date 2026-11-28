@@ -39,7 +39,6 @@ public final class SettingsActivity extends HaafidhActivity {
     private GeometryRepository geometry;
     private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, morningTimeSetting, eveningTimeSetting;
     private TextView sabqiStatus, itqanStatus, acquiredStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
-    private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
     private static final DayOfWeek[] WEEKDAYS = {
         DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
         DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY
@@ -348,7 +347,7 @@ public final class SettingsActivity extends HaafidhActivity {
                     && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC)continue;
             if(WeeklyProgramPolicy.actionFor(WEEKDAYS[i],prefs.weeklyProgramMode(),days)!=action)continue;
             if(out.length()>0)out.append("/");
-            out.append(WEEKDAY_ABBREVIATIONS[i]);
+            out.append(CalendarText.weekday(this,WEEKDAYS[i],true));
         }
         return out.toString();
     }
@@ -371,17 +370,15 @@ public final class SettingsActivity extends HaafidhActivity {
         if(!learningDays.isEmpty())out.append(learningDays).append(" · Apprentissage   ·   ");
         if(!stabilizationDays.isEmpty())out.append(stabilizationDays).append(" · Stabilisation   ·   ");
         return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC
-            ? out.append("Dim · Finales (historique uniquement)").toString()
-            : out.append("Dim · Finales").toString();
+            ? out.append(CalendarText.weekday(this,DayOfWeek.SUNDAY,true)).append(" · Finales (historique uniquement)").toString()
+            : out.append(CalendarText.weekday(this,DayOfWeek.SUNDAY,true)).append(" · Finales").toString();
     }
 
     private String learningDaysSummary(){
         if (prefs.universalProfile()) {
             LocalDate monday = prefs.nextLearningWeek();
             List<String> days = universalWeekdays(monday, CadenceAction.LEARNING);
-            String start = monday.format(java.time.format.DateTimeFormatter
-                .ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)
-                .withLocale(getResources().getConfiguration().getLocales().get(0)));
+            String start = CalendarText.date(this,monday);
             return getString(R.string.setup_learning_days_from,
                 days.isEmpty() ? getString(R.string.setup_none) : String.join(" / ", days), start);
         }

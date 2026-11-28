@@ -70,7 +70,9 @@ public final class AuditClosureSourceContractTest {
     @Test public void slidingDashboardStartsWithToday() throws Exception {
         String dashboard = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(dashboard.contains("today.plusDays(i)"));
-        assertTrue(dashboard.contains("return \"Aujourd’hui\""));
+        String home = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertTrue(home.contains("boolean currentDay = row.date.equals(realToday);"));
+        assertTrue(home.contains("getString(R.string.calendar_today)"));
         assertFalse(dashboard.contains("previousOrSame"));
     }
 }

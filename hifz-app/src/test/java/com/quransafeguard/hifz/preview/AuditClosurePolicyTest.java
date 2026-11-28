@@ -24,8 +24,8 @@ public final class AuditClosurePolicyTest {
         assertEquals(7, window.size());
         assertEquals(today, window.get(0));
         assertEquals(today.plusDays(6), window.get(6));
-        assertEquals("Aujourd’hui", WeeklyDashboardPlanner.day(today, today));
-        assertEquals("Lun", WeeklyDashboardPlanner.day(today.plusDays(1), today));
+        assertEquals(java.time.DayOfWeek.SUNDAY, window.get(0).getDayOfWeek());
+        assertEquals(java.time.DayOfWeek.MONDAY, window.get(1).getDayOfWeek());
     }
 
     @Test public void forcedPromotionHasAVisibleDistinctAnchoringOrigin() {

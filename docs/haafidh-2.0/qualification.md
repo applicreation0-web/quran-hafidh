@@ -11,6 +11,8 @@
 
 ## Cartographie et exigences
 
+[Inventaire des activités, stores, tâches et interactions](inventaire.md). Le manifeste et la navigation réelle distinguent notamment l’Atlas moderne de l’activité historique et l’import par le sélecteur système d’une synchronisation autonome.
+
 Les états concernent la portée décrite dans chaque ligne. Le mandat reste applicable aux sous-cas encore ouverts.
 
 | ID du mandat | État | Fichiers et preuve | Travail restant |
