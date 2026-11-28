@@ -115,5 +115,61 @@ public final class UniversalLearningRouteTest {
         assertNull(store.open(day, geometry, acquired));
         assertTrue(prefs.setUniversalItqanDisciplines(true, true));
         assertEquals(first.raw, store.open(day, geometry, acquired).raw);
+        var plan = JuzMaintenanceStore.plan(first.juz, geometry, acquired);
+        for (int step = 0; step < plan.pages.size() * 2; step++)
+            assertTrue(store.advance(store.read(), plan, day));
+        assertNull(store.read());
+        assertTrue(prefs.universalMaintenanceReviewDue(day));
+        var units = prefs.stabilizedConsolidationUnits(day);
+        assertEquals(1, units.size());
+        assertEquals(ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED, units.get(0).protocol());
+        assertFalse(ItqanRegimeStore.postNasMaintenance(raw));
+    }
+
+    @Test public void declaredAcquisCanAlsoBeAssignedToDeepConsolidationWithoutEarningCredit() {
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putInt("schema", 6).putString("programStartDate", "2026-11-27")
+            .putBoolean("universalSetupPendingV1", true).commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        assertTrue(prefs.configureNewProfile(Collections.emptyList(),
+            UniversalLearningRoute.parse("1:1-114:6"), UniversalLearningRoute.parse("1:1-1:7"),
+            true, true, 0, geometry));
+        assertTrue(prefs.activeMurajaahCorpus().contains(new VerseRef(1,1)));
+        assertNotNull(prefs.currentAnchoringEntry(geometry));
+        assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
+        assertFalse(ItqanRegimeStore.postNasMaintenance(raw));
+    }
+
+    @Test public void legacyRangeEditorsCannotAssignFutureLearningToAnotherDiscipline() {
+        InMemoryPrefs raw = new InMemoryPrefs();
+        raw.edit().putInt("schema", 6).putString("programStartDate", "2026-11-27")
+            .putBoolean("universalSetupPendingV1", true).commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        var future = UniversalLearningRoute.parse("114:1-114:6");
+        assertTrue(prefs.configureNewProfile(future, Collections.emptyList(),
+            Collections.emptyList(), false, false, 2, geometry));
+        var before = raw.getAll();
+        assertThrows(IllegalArgumentException.class, () -> prefs.setV6AcquiredRanges(future, geometry));
+        assertThrows(IllegalArgumentException.class, () -> prefs.setV6StabilizationRanges(future, geometry));
+        assertEquals(before, raw.getAll());
+    }
+
+    @Test public void backupRejectsMalformedUniversalRangesAndOutOfBoundsCheckpoint() throws Exception {
+        var values = new org.json.JSONObject();
+        var route = new org.json.JSONObject().put("t", "s").put("v", "not json");
+        values.put(HifzPrefs.UNIVERSAL_LEARNING, route);
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+        route.put("v", "[{\"start\":\"114:1\",\"end\":\"114:6\"}]");
+        HifzBackup.validateUniversalProfile(values, geometry);
+        var index = new org.json.JSONObject().put("t", "i").put("v", 2);
+        values.put(HifzPrefs.UNIVERSAL_LEARNING_INDEX, index);
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+        index.put("v", "0");
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+        index.put("v", 0);
+        values.put("sabqiLineCursor", new org.json.JSONObject().put("t", "i").put("v", 0));
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+        values.remove(HifzPrefs.UNIVERSAL_LEARNING);
+        assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
     }
 }

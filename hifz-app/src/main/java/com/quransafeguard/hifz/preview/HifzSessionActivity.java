@@ -144,6 +144,10 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
     private PostFinalRecallStore.Review currentPostFinalReview;
     private boolean postFinalRecallFinished;
     private String requestedPostFinalFamily;
+    private static final String STATE_ITQAN_MAINTENANCE = "itqanMaintenanceRoute";
+    private static final String STATE_ITQAN_DATE = "itqanSessionDate";
+    private boolean universalSession;
+    private boolean itqanMaintenanceSession;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -175,6 +179,14 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                 ? capturedToday : LocalDate.parse(requestedSessionDate);
         } catch (RuntimeException invalidRecordedDate) {
             sessionDate = capturedToday;
+        }
+        universalSession = prefs.universalProfile();
+        if (universalSession && ITQAN.equals(mode)) {
+            if (state != null && state.containsKey(STATE_ITQAN_DATE))
+                sessionDate = LocalDate.parse(state.getString(STATE_ITQAN_DATE));
+            itqanMaintenanceSession = state != null && state.containsKey(STATE_ITQAN_MAINTENANCE)
+                ? state.getBoolean(STATE_ITQAN_MAINTENANCE)
+                : prefs.universalMaintenanceDue(capturedToday);
         }
         if (MURAJAAH_ACTIVE.equals(mode)) {
             try {
@@ -587,7 +599,15 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             state.putBoolean("correspondenceSelectorClockWasRunning",correspondenceSelectorClockWasRunning);
         }
         if (activeSlot != null) state.putString("activeSessionDate", sessionDate.toString());
+        if (universalSession && ITQAN.equals(mode)) {
+            state.putBoolean(STATE_ITQAN_MAINTENANCE, itqanMaintenanceSession);
+            state.putString(STATE_ITQAN_DATE, sessionDate.toString());
+        }
         super.onSaveInstanceState(state);
+    }
+
+    private boolean maintenanceRoute() {
+        return universalSession ? itqanMaintenanceSession : prefs.usesJuzMaintenance();
     }
 
     /**
@@ -602,7 +622,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         String date = sessionDate.toString();
         if (SABQI.equals(mode)) return date.equals(prefs.lastSabqiDate());
         if (SABQI_TODAY_REVIEW.equals(mode)) return date.equals(prefs.lastSabqiTodayReviewDate());
-        if (ITQAN.equals(mode)) return (prefs.usesJuzMaintenance() ? HifzClock.today().toString() : date)
+        if (ITQAN.equals(mode)) return (maintenanceRoute() ? HifzClock.today().toString() : date)
             .equals(prefs.lastItqanDate());
         if (RECENT_SABQI_REVIEW.equals(mode))
             return date.equals(prefs.lastStabilizationSnowballEveningDate());
@@ -980,7 +1000,8 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
     private boolean awaitingNewEveningLesson(ConsolidationCycleEngine.Family family, String prefix) {
         String opened = prefs.unfinishedConsolidationSessionDate(family, prefix);
         if (sessionDate.toString().equals(opened)) return false;
-        if (family == ConsolidationCycleEngine.Family.STABILIZATION && prefs.itqanPostNasMaintenance()) {
+        if (family == ConsolidationCycleEngine.Family.STABILIZATION
+                && (prefs.itqanPostNasMaintenance() || prefs.universalMaintenanceReviewDue(sessionDate))) {
             return false;
         }
         return !prefs.hasDailyLessonForNewEvening(family, sessionDate);
@@ -1396,7 +1417,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
     private void renderItqan() { renderItqan(0); }
 
     private void renderItqan(int autoChainDepth) {
-        if (prefs.usesJuzMaintenance()) {
+        if (maintenanceRoute()) {
             renderJuzMaintenance();
             return;
         }
@@ -2612,6 +2633,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         program.setText(R.string.fragility_title);
         timerText.setTextSize(getResources().getConfiguration().smallestScreenWidthDp>=600?19f:15f);
         timerText.setTextColor(Ui.INK);
+        timerText.setFontFeatureSettings("tnum");
         if(standaloneFragility)timerText.setText(R.string.fragility_free);
         else if(activeSlot!=null){
             if(fragilityClock==null)fragilityClock=new SessionClock(state.correctionElapsedMs,this::onFragilityTick);
@@ -2646,7 +2668,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                 ?correctionStore.pageReread(correctionState)
                 :correctionState.assisted?correctionStore.remask(correctionState)
                 :correctionStore.restartPage(correctionState);
-            if(!saved){onError("Impossible de sauvegarder le masquage.");return;}
+            if(!saved){onError(getString(R.string.fragility_mask_save_error));return;}
             correctionState=correctionStore.pending();renderActiveCorrection();
         });
         primary.addView(fragilityMaskButton);
@@ -2655,10 +2677,10 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         correctionPageDoneButton=Ui.iconButton(this,R.drawable.ic_ui_validate,getString(R.string.fragility_validate),v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
             if(!correctionMaskedPageReady||correctionState.assisted||audioPlayer!=null){
-                onError("Masquez toute la page et récitez-la sans aide avant de valider.");return;
+                onError(getString(R.string.fragility_validate_help));return;
             }
             if(!correctionStore.pageRecalled(correctionState)){
-                onError("Impossible de sauvegarder la récitation.");return;
+                onError(getString(R.string.fragility_recitation_save_error));return;
             }
             correctionState=correctionStore.pending();renderActiveCorrection();
         });
@@ -2666,7 +2688,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         secondary.addView(Ui.iconButton(this,R.drawable.ic_hifz_catchup_clock,getString(R.string.fragility_defer),v->{
             if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
             if(!correctionStore.deferPage(correctionState)){
-                onError("Impossible de reporter cette page.");return;
+                onError(getString(R.string.fragility_defer_save_error));return;
             }
             correctionState=correctionStore.pending();renderActiveCorrection();
         }));
@@ -2690,7 +2712,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
     private void navigateFragility(long generation,int delta){
         if(!isCurrentCorrectionRender(generation)||!fragilityHasTime())return;
         if(correctionState.pages.size()-correctionState.pageIndex<2)return;
-        if(!correctionStore.navigate(correctionState,delta)){onError("Navigation non sauvegardée.");return;}
+        if(!correctionStore.navigate(correctionState,delta)){onError(getString(R.string.fragility_navigation_save_error));return;}
         correctionState=correctionStore.pending();renderActiveCorrection();
     }
 
@@ -2699,26 +2721,26 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         LinkedHashSet<VerseRef> verses=new LinkedHashSet<>();
         for(WordGeometryRepository.WordBox word:WordGeometryRepository.shared(this).wordsForPage(currentPage))
             verses.add(new VerseRef(word.surah,word.ayah));
-        if(verses.isEmpty()){onError("Géométrie des versets indisponible.");return;}
+        if(verses.isEmpty()){onError(getString(R.string.fragility_geometry_error));return;}
         List<VerseRef> choices=new ArrayList<>(verses);
         String[] labels=new String[choices.size()];
-        for(int i=0;i<labels.length;i++)labels[i]="Verset "+choices.get(i).toString();
+        for(int i=0;i<labels.length;i++)labels[i]=getString(R.string.fragility_verse_item, choices.get(i).toString());
         fragilityVersePicker=new AlertDialog.Builder(this)
-            .setTitle(audio?"Écouter un verset":"Révéler un verset")
+            .setTitle(audio ? R.string.fragility_listen_verse : R.string.fragility_show_verse)
             .setItems(labels,(d,i)->applyFragilityAid(generation,choices.get(i),audio))
-            .setNegativeButton("Fermer",null).show();
+            .setNegativeButton(R.string.ui_close,null).show();
     }
 
     private void applyFragilityAid(long generation,VerseRef verse,boolean audio){
         if(!isCurrentCorrectionRender(generation)||!fragilityPageReady||!fragilityHasTime())return;
         org.json.JSONArray boxes=WordGeometryRepository.shared(this).boxesForVerse(currentPage,verse);
-        if(boxes.length()==0){onError("Verset absent de cette page.");return;}
+        if(boxes.length()==0){onError(getString(R.string.fragility_verse_absent));return;}
         if(audio&&!new HifzAudioGate(this).installed()){
-            onError("Pack audio non installé · Paramètres › Audio");return;
+            onError(getString(R.string.fragility_audio_missing));return;
         }
         if("RECALL".equals(correctionState.stage)){
             if(!correctionStore.revealDuringControl(correctionState)){
-                onError("Impossible d'enregistrer cette aide.");return;
+                onError(getString(R.string.fragility_aid_save_error));return;
             }
             correctionState=correctionStore.pending();
             if(correctionPageDoneButton!=null)correctionPageDoneButton.setEnabled(false);
@@ -2726,7 +2748,8 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                 Ui.setIconDescription(fragilityMaskButton,getString(R.string.fragility_hide));
                 Ui.setButtonIcon(fragilityMaskButton,R.drawable.ic_ui_hide_page);
             }
-            progress.setText("Page "+currentPage+" · "+correctionState.pageIndex+"/"+correctionState.pages.size()+" traitées · avec aide");
+            progress.setText(getString(R.string.fragility_progress, currentPage, correctionState.pageIndex,
+                correctionState.pages.size(), getString(R.string.fragility_assisted)));
         }
         closeAudio();
         if(audio){
@@ -2751,7 +2774,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         if(timerText!=null){
             long remaining=Math.max(0L,fragilityTargetMs()-elapsed);
             timerText.setText(SessionClock.format(remaining+((remaining>0)?999L:0L)));
-            timerText.setContentDescription("Temps global restant : "+timerText.getText());
+            timerText.setContentDescription(getString(R.string.fragility_time_remaining, timerText.getText()));
         }
     }
 
@@ -2763,7 +2786,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             if(!correctionStore.recordElapsed(correctionState,bounded)){
                 fragilityClockFailed=true;
                 if(fragilityClock!=null)fragilityClock.pause();
-                onError("Impossible de sauvegarder le temps des fragilités.");
+                onError(getString(R.string.fragility_time_save_error));
                 return;
             }
             correctionState=correctionStore.pending();

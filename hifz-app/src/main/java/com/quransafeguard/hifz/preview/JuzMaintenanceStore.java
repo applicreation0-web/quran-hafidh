@@ -194,6 +194,8 @@ final class JuzMaintenanceStore {
 
     private boolean current(Draft expected, Plan plan) {
         return expected != null && plan != null && expected.juz == plan.juz && expected.raw.equals(prefs.getString(DRAFT, null))
+            && (!prefs.contains(HifzPrefs.UNIVERSAL_LEARNING)
+                || prefs.getBoolean(HifzPrefs.UNIVERSAL_MAINTENANCE, false))
             && plan.pages.containsAll(expected.revealed)
             && expected.index < (expected.phase.correction() ? expected.revealed : plan.pages).size();
     }

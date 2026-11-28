@@ -85,4 +85,19 @@
   <string name="setup_advanced">Ku jëm kanam</string>
   <string name="setup_whole_quran">Ku mokkal Alxuraan bi mépp</string>
   <string name="setup_review_only">Nafar rekk</string>
+  <string name="fragility_mask_save_error">Mëneesul denc ni nga nëbbe xët wi.</string>
+  <string name="fragility_validate_help">Nëbbal xët wi yépp te tari ko ci sa xel, bala ngay dëggal.</string>
+  <string name="fragility_recitation_save_error">Mëneesul denc tari bi.</string>
+  <string name="fragility_defer_save_error">Mëneesul bàyyi xët wi ba beneen yoon.</string>
+  <string name="fragility_navigation_save_error">Mëneesul denc soppi xët wi.</string>
+  <string name="fragility_geometry_error">Fi aaya yi nekk jàppandiwul.</string>
+  <string name="fragility_verse_item">Aaya %1$s</string>
+  <string name="fragility_listen_verse">Déglu aaya</string>
+  <string name="fragility_show_verse">Wone aaya</string>
+  <string name="fragility_verse_absent">Aaya bi nekkul ci xët wii.</string>
+  <string name="fragility_audio_missing">Pàccu déglu bi jàppandiwul. Ubbil Tànneef yi, nga tànn Déglu.</string>
+  <string name="fragility_aid_save_error">Mëneesul denc ndimbal li nga jëfandikoo.</string>
+  <string name="fragility_time_remaining">Diir bi des: %1$s</string>
+  <string name="fragility_time_save_error">Mëneesul denc diir bi nga liggéey ci pàcc yi la jafe.</string>
+  <string name="ui_close">Tëj</string>
 </resources>

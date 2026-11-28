@@ -85,4 +85,19 @@
   <string name="setup_advanced">Avancé</string>
   <string name="setup_whole_quran">Coran entièrement mémorisé</string>
   <string name="setup_review_only">Révision seule</string>
+  <string name="fragility_mask_save_error">Impossible de sauvegarder le masquage.</string>
+  <string name="fragility_validate_help">Masquez toute la page et récitez-la sans aide avant de valider.</string>
+  <string name="fragility_recitation_save_error">Impossible de sauvegarder la récitation.</string>
+  <string name="fragility_defer_save_error">Impossible de reporter cette page.</string>
+  <string name="fragility_navigation_save_error">Navigation non sauvegardée.</string>
+  <string name="fragility_geometry_error">Géométrie des versets indisponible.</string>
+  <string name="fragility_verse_item">Verset %1$s</string>
+  <string name="fragility_listen_verse">Écouter un verset</string>
+  <string name="fragility_show_verse">Révéler un verset</string>
+  <string name="fragility_verse_absent">Verset absent de cette page.</string>
+  <string name="fragility_audio_missing">Pack audio non installé · Paramètres › Audio</string>
+  <string name="fragility_aid_save_error">Impossible d’enregistrer cette aide.</string>
+  <string name="fragility_time_remaining">Temps global restant : %1$s</string>
+  <string name="fragility_time_save_error">Impossible de sauvegarder le temps des fragilités.</string>
+  <string name="ui_close">Fermer</string>
 </resources>

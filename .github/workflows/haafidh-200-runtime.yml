@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: haafidh-200-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   android:

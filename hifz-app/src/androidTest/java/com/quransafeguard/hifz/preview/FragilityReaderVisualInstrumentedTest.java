@@ -25,6 +25,84 @@ import static org.junit.Assert.*;
 
 /** Real reader, actual buttons and fully painted pages; synthetic progress only. */
 public final class FragilityReaderVisualInstrumentedTest {
+    @Test public void languageRecreationKeepsOutstandingAssistedRecall() throws Exception {
+        Context context=ApplicationProvider.getApplicationContext();
+        new HifzPrefs(context);
+        JSONObject original=HifzBackup.export(context);
+        int originalLanguage=HaafidhActivity.languageIndex(context);
+        SharedPreferences raw=context.getSharedPreferences("quran_hifz_preview_v1",0);
+        try {
+            assertTrue(raw.edit().clear().commit());
+            assertTrue(HaafidhActivity.setLanguage(context,0));
+            HifzPrefs prefs=new HifzPrefs(context);
+            GeometryRepository geo=GeometryRepository.get(context);
+            VerseRef start=new VerseRef(2,1), end=new VerseRef(2,74);
+            assertTrue(prefs.setV6AcquiredRanges(Collections.singletonList(new VerseRange(start,end)),geo));
+            prefs.setActiveMurajaahCursor(start);
+            VerseRef aid=new VerseRef(2,6);
+            int page=geo.pageForVerse(aid);
+            assertTrue(raw.edit().putString(ActiveReviewCorrectionStore.KEY_QUEUE,"["+page+"]").commit());
+            ActiveReviewCorrectionStore store=prefs.activeReviewSlots().manualCorrection();
+            int acquired=prefs.acquiredLineCountV6();
+            int receipts=prefs.activeReviewSlots().receipts().size();
+            Intent intent=new Intent(context,HifzSessionActivity.class)
+                .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.MURAJAAH_ACTIVE)
+                .putExtra(HifzSessionActivity.EXTRA_FRAGILITY_PAGE,page);
+            try(ActivityScenario<HifzSessionActivity> activity=ActivityScenario.launch(intent)){
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Visible weak spot");
+                assertEquals("READ",store.pending().stage);
+                activity.onActivity(a->click(a,"Masquer la page"));
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Masked weak spot");
+                assertEquals("RECALL",store.pending().stage);
+                activity.onActivity(a->a.onVerseTap(aid));
+                assertTrue(store.pending().assisted);
+                String[] tags={"fr","en","wo"};
+                String[] labels={"Fragilités","Weak spots","Pàcc yu jafe"};
+                for(int language:new int[]{1,2,0,2,1,0}){
+                    assertTrue(HaafidhActivity.setLanguage(context,language));
+                    activity.recreate();
+                    HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Recreated weak spot");
+                    var pending = store.pending();
+                    assertNotNull(pending);
+                    assertEquals(page,pending.page());
+                    assertEquals(0,pending.pageIndex);
+                    assertEquals("RECALL",pending.stage);
+                    assertTrue(pending.assisted);
+                    activity.onActivity(a->{
+                        assertEquals(tags[language],a.getResources().getConfiguration().getLocales().get(0).getLanguage());
+                        assertEquals(labels[language],((TextView)field(a,"program")).getText().toString());
+                        assertEquals(100,((Integer)field(a,"currentMask")).intValue());
+                        assertFalse(control((View)field(a,"actions"),a.getString(R.string.fragility_validate)).isEnabled());
+                        assertFragilityTargetsFit(a);
+                    });
+                    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("fragility-"+tags[language]+".png");
+                }
+            }
+            assertEquals(acquired,prefs.acquiredLineCountV6());
+            assertEquals(start,prefs.activeMurajaahCursor());
+            assertEquals(receipts,prefs.activeReviewSlots().receipts().size());
+        } finally {
+            assertTrue(HaafidhActivity.setLanguage(context,originalLanguage));
+            HifzBackup.restore(context,original);
+        }
+    }
+
+    private static void assertFragilityTargetsFit(HifzSessionActivity activity) {
+        View commands = (View) field(activity,"actions");
+        android.graphics.Rect frame = new android.graphics.Rect();
+        activity.getWindow().getDecorView().getGlobalVisibleRect(frame);
+        int target = Ui.dp(activity,48);
+        for (int label : new int[]{R.string.fragility_previous,R.string.fragility_hide,R.string.fragility_reveal_verse,
+                R.string.fragility_audio,R.string.fragility_validate,R.string.fragility_defer,R.string.fragility_next}) {
+            View button = control(commands,activity.getString(label));
+            assertNotNull(activity.getString(label),button);
+            android.graphics.Rect bounds = new android.graphics.Rect();
+            assertTrue(button.getGlobalVisibleRect(bounds));
+            assertTrue(bounds.toShortString(),bounds.width() >= target && bounds.height() >= target);
+            assertTrue(bounds.toShortString(),frame.contains(bounds));
+        }
+    }
+
     @Test public void standaloneVisibleMaskedAndDeferredPreserveAllAcquisitionAndActiveEvidence() throws Exception {
         Context context=ApplicationProvider.getApplicationContext();
         new HifzPrefs(context);

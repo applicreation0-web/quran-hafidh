@@ -146,6 +146,10 @@ final class HifzBackup {
             if(freeMem!=null){checkValues(freeMem);validateFreeMemory(freeMem);}
             validateReceipts(dashboard);
             validateActiveReview(values);
+            if (values.has(HifzPrefs.UNIVERSAL_LEARNING) || values.has(HifzPrefs.UNIVERSAL_LEARNING_INDEX)
+                    || values.has(HifzPrefs.UNIVERSAL_SETUP) || values.has(HifzPrefs.UNIVERSAL_DEEP)
+                    || values.has(HifzPrefs.UNIVERSAL_MAINTENANCE))
+                validateUniversalProfile(values, GeometryRepository.get(context));
             synchronized(J10ReviewStore.LEGACY_STORE_LOCK) {
                 SharedPreferences main=context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
                 SharedPreferences ledger=context.getSharedPreferences(DASHBOARD_NAME,Context.MODE_PRIVATE);
@@ -183,6 +187,36 @@ final class HifzBackup {
                 return values.length();
             }
         }
+    }
+
+    static void validateUniversalProfile(JSONObject values, GeometryRepository geometry) throws JSONException {
+        try {
+            if (!values.has(HifzPrefs.UNIVERSAL_LEARNING)) throw new JSONException("Parcours universel absent.");
+            String raw = (String) typedUniversalValue(values, HifzPrefs.UNIVERSAL_LEARNING, "s", String.class, null);
+            int index = (Integer) typedUniversalValue(values, HifzPrefs.UNIVERSAL_LEARNING_INDEX, "i", Integer.class, 0);
+            int cursor = (Integer) typedUniversalValue(values, "sabqiLineCursor", "i", Integer.class, -1);
+            boolean pending = (Boolean) typedUniversalValue(values, HifzPrefs.UNIVERSAL_SETUP, "b", Boolean.class, false);
+            boolean deep = (Boolean) typedUniversalValue(values, HifzPrefs.UNIVERSAL_DEEP, "b", Boolean.class, false);
+            boolean maintenance = (Boolean) typedUniversalValue(values, HifzPrefs.UNIVERSAL_MAINTENANCE, "b", Boolean.class, false);
+            var ranges = HifzPrefs.decodeRanges(raw);
+            var span = UniversalLearningRoute.of(ranges, geometry).at(index);
+            if (cursor < -1 || cursor > geometry.lineCount()
+                    || span != null && cursor != -1 && (cursor < span.first || cursor > span.last)
+                    || pending && (!ranges.isEmpty() || cursor != -1 || deep || maintenance))
+                throw new IllegalArgumentException("Inconsistent learning checkpoint");
+        } catch (RuntimeException failure) {
+            throw new JSONException("Parcours universel invalide dans la sauvegarde.");
+        }
+    }
+
+    private static Object typedUniversalValue(JSONObject values, String key, String tag,
+            Class<?> type, Object fallback) throws JSONException {
+        if (!values.has(key)) return fallback;
+        JSONObject entry = values.getJSONObject(key);
+        Object value = entry.get("v");
+        if (!tag.equals(entry.getString("t")) || !type.isInstance(value))
+            throw new JSONException("Type de donnée invalide pour le parcours universel.");
+        return value;
     }
 
     private static void injectedProcessDeath(String store) {

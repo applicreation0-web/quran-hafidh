@@ -67,10 +67,10 @@ public final class HifzPrefs {
     }
 
     static final String UNIVERSAL_LEARNING = "universalLearningRangesV1";
-    private static final String UNIVERSAL_LEARNING_INDEX = "universalLearningRangeIndexV1";
-    private static final String UNIVERSAL_DEEP = "universalItqanDeepV1";
-    private static final String UNIVERSAL_MAINTENANCE = "universalItqanMaintenanceV1";
-    private static final String UNIVERSAL_SETUP = "universalSetupPendingV1";
+    static final String UNIVERSAL_LEARNING_INDEX = "universalLearningRangeIndexV1";
+    static final String UNIVERSAL_DEEP = "universalItqanDeepV1";
+    static final String UNIVERSAL_MAINTENANCE = "universalItqanMaintenanceV1";
+    static final String UNIVERSAL_SETUP = "universalSetupPendingV1";
 
     public HifzPrefs(Context context) {
         this(context, false);
@@ -757,7 +757,8 @@ public final class HifzPrefs {
                     || !learning.isEmpty() && days == 0)
                 throw new IllegalArgumentException("Invalid weekly cadence");
             validateV6ManualRanges(declared, learning);
-            validateV6ManualRanges(declared, deepRanges);
+            // A declared passage may also be assigned to deep consolidation. The
+            // declaration and the results of the repetitions are separate evidence.
             validateV6ManualRanges(learning, deepRanges);
             if (learning.isEmpty() && declared.isEmpty() && deepRanges.isEmpty()
                     || deep && deepRanges.isEmpty() || maintenance && declared.isEmpty())
@@ -1200,7 +1201,14 @@ public final class HifzPrefs {
                                       List<VerseRange> stabilizationRanges,
                                       GeometryRepository geometry) {
         if (geometry == null) throw new IllegalArgumentException("Géométrie Mushaf requise.");
-        validateV6ManualRanges(acquiredRanges, stabilizationRanges);
+        if (universalProfile()) {
+            List<VerseRange> learning = configuredUniversalLearningRanges();
+            validateV6ManualRanges(acquiredRanges, learning);
+            validateV6ManualRanges(stabilizationRanges, learning);
+            UniversalLearningRoute.of(stabilizationRanges, geometry);
+        } else {
+            validateV6ManualRanges(acquiredRanges, stabilizationRanges);
+        }
         // Schema-6 manual ranges are ordered but deliberately NOT coalesced. Adjacent
         // ranges may sit on opposite surah boundaries; merging them would destroy the
         // physical boundary that Stabilisation/Consolidation must preserve.
@@ -3687,6 +3695,19 @@ public final class HifzPrefs {
             && !snapshot.equals(p.getString(POST_NAS_WEEK_DONE,""));
     }
 
+    boolean universalMaintenanceReviewDue(LocalDate date) {
+        if (!universalProfile()) return false;
+        String openDate = unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.STABILIZATION, "stabilization-");
+        if (openDate != null) {
+            var open = restoreConsolidationSession(new ConsolidationCycleEngine(),
+                ConsolidationCycleEngine.Family.STABILIZATION, "stabilization-" + openDate);
+            return date.toString().equals(openDate) && open != null
+                && open.cycle().units().get(0).protocol() == ConsolidationCycleEngine.Protocol.POST_NAS_WEEKLY_MASKED;
+        }
+        return universalMaintenanceEnabled() && postNasConsolidationPending(date);
+    }
+
     private List<ConsolidationCycleEngine.Unit> postNasConsolidationUnits(LocalDate date) {
         if(!postNasConsolidationPending(date))return Collections.emptyList();
         JSONArray hizbs=postNasMaintainedHizbs(date);
@@ -3947,7 +3968,8 @@ public final class HifzPrefs {
     }
 
     List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
-        if (itqanPostNasMaintenance()) return postNasConsolidationUnits(today);
+        if (itqanPostNasMaintenance() || universalMaintenanceReviewDue(today))
+            return postNasConsolidationUnits(today);
         JSONArray source = stabilizationEveningSource(today);
         if (source.length() == 0) return Collections.emptyList();
         Set<String> earned = earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
@@ -4347,6 +4369,8 @@ public final class HifzPrefs {
 
     boolean snowballEveningPending(ConsolidationCycleEngine.Family family,LocalDate date) {
         if(family==null||date==null)throw new IllegalArgumentException("evening review required");
+        if (family == ConsolidationCycleEngine.Family.STABILIZATION && universalMaintenanceReviewDue(date))
+            return true;
         if(family==ConsolidationCycleEngine.Family.STABILIZATION && itqanPostNasMaintenance()) {
             // An old first-pass OPEN Consolidation keeps its frozen receipts.
             String old=p.getString(consolidationStateKey(family),"");
@@ -4467,9 +4491,10 @@ public final class HifzPrefs {
                 for(int i=0;i<exact.length();i++)
                     if(!exact.optString(i).equals(completed.cycle().units().get(i).id()))
                         throw new IllegalStateException("Maintien units changed during weekly consolidation");
-                return p.edit().putString(POST_NAS_WEEK_DONE,snapshot)
-                    .putString("lastStabilizationSnowballEveningDate",date)
-                    .remove(consolidationStateKey(family)).commit();
+                SharedPreferences.Editor editor = p.edit().putString(POST_NAS_WEEK_DONE,snapshot)
+                    .remove(consolidationStateKey(family));
+                if (!universalProfile()) editor.putString("lastStabilizationSnowballEveningDate",date);
+                return editor.commit();
             }
         }
         List<String> justEarned=earnedFromClosedEvening(completed,family);
@@ -5499,17 +5524,22 @@ static List<RecentSabqi> withoutRecentBlocks(List<RecentSabqi> source, List<Rece
     }
 
     private List<VerseRange> parseRangesAllowEmpty(String key) {
-        ArrayList<VerseRange> out = new ArrayList<>();
         try {
-            JSONArray array = new JSONArray(p.getString(key, "[]"));
-            for (int i = 0; i < array.length(); i++) {
-                JSONObject o = array.getJSONObject(i);
-                out.add(new VerseRange(GeometryRepository.parseVerse(o.getString("start")), GeometryRepository.parseVerse(o.getString("end"))));
-            }
+            List<VerseRange> out = decodeRanges(p.getString(key, "[]"));
+            return UNIVERSAL_LEARNING.equals(key) ? out : sortRangesPreservingBoundaries(out);
         } catch (Exception error) {
             throw new IllegalStateException("Corrupt range list: " + key, error);
         }
-        return UNIVERSAL_LEARNING.equals(key) ? out : sortRangesPreservingBoundaries(out);
+    }
+
+    static List<VerseRange> decodeRanges(String raw) throws org.json.JSONException {
+        ArrayList<VerseRange> out = new ArrayList<>();
+        JSONArray array = new JSONArray(raw);
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject o = array.getJSONObject(i);
+            out.add(new VerseRange(GeometryRepository.parseVerse(o.getString("start")), GeometryRepository.parseVerse(o.getString("end"))));
+        }
+        return out;
     }
 
     private static List<VerseRange> normalizeRanges(List<VerseRange> ranges) {

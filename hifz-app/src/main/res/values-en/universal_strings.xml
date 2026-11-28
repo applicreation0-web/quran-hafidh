@@ -85,4 +85,19 @@
   <string name="setup_advanced">Advanced</string>
   <string name="setup_whole_quran">Quran memorized in full</string>
   <string name="setup_review_only">Review only</string>
+  <string name="fragility_mask_save_error">Could not save the mask.</string>
+  <string name="fragility_validate_help">Hide the whole page and recite without help before confirming.</string>
+  <string name="fragility_recitation_save_error">Could not save the recitation.</string>
+  <string name="fragility_defer_save_error">Could not defer this page.</string>
+  <string name="fragility_navigation_save_error">Could not save the page change.</string>
+  <string name="fragility_geometry_error">Verse positions are unavailable.</string>
+  <string name="fragility_verse_item">Verse %1$s</string>
+  <string name="fragility_listen_verse">Listen to a verse</string>
+  <string name="fragility_show_verse">Reveal a verse</string>
+  <string name="fragility_verse_absent">This verse is absent from the page.</string>
+  <string name="fragility_audio_missing">Audio pack unavailable. Open Settings, then Audio.</string>
+  <string name="fragility_aid_save_error">Could not save this use of an aid.</string>
+  <string name="fragility_time_remaining">Total time remaining: %1$s</string>
+  <string name="fragility_time_save_error">Could not save time spent on weak spots.</string>
+  <string name="ui_close">Close</string>
 </resources>
