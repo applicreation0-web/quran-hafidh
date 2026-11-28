@@ -113,11 +113,15 @@ public final class FragilityReaderVisualInstrumentedTest {
             Intent intent=new Intent(context,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,slot.mode);
             try(ActivityScenario<HifzSessionActivity> activity=ActivityScenario.launch(intent)) {
                 HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Paused timed review");
+                String[] locales={"fr","en","wo"};
                 for(int language:new int[]{1,2,0,2,1,0}) {
                     activity.onActivity(a->chooseLanguage(a,language));
                     androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                     HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Recreated timed review");
                     activity.onActivity(a->{
+                        assertEquals(locales[language],a.getResources().getConfiguration().getLocales().get(0).getLanguage());
+                        assertTrue(((TextView)field(a,"program")).getText().toString()
+                            .startsWith(a.getString(R.string.recall_review_am)));
                         assertTrue((Boolean)field(a,"activeClockPaused"));
                         assertEquals(elapsed,((SessionClock)field(a,"clock")).elapsedMs());
                         assertEquals(100,((Integer)field(a,"currentMask")).intValue());
@@ -131,6 +135,23 @@ public final class FragilityReaderVisualInstrumentedTest {
                     assertEquals(start,prefs.activeMurajaahCursor());
                     assertTrue(slots.receipts().isEmpty());
                 }
+                long resumedAt=android.os.SystemClock.elapsedRealtime();
+                activity.onActivity(a->{
+                    assertTrue(((View)field(a,"activeClockAction")).performClick());
+                    assertFalse((Boolean)field(a,"activeClockPaused"));
+                    chooseLanguage(a,1);
+                });
+                androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(activity,"mushaf","Running timed review");
+                activity.onActivity(a->{
+                    assertEquals("en",a.getResources().getConfiguration().getLocales().get(0).getLanguage());
+                    assertFalse((Boolean)field(a,"activeClockPaused"));
+                    long measured=((SessionClock)field(a,"clock")).elapsedMs();
+                    assertTrue(measured>=elapsed);
+                    assertTrue(measured<=elapsed+android.os.SystemClock.elapsedRealtime()-resumedAt+1_000L);
+                    assertEquals(100,((Integer)field(a,"currentMask")).intValue());
+                });
+                assertTrue(slots.receipts().isEmpty());
             }
         } finally {
             HifzClock.resetClockForTests();

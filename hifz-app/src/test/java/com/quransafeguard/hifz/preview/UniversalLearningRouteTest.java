@@ -131,17 +131,30 @@ public final class UniversalLearningRouteTest {
         prefs.setSabqiLineCursor(range.first);
         LocalDate date=LocalDate.of(2026,11,27);
         assertEquals(3,prefs.forecastUniversalSabqiBlock(geometry,range.first,range.last).lineIds.size());
+        assertEquals(5,prefs.forecastUniversalSabqiLessons(geometry));
         assertEquals(date,prefs.openSabqiLesson(geometry,date));
         var token = prefs.sabqiLessonToken();
         assertTrue(prefs.setUniversalLearningLines(1));
         assertEquals(token,prefs.sabqiLessonToken());
         assertEquals(3,prefs.forecastUniversalSabqiBlock(geometry,range.first,range.last).lineIds.size());
+        assertEquals(13,prefs.forecastUniversalSabqiLessons(geometry));
         var opened=prefs.frozenSabqiBlock(geometry,range.last);
         assertTrue(MorningProtocolFixture.completeSabqi(prefs,opened.startLineIndex,opened.endLineIndex,
             opened.endLineIndex+1,opened.lineIds,date.toString(),"synthetic"));
         assertEquals(3,prefs.progressionSnapshotV6().learned.size());
         assertEquals(1,prefs.forecastUniversalSabqiBlock(geometry,prefs.sabqiLineCursor(),range.last).lineIds.size());
         assertFalse(prefs.setUniversalLearningLines(0));
+    }
+
+    @Test public void disjointSingleLinesEachRequireTheirOwnForecastLesson() {
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putString("programStartDate","2026-11-27").putBoolean(HifzPrefs.UNIVERSAL_SETUP,true)
+            .putInt("sabqiLineCursor",-1).commit();
+        HifzPrefs prefs = new HifzPrefs(raw,geometry);
+        assertTrue(prefs.configureNewProfile(UniversalLearningRoute.parse("1:1; 1:3-1:4; 2:45; 2:52"),
+            Collections.emptyList(),Collections.emptyList(),false,false,1,5,geometry));
+        assertEquals(4,prefs.sabqiLinesRemaining(geometry));
+        assertEquals(4,prefs.forecastUniversalSabqiLessons(geometry));
     }
 
     @Test public void configuredMaintenanceCanOpenAndResumeWithoutAnyAnNasLatch() {

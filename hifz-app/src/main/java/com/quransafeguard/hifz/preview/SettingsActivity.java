@@ -993,7 +993,13 @@ public final class SettingsActivity extends HaafidhActivity {
             ?3:effectiveLearningDaysPerWeek();
         int weeklyPace=prefs.learningLinesPerSession()*Math.max(0,sabqiDays);
         if(weeklyPace==0)return remaining+" ligne(s) restante(s) · aucun jour Sabqi programmé";
-        int weeks=(remaining+weeklyPace-1)/weeklyPace;
+        int weeks;
+        if (prefs.universalProfile()) {
+            int lessons = prefs.forecastUniversalSabqiLessons(geometry);
+            weeks = (lessons + sabqiDays - 1) / sabqiDays;
+        } else {
+            weeks = (remaining + weeklyPace - 1) / weeklyPace;
+        }
         return remaining+" ligne(s) restante(s) · estimation ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
     }
 

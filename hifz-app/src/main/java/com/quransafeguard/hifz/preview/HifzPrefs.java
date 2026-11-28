@@ -817,6 +817,22 @@ public final class HifzPrefs {
         return configuredSabqiBlock(geometry, start, endLimit);
     }
 
+    int forecastUniversalSabqiLessons(GeometryRepository geometry) {
+        var route = universalLearningRoute(geometry);
+        int index = universalLearningRangeIndex();
+        int cursor = sabqiLineCursor();
+        int lessons = 0;
+        for (var span = route.at(index); span != null; span = route.at(++index)) {
+            for (int line = Math.max(span.first,cursor); line <= span.last;) {
+                var block = forecastUniversalSabqiBlock(geometry,line,span.last);
+                line = block.endLineIndex + 1;
+                lessons++;
+            }
+            cursor = -1;
+        }
+        return lessons;
+    }
+
     private GeometryRepository.FiveLineBlock configuredSabqiBlock(
             GeometryRepository geometry, int start, int endLimit) {
         return geometry.fiveLineBlock(start, Math.min(endLimit, start + learningLinesPerSession() - 1));
