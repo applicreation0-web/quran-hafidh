@@ -243,6 +243,24 @@ final class ActiveReviewSlots {
         }
     }
 
+    boolean keepsOpenDraftCoverage(com.quransafeguard.hifz.core.EligibleCorpus corpus) {
+        for (String key : prefs.getAll().keySet()) {
+            if (!key.startsWith(DRAFT + "|")) continue;
+            String[] parts = key.split("\\|", -1);
+            if (parts.length != 3) throw new IllegalStateException("Invalid active draft key");
+            LocalDate date = LocalDate.parse(parts[1]);
+            Slot slot = Slot.valueOf(parts[2]);
+            Draft saved = draft(date, slot);
+            if (saved == null) continue;
+            boolean correcting = correctionPending(date, slot);
+            if (!correcting && (receipt(date, slot) != null || !isCurrent(saved, currentCursor(saved.start)))) continue;
+            if (corpus == null || !corpus.contains(saved.start)
+                    || (saved.end != null && !corpus.contains(saved.end))) return false;
+            for (VerseRef verse : saved.traversal) if (!corpus.contains(verse)) return false;
+        }
+        return true;
+    }
+
     boolean earlierCurrentDraftExists(LocalDate today) {
         for (String key : prefs.getAll().keySet()) {
             if (!key.startsWith(DRAFT + "|")) continue;

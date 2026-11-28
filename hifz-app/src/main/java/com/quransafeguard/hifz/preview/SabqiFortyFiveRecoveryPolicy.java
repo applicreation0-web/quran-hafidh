@@ -37,4 +37,29 @@ final class SabqiFortyFiveRecoveryPolicy {
             throw new IllegalStateException("Sabqi recovery target invalid");
         return current+RECOVERY;
     }
+
+    static final int CONFIGURED_VERSION = 3;
+
+    static boolean validConfiguredBase(int base) {
+        return base >= 10 && base <= BASE && base % 5 == 0;
+    }
+
+    static boolean validConfiguredTarget(int base, int target) {
+        return validConfiguredBase(base) && target >= base && target <= MAX_REPS
+            && (target - base) % RECOVERY == 0;
+    }
+
+    static int configuredMaskForNextRep(int base, int completed) {
+        if (!validConfiguredBase(base) || completed < 0 || completed >= MAX_REPS)
+            throw new IllegalArgumentException("Invalid configured Sabqi repetition");
+        if (completed >= base) return (completed - base) % RECOVERY < 5 ? 0 : 100;
+        int step = Math.max(1, base / 9);
+        return Math.max(0, 4 - (base - 1 - completed) / step) * 25;
+    }
+
+    static int nextConfiguredRecoveryTarget(int base, int target) {
+        if (!validConfiguredTarget(base, target) || target > MAX_REPS - RECOVERY)
+            throw new IllegalStateException("Configured Sabqi recovery target invalid");
+        return target + RECOVERY;
+    }
 }

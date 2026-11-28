@@ -143,6 +143,9 @@ public final class SettingsActivity extends HaafidhActivity {
             LinearLayout learningVolume = Ui.settingRow(this,getString(R.string.setup_learning_volume),
                 learningVolumeLabel(prefs.learningLinesPerSession()), view -> chooseLearningVolume((LinearLayout)view));
             parcours.addView(learningVolume);
+            parcours.addView(Ui.settingRow(this, getString(R.string.settings_sabqi_repetitions),
+                getString(R.string.settings_sabqi_repetitions_value, prefs.configuredSabqiReps()),
+                view -> chooseSabqiRepetitions((LinearLayout)view)));
             roadmapModeRow.setVisibility(View.GONE);
             roadmapLimit.setVisibility(View.GONE);
         }
@@ -152,6 +155,13 @@ public final class SettingsActivity extends HaafidhActivity {
         stabilizationRangesBox=Ui.column(this);stabilizationRangesBox.setPadding(0,0,0,0);corpus.addView(stabilizationRangesBox);
         corpus.addView(Ui.divider(this));
         corpus.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseStabilizationRange(null,-1)));
+
+        if (prefs.universalProfile()) {
+            corpus.addView(Ui.settingRow(this, getString(R.string.setup_declared_ranges),
+                getString(R.string.settings_declared_help), view -> editUniversalRanges(
+                    R.string.setup_declared_ranges, prefs.itqanRanges(),
+                    ranges -> prefs.setV6AcquiredRanges(ranges, geometry), this::refreshAll)));
+        }
 
         section(corpus,"Acquis");
         acquiredRangesBox=Ui.column(this); // read-only; do not edit physical credits
@@ -558,8 +568,14 @@ public final class SettingsActivity extends HaafidhActivity {
     }
 
     private void editUniversalLearning() {
+        editUniversalRanges(R.string.setup_learning_ranges, prefs.configuredUniversalLearningRanges(),
+            ranges -> prefs.updateUniversalLearning(ranges, geometry), this::refreshSabqi);
+    }
+
+    private void editUniversalRanges(int title, List<VerseRange> current,
+            java.util.function.Predicate<List<VerseRange>> save, Runnable refresh) {
         List<String> ranges = new ArrayList<>();
-        for (VerseRange range : prefs.configuredUniversalLearningRanges())
+        for (VerseRange range : current)
             ranges.add(range.getStart()+"-"+range.getEndInclusive());
         android.widget.EditText input = new android.widget.EditText(this);
         input.setText(android.text.TextUtils.join(", ", ranges));
@@ -570,20 +586,29 @@ public final class SettingsActivity extends HaafidhActivity {
         form.addView(input);
         form.addView(Ui.button(this,getString(R.string.setup_pick_range),
             view -> QuranRangePicker.show(this,range -> QuranRangePicker.appendTo(input,range))));
-        new AlertDialog.Builder(this)
-            .setTitle(R.string.setup_learning_ranges)
-            .setMessage(R.string.setup_ranges_help)
-            .setView(form)
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.setup_save, (dialog, button) -> {
-                try {
-                    if (prefs.updateUniversalLearning(UniversalLearningRoute.parse(input.getText().toString(), geometry), geometry))
-                        refreshSabqi();
-                    else Toast.makeText(this, R.string.setup_keep_finished_ranges, Toast.LENGTH_LONG).show();
-                } catch (IllegalArgumentException invalid) {
-                    Toast.makeText(this, R.string.setup_ranges_error, Toast.LENGTH_LONG).show();
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle(title)
+            .setMessage(R.string.setup_ranges_help).setView(form)
+            .setNegativeButton(android.R.string.cancel,null)
+            .setPositiveButton(R.string.setup_save,null).create();
+        dialog.show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+            try {
+                List<VerseRange> replacement = UniversalLearningRoute.parse(input.getText().toString(), geometry);
+                if (!save.test(replacement)) {
+                    Toast.makeText(this, title == R.string.setup_learning_ranges
+                        ? R.string.setup_keep_finished_ranges : R.string.setup_save_error, Toast.LENGTH_LONG).show();
+                    return;
                 }
-            }).show();
+            } catch (IllegalArgumentException invalid) {
+                Toast.makeText(this, R.string.setup_ranges_error, Toast.LENGTH_LONG).show();
+                return;
+            } catch (IllegalStateException protectedState) {
+                Toast.makeText(this, R.string.settings_declared_protected, Toast.LENGTH_LONG).show();
+                return;
+            }
+            dialog.dismiss();
+            refresh.run();
+        });
     }
 
     private String learningVolumeLabel(int lines) {
@@ -598,6 +623,21 @@ public final class SettingsActivity extends HaafidhActivity {
                 if (prefs.setUniversalLearningLines(selected+1))
                     Ui.settingValue(row).setText(learningVolumeLabel(prefs.learningLinesPerSession()));
                 else Toast.makeText(this,R.string.setup_save_error,Toast.LENGTH_LONG).show();
+                dialog.dismiss();
+            }).setNegativeButton(R.string.ui_close,null).show();
+    }
+
+    private void chooseSabqiRepetitions(LinearLayout row) {
+        String[] options = new String[8];
+        for (int i = 0; i < options.length; i++)
+            options[i] = getString(R.string.settings_sabqi_repetitions_value,10 + 5 * i);
+        new AlertDialog.Builder(this).setTitle(R.string.settings_sabqi_repetitions)
+            .setSingleChoiceItems(options,(prefs.configuredSabqiReps()-10)/5,(dialog,index) -> {
+                if (!prefs.setConfiguredSabqiReps(10 + 5 * index)) {
+                    Toast.makeText(this,R.string.setup_save_error,Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Ui.settingValue(row).setText(options[index]);
                 dialog.dismiss();
             }).setNegativeButton(R.string.ui_close,null).show();
     }

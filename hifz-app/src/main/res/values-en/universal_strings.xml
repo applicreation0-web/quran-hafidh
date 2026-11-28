@@ -181,4 +181,8 @@
   <string name="calendar_forecast">Forecast</string>
   <string name="calendar_no_finale">No final review due</string>
   <string name="calendar_check">Check forecast</string>
+  <string name="settings_declared_help">Eligibility for review and maintenance</string>
+  <string name="settings_declared_protected">Keep the passages of a session that is still open.</string>
+  <string name="settings_sabqi_repetitions">Repetitions · upcoming Sabqi sessions</string>
+  <string name="settings_sabqi_repetitions_value">%1$d repetitions</string>
 </resources>

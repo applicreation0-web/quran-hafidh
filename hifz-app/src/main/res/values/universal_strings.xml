@@ -181,4 +181,8 @@
   <string name="calendar_forecast">Prévision</string>
   <string name="calendar_no_finale">Aucune finale à valider</string>
   <string name="calendar_check">Projection à vérifier</string>
+  <string name="settings_declared_help">Éligibilité à la révision et au maintien</string>
+  <string name="settings_declared_protected">Conservez les passages d’une séance en cours jusqu’à sa fin.</string>
+  <string name="settings_sabqi_repetitions">Répétitions · prochaines séances Sabqi</string>
+  <string name="settings_sabqi_repetitions_value">%1$d répétitions</string>
 </resources>

@@ -11,6 +11,7 @@ import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.time.LocalDate;
@@ -72,6 +73,7 @@ public final class HifzPrefs {
     static final String UNIVERSAL_MAINTENANCE = "universalItqanMaintenanceV1";
     static final String UNIVERSAL_SETUP = "universalSetupPendingV1";
     static final String UNIVERSAL_REVIEW_MINUTES = "universalActiveReviewMinutesV1";
+    static final String UNIVERSAL_SABQI_REPS = "universalSabqiRepetitionsV1";
     static final String UNIVERSAL_LEARNING_LINES = "universalLearningLinesPerSessionV1";
     static final String UNIVERSAL_LEARNING_WEEKS = "universalLearningWeekdaysV1";
     static final String UNIVERSAL_ITQAN_HISTORY = "universalItqanCalendarV1";
@@ -1304,6 +1306,20 @@ public final class HifzPrefs {
             throw new IllegalStateException("Terminez la Stabilisation en cours avant de retirer sa plage.");
         }
 
+        if (universalProfile() && !acquiredNormalized.equals(itqanRanges())) {
+            List<VerseRange> review = new ArrayList<>(acquiredNormalized);
+            review.addAll(legacyMurajaahPromotedRanges());
+            review.addAll(consolidatedPromotions);
+            List<VerseRange> eligible = withAcquiredReviewRanges(review, geometry);
+            EligibleCorpus replacement = eligible.isEmpty() ? null : EligibleCorpus.Companion.of(eligible);
+            JuzMaintenanceStore.Draft maintenance = juzMaintenance().read();
+            if ((maintenance != null && (replacement == null
+                    || JuzMaintenanceStore.plan(maintenance.juz, geometry, replacement) == null))
+                    || !activeReviewSlots().keepsOpenDraftCoverage(replacement)) {
+                throw new IllegalStateException("Open review coverage must be preserved");
+            }
+        }
+
         // These ranges declare work or review eligibility. Only session validation can
         // change earned line levels, and an OPEN evening keeps its frozen snapshot.
         SharedPreferences.Editor editor = p.edit()
@@ -1779,7 +1795,22 @@ public final class HifzPrefs {
         return completeSabqiBlock(startLine, endLine, nextLineCursor, date, label);
     }
 
-    private static final String SABQI_LESSON_SNAPSHOT="sabqiPhysicalLessonSnapshotV1";
+    static final String SABQI_LESSON_SNAPSHOT="sabqiPhysicalLessonSnapshotV1";
+
+    int configuredSabqiReps() {
+        return universalProfile() ? p.getInt(UNIVERSAL_SABQI_REPS, SabqiFortyFiveRecoveryPolicy.BASE)
+            : SabqiFortyFiveRecoveryPolicy.BASE;
+    }
+
+    boolean setConfiguredSabqiReps(int base) {
+        return universalProfile() && SabqiFortyFiveRecoveryPolicy.validConfiguredBase(base)
+            && p.edit().putInt(UNIVERSAL_SABQI_REPS, base).commit();
+    }
+
+    private static boolean supportedSabqiLessonVersion(int version) {
+        return version == 1 || version == SabqiFortyFiveRecoveryPolicy.VERSION
+            || version == SabqiFortyFiveRecoveryPolicy.CONFIGURED_VERSION;
+    }
 
     int sabqiLessonTargetReps() {
         try {
@@ -1787,6 +1818,9 @@ public final class HifzPrefs {
             int v=frozen.getInt("version");
             if(v==1)return PreviewConfig.SABQI_TOTAL_REPS;
             int target=frozen.getInt("target");
+            if (v == SabqiFortyFiveRecoveryPolicy.CONFIGURED_VERSION)
+                return universalProfile() && SabqiFortyFiveRecoveryPolicy.validConfiguredTarget(
+                    frozen.getInt("base"), target) ? target : -1;
             return v==2 && SabqiFortyFiveRecoveryPolicy.validTarget(target) ? target : -1;
         }catch(Exception invalid){return -1;}
     }
@@ -1797,6 +1831,8 @@ public final class HifzPrefs {
             if(frozen.getInt("version")==2)
                 return SabqiFortyFiveRecoveryPolicy.maskForNextRep(completed);
             if(frozen.getInt("version")==1)return PreviewConfig.sabqiMaskForNextRep(completed);
+            if(frozen.getInt("version")==SabqiFortyFiveRecoveryPolicy.CONFIGURED_VERSION)
+                return SabqiFortyFiveRecoveryPolicy.configuredMaskForNextRep(frozen.getInt("base"), completed);
         }catch(Exception ignored){}
         throw new IllegalStateException("Invalid frozen Sabqi mask profile");
     }
@@ -1809,24 +1845,40 @@ public final class HifzPrefs {
                     || frozen.getInt("assisted")!=sabqiAssisted())return false;
             if(frozen.getInt("version")==1)
                 return StructuredSessionPolicy.assistancePasses(sabqiAssisted());
-            return frozen.getInt("version")==2 && frozen.getInt("passReveals")==0;
+            return frozen.getInt("passReveals")==0;
         }catch(Exception ignored){return false;}
+    }
+
+    boolean usesSabqiRecoveryPass() {
+        try {
+            int version = new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT, "")).getInt("version");
+            return version != 1 && supportedSabqiLessonVersion(version) && sabqiLessonTargetReps() > 0;
+        } catch (JSONException invalid) {
+            return false;
+        }
     }
 
     boolean beginSabqiRecovery(String expectedToken) {
         synchronized(V6_STATE_LOCK){
             try {
                 JSONObject frozen=new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT,""));
-                if(frozen.getInt("version")!=2 || expectedToken==null
+                int version=frozen.getInt("version");
+                if(!supportedSabqiLessonVersion(version) || version==1 || expectedToken==null
                         || !expectedToken.equals(frozen.getString("sessionId")))return false;
-                int target=frozen.getInt("target");
-                if(!SabqiFortyFiveRecoveryPolicy.validTarget(target)
+                int target=sabqiLessonTargetReps();
+                if(target<1
                         || frozen.getInt("reps")!=target || sabqiRep()!=target
                         || frozen.getInt("passReveals")!=0)return false;
-                frozen.put("target",SabqiFortyFiveRecoveryPolicy.nextRecoveryTarget(target));
+                frozen.put("target",nextSabqiRecoveryTarget(frozen, target));
                 return p.edit().putString(SABQI_LESSON_SNAPSHOT,frozen.toString()).commit();
             }catch(Exception invalid){return false;}
         }
+    }
+
+    private static int nextSabqiRecoveryTarget(JSONObject frozen, int target) throws JSONException {
+        return frozen.getInt("version") == SabqiFortyFiveRecoveryPolicy.CONFIGURED_VERSION
+            ? SabqiFortyFiveRecoveryPolicy.nextConfiguredRecoveryTarget(frozen.getInt("base"), target)
+            : SabqiFortyFiveRecoveryPolicy.nextRecoveryTarget(target);
     }
 
     String sabqiLessonToken() {
@@ -1840,21 +1892,22 @@ public final class HifzPrefs {
                 JSONObject root=new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT,""));
                 int version=root.getInt("version");
                 int target=sabqiLessonTargetReps();
-                if((version!=1 && version!=2) || target<1
+                if(!supportedSabqiLessonVersion(version) || target<1
                     || expectedToken==null || expectedToken.isEmpty()
                     || !expectedToken.equals(root.getString("sessionId"))
                     || root.getInt("reps")!=expectedRep || sabqiRep()!=expectedRep
                     || expectedRep<0 || expectedRep>=target)return false;
                 int next=expectedRep+1,assisted=root.getInt("assisted")+(revealed?1:0);
                 root.put("reps",next).put("assisted",assisted);
-                if(version==2) {
+                if(version!=1) {
                     int passReveals=root.getInt("passReveals");
                     if(passReveals<0)return false;
-                    if(revealed && SabqiFortyFiveRecoveryPolicy.maskedFinalRep(expectedRep))
-                        passReveals++;
+                    boolean finalMask = version == 2 ? SabqiFortyFiveRecoveryPolicy.maskedFinalRep(expectedRep)
+                        : SabqiFortyFiveRecoveryPolicy.configuredMaskForNextRep(root.getInt("base"), expectedRep) == 100;
+                    if(revealed && finalMask) passReveals++;
                     if(next==target && passReveals>0){
                         // Failure cannot earn the learned-lines receipt.
-                        target=SabqiFortyFiveRecoveryPolicy.nextRecoveryTarget(target);
+                        target=nextSabqiRecoveryTarget(root,target);
                         root.put("target",target);
                         passReveals=0;
                     }
@@ -1876,10 +1929,10 @@ public final class HifzPrefs {
                     return p.edit().putInt("sabqiRep",0).putInt("sabqiAssisted",0).commit();
                 JSONObject frozen=new JSONObject(raw);
                 int version=frozen.getInt("version");
-                if(version!=1 && version!=2)return false;
+                if(!supportedSabqiLessonVersion(version))return false;
                 frozen.put("reps",0).put("assisted",0)
                     .put("sessionId",UUID.randomUUID().toString());
-                if(version==2)frozen.put("target",SabqiFortyFiveRecoveryPolicy.BASE)
+                if(version!=1)frozen.put("target",version == 2 ? SabqiFortyFiveRecoveryPolicy.BASE : frozen.getInt("base"))
                     .put("passReveals",0);
                 return p.edit().putString(SABQI_LESSON_SNAPSHOT,frozen.toString())
                     .putInt("sabqiRep",0).putInt("sabqiAssisted",0).commit();
@@ -1918,7 +1971,7 @@ public final class HifzPrefs {
             try {
                 if(!raw.isEmpty()) {
                     JSONObject saved=new JSONObject(raw);
-                    if((saved.getInt("version")!=1 && saved.getInt("version")!=2)
+                    if(!supportedSabqiLessonVersion(saved.getInt("version"))
                             || sabqiLessonTargetReps()<1)
                         throw new IllegalStateException("Unknown frozen Sabqi repetition protocol");
                     frozenSabqiBlock(geometry,endLimit);
@@ -1928,11 +1981,17 @@ public final class HifzPrefs {
                     throw new IllegalStateException("Legacy Sabqi repetition date is unverified");
                 GeometryRepository.FiveLineBlock block=universalProfile()
                     ? configuredSabqiBlock(geometry,cursor,endLimit) : geometry.fiveLineBlock(cursor,endLimit);
-                JSONObject snapshot=new JSONObject().put("version",SabqiFortyFiveRecoveryPolicy.VERSION)
+                int base = configuredSabqiReps();
+                if (!SabqiFortyFiveRecoveryPolicy.validConfiguredBase(base))
+                    throw new IllegalStateException("Invalid Sabqi repetitions in profile");
+                int version = base == SabqiFortyFiveRecoveryPolicy.BASE ? SabqiFortyFiveRecoveryPolicy.VERSION
+                    : SabqiFortyFiveRecoveryPolicy.CONFIGURED_VERSION;
+                JSONObject snapshot=new JSONObject().put("version",version)
                     .put("date",day.toString()).put("sessionId",UUID.randomUUID().toString())
                     .put("reps",0).put("assisted",0).put("passReveals",0)
-                    .put("target",SabqiFortyFiveRecoveryPolicy.BASE)
+                    .put("target",base)
                     .put("start",cursor).put("end",block.endLineIndex).put("lines",new JSONArray(block.lineIds));
+                if (version == SabqiFortyFiveRecoveryPolicy.CONFIGURED_VERSION) snapshot.put("base", base);
                 if(!p.edit().putString(SABQI_LESSON_SNAPSHOT,snapshot.toString()).commit())
                     throw new IllegalStateException("Unable to persist Sabqi physical lesson");
                 return day;
@@ -1946,7 +2005,7 @@ public final class HifzPrefs {
         try {
             JSONObject frozen=new JSONObject(p.getString(SABQI_LESSON_SNAPSHOT,""));
             int version=frozen.getInt("version");
-            if(version!=1 && version!=2)return false;
+            if(!supportedSabqiLessonVersion(version))return false;
             return sabqiLessonReadyForCredit()
                 && frozen.getInt("assisted")==sabqiAssisted()
                 && frozen.getInt("start")==start

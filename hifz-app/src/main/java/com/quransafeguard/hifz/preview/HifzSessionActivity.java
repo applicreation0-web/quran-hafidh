@@ -737,7 +737,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             showCurrent();
             if (assistancePassed) addRoundAction(R.drawable.ic_ui_validate,"Valider",v->runValidationSafely(this::validateSabqi));
             else addRoundAction(R.drawable.ic_ui_resume,"Reprendre",v->restartSabqiAfterAssistance());
-            if(target>=SabqiFortyFiveRecoveryPolicy.BASE)
+            if(prefs.usesSabqiRecoveryPass())
                 addRoundAction(R.drawable.ic_ui_repeat,"Échec · +5 visibles + 5 masquées",v->beginSabqiFortyFiveRecovery());
             return;
         }
@@ -813,7 +813,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
     /** Explicit unsuccessful final recall: extend the *same* lesson by 5+5,
      * never issue a credit and never reset earlier earned repetitions. */
     private void beginSabqiFortyFiveRecovery() {
-        if(prefs.sabqiLessonTargetReps()<SabqiFortyFiveRecoveryPolicy.BASE
+        if(!prefs.usesSabqiRecoveryPass()
                 ||!prefs.beginSabqiRecovery(sabqiLessonToken)) {
             onError("Impossible d'ouvrir la reprise Sabqi 5+5.");
             return;

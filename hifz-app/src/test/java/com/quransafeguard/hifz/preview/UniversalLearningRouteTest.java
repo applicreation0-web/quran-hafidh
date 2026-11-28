@@ -147,6 +147,43 @@ public final class UniversalLearningRouteTest {
         assertFalse(prefs.setUniversalLearningLines(0));
     }
 
+    @Test public void configurableSabqiFreezesTheMaskAndEnforcesRecoveryBeforeCredit() throws Exception {
+        LocalDate day = LocalDate.of(2026, 11, 27);
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putString("programStartDate",day.toString()).putBoolean(HifzPrefs.UNIVERSAL_SETUP,true)
+            .putInt("sabqiLineCursor",-1).commit();
+        HifzPrefs prefs = new HifzPrefs(raw,geometry);
+        assertFalse(prefs.setConfiguredSabqiReps(10));
+        assertTrue(prefs.configureNewProfile(UniversalLearningRoute.parse("2:84-2:88"),
+            Collections.emptyList(),Collections.emptyList(),false,false,3,geometry));
+        var range = prefs.universalLearningRoute(geometry).at(0);
+        prefs.setSabqiLineCursor(range.first);
+        assertFalse(prefs.setConfiguredSabqiReps(7));
+        assertTrue(prefs.setConfiguredSabqiReps(10));
+        assertEquals(day,prefs.openSabqiLesson(geometry,day));
+        String token = prefs.sabqiLessonToken();
+        assertTrue(prefs.setConfiguredSabqiReps(30));
+        assertEquals(10,prefs.sabqiLessonTargetReps());
+        assertEquals(100,prefs.sabqiLessonMaskForNextRep(9));
+        for (int rep = 0; rep < 10; rep++) assertTrue(prefs.recordSabqiRepetition(token,rep,rep == 9));
+        assertEquals(20,prefs.sabqiLessonTargetReps());
+        assertFalse(prefs.sabqiLessonReadyForCredit());
+        assertTrue(prefs.progressionSnapshotV6().learned.isEmpty());
+        HifzPrefs reopened = new HifzPrefs(raw,geometry);
+        assertEquals(day,reopened.openSabqiLesson(geometry,day.plusDays(1)));
+        assertEquals(token,reopened.sabqiLessonToken());
+        assertEquals(100,reopened.sabqiLessonMaskForNextRep(19));
+        for (int rep = 10; rep < 20; rep++) assertTrue(reopened.recordSabqiRepetition(token,rep,false));
+        assertTrue(reopened.sabqiLessonReadyForCredit());
+        var block = reopened.frozenSabqiBlock(geometry,range.last);
+        assertTrue(reopened.completeSabqiBlockV6(block.startLineIndex,block.endLineIndex,
+            block.endLineIndex+1,block.lineIds,day.toString(),"synthetic"));
+        assertFalse(reopened.completeSabqiBlockV6(block.startLineIndex,block.endLineIndex,
+            block.endLineIndex+1,block.lineIds,day.toString(),"synthetic duplicate"));
+        assertEquals(day.plusDays(1),reopened.openSabqiLesson(geometry,day.plusDays(1)));
+        assertEquals(30,reopened.sabqiLessonTargetReps());
+    }
+
     @Test public void disjointSingleLinesEachRequireTheirOwnForecastLesson() {
         InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
         raw.edit().putString("programStartDate","2026-11-27").putBoolean(HifzPrefs.UNIVERSAL_SETUP,true)
@@ -364,6 +401,30 @@ public final class UniversalLearningRouteTest {
         assertFalse(raw.contains("itqanJuzMaintenanceReceiptV1|" + sunday));
         assertNull(store.open(sunday, geometry, acquired));
         assertFalse(store.advance(finalPage, plan, sunday));
+        assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
+    }
+
+    @Test public void declaredRangesCanBeEditedWithoutCreditsAndCannotStrandOpenMaintenance() {
+        LocalDate saturday = LocalDate.of(2026, 11, 28);
+        HifzClock.setClockForTests(Clock.fixed(saturday.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putString("programStartDate", saturday.toString())
+            .putBoolean(HifzPrefs.UNIVERSAL_SETUP, true).commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        assertTrue(prefs.configureNewProfile(UniversalLearningRoute.parse("114:1-114:6"),
+            Collections.emptyList(), Collections.emptyList(), false, false, 1, geometry));
+        var j1 = UniversalLearningRoute.parse("j1", geometry);
+        assertTrue(prefs.setV6AcquiredRanges(j1, geometry));
+        assertEquals(j1, prefs.itqanRanges());
+        assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
+        assertTrue(prefs.setUniversalItqanDisciplines(false, true));
+        var open = prefs.juzMaintenance().open(saturday, geometry, prefs.activeMurajaahCorpus());
+        assertNotNull(open);
+        var original = new java.util.HashMap<>(raw.getAll());
+        assertThrows(IllegalStateException.class, () -> prefs.setV6AcquiredRanges(Collections.emptyList(), geometry));
+        assertEquals(original, raw.getAll());
+        assertTrue(prefs.setV6AcquiredRanges(UniversalLearningRoute.parse("j1, j3", geometry), geometry));
+        assertEquals(open.raw, prefs.juzMaintenance().read().raw);
         assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
     }
 

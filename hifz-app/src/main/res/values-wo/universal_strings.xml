@@ -181,4 +181,8 @@
   <string name="calendar_forecast">Li ñu séentu</string>
   <string name="calendar_no_finale">Amul nafar bu mujj bu war</string>
   <string name="calendar_check">Seetal li ñu séentu</string>
+  <string name="settings_declared_help">Pàcc yi nga mën a nafar te sàmm</string>
+  <string name="settings_declared_protected">Bàyyil pàcc yi nekk ci jotaay bu jeexagul.</string>
+  <string name="settings_sabqi_repetitions">Yoon yi · jotaayi Sabqi yu ñëw</string>
+  <string name="settings_sabqi_repetitions_value">%1$d yoon</string>
 </resources>

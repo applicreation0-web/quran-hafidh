@@ -151,6 +151,7 @@ final class HifzBackup {
                     || values.has(HifzPrefs.UNIVERSAL_SETUP) || values.has(HifzPrefs.UNIVERSAL_DEEP)
                     || values.has(HifzPrefs.UNIVERSAL_MAINTENANCE) || values.has(HifzPrefs.UNIVERSAL_REVIEW_MINUTES)
                     || values.has(HifzPrefs.UNIVERSAL_LEARNING_LINES)
+                    || values.has(HifzPrefs.UNIVERSAL_SABQI_REPS)
                     || values.has(HifzPrefs.UNIVERSAL_LEARNING_WEEKS)
                     || values.has(HifzPrefs.UNIVERSAL_ITQAN_HISTORY))
                 validateUniversalProfile(values, GeometryRepository.get(context));
@@ -205,6 +206,10 @@ final class HifzBackup {
             int reviewMinutes = (Integer) typedUniversalValue(values, HifzPrefs.UNIVERSAL_REVIEW_MINUTES, "i", Integer.class, 0);
             int lines = (Integer) typedUniversalValue(values, HifzPrefs.UNIVERSAL_LEARNING_LINES,
                 "i", Integer.class, PreviewConfig.SABQI_LINES);
+            int repetitions = (Integer) typedUniversalValue(values, HifzPrefs.UNIVERSAL_SABQI_REPS,
+                "i", Integer.class, SabqiFortyFiveRecoveryPolicy.BASE);
+            if (!SabqiFortyFiveRecoveryPolicy.validConfiguredBase(repetitions))
+                throw new IllegalArgumentException("Invalid stored Sabqi repetitions");
             String weeks = (String) typedUniversalValue(values, HifzPrefs.UNIVERSAL_LEARNING_WEEKS,
                 "s", String.class, "[]");
             var learningWeeks = WeeklyProgramPolicy.decodeDatedMasks(weeks, "days", 63, true);
@@ -230,6 +235,13 @@ final class HifzBackup {
                     || span != null && cursor != -1 && (cursor < span.first || cursor > span.last)
                     || pending && (!ranges.isEmpty() || cursor != -1 || deep || maintenance))
                 throw new IllegalArgumentException("Inconsistent learning checkpoint");
+            String sabqi = (String) typedUniversalValue(values, HifzPrefs.SABQI_LESSON_SNAPSHOT,
+                "s", String.class, "");
+            if (!sabqi.isEmpty()) {
+                JSONObject lesson = new JSONObject(sabqi);
+                if (lesson.getInt("version") == SabqiFortyFiveRecoveryPolicy.CONFIGURED_VERSION)
+                    validateConfiguredSabqi(values, lesson, span, cursor, geometry);
+            }
             var acquired = HifzPrefs.decodeRanges((String) typedUniversalValue(values, "itqanRanges", "s", String.class, "[]"));
             var legacy = HifzPrefs.decodeRanges((String) typedUniversalValue(values, "legacyMurajaahPromotedRanges", "s", String.class, "[]"));
             var promoted = HifzPrefs.decodeRanges((String) typedUniversalValue(values, "promotedRanges", "s", String.class, "[]"));
@@ -256,6 +268,28 @@ final class HifzBackup {
         } catch (RuntimeException failure) {
             throw new JSONException("Parcours universel invalide dans la sauvegarde.");
         }
+    }
+
+    private static void validateConfiguredSabqi(JSONObject values, JSONObject lesson,
+            UniversalLearningRoute.Span span, int cursor, GeometryRepository geometry) throws JSONException {
+        int base = lesson.getInt("base");
+        int target = lesson.getInt("target");
+        int reps = lesson.getInt("reps");
+        int assisted = lesson.getInt("assisted");
+        int passReveals = lesson.getInt("passReveals");
+        int end = lesson.getInt("end");
+        LocalDate.parse(lesson.getString("date"));
+        if (span == null || cursor < span.first || lesson.getInt("start") != cursor
+                || end < cursor || end > span.last || lesson.getString("sessionId").isEmpty()
+                || !SabqiFortyFiveRecoveryPolicy.validConfiguredTarget(base,target)
+                || reps < 0 || reps > target || assisted < 0 || assisted > reps
+                || passReveals < 0 || passReveals > assisted || reps == target && passReveals != 0
+                || reps != (Integer) typedUniversalValue(values, "sabqiRep", "i", Integer.class, 0)
+                || assisted != (Integer) typedUniversalValue(values, "sabqiAssisted", "i", Integer.class, 0))
+            throw new IllegalArgumentException("Invalid configured Sabqi checkpoint");
+        var block = geometry.fiveLineBlock(cursor,end);
+        if (block.endLineIndex != end || !lesson.getJSONArray("lines").toString().equals(new JSONArray(block.lineIds).toString()))
+            throw new IllegalArgumentException("Invalid physical lines in configured Sabqi checkpoint");
     }
 
     private static Object typedUniversalValue(JSONObject values, String key, String tag,
