@@ -180,11 +180,11 @@ final class RefrainTimeline {
                 if(onSelect!=null)onSelect.selected(nodes.get(index)[5]);
             });
         }
-        Button previous=Ui.iconButton(a,"‹","Occurrence précédente",v->{
+        Button previous=Ui.iconButton(a,R.drawable.ic_ui_previous,"Occurrence précédente",v->{
             current[0]=(current[0]+nodes.size()-1)%nodes.size();redraw[0].run();
             if(onSelect!=null)onSelect.selected(nodes.get(current[0])[5]);
         });
-        Button next=Ui.iconButton(a,"›","Occurrence suivante",v->{
+        Button next=Ui.iconButton(a,R.drawable.ic_ui_next,"Occurrence suivante",v->{
             current[0]=(current[0]+1)%nodes.size();redraw[0].run();
             if(onSelect!=null)onSelect.selected(nodes.get(current[0])[5]);
         });

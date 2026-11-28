@@ -23,9 +23,9 @@ public final class HifzBacklogScreenContractTest {
         assertTrue(session.contains("attendance.capture(prefs)"));
     }
     @Test public void booxPalaceIconsAreRealAndLarge()throws Exception {
-        String home=file("MainActivity.java"),ui=file("Ui.java");
-        for(String s:new String[]{"door","column","buttress","keystone","torch","mirror"})
-            assertTrue(ui.contains("R.drawable.ic_palace_"+s));
+        String home=file("MainActivity.java");
+        for(String s:new String[]{"apprentissage","stabilisation","renforcement","consolidation","revision_active","fragilities"})
+            assertTrue(home.contains("R.drawable.ic_haafidh_"+s));
         assertTrue(home.contains("booxIconDp(2, 124)"));
         assertTrue(home.contains("architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp))"));
         assertTrue(home.contains("backlogParcoursRow = backlogRow()"));

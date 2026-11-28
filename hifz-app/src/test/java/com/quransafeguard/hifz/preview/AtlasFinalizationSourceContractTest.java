@@ -78,7 +78,7 @@ public final class AtlasFinalizationSourceContractTest {
             read(ROOT+"MapQcfThumbnails.java").contains("aria-current='page'"));
         assertTrue("Gray shading uses the entire active Ayah Themes passage",
             map.contains("thumbnails.showPages(first,last,page,surah,focusStart,focusEnd,false,"));
-        assertTrue("Existing Lecture action is retained",map.contains("Ui.iconButton(activity,\"\",\"Lecture\""));
+        assertTrue("Existing Lecture action is retained",map.contains("Ui.iconButton(activity,R.drawable.ic_ui_reading,\"Lecture\""));
         assertTrue("Lecture carries the selected passage, not just the unit",
             map.contains(".putExtra(\"map114PassageId\",current().id)"));
         assertTrue("Open/return QCF page stays in its unit",
@@ -122,19 +122,17 @@ public final class AtlasFinalizationSourceContractTest {
         String home=read(ROOT+"MainActivity.java");
         String map=read(ROOT+"MawdudiMapScreen.java");
         String reader=read(ROOT+"StudyReaderActivity.java");
-        String ui=read(ROOT+"Ui.java");
         assertTrue(home.contains("primaryTile(readingRow, R.drawable.ic_haafidh_atlas, getString(R.string.nav_atlas)"));
-        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Atlas\""));
+        assertTrue(map.contains("Ui.iconButton(activity,R.drawable.ic_palace_compass,\"Atlas\""));
         assertTrue(map.contains("Unité Atlas · "));
         assertFalse("Passage captions belong to Lecture, not the unit-only Atlas",
             map.contains("Passage Ayah Themes · "));
         assertTrue(reader.contains("Passage Ayah Themes actif sur cette page"));
         assertTrue(reader.contains("\"Afficher les ancres\""));
-        assertTrue(ui.contains("s.equals(\"atlas\")"));
         assertTrue("Ancre uses only its dedicated icon",
-            ui.contains("if (s.contains(\"ancre\")) return R.drawable.ic_ui_semantic_anchor;"));
+            reader.contains("R.drawable.ic_ui_semantic_anchor, \"Afficher les ancres\""));
         assertTrue("Frozen Amorces retain the independently approved key-round icon",
-            ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_recall_key;"));
+            read("hifz-app/src/main/res/drawable/ic_ui_recall_key.xml").contains("Lucide key-round"));
     }
     @Test public void sharedPassageLaunchCarriesCanonicalBoundsSeparatelyFromFocus() throws Exception {
         String map=read(ROOT+"MawdudiMapScreen.java");

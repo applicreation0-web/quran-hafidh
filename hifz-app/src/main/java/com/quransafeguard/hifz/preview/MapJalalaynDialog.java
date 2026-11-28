@@ -73,14 +73,14 @@ final class MapJalalaynDialog {
 
         LinearLayout controls=Ui.row(activity);
         controls.setGravity(Gravity.CENTER_VERTICAL);
-        controls.addView(Ui.iconButton(activity,"","Retour",v->close()),
+        controls.addView(Ui.iconButton(activity,R.drawable.ic_ui_back,"Retour",v->close()),
             new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,44)));
-        previous=Ui.iconButton(activity,"","Verset précédent",v->move(-1));
+        previous=Ui.iconButton(activity,R.drawable.ic_ui_previous,"Verset précédent",v->move(-1));
         controls.addView(previous,new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,44)));
         heading=Ui.text(activity,"",14f,true);
         heading.setGravity(Gravity.CENTER);
         controls.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
-        next=Ui.iconButton(activity,"","Verset suivant",v->move(1));
+        next=Ui.iconButton(activity,R.drawable.ic_ui_next,"Verset suivant",v->move(1));
         controls.addView(next,new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,44)));
         shell.addView(controls);
 

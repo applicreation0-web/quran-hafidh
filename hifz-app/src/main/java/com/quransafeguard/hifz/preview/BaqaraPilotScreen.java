@@ -103,13 +103,13 @@ final class BaqaraPilotScreen implements MushafView.Listener {
 
         LinearLayout top = Ui.row(host);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(Ui.iconButton(activity, "", "Retour", v -> {
+        top.addView(Ui.iconButton(activity, R.drawable.ic_ui_back, "Retour", v -> {
             if (!handleBack()) host.finish();
         }));
         TextView title = Ui.bookText(host, "Al-Baqarah  ·  1–286", 17f, true);
         title.setGravity(Gravity.CENTER);
         top.addView(title, new LinearLayout.LayoutParams(0, Ui.dp(host, 45), 1f));
-        top.addView(Ui.iconButton(activity, "", "Choisir une sourate", v ->
+        top.addView(Ui.iconButton(activity, R.drawable.ic_ui_surah_list, "Choisir une sourate", v ->
             QuranSurahNames.showSurahPicker(host, chosen -> {
                 Intent intent = new Intent(host, IbnKathirMapActivity.class);
                 intent.putExtra(IbnKathirMapActivity.EXTRA_SURAH, chosen);
@@ -121,7 +121,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
 
         LinearLayout mapHeader = Ui.row(host);
         mapHeader.setGravity(Gravity.CENTER_VERTICAL);
-        Button overview = Ui.iconButton(activity, "", "Accueil", v -> showOverview());
+        Button overview = Ui.iconButton(activity, R.drawable.ic_palace_home, "Accueil", v -> showOverview());
         overview.setContentDescription("Vue générale de la sourate");
         mapHeader.addView(overview, new LinearLayout.LayoutParams(Ui.dp(host, 48), Ui.dp(host, 48)));
         mapHeading = Ui.bookText(host, "", 13.5f, true);
@@ -129,7 +129,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         mapHeading.setSingleLine(true);
         mapHeading.setEllipsize(TextUtils.TruncateAt.END);
         mapHeader.addView(mapHeading, new LinearLayout.LayoutParams(0, Ui.dp(host, 37), 1f));
-        Button scale = Ui.iconButton(activity, "", "Focus", v -> {
+        Button scale = Ui.iconButton(activity, R.drawable.ic_ui_focus, "Focus", v -> {
             mushafExpanded = !mushafExpanded; updateSplit();
         });
         scale.setContentDescription("Agrandir ou réduire le Muṣḥaf");
@@ -150,15 +150,15 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         LinearLayout commentaryColumn = Ui.column(host);
         commentaryColumn.setPadding(Ui.dp(host, 12), Ui.dp(host, 6),
             Ui.dp(host, 12), Ui.dp(host, 12));
-        Button returnToMap = Ui.iconButton(activity, "", "Retour", v -> closeCommentary());
+        Button returnToMap = Ui.iconButton(activity, R.drawable.ic_ui_back, "Retour", v -> closeCommentary());
         returnToMap.setContentDescription("Retour à la carte");
         LinearLayout tafsirControls = Ui.row(host);
         tafsirControls.setGravity(Gravity.CENTER_VERTICAL);
         tafsirControls.addView(returnToMap, new LinearLayout.LayoutParams(
             Ui.dp(host, 44), Ui.dp(host, 40)));
-        previousCommentaryVerse = Ui.iconButton(activity, "", "Verset précédent",
+        previousCommentaryVerse = Ui.iconButton(activity, R.drawable.ic_ui_previous, "Verset précédent",
             v -> moveCommentaryVerse(-1));
-        nextCommentaryVerse = Ui.iconButton(activity, "", "Verset suivant",
+        nextCommentaryVerse = Ui.iconButton(activity, R.drawable.ic_ui_next, "Verset suivant",
             v -> moveCommentaryVerse(1));
         tafsirControls.addView(previousCommentaryVerse, new LinearLayout.LayoutParams(
             Ui.dp(host, 44), Ui.dp(host, 40)));
@@ -194,12 +194,12 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         caption.setOnClickListener(v -> openCommentary());
         LinearLayout cueNavigation = Ui.row(host);
         cueNavigation.setGravity(Gravity.CENTER_VERTICAL);
-        Button previousCue = Ui.iconButton(activity, "", "Passage précédent du corpus",
+        Button previousCue = Ui.iconButton(activity, R.drawable.ic_ui_jump_prev, "Passage précédent du corpus",
             v -> movePassage(-1));
         cueNavigation.addView(previousCue,
             new LinearLayout.LayoutParams(Ui.dp(host, 48), Ui.dp(host, 48)));
         cueNavigation.addView(caption, new LinearLayout.LayoutParams(0, -2, 1f));
-        Button nextCue = Ui.iconButton(activity, "", "Passage suivant du corpus",
+        Button nextCue = Ui.iconButton(activity, R.drawable.ic_ui_jump_next, "Passage suivant du corpus",
             v -> movePassage(1));
         cueNavigation.addView(nextCue,
             new LinearLayout.LayoutParams(Ui.dp(host, 48), Ui.dp(host, 48)));
@@ -207,8 +207,8 @@ final class BaqaraPilotScreen implements MushafView.Listener {
 
         pageControlsRow = Ui.row(host);
         pageControlsRow.setGravity(Gravity.CENTER_VERTICAL);
-        previousPage = Ui.iconButton(activity, "", "Page précédente", v -> turnPage(-1));
-        nextPage = Ui.iconButton(activity, "", "Page suivante", v -> turnPage(1));
+        previousPage = Ui.iconButton(activity, R.drawable.ic_ui_previous, "Page précédente", v -> turnPage(-1));
+        nextPage = Ui.iconButton(activity, R.drawable.ic_ui_next, "Page suivante", v -> turnPage(1));
         pageIndicator = Ui.text(host, "", 12f, true);
         pageIndicator.setGravity(Gravity.CENTER);
         pageControlsRow.addView(previousPage);

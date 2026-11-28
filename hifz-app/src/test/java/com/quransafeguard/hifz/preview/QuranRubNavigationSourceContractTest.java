@@ -40,16 +40,16 @@ public final class QuranRubNavigationSourceContractTest {
     @Test public void freeMemorizationOffersTheSameHizbPickerNextToItsOwnSurahPicker() throws Exception {
         String freeMem = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         assertTrue("must sit right beside the existing surah nav button",
-            freeMem.contains("nav.addView(Ui.iconButton(this,\"\",\"Sourate\",v->showSurahPicker()));\n"
-                + "        nav.addView(Ui.iconButton(this,\"\",\"Hizb\",v->showRubPicker()));"));
+            freeMem.contains("nav.addView(Ui.iconButton(this,R.drawable.ic_ui_surah_list,\"Sourate\",v->showSurahPicker()));\n"
+                + "        nav.addView(Ui.iconButton(this,R.drawable.ic_ui_hizb,\"Hizb\",v->showRubPicker()));"));
         assertTrue("must reuse the same shared picker helper as Lecture, not a second implementation",
             freeMem.contains("private void showRubPicker(){ QuranRubNames.showPicker(this,this::setPage); }"));
     }
 
     @Test public void hizbIconIsResolvedFromPlainGeometryLikeEveryOtherReaderMark() throws Exception {
-        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        assertTrue("must be resolvable through the same icon lookup every other nav button uses",
-            ui.contains("if (s.contains(\"hizb\")) return R.drawable.ic_ui_hizb;"));
+        String freeMem = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
+        assertTrue("the Hizb button explicitly uses the approved vector",
+            freeMem.contains("R.drawable.ic_ui_hizb,\"Hizb\""));
         String icon = read("hifz-app/src/main/res/drawable/ic_ui_hizb.xml");
         assertTrue("the rub'-al-hizb 8-point star must stay two overlaid squares — the same generic "
                 + "construction as the reader's other star, never a path lifted from licensed Mushaf art",

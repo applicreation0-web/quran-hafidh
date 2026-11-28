@@ -16,9 +16,6 @@ public final class HifzIconMeaningSourceContractTest {
         return read("hifz-app/src/main/res/drawable/ic_palace_"+icon+".xml");
     }
     @Test public void distinctModesHaveCoherentBookPageAndVisibilitySymbols() throws Exception {
-        String ui=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        for(String name:new String[]{"door","buttress","column","keystone","torch","mirror"})
-            assertTrue(ui.contains("R.drawable.ic_palace_"+name));
         // Reprise is present in both cumulative modes, never in initial introduction.
         assertTrue(drawable("buttress").contains("M12.8 9.5C"));
         assertTrue(drawable("column").contains("M8.5 13.5C"));
@@ -41,10 +38,13 @@ public final class HifzIconMeaningSourceContractTest {
         assertTrue(main.contains("ic_hifz_catchup_clock"));
     }
     @Test public void completionStatusesCannotBorrowActionIcons() throws Exception {
-        String ui=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        assertTrue(ui.contains("R.drawable.ic_hifz_acquired"));
-        assertTrue(ui.contains("R.drawable.ic_hifz_final_review"));
-        assertTrue(ui.contains("R.drawable.ic_hifz_waiting"));
-        assertFalse(ui.contains("if (s.equals(\"acquis\")) return R.drawable.ic_palace_"));
+        String main=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertTrue(main.contains("R.drawable.ic_hifz_final_sabqi"));
+        assertTrue(main.contains("R.drawable.ic_hifz_final_itqan"));
+        for (String status : new String[]{"acquired", "waiting", "final_review"}) {
+            String icon = read("hifz-app/src/main/res/drawable/ic_hifz_" + status + ".xml");
+            for (String action : new String[]{"door", "column", "buttress", "keystone", "torch", "mirror"})
+                assertNotEquals(icon, drawable(action));
+        }
     }
 }

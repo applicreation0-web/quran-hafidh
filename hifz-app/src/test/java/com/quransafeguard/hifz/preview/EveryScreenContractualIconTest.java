@@ -21,8 +21,7 @@ public final class EveryScreenContractualIconTest {
     private static final String ROOT =
         "hifz-app/src/main/java/com/quransafeguard/hifz/preview";
     private static final Pattern STATIC_ACTION = Pattern.compile(
-        "Ui\\.(?:iconButton|roundAction)\\s*\\(" +
-        "[^,]*,\\s*\\\"[^\\\"]*\\\",\\s*\\\"([^\\\"]+)\\\""
+        "Ui\\.(?:iconButton|roundAction)\\s*\\([^,]+,\\s*R\\.drawable\\.(\\w+)"
     );
 
     private static Path repo(String relative) {
@@ -43,16 +42,8 @@ public final class EveryScreenContractualIconTest {
         for (String screen : screens) {
             String java = new String(Files.readAllBytes(dir.resolve(screen + ".java")),
                 StandardCharsets.UTF_8);
-            Matcher matcher = STATIC_ACTION.matcher(java);
+            Matcher explicit = STATIC_ACTION.matcher(java);
             int local = 0;
-            while (matcher.find()) {
-                String label = matcher.group(1);
-                assertTrue("Fallback glyph forbidden in " + screen + " : " + label,
-                    Ui.iconFor(label, "") != 0);
-                local++;
-                labels.add(label);
-            }
-            Matcher explicit = Pattern.compile("Ui\\.iconButton\\([^,]+,\\s*R\\.drawable\\.(\\w+)").matcher(java);
             while (explicit.find()) {
                 String drawable = explicit.group(1);
                 assertTrue("No vector for " + drawable,
@@ -71,7 +62,7 @@ public final class EveryScreenContractualIconTest {
         String ui = new String(Files.readAllBytes(repo(ROOT + "/Ui.java")),
             StandardCharsets.UTF_8);
         assertTrue(ui.contains("button.setText(\"\");"));
-        assertTrue(ui.contains("box.addView(iconButton(context, symbol, label, listener));"));
+        assertTrue(ui.contains("box.addView(iconButton(context, iconRes, label, listener));"));
         assertTrue(ui.contains("int size = dp(context, 48);"));
         assertTrue(ui.contains("button.setContentDescription(value);"));
     }

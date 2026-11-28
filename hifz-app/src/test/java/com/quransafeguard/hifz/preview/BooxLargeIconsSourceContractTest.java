@@ -36,8 +36,8 @@ public final class BooxLargeIconsSourceContractTest {
         assertTrue(main.contains("getDrawable(destination.icon)"));
         assertFalse(main.contains("icon.setColorFilter(Ui.INK)"));
         assertFalse(main.contains("name.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Ui.INK))"));
-        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        assertTrue(ui.contains("if (s.contains(\"ancre\")) return R.drawable.ic_ui_semantic_anchor;"));
-        assertTrue(ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_recall_key;"));
+        String reader = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        assertTrue(reader.contains("R.drawable.ic_ui_semantic_anchor"));
+        assertTrue(read("hifz-app/src/main/res/drawable/ic_ui_recall_key.xml").contains("Lucide key-round"));
     }
 }

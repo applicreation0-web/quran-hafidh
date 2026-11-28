@@ -12,13 +12,28 @@ import java.util.List;
 
 /** Read-only seven-day projection driven by the canonical Apprentissage/Stabilisation/Révision cadence. */
 final class WeeklyDashboardPlanner {
+    enum State {
+        NOT_STARTED(R.string.calendar_none),
+        DUE(R.string.calendar_due),
+        VALIDATED(R.string.calendar_done),
+        EVENING_DUE(R.string.calendar_evening_due),
+        NO_SESSION(R.string.calendar_no_session),
+        PROJECTED(R.string.calendar_forecast),
+        FORECAST(R.string.calendar_forecast),
+        NO_FINALE(R.string.calendar_no_finale),
+        CHECK_PROJECTION(R.string.calendar_check);
+
+        final int labelRes;
+        State(int labelRes) { this.labelRes = labelRes; }
+    }
+
     static final class Row {
         final LocalDate date;
         final String day;
         final String morning;
         final String evening;
-        final String state;
-        Row(LocalDate date,String day,String morning,String evening,String state){
+        final State state;
+        Row(LocalDate date,String day,String morning,String evening,State state){
             this.date=date;this.day=day;this.morning=morning;this.evening=evening;this.state=state;
         }
     }
@@ -57,7 +72,7 @@ final class WeeklyDashboardPlanner {
         ArrayList<Row> rows=new ArrayList<>();
         for(LocalDate date:window(today))
             rows.add(new Row(date,day(date,today),
-                "Matin · détails à vérifier","Soir · détails à vérifier","Projection à vérifier"));
+                "Matin · détails à vérifier","Soir · détails à vérifier",State.CHECK_PROJECTION));
         return Collections.unmodifiableList(rows);
     }
 
@@ -112,12 +127,13 @@ final class WeeklyDashboardPlanner {
 
         for(LocalDate date:window(today)){
             if(date.isBefore(prefs.programStartDate())){
-                out.add(new Row(date,day(date,today),"—","—","Parcours non démarré"));
+                out.add(new Row(date,day(date,today),"—","—",State.NOT_STARTED));
                 continue;
             }
             try {
             CadenceAction action=WeeklyProgramPolicy.actionFor(prefs,date,prefs.learningDaysPerWeek());
-            String morning="—",evening="—",state="À faire";
+            String morning="—",evening="—";
+            State state=State.DUE;
             switch(action){
                 case LEARNING:{
                     DashboardLedger.Record morningActual=ledger.find(date,HifzSessionActivity.SABQI);
@@ -145,8 +161,8 @@ final class WeeklyDashboardPlanner {
                     EveningReviewDisplay.Status learningEvening=EveningReviewDisplay.forDay(
                         lessonDone,snowballActual!=null,eveningDue);
                     evening=EveningReviewDisplay.learningLabel(learningEvening);
-                    state=lessonDone&&EveningReviewDisplay.resolved(learningEvening)?"Validé"
-                        :lessonDone?"Soir à faire":"À faire";
+                    state=lessonDone&&EveningReviewDisplay.resolved(learningEvening)?State.VALIDATED
+                        :lessonDone?State.EVENING_DUE:State.DUE;
                     break;
                 }
                 case STABILIZATION:{
@@ -157,19 +173,19 @@ final class WeeklyDashboardPlanner {
                     else if(date.equals(today)&&prefs.anchoringDeferredToday())morning="Stabilisation · unité reportée";
                     else if(prefs.weeklyItqanPageClosed(date)) {
                         morning="Stabilisation · page terminée";
-                        state="Aucune séance prévue";
+                        state=State.NO_SESSION;
                         break;
                     }
                     else if (!prefs.itqanDisciplineScheduled(date)) {
                         morning="Aucune séance prévue";
-                        state="Aucune séance prévue";
+                        state=State.NO_SESSION;
                         break;
                     }
                     else if(date.isBefore(today))morning="Stabilisation";
                     else if (prefs.universalProfile()) {
                         if (!prefs.universalItqanAvailable(date, geometry)) {
                             morning="Aucune séance prévue";
-                            state="Aucune séance prévue";
+                            state=State.NO_SESSION;
                             break;
                         }
                         morning=prefs.universalMaintenanceDue(date)
@@ -181,7 +197,7 @@ final class WeeklyDashboardPlanner {
                             nextFourDateSlot++;
                         if(nextFourDateSlot==count) {
                             morning="Stabilisation · prochaine page après validation";
-                            state="Projection";
+                            state=State.PROJECTED;
                             break;
                         }
                         ItqanFourSessionPolicy.Session slot=fourDates.sessions.get(nextFourDateSlot);
@@ -236,8 +252,8 @@ final class WeeklyDashboardPlanner {
                             (date.equals(today)&&prefs.stabilizationSnowballFinalUnits(date).isEmpty());
                         morning+=" · "+(learningDone?"✓ Finale Sabqi":"Finale Sabqi");
                         evening=stabilizationDone?"✓ Finale Itqān":"Finale Itqān uniquement";
-                        state=morningDone&&learningDone&&stabilizationDone?"Validé":
-                            morningDone&&learningDone?"Soir à faire":"À faire";
+                        state=morningDone&&learningDone&&stabilizationDone?State.VALIDATED:
+                            morningDone&&learningDone?State.EVENING_DUE:State.DUE;
                         break;
                     }
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
@@ -247,8 +263,8 @@ final class WeeklyDashboardPlanner {
                         morningDone,snowballActual!=null,eveningDue);
                     evening=EveningReviewDisplay.stabilizationLabel(
                         stabilizationEvening,prefs.itqanPostNasMaintenance());
-                    state=morningDone&&EveningReviewDisplay.resolved(stabilizationEvening)?"Validé"
-                        :morningDone?"Soir à faire":"À faire";
+                    state=morningDone&&EveningReviewDisplay.resolved(stabilizationEvening)?State.VALIDATED
+                        :morningDone?State.EVENING_DUE:State.DUE;
                     break;
                 }
                 case REVISION:{
@@ -276,11 +292,11 @@ final class WeeklyDashboardPlanner {
                         :consolidationDue?"Finale Itqān · par page ×3"
                         :date.isAfter(today)?"Finale Itqān · à prévoir selon les acquis"
                         :"Finale Itqān · aucun passage admissible";
-                    state=learningDone&&(!itqanFinalDue||consolidationDone)?"Validé"
-                        :learningDone?"Soir à faire"
+                    state=learningDone&&(!itqanFinalDue||consolidationDone)?State.VALIDATED
+                        :learningDone?State.EVENING_DUE
                         :!learningDue&&!consolidationDue
-                            ?(date.isAfter(today)?"Prévision":"Aucune finale à valider")
-                            :"À faire";
+                            ?(date.isAfter(today)?State.FORECAST:State.NO_FINALE)
+                            :State.DUE;
                     break;
                 }
                 default:throw new IllegalStateException("Action de cadence inconnue");
@@ -295,10 +311,10 @@ final class WeeklyDashboardPlanner {
                 String activeEvening=activeReviewLabel(pm,eveningDone,prefs.activeReviewSlots().targetMinutes(date,pm,duration));
                 morning=joinSessions(activeMorning,morning);
                 if(eveningScheduled)evening=joinSessions(activeEvening,evening);
-                if(!morningDone)state="À faire";
-                else if(!eveningDone&&("Validé".equals(state)||"Aucune finale à valider".equals(state)))
-                    state="Soir à faire";
-                else if(eveningDone&&"Aucune finale à valider".equals(state))state="Validé";
+                if(!morningDone)state=State.DUE;
+                else if(!eveningDone&&(state==State.VALIDATED||state==State.NO_FINALE))
+                    state=State.EVENING_DUE;
+                else if(eveningDone&&state==State.NO_FINALE)state=State.VALIDATED;
             }
             out.add(new Row(date,day(date,today),morning,evening,state));
             } catch(RuntimeException invalidForecast){
@@ -306,7 +322,7 @@ final class WeeklyDashboardPlanner {
                 // all seven dates. No advancement, credit, or synthetic completion.
                 out.add(new Row(date,day(date,today),
                     "Matin · détails à vérifier","Soir · détails à vérifier",
-                    "Projection à vérifier"));
+                    State.CHECK_PROJECTION));
             }
         }
         return out;

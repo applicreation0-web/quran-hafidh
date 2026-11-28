@@ -64,7 +64,7 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertFalse("No rotating Itqān arrows in circles", calendar.contains("↻"));
         assertFalse("No finale F inside circles", calendar.contains("done?\"✓\""));
         assertTrue("Only real receipts fill the validation circle",
-            calendar.contains("boolean done = !future && \"Validé\".equals(row.state);")
+            calendar.contains("boolean done = !future && row.state == WeeklyDashboardPlanner.State.VALIDATED;")
             && calendar.contains("circle.setColor(done ? Ui.INK : Ui.PAPER);"));
         assertTrue("Only the actual weekday gets its own underline",
             calendar.contains("LocalDate realToday = HifzClock.today();")
@@ -100,10 +100,11 @@ public final class BooxMemoryPalaceNavigationContractTest {
     }
 
     @Test public void exactNineSemanticsAreSeparated() throws Exception {
-        String ui = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
+        java.util.Set<String> vectors = new java.util.HashSet<>();
         for (String name : new String[]{"home", "route", "compass", "door", "column",
                 "buttress", "keystone", "torch", "mirror"}) {
-            assertTrue("Missing palace resource: " + name, ui.contains("R.drawable.ic_palace_" + name));
+            assertTrue("Duplicate architecture vector " + name, vectors.add(source(
+                "hifz-app/src/main/res/drawable/ic_palace_" + name + ".xml")));
         }
     }
 }

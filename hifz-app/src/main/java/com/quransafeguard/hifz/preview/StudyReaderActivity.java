@@ -197,7 +197,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         topControls.setGravity(Gravity.CENTER_VERTICAL);
         topControls.setBackgroundColor(Ui.PAPER);
         topControls.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
-        Button back = Ui.iconButton(this, "‹", "Retour", v -> finish());
+        Button back = Ui.iconButton(this, R.drawable.ic_ui_back, "Retour", v -> finish());
         LinearLayout titleRow = Ui.row(this);
         Ui.weight(titleRow, 1f);
         titleRow.setGravity(Gravity.CENTER);
@@ -231,21 +231,21 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setMinimumHeight(Ui.dp(this, 48));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
-        semanticButton = Ui.iconButton(this, "", "Afficher les ancres", v -> toggleSemanticCues());
+        semanticButton = Ui.iconButton(this, R.drawable.ic_ui_semantic_anchor, "Afficher les ancres", v -> toggleSemanticCues());
         semanticButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
         // Correspondences are reached through the single contextual QCF margin mark.
         // One discreet access point, using the existing Révision pictogram.
         // The 100% mask only affects the current Lecture surface.
-        freeActiveMaskButton=Ui.iconButton(this,"","Révision active",
+        freeActiveMaskButton=Ui.iconButton(this,R.drawable.ic_palace_torch,"Révision active",
             v -> toggleFreeActiveMask());
         Ui.setButtonIcon(freeActiveMaskButton,R.drawable.ic_ui_revision);
         freeActiveMaskButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
         readerActions.addView(freeActiveMaskButton);
         updateFreeActiveMaskButton();
         if(mapUnitPreview){
-            atlasPassageUp=Ui.iconButton(this,"","Passage vers le haut",v->moveAtlasPassage(-1));
-            atlasPassageDown=Ui.iconButton(this,"","Passage vers le bas",v->moveAtlasPassage(1));
+            atlasPassageUp=Ui.iconButton(this,R.drawable.ic_ui_previous,"Passage vers le haut",v->moveAtlasPassage(-1));
+            atlasPassageDown=Ui.iconButton(this,R.drawable.ic_ui_previous,"Passage vers le bas",v->moveAtlasPassage(1));
             Ui.setButtonIcon(atlasPassageUp,R.drawable.ic_ui_previous);
             atlasPassageUp.setRotation(90f);
             Ui.setButtonIcon(atlasPassageDown,R.drawable.ic_ui_previous);
@@ -255,12 +255,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             updateAtlasPassageButtons();
         }
         updateSemanticButton();
-        annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
+        annotationButton = Ui.iconButton(this, R.drawable.ic_ui_edit, "Annoter", v -> toggleAnnotationMode());
         annotationButton.setSelected(annotationEnabled);
         readerActions.addView(annotationButton);
-        annotationUndoButton = Ui.iconButton(this, "", "Annuler la note",
+        annotationUndoButton = Ui.iconButton(this, R.drawable.ic_ui_undo, "Annuler la note",
             v -> annotationOverlay.undoLastStroke());
-        annotationClearButton = Ui.iconButton(this, "", "Effacer les notes",
+        annotationClearButton = Ui.iconButton(this, R.drawable.ic_ui_annotation_erase, "Effacer les notes",
             v -> annotationOverlay.clearCurrentPage());
         annotationUndoButton.setVisibility(View.GONE);
         annotationClearButton.setVisibility(View.GONE);
@@ -375,7 +375,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     /** Same icon grammar as Amorces/Annoter; the hint stays in the description/tooltip. */
     private Button tafsirReaderAction() {
-        Button button = Ui.iconButton(this, "", "Tafsir", v -> openTafsir());
+        Button button = Ui.iconButton(this, R.drawable.ic_ui_tafsir, "Tafsir", v -> openTafsir());
         button.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
         return button;
     }
@@ -576,7 +576,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         String description=semanticCuesEnabled?"Masquer les ancres"
             :"Afficher les ancres";
         Ui.setIconDescription(semanticButton,description);
-        int icon=Ui.iconFor(semanticCuesEnabled?"Masquer les ancres":"Afficher les ancres","");
+        int icon=R.drawable.ic_ui_semantic_anchor;
         if (icon != 0) Ui.setButtonIcon(semanticButton, icon);
     }
 
@@ -994,9 +994,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             readingPrefs.edit().putFloat(TAFSIR_FONT_KEY, fontSize[0]).apply();
             if (loaded[0] != null) renderTafsirText(loaded[0], fontSize[0]);
         });
-        Button info = Ui.iconButton(this, "i", "Référence", v ->
+        Button info = Ui.iconButton(this, R.drawable.ic_ui_info, "Référence", v ->
             source.setVisibility(source.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
-        Button close = Ui.iconButton(this, "×", "Fermer le Tafsir", v -> closeAction.run());
+        Button close = Ui.iconButton(this, R.drawable.ic_ui_close, "Fermer le Tafsir", v -> closeAction.run());
         titleRow.addView(minus);
         titleRow.addView(plus);
         titleRow.addView(info);

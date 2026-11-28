@@ -123,11 +123,11 @@ final class MawdudiMapScreen implements MushafView.Listener {
  void display() {
   LinearLayout root=Ui.column(activity);root.setBackgroundColor(Ui.PAPER);
   LinearLayout top=Ui.row(activity);top.setGravity(Gravity.CENTER_VERTICAL);
-  top.addView(Ui.iconButton(activity,"","Retour",v->goBack()),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
+  top.addView(Ui.iconButton(activity,R.drawable.ic_ui_back,"Retour",v->goBack()),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
   heading=Ui.text(activity,"",12f,false);heading.setMaxLines(2);heading.setEllipsize(TextUtils.TruncateAt.END);
   heading.setClickable(true);heading.setFocusable(true);heading.setOnClickListener(v->chooseUnit());
   top.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
-  top.addView(Ui.iconButton(activity,"","Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);setLevel(true);})),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
+  top.addView(Ui.iconButton(activity,R.drawable.ic_ui_surah_list,"Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);setLevel(true);})),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
   // Similar-verse comparisons are reached contextually from Lecture or Révision,
   // never from a stand-alone Atlas browsing shortcut.
   root.addView(top);
@@ -185,10 +185,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
   icons.setMinimumHeight(Ui.dp(activity,compact?48:56));
   LinearLayout.LayoutParams tafsirPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
   tafsirPos.rightMargin=Ui.dp(activity,36);
-  icons.addView(Ui.iconButton(activity,"","Atlas",v->setLevel(true)),tafsirPos);
+  icons.addView(Ui.iconButton(activity,R.drawable.ic_palace_compass,"Atlas",v->setLevel(true)),tafsirPos);
   LinearLayout.LayoutParams readerPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
   readerPos.leftMargin=Ui.dp(activity,36);
-  icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),readerPos);
+  icons.addView(Ui.iconButton(activity,R.drawable.ic_ui_reading,"Lecture",v->openReader()),readerPos);
   root.addView(icons);
   activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
   activity.setContentView(root);refresh();

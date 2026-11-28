@@ -42,7 +42,7 @@ public final class WeakVersesActivity extends android.app.Activity {
 
         LinearLayout top = Ui.row(this);
         top.setPadding(0, 0, 0, Ui.dp(this, 2));
-        top.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
+        top.addView(Ui.iconButton(this, R.drawable.ic_ui_back, "Retour", v -> finish()));
         TextView title = Ui.bookText(this, "Repères faibles", 18, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER);
@@ -109,7 +109,7 @@ public final class WeakVersesActivity extends android.app.Activity {
         row.addView(tapArea);
 
         // Compact icon (trash): no "Démarquer" text button.
-        row.addView(Ui.iconButton(this, "", "Retirer le repère", v -> {
+        row.addView(Ui.iconButton(this, R.drawable.ic_ui_annotation_erase, "Retirer le repère", v -> {
             prefs.toggleMurajaahWeakVerse(verse);
             refreshList();
         }));

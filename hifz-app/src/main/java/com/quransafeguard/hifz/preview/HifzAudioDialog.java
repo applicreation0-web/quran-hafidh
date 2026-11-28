@@ -88,13 +88,13 @@ final class HifzAudioDialog {
         panel.addView(title);
 
         if (!targetedVerse)
-            panel.addView(Ui.iconButton(activity, "‹", "Verset précédent", v -> previous()));
-        playPause = Ui.iconButton(activity, "▶", "Lire / pause", v -> toggle());
-        Button repeat = Ui.iconButton(activity, "↻", "Répéter le verset", v -> playCurrent(false));
-        Button close = Ui.iconButton(activity, "×", "Fermer", v -> detachInline());
+            panel.addView(Ui.iconButton(activity, R.drawable.ic_ui_previous, "Verset précédent", v -> previous()));
+        playPause = Ui.iconButton(activity, R.drawable.ic_ui_play, "Lire / pause", v -> toggle());
+        Button repeat = Ui.iconButton(activity, R.drawable.ic_ui_repeat, "Répéter le verset", v -> playCurrent(false));
+        Button close = Ui.iconButton(activity, R.drawable.ic_ui_close, "Fermer", v -> detachInline());
         panel.addView(playPause);
         if (!targetedVerse)
-            panel.addView(Ui.iconButton(activity, "›", "Verset suivant", v -> next()));
+            panel.addView(Ui.iconButton(activity, R.drawable.ic_ui_next, "Verset suivant", v -> next()));
         panel.addView(repeat);
         panel.addView(close);
         host.addView(panel, new LinearLayout.LayoutParams(

@@ -91,7 +91,7 @@ public final class BooxTodaySelectedDayInstrumentedTest {
             LocalDate day = today.plusDays(i);
             rows.add(new WeeklyDashboardPlanner.Row(day,
                 WeeklyDashboardPlanner.day(day, today), "Matin", "Soir",
-                i == 0 || i == 2 ? "Validé" : "À faire")); // Future cannot count as validated.
+                i == 0 || i == 2 ? WeeklyDashboardPlanner.State.VALIDATED : WeeklyDashboardPlanner.State.DUE)); // Future cannot count as validated.
         }
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a -> {

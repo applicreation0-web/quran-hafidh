@@ -172,4 +172,13 @@
     <item>Vendredi</item>
     <item>Samedi</item>
   </string-array>
+  <string name="calendar_none">—</string>
+  <string name="calendar_due">À faire</string>
+  <string name="calendar_done">Validé</string>
+  <string name="calendar_evening_due">Soir à faire</string>
+  <string name="calendar_no_session">Aucune séance prévue</string>
+  <string name="calendar_planned">Prévu</string>
+  <string name="calendar_forecast">Prévision</string>
+  <string name="calendar_no_finale">Aucune finale à valider</string>
+  <string name="calendar_check">Projection à vérifier</string>
 </resources>

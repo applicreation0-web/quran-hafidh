@@ -13,7 +13,7 @@ public final class NoSemanticListsAndOfflineAmorcesContractTest {
     String s=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
     assertFalse(s.contains("openIbnKathirMap"));
     assertFalse(s.contains("new Intent(this,IbnKathirMapActivity.class)"));
-    assertFalse(s.contains("Ui.iconButton(this, \"\", \"Carte\""));
+    assertFalse(s.contains("Ui.iconButton(this, R.drawable.ic_ui_semantic_map, \"Carte\""));
     assertTrue(s.contains("SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog)"));
     assertTrue("Reader must load ONLY the private 114-surah Ayah Themes pack",
       s.contains("AyahThemesCueIndex.load(this)"));

@@ -99,7 +99,7 @@ public final class PostFinalRecallInstrumentedTest {
             assertTrue("Sunday should show Itqan final",days.get(6).evening.contains("Finale Itqān"));
             for(WeeklyDashboardPlanner.Row day:days){
                 assertFalse("Valid week must not degrade to placeholders: "+day.date,
-                    day.state.contains("Projection à vérifier"));
+                    day.state == WeeklyDashboardPlanner.State.CHECK_PROJECTION);
             }
         }finally{assertTrue(raw.edit().clear().commit());}
     }
@@ -134,7 +134,7 @@ public final class PostFinalRecallInstrumentedTest {
                 assertFalse("No synthetic Sunday Itqan validation "+monday,
                     rows.get(6).evening.contains("✓ Finale"));
                 assertFalse("Sunday cannot count as validated without final receipts",
-                    "Validé".equals(rows.get(6).state));
+                    rows.get(6).state == WeeklyDashboardPlanner.State.VALIDATED);
                 assertFalse(rows.get(6).morning.contains("Révision active"));
                 assertFalse(rows.get(6).morning.contains("Révision passive"));
             }

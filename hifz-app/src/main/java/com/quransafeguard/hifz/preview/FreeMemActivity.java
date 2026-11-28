@@ -47,7 +47,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(Ui.iconButton(this,"‹","Retour",v->finish()));
+        top.addView(Ui.iconButton(this,R.drawable.ic_ui_back,"Retour",v->finish()));
         // Two-line header (spec 23.8): title, then "Passage … · masque X %".
         LinearLayout titles=Ui.column(this);titles.setPadding(0,0,0,0);titles.setGravity(Gravity.CENTER);Ui.weight(titles,1f);
         TextView title=Ui.bookText(this,"Mémorisation libre",15f,true);title.setGravity(Gravity.CENTER);titles.addView(title);
@@ -63,13 +63,13 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
         // "−  12  +" with reset only once there is something to reset (spec 12).
         LinearLayout reps=Ui.row(this);reps.setGravity(Gravity.CENTER);
-        Button decrement=Ui.iconButton(this,"−","Retirer une répétition",v->{if(count==0)return;count--;save();updateCounter();mushaf.localCounterChanged();});
+        Button decrement=Ui.iconButton(this,R.drawable.ic_ui_delete,"Retirer une répétition",v->{if(count==0)return;count--;save();updateCounter();mushaf.localCounterChanged();});
         Ui.setButtonIcon(decrement,R.drawable.ic_ui_remove);reps.addView(decrement);
         counter = Ui.bookText(this,"0",17,true); counter.setGravity(Gravity.CENTER); counter.setContentDescription("Répétitions");
         reps.addView(counter,new LinearLayout.LayoutParams(Ui.dp(this,56),Ui.dp(this,48)));
-        Button increment=Ui.iconButton(this,"+","Ajouter une répétition",v->{count++;save();updateCounter();mushaf.localCounterChanged();});
+        Button increment=Ui.iconButton(this,R.drawable.ic_ui_add,"Ajouter une répétition",v->{count++;save();updateCounter();mushaf.localCounterChanged();});
         Ui.setButtonIcon(increment,R.drawable.ic_ui_add);reps.addView(increment);
-        resetButton=Ui.iconButton(this,"↺","Remettre à zéro",v->{count=0;save();updateCounter();mushaf.localCounterChanged();});
+        resetButton=Ui.iconButton(this,R.drawable.ic_ui_reset,"Remettre à zéro",v->{count=0;save();updateCounter();mushaf.localCounterChanged();});
         reps.addView(resetButton);
         root.addView(reps);
 
@@ -90,11 +90,11 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
         // Explicit RTL navigation grammar, matching the main reader.
         LinearLayout nav=Ui.row(this);nav.setGravity(Gravity.CENTER);nav.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        nav.addView(Ui.iconButton(this,"›","Page suivante",v->go(1)));
-        if (new HifzAudioGate(this).installed()) nav.addView(Ui.iconButton(this,"♪","Audio",v->openAudio()));
-        nav.addView(Ui.iconButton(this,"‹","Page précédente",v->go(-1)));
-        nav.addView(Ui.iconButton(this,"","Sourate",v->showSurahPicker()));
-        nav.addView(Ui.iconButton(this,"","Hizb",v->showRubPicker()));
+        nav.addView(Ui.iconButton(this,R.drawable.ic_ui_next,"Page suivante",v->go(1)));
+        if (new HifzAudioGate(this).installed()) nav.addView(Ui.iconButton(this,R.drawable.ic_ui_play,"Audio",v->openAudio()));
+        nav.addView(Ui.iconButton(this,R.drawable.ic_ui_previous,"Page précédente",v->go(-1)));
+        nav.addView(Ui.iconButton(this,R.drawable.ic_ui_surah_list,"Sourate",v->showSurahPicker()));
+        nav.addView(Ui.iconButton(this,R.drawable.ic_ui_hizb,"Hizb",v->showRubPicker()));
         root.addView(nav);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);

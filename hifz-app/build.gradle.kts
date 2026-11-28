@@ -193,7 +193,6 @@ val verifyHifzConvergenceRules by tasks.registering {
         val session = file("src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java").readText()
         val settings = file("src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java").readText()
         val main = file("src/main/java/com/quransafeguard/hifz/preview/MainActivity.java").readText()
-        val ui = file("src/main/java/com/quransafeguard/hifz/preview/Ui.java").readText()
         val study = file("src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java").readText()
         val reader = file("src/main/assets/hifzreader/reader.js").readText()
         val prefs = file("src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java").readText()
@@ -291,18 +290,14 @@ val verifyHifzConvergenceRules by tasks.registering {
                 && !main.contains("\"Séance\", v -> openToday")) {
             "The approved BOOX Today hero must remain the single scheduled-session entry point."
         }
-        val palaceHifz = listOf("door", "column", "buttress", "keystone", "torch", "mirror")
-        check(palaceHifz.all { icon ->
-            ui.contains("R.drawable.ic_palace_" + icon)
-                && file("src/main/res/drawable/ic_palace_" + icon + ".xml").exists()
+        val pathIcons = listOf("apprentissage", "stabilisation", "renforcement", "consolidation",
+            "revision_active", "fragilities")
+        val navigationIcons = listOf("parcours", "lecture", "atlas", "progression")
+        check((pathIcons + navigationIcons).all { icon ->
+            main.contains("R.drawable.ic_haafidh_" + icon)
+                && file("src/main/res/drawable/ic_haafidh_" + icon + ".xml").isFile
         }) {
-            "Six unique BOOX memory-palace Hifz vectors must be mapped and bundled."
-        }
-        check(listOf("home", "route", "compass").all { icon ->
-            ui.contains("R.drawable.ic_palace_" + icon)
-                && file("src/main/res/drawable/ic_palace_" + icon + ".xml").exists()
-        }) {
-            "Grand Palais, Parcours and Atlas boussole must be distinct real vectors."
+            "BOOX destinations must reference their contractual vector independently of the visible label."
         }
         val launcher = file("src/main/res/mipmap-anydpi-v26/ic_haafidh_launcher.xml").readText()
         val launcherForeground = file("src/main/res/drawable/ic_haafidh_launcher_foreground.xml").readText()

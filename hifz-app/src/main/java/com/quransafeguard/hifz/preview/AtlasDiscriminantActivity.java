@@ -129,7 +129,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         root.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));
         root.setBackgroundColor(Ui.PAPER);
         LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(Ui.iconButton(this,"","Retour",v->finish()));
+        top.addView(Ui.iconButton(this,R.drawable.ic_ui_back,"Retour",v->finish()));
         title=text("",compact?15:17,true);
         title.setGravity(Gravity.CENTER);
         title.setSingleLine(true);
@@ -247,7 +247,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         firstTafsirTab=tafsirTab(0);secondTafsirTab=tafsirTab(1);
         tabs.addView(firstTafsirTab,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
         tabs.addView(secondTafsirTab,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
-        tabs.addView(Ui.iconButton(this,"","Fermer le Tafsir",v->closeTafsir()),
+        tabs.addView(Ui.iconButton(this,R.drawable.ic_ui_close,"Fermer le Tafsir",v->closeTafsir()),
             new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         tafsirPanel.addView(tabs);
         tafsirHeading=text("",14,true);
@@ -288,7 +288,7 @@ public final class AtlasDiscriminantActivity extends Activity {
         returnToSource.setContentDescription("Retour à la séance d’origine");
         returnToSource.setOnClickListener(v->finish());
         bottom.addView(returnToSource,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
-        Button explanation=Ui.iconButton(this,"","Indice et référence",v->showExplanation());
+        Button explanation=Ui.iconButton(this,R.drawable.ic_ui_info,"Indice et référence",v->showExplanation());
         bottom.addView(explanation,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         root.addView(bottom,new LinearLayout.LayoutParams(-1,Ui.dp(this,48)));
 

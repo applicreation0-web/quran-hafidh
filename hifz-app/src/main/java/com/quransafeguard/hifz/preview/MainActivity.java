@@ -1707,7 +1707,7 @@ public final class MainActivity extends HaafidhActivity {
                 String day=WeeklyDashboardPlanner.day(date,HifzClock.today());
                 rows.add(new WeeklyDashboardPlanner.Row(date,day,
                     "Matin · détails à vérifier","Soir · détails à vérifier",
-                    "Projection à vérifier"));
+                    WeeklyDashboardPlanner.State.CHECK_PROJECTION));
             }
             todayRow = rows.get(0);
         }
@@ -1929,9 +1929,8 @@ public final class MainActivity extends HaafidhActivity {
             if (active) chosen = row;
             boolean future = row.date.isAfter(realToday);
             // Validation is a real signed-off ledger state, never a forecast for future days.
-            boolean done = !future && "Validé".equals(row.state);
-            String status = future ? "Prévu" : done ? "Validé"
-                : row.state == null ? "À vérifier" : compactState(row.state);
+            boolean done = !future && row.state == WeeklyDashboardPlanner.State.VALIDATED;
+            String status = future ? getString(R.string.calendar_planned) : compactState(row.state);
             LinearLayout station = Ui.column(this);
             station.setPadding(0,0,0,0);
             station.setBackgroundColor(android.graphics.Color.TRANSPARENT);
@@ -2098,11 +2097,8 @@ public final class MainActivity extends HaafidhActivity {
         row.addView(cell);
     }
 
-    private static String compactState(String state) {
-        if (state == null || state.trim().isEmpty()) return "—";
-        if (state.contains("Parcours non démarré")) return "—";
-        if (state.startsWith("En cours")) return "En cours";
-        return state;
+    private String compactState(WeeklyDashboardPlanner.State state) {
+        return getString(state.labelRes);
     }
 
     private static String compactSession(String value) {

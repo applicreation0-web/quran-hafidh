@@ -56,9 +56,8 @@ public final class ProgressMapSourceContractTest {
         assertTrue("it must gate behind geometry loading like the other home destinations",
             main.contains("geometryActions.add(progress);"));
 
-        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        assertTrue("the card needs its own icon mapping or it renders with neither icon nor text",
-            ui.contains("if (s.contains(\"progression\")) return R.drawable.ic_ui_progress_map;"));
+        assertTrue("the progress card uses a local vector",
+            read("hifz-app/src/main/res/drawable/ic_haafidh_progression.xml").contains("<vector"));
     }
 
     @Test public void statusIsPatternedNeverColoredAndFourStatusesExist() throws Exception {

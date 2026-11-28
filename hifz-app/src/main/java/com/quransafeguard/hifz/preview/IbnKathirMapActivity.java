@@ -124,12 +124,12 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
 
         LinearLayout top = Ui.row(this);
         top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(Ui.iconButton(this, "", "Retour", v -> finish()));
+        top.addView(Ui.iconButton(this, R.drawable.ic_ui_back, "Retour", v -> finish()));
         header = Ui.bookText(this, "", 18f, true);
         header.setGravity(Gravity.CENTER);
         header.setSingleLine(true);
         top.addView(header, new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1f));
-        top.addView(Ui.iconButton(this, "", "Choisir une sourate", v ->
+        top.addView(Ui.iconButton(this, R.drawable.ic_ui_surah_list, "Choisir une sourate", v ->
             QuranSurahNames.showSurahPicker(this, this::chooseSurah)));
         root.addView(top);
         root.addView(Ui.divider(this));
@@ -206,8 +206,8 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
 
         LinearLayout pageControls = Ui.row(this);
         pageControls.setGravity(Gravity.CENTER);
-        previousPage = Ui.iconButton(this, "", "Page précédente", v -> turnPreviewPage(-1));
-        nextPage = Ui.iconButton(this, "", "Page suivante", v -> turnPreviewPage(1));
+        previousPage = Ui.iconButton(this, R.drawable.ic_ui_previous, "Page précédente", v -> turnPreviewPage(-1));
+        nextPage = Ui.iconButton(this, R.drawable.ic_ui_next, "Page suivante", v -> turnPreviewPage(1));
         pageIndicator = Ui.text(this, "", 12.5f, true);
         pageIndicator.setGravity(Gravity.CENTER);
         pageControls.addView(previousPage);

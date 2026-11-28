@@ -46,8 +46,8 @@ public final class FinalUiPolishSourceContractTest {
     /** Spec UI pass 2: Lecture footer is [Tafsir] [Amorces] [Annoter], icons only, slim bars. */
     @Test public void studyTafsirIsAnIconActionInASlimAlwaysClickableBar() throws Exception {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        assertFalse("no caption-under-icon action", study.contains("Ui.roundAction(this, \"\", \"Tafsir\""));
-        assertTrue("Tafsir uses the shared icon grammar", study.contains("Ui.iconButton(this, \"\", \"Tafsir\", v -> openTafsir())"));
+        assertFalse("no caption-under-icon action", study.contains("Ui.roundAction(this, R.drawable.ic_ui_tafsir"));
+        assertTrue("Tafsir uses the shared icon grammar", study.contains("Ui.iconButton(this, R.drawable.ic_ui_tafsir, \"Tafsir\", v -> openTafsir())"));
         assertTrue("Tafsir must explain the missing selection instead of being disabled", study.contains("Touchez d’abord un verset pour ouvrir le Tafsir."));
         assertFalse("Tafsir action must never be disabled in Lecture", study.contains("tafsirButton.setEnabled(false)"));
         assertTrue("action bar keeps the 48dp touch height only", study.contains("readerActions.setMinimumHeight(Ui.dp(this, 48))"));

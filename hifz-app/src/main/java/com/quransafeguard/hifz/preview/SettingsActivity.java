@@ -268,7 +268,7 @@ public final class SettingsActivity extends HaafidhActivity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Ui.PAPER);
         LinearLayout page=Ui.column(this);scroll.addView(page);
         LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(Ui.iconButton(this,"","Retour",v->goBack()));
+        top.addView(Ui.iconButton(this,R.drawable.ic_ui_back,"Retour",v->goBack()));
         TextView heading=Ui.bookText(this,title,18,true);
         if(getResources().getConfiguration().smallestScreenWidthDp>=600)heading.setTextSize(22f);
         Ui.weight(heading,1);heading.setGravity(Gravity.CENTER);top.addView(heading);
@@ -642,8 +642,8 @@ public final class SettingsActivity extends HaafidhActivity {
             TextView value=Ui.menuSubline(this,QuranSurahNames.range(range.getStart(),range.getEndInclusive()));
             value.setMaxLines(Integer.MAX_VALUE);value.setEllipsize(null);
             Ui.weight(value,1);row.addView(value);
-            row.addView(Ui.iconButton(this,"","Modifier la plage",v->{if(stabilization)chooseStabilizationRange(range,index);else chooseAcquiredRange(range,index);}));
-            row.addView(Ui.iconButton(this,"","Supprimer la plage",v->{if(stabilization)removeStabilizationRange(index);else removeAcquiredRange(index);}));box.addView(row);
+            row.addView(Ui.iconButton(this,R.drawable.ic_ui_edit,"Modifier la plage",v->{if(stabilization)chooseStabilizationRange(range,index);else chooseAcquiredRange(range,index);}));
+            row.addView(Ui.iconButton(this,R.drawable.ic_ui_annotation_erase,"Supprimer la plage",v->{if(stabilization)removeStabilizationRange(index);else removeAcquiredRange(index);}));box.addView(row);
             if(i+1<ranges.size())box.addView(Ui.divider(this));
         }
     }

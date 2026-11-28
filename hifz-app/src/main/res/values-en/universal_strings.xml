@@ -172,4 +172,13 @@
     <item>Friday</item>
     <item>Saturday</item>
   </string-array>
+  <string name="calendar_none">—</string>
+  <string name="calendar_due">Due</string>
+  <string name="calendar_done">Completed</string>
+  <string name="calendar_evening_due">Evening session due</string>
+  <string name="calendar_no_session">No session scheduled</string>
+  <string name="calendar_planned">Scheduled</string>
+  <string name="calendar_forecast">Forecast</string>
+  <string name="calendar_no_finale">No final review due</string>
+  <string name="calendar_check">Check forecast</string>
 </resources>

@@ -28,7 +28,7 @@ public final class WeeklyDashboardBooxRecoveryTest {
             assertTrue(rows.get(i).morning.contains("à vérifier"));
             assertTrue(rows.get(i).evening.contains("à vérifier"));
             assertFalse("Fail closed: no invented completed lessons",
-                rows.get(i).state.contains("Validé"));
+                rows.get(i).state == WeeklyDashboardPlanner.State.VALIDATED);
         }
     }
     @Test public void mainScreenNoLongerUsesWeekHeadingForProgrammeChanges() throws Exception{

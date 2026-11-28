@@ -37,7 +37,7 @@ public final class PreDebugVisualRestorationSourceContractTest {
     @Test public void contractPictogramsStayVisibleAndParcoursUsesArchitecturalPath() throws Exception {
         String ui=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String home=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(ui.contains("if (s.equals(\"parcours hifz\")) return R.drawable.ic_palace_route;"));
+        assertTrue(home.contains("R.drawable.ic_haafidh_parcours, getString(R.string.nav_plan)"));
         assertTrue(ui.contains("new int[]{MUTED,PAPER,INK,INK}"));
         assertTrue("Selected icon must be dark on light background",ui.contains(
             "shape(SURFACE, LINE, dp(context, 6), Math.max(1, dp(context, 1)))"));

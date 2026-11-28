@@ -94,7 +94,7 @@ public final class BooxPortraitHomeSourceContractTest {
             && home.contains("stations.addView(station")
             && home.contains("station.setOnClickListener")
             && home.contains("selectedWeekDate = row.date")
-            && home.contains("boolean done = !future && \"Validé\".equals(row.state)"));
+            && home.contains("boolean done = !future && row.state == WeeklyDashboardPlanner.State.VALIDATED"));
         assertTrue(home.contains("scheduleDetail(chosen.morning)"));
         assertTrue(home.contains("scheduleDetail(chosen.evening)"));
         assertTrue(home.contains("showRevisionSelector()"));
@@ -339,8 +339,8 @@ public final class BooxPortraitHomeSourceContractTest {
         String resume=read(RES+"ic_ui_resume.xml");
         assertTrue(resume.contains("M3 12a9 9"));
         assertTrue(resume.contains("M21 3v5h-5"));
-        String ui=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        assertTrue(ui.contains("if (s.equals(\"reprendre\")) return R.drawable.ic_ui_resume;"));
+        String session=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("addRoundAction(R.drawable.ic_ui_resume,"));
         for (String xml : new String[]{quiz,progress,back,resume}) {
             assertTrue(xml.contains("android:strokeColor=\"#121211\""));
             assertTrue(xml.contains("android:viewportWidth=\"24\""));

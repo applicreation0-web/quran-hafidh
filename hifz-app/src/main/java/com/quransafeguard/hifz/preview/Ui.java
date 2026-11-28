@@ -18,7 +18,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.util.Locale;
 
 /** BOOX-first UI: quiet, flat, high-contrast, animation-free and semantically uniform. */
 final class Ui {
@@ -60,18 +59,15 @@ final class Ui {
     }
 
     /** Compact text action, reserved for tabs and explicit text choices. */
-    static Button smallButton(Context context, String label, View.OnClickListener listener) {
+    static Button smallButton(Context context, int iconRes, String label, View.OnClickListener listener) {
         Button button = styled(new Button(context), context, 16f, dp(context, 10));
-        String shown = label;
-        int iconRes = iconFor(label, label);
-        if (label != null && label.toLowerCase(Locale.ROOT).contains("audio")) shown = "Écouter";
-        button.setText(shown);
+        button.setText(label);
         if (iconRes != 0) {
             button.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
             button.setCompoundDrawableTintList(iconTint());
             button.setCompoundDrawablePadding(dp(context, 5));
         }
-        button.setContentDescription(shown);
+        button.setContentDescription(label);
         button.setOnClickListener(listener);
         button.setMinWidth(dp(context, 48));
         button.setMinHeight(dp(context, 48));
@@ -79,10 +75,6 @@ final class Ui {
     }
 
     /** 48dp hit target with a quiet 24dp pictogram and no permanent visible circle. */
-    static Button iconButton(Context context, String symbol, String description, View.OnClickListener listener) {
-        return iconButton(context, iconFor(description, symbol), description, listener);
-    }
-
     static Button iconButton(Context context, int iconRes, String description, View.OnClickListener listener) {
         if (iconRes == 0) {
             throw new IllegalArgumentException("Unmapped compact icon role: " + description);
@@ -137,11 +129,11 @@ final class Ui {
      * label is never printed under it (it crowded the bar on device); it stays available as the
      * spoken description and the long-press tooltip.
      */
-    static LinearLayout roundAction(Context context, String symbol, String label, View.OnClickListener listener) {
+    static LinearLayout roundAction(Context context, int iconRes, String label, View.OnClickListener listener) {
         LinearLayout box = column(context);
         box.setGravity(Gravity.CENTER);
         box.setPadding(0, 0, 0, 0);
-        box.addView(iconButton(context, symbol, label, listener));
+        box.addView(iconButton(context, iconRes, label, listener));
         return box;
     }
 
@@ -347,102 +339,6 @@ final class Ui {
         return new ColorStateList(
             new int[][]{{-android.R.attr.state_enabled},{android.R.attr.state_pressed},{android.R.attr.state_selected},{}},
             new int[]{MUTED,PAPER,INK,INK});
-    }
-
-    static int iconFor(String semantic, String fallbackSymbol) {
-        String s = semantic == null ? "" : semantic.toLowerCase(Locale.ROOT);
-        // Frozen BOOX pictograms: never infer shapes from fallback Unicode glyphs.
-        if (s.equals("accueil")) return R.drawable.ic_palace_home;
-        if (s.equals("parcours hifz")) return R.drawable.ic_palace_route;
-        if (s.equals("focus")) return R.drawable.ic_ui_focus;
-        if (s.equals("révision active")) return R.drawable.ic_palace_torch;
-        if (s.equals("révision passive") || s.equals("entretien")) return R.drawable.ic_palace_mirror;
-        if (s.equals("révision")) return R.drawable.ic_ui_revision;
-        if (s.equals("lecture cumulative")) return R.drawable.ic_ui_revision;
-        if (s.equals("continuer")) return R.drawable.ic_ui_next;
-        if (s.equals("masquer la page") || s.equals("afficher la page")) return R.drawable.ic_ui_reveal;
-        if (s.equals("page récitée")) return R.drawable.ic_ui_validate;
-        if (s.equals("page relue") || s.equals("page récitée sans aide")) return R.drawable.ic_ui_validate;
-        if (s.equals("reporter cette page")) return R.drawable.ic_hifz_catchup_clock;
-        if (s.equals("révéler un verset")) return R.drawable.ic_ui_focus;
-        if (s.equals("recommencer la page") || s.startsWith("échec ·")) return R.drawable.ic_ui_repeat;
-        if (s.contains("difficulté") || s.contains("difficulte")) return R.drawable.ic_ui_difficulty;
-        if (s.equals("marquer") || s.startsWith("touchez le verset")) return R.drawable.ic_ui_difficulty;
-        if (s.contains("plus d’options") || s.contains("plus d'options")) return R.drawable.ic_ui_more;
-        if (s.contains("quiz")) return R.drawable.ic_ui_quiz;
-        if (s.contains("annoter") || s.contains("crayon")) return R.drawable.ic_ui_edit;
-        if (s.contains("annuler la note")) return R.drawable.ic_ui_undo;
-        if (s.contains("effacer les notes")) return R.drawable.ic_ui_annotation_erase;
-        if (s.contains("retour")) return R.drawable.ic_ui_back;
-        if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
-        if (s.equals("atlas")) return R.drawable.ic_palace_compass;
-        if (s.equals("versets ressemblants") || s.equals("similitudes")) return R.drawable.ic_ui_atlas_similar;
-        if (s.equals("correspondances")) return R.drawable.ic_ui_correspondances;
-        if (s.equals("sources") || s.contains("justification")) return R.drawable.ic_ui_info;
-        if (s.contains("agrandir le mushaf")) return R.drawable.ic_ui_focus;
-        if (s.equals("carte atlas") || s.equals("carte") || s.equals("carte ibn kathīr")) return R.drawable.ic_ui_semantic_map;
-        if (s.contains("tafsir") || s.contains("tafsīr")) return R.drawable.ic_ui_tafsir;
-        if (s.contains("passage vers le haut") || s.contains("passage vers le bas")) return R.drawable.ic_ui_previous;
-        if (s.contains("passage précédent du corpus")) return R.drawable.ic_ui_jump_prev;
-        if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_jump_next;
-        if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
-        if (s.contains("suivant")) return R.drawable.ic_ui_next;
-        if (s.equals("pause") || s.equals("mettre en pause")) return R.drawable.ic_ui_pause;
-        if (s.contains("lire") || s.contains("pause")) return R.drawable.ic_ui_play;
-        if (s.equals("reprendre")) return R.drawable.ic_ui_resume;
-        if (s.contains("référence") || s.contains("diagnostic")) return R.drawable.ic_ui_info;
-        if (s.equals("lecture")) return R.drawable.ic_ui_reading;
-        if (s.contains("mémor")) return R.drawable.ic_ui_memorize;
-        if (s.contains("progression")) return R.drawable.ic_ui_progress_map;
-        if (s.contains("param")) return R.drawable.ic_ui_settings;
-        if (s.equals("séance")) return R.drawable.ic_ui_session;
-        // Playback uses the agreed play triangle, not the legacy speaker approximation.
-        if (s.contains("audio") || s.contains("écouter")) return R.drawable.ic_ui_play;
-        if (s.contains("sourate")) return R.drawable.ic_ui_surah_list;
-        if (s.contains("hizb")) return R.drawable.ic_ui_hizb;
-        if (s.contains("réinitial") || s.contains("remettre à zéro")) return R.drawable.ic_ui_reset;
-        if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
-        if (s.equals("retirer le repère")) return R.drawable.ic_ui_annotation_erase;
-        if (s.startsWith("retirer")) return R.drawable.ic_ui_delete;
-        if (s.startsWith("ajouter")) return R.drawable.ic_ui_add;
-        if (s.equals("commencer")) return R.drawable.ic_ui_play;
-        if (s.equals("correct")) return R.drawable.ic_ui_validate;
-        if (s.contains("hésitation") || s.contains("hesitation")) return R.drawable.ic_ui_info;
-        if (s.contains("à revoir") || s.contains("a revoir")) return R.drawable.ic_ui_repeat;
-        if (s.contains("répétition") || s.contains("répéter") || s.contains("réessayer")) return R.drawable.ic_ui_repeat;
-        if (s.contains("enregistrer")) return R.drawable.ic_ui_record;
-        if (s.contains("arrêter") || s.contains("arreter")) return R.drawable.ic_ui_stop;
-        if (s.contains("vérifier") || s.contains("verifier")) return R.drawable.ic_ui_validate;
-        if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
-        // Only Atlas "Ancre" uses the new anchor glyph; frozen Amorces keep key-round.
-        // They are distinct semantic actions and must never share a fallback icon.
-        if (s.contains("ancre")) return R.drawable.ic_ui_semantic_anchor;
-        if (s.contains("amorce")) return R.drawable.ic_ui_recall_key;
-        if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
-        if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
-        if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
-        if (s.contains("apprentissage") || s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_palace_door;
-        if (s.contains("reprise")) return R.drawable.ic_hifz_reprise;
-        if (s.contains("finale")) return R.drawable.ic_hifz_final_review;
-        if (s.contains("renforcement")) return R.drawable.ic_palace_buttress;
-        if (s.contains("consolidation")) return R.drawable.ic_palace_keystone;
-        if (s.contains("stabilisation") || s.contains("ancrage")) return R.drawable.ic_palace_column;
-        if (s.contains("révision passive") || s.contains("revision passive") || s.contains("entretien")) return R.drawable.ic_palace_mirror;
-        if (s.contains("révision active") || s.contains("revision active")) return R.drawable.ic_palace_torch;
-        if (s.contains("révision") || s.contains("revision")) return R.drawable.ic_hifz_maintenance;
-        if (s.contains("valider") || s.equals("revu") || s.contains("termin")) return R.drawable.ic_ui_validate;
-        if (s.startsWith("début")) return R.drawable.ic_ui_start;
-        if (s.startsWith("fin")) return R.drawable.ic_ui_end;
-        if (s.contains("ajouter")) return R.drawable.ic_ui_add;
-        if (s.contains("modifier")) return R.drawable.ic_ui_edit;
-        if (s.contains("supprimer")) return R.drawable.ic_ui_annotation_erase;
-        if (s.contains("choisir le pack") || s.contains("import")) return R.drawable.ic_ui_import;
-        if (s.contains("sabqi")) return R.drawable.ic_palace_door;
-        if (s.contains("itq")) return R.drawable.ic_palace_column;
-        if (s.contains("murāja") || s.contains("muraja")) return R.drawable.ic_palace_mirror;
-        if (s.contains("annuler")) return R.drawable.ic_ui_undo;
-        if (s.contains("effacer")) return R.drawable.ic_ui_annotation_erase;
-        return 0;
     }
 
     private static GradientDrawable shape(int fill, int strokeColor, int radius, int strokeWidth) {

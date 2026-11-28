@@ -393,7 +393,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             "static LinearLayout roundAction(", "static String stabilizationCue(");
         assertFalse("no caption TextView under the icon", roundAction.contains("TextView caption"));
         assertTrue("the label stays the icon's spoken description/tooltip",
-            roundAction.contains("iconButton(context, symbol, label, listener)"));
+            roundAction.contains("iconButton(context, iconRes, label, listener)"));
     }
 
     /**
@@ -508,7 +508,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("the action must be withheld while a page other than the last is showing",
             helper.contains("if (currentPage != unitLastPage) {"));
         assertTrue("the Répétition action itself must only be added once on the last page",
-            helper.contains("addRoundAction(\"↻\", \"Répétition\", v -> completeGroupedCycleRep());"));
+            helper.contains("addRoundAction(R.drawable.ic_ui_repeat, \"Répétition\", v -> completeGroupedCycleRep());"));
         String goPage = method(session, "private void goPage(int delta) {", "private void addRoundAction(");
         assertTrue("goPage must refresh the gated action after every swipe, not just at render time",
             goPage.contains("updateGroupedCycleRepAction();"));
@@ -531,7 +531,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     @Test public void freeMemActivityAlsoOffersTheDirectSurahPicker() throws Exception {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         assertTrue("Mémorisation libre must expose a Sourate nav button",
-            free.contains("Ui.iconButton(this,\"\",\"Sourate\",v->showSurahPicker())"));
+            free.contains("Ui.iconButton(this,R.drawable.ic_ui_surah_list,\"Sourate\",v->showSurahPicker())"));
         assertTrue("selecting a surah must jump the free-memorization page too",
             free.contains("QuranSurahNames.showPicker(this,geometry,this::setPage)"));
     }
@@ -810,14 +810,13 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue("the corpus-jump action must not be labelled like a plain pagination control",
             session.contains("\"Passage suivant du corpus\""));
-        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        assertTrue("it must resolve to its own icon before the generic pagination fallback",
-            ui.contains("if (s.contains(\"passage suivant du corpus\")) return R.drawable.ic_ui_jump_next;"));
+        assertTrue("the next corpus jump has a dedicated drawable",
+            session.contains("R.drawable.ic_ui_jump_next, \"Passage suivant du corpus\""));
         assertTrue("Arabic-book order: 'suivant' left of 'précédent'",
             session.indexOf("\"Passage suivant du corpus\"") < session.indexOf("\"Passage précédent du corpus\""));
         assertTrue("Révision keeps both corpus jumps (spec UI pass 2: previous AND next)",
             session.contains("\"Passage précédent du corpus\"")
-                && ui.contains("if (s.contains(\"passage précédent du corpus\")) return R.drawable.ic_ui_jump_prev;"));
+                && session.contains("R.drawable.ic_ui_jump_prev, \"Passage précédent du corpus\""));
     }
 
     /**

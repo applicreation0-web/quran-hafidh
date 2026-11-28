@@ -49,7 +49,7 @@ public final class ProgressMapActivity extends android.app.Activity {
 
         LinearLayout top = Ui.row(this);
         top.setPadding(0, 0, 0, Ui.dp(this, 2));
-        backButton=Ui.iconButton(this,"‹","Retour",v->{
+        backButton=Ui.iconButton(this,R.drawable.ic_ui_back,"Retour",v->{
             if(selectedJuz>0)showAllPages();else finish();
         });
         top.addView(backButton);

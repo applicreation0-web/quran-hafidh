@@ -128,8 +128,8 @@ public final class CorrespondenceComparisonActivity extends Activity {
         TextView t=Ui.text(this,value,size,bold);t.setTextColor(Ui.INK);return t;
     }
     private int dp(int n){return Ui.dp(this,n);}
-    private Button action(String glyph,String label,Runnable runnable){
-        return Ui.iconButton(this,glyph,label,v->runnable.run());
+    private Button action(int iconRes,String label,Runnable runnable){
+        return Ui.iconButton(this,iconRes,label,v->runnable.run());
     }
     private void build(){
         int width=getResources().getConfiguration().screenWidthDp;
@@ -137,7 +137,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         boolean landscape=getResources().getConfiguration().orientation==Configuration.ORIENTATION_LANDSCAPE;
         root=Ui.column(this);root.setBackgroundColor(Ui.PAPER);
         LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
-        top.addView(action("‹","Retour",this::finish),
+        top.addView(action(R.drawable.ic_ui_back,"Retour",this::finish),
             new LinearLayout.LayoutParams(dp(48),dp(48)));
         ImageView icon=new ImageView(this);icon.setImageResource(R.drawable.ic_ui_correspondances);
         icon.setContentDescription("Parallèles · Correspondances");
@@ -146,7 +146,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         TextView title=caption("Correspondances",16,true);
         title.setGravity(Gravity.CENTER);
         top.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
-        top.addView(action("ⓘ","Sources",this::showSources),
+        top.addView(action(R.drawable.ic_ui_info,"Sources",this::showSources),
             new LinearLayout.LayoutParams(dp(48),dp(48)));
         root.addView(top,new LinearLayout.LayoutParams(-1,dp(48)));
         root.addView(Ui.divider(this));
@@ -160,9 +160,9 @@ public final class CorrespondenceComparisonActivity extends Activity {
         relationLine.setSingleLine(false);relationLine.setMaxLines(2);relationLine.setPadding(dp(8),0,0,0);
         pairHeader.addView(relationLine,new LinearLayout.LayoutParams(0,dp(40),1));
         if(relation.partnerCount(origin)>1&&!isRefrain()){ 
-            pairHeader.addView(action("‹","Occurrence précédente",()->changePartner(-1)),
+            pairHeader.addView(action(R.drawable.ic_ui_previous,"Occurrence précédente",()->changePartner(-1)),
                 new LinearLayout.LayoutParams(dp(44),dp(40)));
-            pairHeader.addView(action("›","Occurrence suivante",()->changePartner(1)),
+            pairHeader.addView(action(R.drawable.ic_ui_next,"Occurrence suivante",()->changePartner(1)),
                 new LinearLayout.LayoutParams(dp(44),dp(40)));
         }
         root.addView(pairHeader,new LinearLayout.LayoutParams(-1,dp(40)));
@@ -197,8 +197,8 @@ public final class CorrespondenceComparisonActivity extends Activity {
             column.addView(loc,new LinearLayout.LayoutParams(-1,dp(24)));
             pageLabels[side]=loc;
             Button zoom=booxPortrait
-                ?Ui.smallButton(this,"Agrandir "+(side==0?"A":"B"),v->toggleEnlarge(pane))
-                :action("⛶","Agrandir le Mushaf "+(side==0?"A":"B"),()->toggleEnlarge(pane));
+                ?Ui.smallButton(this,0,"Agrandir "+(side==0?"A":"B"),v->toggleEnlarge(pane))
+                :action(R.drawable.ic_ui_focus,"Agrandir le Mushaf "+(side==0?"A":"B"),()->toggleEnlarge(pane));
             focusActions[side]=zoom;
             bar.addView(zoom,new LinearLayout.LayoutParams(dp(booxPortrait?110:44),dp(44)));
             column.addView(bar,new LinearLayout.LayoutParams(-1,dp(44)));
@@ -229,7 +229,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
         tafsirHeading=caption(tafsirOpen?"Tafsīr al-Jalālayn · ouvert":"Tafsīr al-Jalālayn · replié",14,true);
         tafsirHeading.setPadding(dp(8),0,0,0);
         tafsirHead.addView(tafsirHeading,new LinearLayout.LayoutParams(0,dp(42),1));
-        tafsirHead.addView(action("⌃","Afficher ou masquer le Tafsīr",()->setTafsirOpen(!tafsirOpen)),
+        tafsirHead.addView(action(R.drawable.ic_ui_tafsir,"Afficher ou masquer le Tafsīr",()->setTafsirOpen(!tafsirOpen)),
             new LinearLayout.LayoutParams(dp(44),dp(42)));
         root.addView(tafsirHead,new LinearLayout.LayoutParams(-1,dp(42)));
         tafsirPanel=Ui.row(this);
@@ -238,8 +238,8 @@ public final class CorrespondenceComparisonActivity extends Activity {
             LinearLayout part=Ui.column(this);
             LinearLayout header=Ui.row(this);header.setGravity(Gravity.CENTER_VERTICAL);
             String sideName=side==0?"A":"B";
-            previousVerses[side]=action("‹","Verset précédent "+sideName,()->stepVerse(pane,-1));
-            nextVerses[side]=action("›","Verset suivant "+sideName,()->stepVerse(pane,1));
+            previousVerses[side]=action(R.drawable.ic_ui_previous,"Verset précédent "+sideName,()->stepVerse(pane,-1));
+            nextVerses[side]=action(R.drawable.ic_ui_next,"Verset suivant "+sideName,()->stepVerse(pane,1));
             header.addView(previousVerses[side],new LinearLayout.LayoutParams(dp(44),dp(44)));
             TextView label=caption("",booxPortrait?14:12,true);
             label.setGravity(Gravity.CENTER);label.setMaxLines(2);
@@ -506,7 +506,7 @@ public final class CorrespondenceComparisonActivity extends Activity {
             LinearLayout complete=Ui.column(this);
             complete.setVisibility(View.GONE);
             sourceSection(complete,"Bibliographie complète",relation.source);
-            Button expand=Ui.smallButton(this,"Toutes les références",v->
+            Button expand=Ui.smallButton(this,R.drawable.ic_ui_info,"Toutes les références",v->
                 complete.setVisibility(complete.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE));
             column.addView(expand);
             column.addView(complete);

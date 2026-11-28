@@ -371,7 +371,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         timerText.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         meta.addView(timerText);
         if (activeSlot != null) {
-            activeClockAction = Ui.iconButton(this, "", "Pause", v -> toggleActiveClock());
+            activeClockAction = Ui.iconButton(this, R.drawable.ic_ui_pause, "Pause", v -> toggleActiveClock());
             meta.addView(activeClockAction);
         }
         root.addView(meta);
@@ -410,21 +410,21 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             actionScroll.addView(actions);
             controlBar.addView(actionScroll,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1f));
         }else controlBar.addView(actions);
-        discriminantButton=Ui.iconButton(this,"","Similitudes",v->openRevisionDiscriminant());
+        discriminantButton=Ui.iconButton(this,R.drawable.ic_ui_atlas_similar,"Similitudes",v->openRevisionDiscriminant());
         discriminantButton.setVisibility(View.GONE);
         controlBar.addView(discriminantButton);
         if(MURAJAAH_ACTIVE.equals(mode)){
-            validatedCorrespondenceButton=Ui.iconButton(this,"","Correspondances",
+            validatedCorrespondenceButton=Ui.iconButton(this,R.drawable.ic_ui_correspondances,"Correspondances",
                 v->openValidatedCorrespondence());
             validatedCorrespondenceButton.setVisibility(View.GONE);
             controlBar.addView(validatedCorrespondenceButton);
         }
         if (!MURAJAAH_ACTIVE.equals(mode)) {
-            annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
+            annotationButton = Ui.iconButton(this, R.drawable.ic_ui_edit, "Annoter", v -> toggleAnnotationMode());
             annotationButton.setSelected(annotationEnabled);
             controlBar.addView(annotationButton);
-            annotationUndoButton = Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke());
-            annotationClearButton = Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage());
+            annotationUndoButton = Ui.iconButton(this, R.drawable.ic_ui_undo, "Annuler la note", v -> annotationOverlay.undoLastStroke());
+            annotationClearButton = Ui.iconButton(this, R.drawable.ic_ui_annotation_erase, "Effacer les notes", v -> annotationOverlay.clearCurrentPage());
             annotationUndoButton.setVisibility(View.GONE);
             annotationClearButton.setVisibility(View.GONE);
             controlBar.addView(annotationUndoButton);
@@ -432,7 +432,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         }
         // Audio only when the recitation pack is actually installed.
         if (new HifzAudioGate(this).installed()) {
-            generalAudioButton=Ui.iconButton(this,"","Écouter",v->openAudio());
+            generalAudioButton=Ui.iconButton(this,R.drawable.ic_ui_play,"Écouter",v->openAudio());
             controlBar.addView(generalAudioButton);
         }
         root.addView(controlBar);
@@ -709,7 +709,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             sessionCompleted=false;clock.pause();
             program.setText("Apprentissage · séance à reprendre");
             progress.setText("La séance ancienne ne permet pas de vérifier sa date. Reprenez ce bloc.");
-            addRoundAction("↻","Reprendre",v->restartSabqiAfterAssistance());
+            addRoundAction(R.drawable.ic_ui_resume,"Reprendre",v->restartSabqiAfterAssistance());
             return;
         }
         today=sessionDate.toString();
@@ -735,10 +735,10 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                 ? target+"/"+target+" · prêt à valider · révélations " + prefs.sabqiAssisted()
                 : target+"/"+target+" · à renforcer · révélations " + prefs.sabqiAssisted());
             showCurrent();
-            if (assistancePassed) addRoundAction("✓","Valider",v->runValidationSafely(this::validateSabqi));
-            else addRoundAction("↻","Reprendre",v->restartSabqiAfterAssistance());
+            if (assistancePassed) addRoundAction(R.drawable.ic_ui_validate,"Valider",v->runValidationSafely(this::validateSabqi));
+            else addRoundAction(R.drawable.ic_ui_resume,"Reprendre",v->restartSabqiAfterAssistance());
             if(target>=SabqiFortyFiveRecoveryPolicy.BASE)
-                addRoundAction("↻","Échec · +5 visibles + 5 masquées",v->beginSabqiFortyFiveRecovery());
+                addRoundAction(R.drawable.ic_ui_repeat,"Échec · +5 visibles + 5 masquées",v->beginSabqiFortyFiveRecovery());
             return;
         }
         sessionCompleted = false;
@@ -746,8 +746,8 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · " + sabqiBlock.lineIds.size() + " lignes");
         updateSabqiProgress(rep, prefs.sabqiAssisted());
         showCurrent();
-        addRoundAction("↻","Répétition",v->completeSabqiRep());
-        LinearLayout revealAction = Ui.roundAction(this,"","Révéler",null);
+        addRoundAction(R.drawable.ic_ui_repeat,"Répétition",v->completeSabqiRep());
+        LinearLayout revealAction = Ui.roundAction(this,R.drawable.ic_ui_reveal,"Révéler",null);
         revealButton = (Button) revealAction.getChildAt(0);
         configureRevealButton(revealButton);
         actions.addView(revealAction);
@@ -869,7 +869,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         program.setText("Apprentissage · " + block.verseLabel() + " · " + block.lineIds.size() + " lignes");
         progress.setText(timedSessionLimitReached ? "30 min atteintes" : "Répétez les mêmes lignes.");
         showCurrent();
-        if (!timedSessionLimitReached) addRoundAction("↻", "Répétition", v -> renderMode());
+        if (!timedSessionLimitReached) addRoundAction(R.drawable.ic_ui_repeat, "Répétition", v -> renderMode());
     }
 
     /**
@@ -921,7 +921,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             sessionCompleted = true;
             program.setText(displayName + " · prêt à valider");
             progress.setText("Toutes les répétitions du groupe sont terminées.");
-            addRoundAction("✓", "Valider", v -> runValidationSafely(onValidate));
+            addRoundAction(R.drawable.ic_ui_validate, "Valider", v -> runValidationSafely(onValidate));
             return;
         }
         int position = consolidationSession.nextUnitIndex();
@@ -991,7 +991,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         }
         progress.setText("Répétition " + consolidationSession.donePerStage() + "/" + target
             + (isSundayFinalPageRepetition() ? currentMask == 100 ? " · masquée 100 %" : " · visible" : ""));
-        addRoundAction("↻", "Répétition", v -> completeGroupedCycleRep());
+        addRoundAction(R.drawable.ic_ui_repeat, "Répétition", v -> completeGroupedCycleRep());
     }
 
     private void completeGroupedCycleRep() {
@@ -1188,7 +1188,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             progress.setText("Les lignes sont Apprises. Reprendre le Renforcement du "
                 +overdue+" avant la finale ; aucun apprentissage à recommencer.");
             actions.removeAllViews();
-            addRoundAction("↻","Reprendre",
+            addRoundAction(R.drawable.ic_ui_resume,"Reprendre",
                 v -> {
                     Intent intent=new Intent(this,HifzSessionActivity.class)
                         .putExtra(EXTRA_MODE,LEARNING_CONSOLIDATION)
@@ -1292,7 +1292,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
 
     private void offerPostFinalRecall(String family){
         PostFinalRecallStore.Review ready=readyPostFinalRecall(family);
-        if(ready!=null)addRoundAction("↻","Lecture cumulative",
+        if(ready!=null)addRoundAction(R.drawable.ic_ui_revision,"Lecture cumulative",
             v->launchPostFinalRecall(family));
     }
 
@@ -1376,7 +1376,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         }
         progress.setText("Page "+(currentPostFinalReview.position+1)+"/"
             +currentPostFinalReview.total+" · 100 % masquée · un passage");
-        addRoundAction("↻","Page récitée",v->{
+        addRoundAction(R.drawable.ic_ui_validate,"Page récitée",v->{
             if(!sundayFinalMaskedPageReady||sundayFinalAnchorUnavailable||currentPostFinalReview==null
                     ||currentPage!=currentPostFinalReview.page)return;
             if(!postFinalStore.advance(currentPostFinalReview,prefs.lastLearningConsolidationDate(),
@@ -1593,7 +1593,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             sessionCompleted=true;clock.pause();
             program.setText("Stabilisation · reprise nécessaire");
             progress.setText("Anciennes répétitions conservées, mais lot physique non authentifiable. Reprendre explicitement le bloc.");
-            addRoundAction("↻","Reprendre",v->restartItqanAfterAssistance());
+            addRoundAction(R.drawable.ic_ui_resume,"Reprendre",v->restartItqanAfterAssistance());
             return;
         }
         itqanProofToken=prefs.itqanBlockProofTokenV7();
@@ -1617,10 +1617,10 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                 ? itqanTargetReps+"/"+itqanTargetReps+" · prêt à valider · révélations "+prefs.itqanAssisted()
                 : itqanTargetReps+"/"+itqanTargetReps+" · à renforcer · révélations "+prefs.itqanAssisted()+" · maximum 2");
             showCurrent();
-            if (assistancePassed) addRoundAction("✓","Valider",v->runValidationSafely(this::validateItqan));
-            else addRoundAction("↻","Reprendre",v->restartItqanAfterAssistance());
+            if (assistancePassed) addRoundAction(R.drawable.ic_ui_validate,"Valider",v->runValidationSafely(this::validateItqan));
+            else addRoundAction(R.drawable.ic_ui_resume,"Reprendre",v->restartItqanAfterAssistance());
             if (ItqanThirtyRecoveryPolicy.eligible(itqanUnitPlan))
-                addRoundAction("↻","Échec · 5 visibles + 5 masquées",
+                addRoundAction(R.drawable.ic_ui_repeat,"Échec · 5 visibles + 5 masquées",
                     v->beginItqanThirtyRecovery());
             return;
         }
@@ -1628,8 +1628,8 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         currentMask=ItqanBalancedMaskSchedule.maskForNextRep(itqanUnitPlan, rep);
         program.setText(itqanProgramLabel());
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
-        addRoundAction("↻","Répétition",v->completeItqanRep());
-        LinearLayout revealAction = Ui.roundAction(this,"","Révéler",null);
+        addRoundAction(R.drawable.ic_ui_repeat,"Répétition",v->completeItqanRep());
+        LinearLayout revealAction = Ui.roundAction(this,R.drawable.ic_ui_reveal,"Révéler",null);
         revealButton=(Button)revealAction.getChildAt(0);
         configureRevealButton(revealButton);
         actions.addView(revealAction);
@@ -1696,7 +1696,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         maintenancePageAction.setEnabled(false);
         actions.addView(maintenancePageAction);
         if (phase.masked()) {
-            LinearLayout reveal = Ui.roundAction(this, "", "Révéler", null);
+            LinearLayout reveal = Ui.roundAction(this, R.drawable.ic_ui_reveal, "Révéler", null);
             revealButton = (Button) reveal.getChildAt(0);
             configureRevealButton(revealButton);
             revealButton.setEnabled(false);
@@ -1754,9 +1754,9 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             progress.setText(count+(assistancePassed?" · prêt à valider"
                 :" · révélations excessives : reprendre ce bloc"));
             showCurrent();
-            if(assistancePassed)addRoundAction("✓","Valider",v->runValidationSafely(this::validateItqan));
-            else addRoundAction("↻","Reprendre",v->restartItqanAfterAssistance());
-            if(frozenItqan.usesRecovery()) addRoundAction("↻","Échec · 5 visibles + 5 masquées",
+            if(assistancePassed)addRoundAction(R.drawable.ic_ui_validate,"Valider",v->runValidationSafely(this::validateItqan));
+            else addRoundAction(R.drawable.ic_ui_resume,"Reprendre",v->restartItqanAfterAssistance());
+            if(frozenItqan.usesRecovery()) addRoundAction(R.drawable.ic_ui_repeat,"Échec · 5 visibles + 5 masquées",
                 v->restartItqanAfterAssistance());
             return;
         }
@@ -1765,8 +1765,8 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         program.setText(itqanProgramLabel());
         updateItqanProgress(frozenItqan.reps,prefs.itqanAssisted());
         showCurrent();
-        addRoundAction("↻","Répétition",v->completeItqanRep());
-        LinearLayout revealAction=Ui.roundAction(this,"","Révéler",null);
+        addRoundAction(R.drawable.ic_ui_repeat,"Répétition",v->completeItqanRep());
+        LinearLayout revealAction=Ui.roundAction(this,R.drawable.ic_ui_reveal,"Révéler",null);
         revealButton=(Button)revealAction.getChildAt(0);
         configureRevealButton(revealButton);
         actions.addView(revealAction);
@@ -2124,7 +2124,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             progress.setText(receipt.isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(receipt));
             updateActiveClockAction();
             if(activeSlot!=null&&sessionDate.equals(HifzClock.today()))
-                actions.addView(Ui.roundAction(this,"","Continuer",v->{
+                actions.addView(Ui.roundAction(this,R.drawable.ic_ui_next,"Continuer",v->{
                     setResult(RESULT_OK,new Intent()
                         .putExtra(EXTRA_FINISHED_ACTIVE_SLOT,activeSlot.name())
                         .putExtra(EXTRA_FINISHED_ACTIVE_DATE,sessionDate.toString()));
@@ -2300,7 +2300,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
             VerseRef jumpTarget = nextSegment;
             MurajaahSegment current = currentIndex >= 0 ? segments.get(currentIndex) : null;
             boolean validated = current == null || murajaahValidatedThroughSegment(segments, currentIndex);
-            LinearLayout jumpAction = Ui.roundAction(this, "", "Passage suivant du corpus", v -> {
+            LinearLayout jumpAction = Ui.roundAction(this, R.drawable.ic_ui_jump_next, "Passage suivant du corpus", v -> {
                 if (current != null && !murajaahValidatedThroughSegment(segments, currentIndex)) {
                     Toast.makeText(this, "Touchez d’abord le dernier verset de ce passage ("
                         + murajaahVerseLabel(current.end) + ").", Toast.LENGTH_LONG).show();
@@ -2322,7 +2322,7 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         // "suivant" sits left, pointing left; "précédent" right, pointing right. Navigation only.
         if (currentIndex > 0) {
             VerseRef previousStart = segments.get(currentIndex - 1).start;
-            actions.addView(Ui.roundAction(this, "", "Passage précédent du corpus", v -> {
+            actions.addView(Ui.roundAction(this, R.drawable.ic_ui_jump_prev, "Passage précédent du corpus", v -> {
                 currentPage = geometry.pageForVerse(previousStart);
                 currentSelection = Collections.emptyList();
                 currentLineIds = active ? applyActiveLandmarks(currentPage) : Collections.emptyList();
@@ -2331,12 +2331,12 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                 updateMurajaahActions();
             }));
         }
-        LinearLayout validateAction = Ui.roundAction(this, "", "Valider jusqu’ici", v -> finishMurajaah());
+        LinearLayout validateAction = Ui.roundAction(this, R.drawable.ic_ui_validate, "Valider jusqu’ici", v -> finishMurajaah());
         murajaahFinishButton = (Button) validateAction.getChildAt(0);
         murajaahFinishButton.setEnabled(activeSlot == null || timedSessionLimitReached);
         actions.addView(validateAction);
         if (active) {
-            LinearLayout revealAction = Ui.roundAction(this, "", "Révéler", null);
+            LinearLayout revealAction = Ui.roundAction(this, R.drawable.ic_ui_reveal, "Révéler", null);
             revealButton = (Button) revealAction.getChildAt(0);
             configureRevealButton(revealButton);
             actions.addView(revealAction);
@@ -3163,8 +3163,8 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
         if(isMurajaahMode()&&murajaahPlan!=null&&!sessionCompleted)updateMurajaahActions();
     }
 
-    private void addRoundAction(String symbol,String label,View.OnClickListener listener){
-        LinearLayout box=Ui.roundAction(this,symbol,label,listener);actions.addView(box);
+    private void addRoundAction(int iconRes,String label,View.OnClickListener listener){
+        LinearLayout box=Ui.roundAction(this,iconRes,label,listener);actions.addView(box);
     }
 
     private void runValidationSafely(Runnable validation) {
