@@ -68,3 +68,21 @@ Le diff des commits publics 2.0 comparé à fe271ca6 ne contient ni sauvegarde J
 | Pictogrammes | Les ressources vectorielles existantes ont des métadonnées et contrats Lucide. Les nouveaux dessins du lecteur et de l’icône sont dans le code | Recouper le manifeste de toutes les icônes et leurs notices empaquetées |
 | Tafsirs, cartes sémantiques, similitudes et amorces | Les assemblages Gradle et les contrôles de séparation public/privé sont identifiés | Vérifier chaque source, ses droits et son attribution dans l’assemblage exact. Le test de non-activation Ibn Kathir ne vaut pas une autorisation de distribution |
 | Audio | Les tests peuvent créer un signal PCM synthétique pour exercer le lecteur. Les sources privées restent exclues de l’émulateur public | Vérifier l’installation et les droits de chaque pack déclaré éligible au livrable privé |
+
+## Comparatif Android exécuté
+
+[Campagne 46123203616, commit 66ab606](https://github.com/applicreation0-web/quran-hafidh/actions/runs/46123203616). Les compteurs de l’instrumentation et les captures figurent dans [l’artefact de preuves](https://github.com/applicreation0-web/quran-hafidh/actions/runs/46123203616/artifacts/15255250577). Sept tests Android ont réussi. Quatre à 320 dp couvrent l’assistant, les 120 transitions, le vrai bouton de langue dans le lecteur après une aide et les commandes de Fragilités. Trois autres tests vérifient les pixels visibles, masqués et dévoilés sur les formats ci-dessous. La barre d’état, les cibles de 48 dp et les contours d’indisponibilité sont visibles dans la capture wolof du lecteur étroit. Le récapitulatif de l’assistant a été contrôlé en anglais.
+
+Le rectangle du folio est mesuré sur la capture réelle de l’état visible, par l’étendue de la couleur du fond de folio. Les deux versions sont mesurées à résolution, densité et échelle de police identiques. L’écart des dimensions est nul dans les trois comparaisons.
+
+| Capture portrait Android | Police | Folio 1.17.24 | Folio 2.0.0 | Largeur / hauteur / surface de l’écran |
+|---|---:|---:|---:|---:|
+| 1 080 × 2 400 px | 100 % | 883 × 1 407 px | 883 × 1 407 px | 81,76 % / 58,63 % / 47,93 % |
+| 900 × 1 200 px | 150 % | 565 × 901 px | 565 × 901 px | 62,78 % / 75,08 % / 47,14 % |
+| 1 404 × 1 872 px | 150 % | 950 × 1 514 px | 950 × 1 514 px | 67,66 % / 80,88 % / 54,72 % |
+
+Les mesures des deux écrans 4:3 proviennent d’un émulateur Android. Les essais de rafraîchissement, de ghosting et de commandes matérielles restent réservés au BOOX physique.
+
+## Mise à jour Android instrumentée
+
+Le scénario synthétique vérifie une installation de la référence `fe271ca6`, un arrêt de processus avec journal d’import ouvert, le remplacement en place de la version 62 par la version 63, la stabilité de la date d’installation, le retour du journal à l’état cohérent, et la persistance des acquis et brouillons du scénario. Il utilise la signature de développement sur l’émulateur. La vérification sur l’installation personnelle avec le certificat historique reste une porte distincte.

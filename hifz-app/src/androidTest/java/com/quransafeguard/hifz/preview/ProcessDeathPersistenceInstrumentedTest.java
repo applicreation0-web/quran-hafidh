@@ -143,6 +143,8 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             assertTrue(context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).edit().clear().commit());
             assertTrue(HifzBackup.restore(context,backup)>0);
             assertPersistedFixture(context);
+            assertTrue("An existing installation must not be sent to the new-profile setup",
+                !new HifzPrefs(context,true).universalSetupPending());
             assertBackupLedgerAndJ10(context);
             assertEquals("Free-memory counter lost after v3 restore",4,
                 context.getSharedPreferences(FREE_MEM,Context.MODE_PRIVATE).getInt("count",-1));
@@ -254,6 +256,8 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             assertTrue("Recovery must consume the pending journal",
                 !context.getSharedPreferences("quran_hifz_restore_journal_v1",
                     Context.MODE_PRIVATE).contains("pending_restore"));
+            assertTrue("An Android update must retain the existing profile",
+                !new HifzPrefs(context,true).universalSetupPending());
             assertPersistedFixture(context);
             assertBackupLedgerAndJ10(context);
         } finally {

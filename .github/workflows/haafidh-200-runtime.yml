@@ -42,6 +42,12 @@ jobs:
         run: |
           gradle --no-daemon --init-script scripts/no_apk.init.gradle \
             :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest
+      - name: Check out the pinned 1.17.24 reference for the synthetic update
+        uses: actions/checkout@v4
+        with:
+          ref: fe271ca6c3dff7b9e31ca5b0a2801c9fece3be0c
+          path: haafidh-11724-reference
+          persist-credentials: false
       - name: Instrument Android locale and Fragilités
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -50,7 +56,7 @@ jobs:
           target: google_apis
           profile: pixel_6
           emulator-options: -no-window -no-snapshot -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: bash scripts/run_200_runtime_checks.sh
+          script: bash scripts/run_200_runtime_checks.sh haafidh-11724-reference
       - name: Retain synthetic test evidence
         if: always()
         uses: actions/upload-artifact@v4

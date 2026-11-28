@@ -11,14 +11,47 @@ device_dir="/sdcard/Android/data/$target/files"
 runner="$target.test/androidx.test.runner.AndroidJUnitRunner"
 fragility="$package.FragilityReaderVisualInstrumentedTest#standaloneVisibleMaskedAndDeferredPreserveAllAcquisitionAndActiveEvidence"
 
+reference="${1:?Expected the pinned 1.17.24 checkout}"
+test "$(git -C "$reference" rev-parse HEAD)" = fe271ca6c3dff7b9e31ca5b0a2801c9fece3be0c
+test ! -d "$reference/hifz-app/src/private114/assets"
+gradle --no-daemon -p "$reference" :hifz-app:assembleDebug :hifz-app:assembleDebugAndroidTest
 gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleDebugAndroidTest
+mapfile -t old_app < <(find "$reference/hifz-app/build/outputs/apk/debug" -name '*.apk' -type f)
+mapfile -t old_test < <(find "$reference/hifz-app/build/outputs/apk/androidTest/debug" -name '*.apk' -type f)
 mapfile -t app_apk < <(find hifz-app/build/outputs/apk/debug -name '*.apk' -type f)
 mapfile -t test_apk < <(find hifz-app/build/outputs/apk/androidTest/debug -name '*.apk' -type f)
 test "${#app_apk[@]}" -eq 1
 test "${#test_apk[@]}" -eq 1
-# Keep both debug packages installed until their app-scoped screenshots have been pulled.
-adb install -r "${app_apk[0]}"
-adb install -r "${test_apk[0]}"
+test "${#old_app[@]}" -eq 1
+test "${#old_test[@]}" -eq 1
+
+instrument() {
+    local tests="$1" count="$2" output="$3"
+    adb shell am instrument -w -r -e class "$tests" "$runner" | tr -d '\r' | tee "$output"
+    grep -Eq "^OK \\($count tests?\\)$" "$output"
+    grep -Fxq 'INSTRUMENTATION_CODE: -1' "$output"
+}
+
+run_update() {
+    local destroy="$package.ProcessDeathPersistenceInstrumentedTest"
+    local dest="$evidence/debug-update-62-to-63"
+    mkdir -p "$dest"
+    adb install -r "${old_app[0]}"
+    adb install -r "${old_test[0]}"
+    adb shell dumpsys package "$target" > "$dest/before.txt"
+    grep -Eq '^ *versionCode=62( |$)' "$dest/before.txt"
+    local first_install
+    first_install="$(awk -F= '/firstInstallTime=/{print $2; exit}' "$dest/before.txt")"
+    test -n "$first_install"
+    instrument "$destroy#a_prepareFixtureForExternalForceStop" 1 "$dest/prepare.txt"
+    adb shell am force-stop "$target"
+    adb install -r "${app_apk[0]}"
+    adb install -r "${test_apk[0]}"
+    adb shell dumpsys package "$target" > "$dest/after.txt"
+    grep -Eq '^ *versionCode=63( |$)' "$dest/after.txt"
+    test "$first_install" = "$(awk -F= '/firstInstallTime=/{print $2; exit}' "$dest/after.txt")"
+    instrument "$destroy#b_verifyFixtureAfterExternalForceStop" 1 "$dest/verify.txt"
+}
 
 run_case() {
     local size="$1" density="$2" font="$3" tests="$4" count="$5"
@@ -33,10 +66,7 @@ run_case() {
     for screenshot in "$@"; do
         adb shell rm -f "$device_dir/$screenshot.png"
     done
-    adb shell am instrument -w -r -e class "$tests" "$runner" | tee "$dest/instrumentation.txt"
-    tr -d '\r' < "$dest/instrumentation.txt" > "$dest/result.txt"
-    grep -Eq "^OK \\($count tests?\\)$" "$dest/result.txt"
-    grep -Fxq 'INSTRUMENTATION_CODE: -1' "$dest/result.txt"
+    instrument "$tests" "$count" "$dest/result.txt"
     for screenshot in "$@"; do
         adb pull "$device_dir/$screenshot.png" "$dest/"
         test -s "$dest/$screenshot.png"
@@ -44,6 +74,7 @@ run_case() {
 }
 
 frames=(fragilite-visible fragilite-masquee fragilite-cible fragilite-reprise)
+run_update
 run_case 720x1600 360 1.0 \
     "$package.HaafidhLanguagePersistenceInstrumentedTest,$fragility,$package.FragilityReaderVisualInstrumentedTest#languageRecreationKeepsOutstandingAssistedRecall" 4 \
     "${frames[@]}" fragility-fr fragility-en fragility-wo setup-summary-en
