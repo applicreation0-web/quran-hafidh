@@ -51,7 +51,7 @@ public final class SettingsActivity extends HaafidhActivity {
         super.onCreate(savedInstanceState);
         prefs = new HifzPrefs(this);
         if (getIntent().getBooleanExtra(EXTRA_INITIAL_RESTORE, false) && prefs.universalSetupPending()) {
-            LinearLayout restore = subScreen(null, getString(R.string.setup_restore));
+            LinearLayout restore = subScreen(null, R.string.setup_restore, 0);
             restore.addView(Ui.button(this, getString(R.string.setup_restore), view -> confirmImportBackup()));
             showScreen(restore);
             return;
@@ -66,16 +66,16 @@ public final class SettingsActivity extends HaafidhActivity {
 
         // Spec UI pass 2 (§6): a six-line root; each rubric opens its own short sub-screen. Every
         // row below is the same as before — only where it is shown changed.
-        LinearLayout root = subScreen(null, getString(R.string.nav_settings));
+        LinearLayout root = subScreen(null, R.string.nav_settings, 0);
         root.addView(Ui.settingRow(this, getString(R.string.app_language), LANGUAGE_LABELS[languageIndex(this)],
             view -> chooseLanguage()));
-        LinearLayout parcours = subScreen(root, "Parcours");
-        LinearLayout corpus = subScreen(root, "Plages & corpus");
-        LinearLayout revision = subScreen(root, "Révision");
-        LinearLayout audioDisplay = subScreen(root, "Audio & affichage");
-        LinearLayout backup = subScreen(root, "Sauvegarde");
-        LinearLayout advanced = subScreen(root, "Avancé");
-        LinearLayout about = subScreen(null, "À propos du parcours");
+        LinearLayout parcours = subScreen(root, R.string.nav_plan, R.string.settings_plan_intro);
+        LinearLayout corpus = subScreen(root, R.string.settings_corpus, R.string.settings_corpus_intro);
+        LinearLayout revision = subScreen(root, R.string.settings_review, R.string.settings_review_intro);
+        LinearLayout audioDisplay = subScreen(root, R.string.settings_display, R.string.settings_display_intro);
+        LinearLayout backup = subScreen(root, R.string.settings_backup, R.string.settings_backup_intro);
+        LinearLayout advanced = subScreen(root, R.string.settings_advanced, R.string.settings_advanced_intro);
+        LinearLayout about = subScreen(null, R.string.settings_about, 0);
 
         protocol=Ui.text(this,weeklyCadenceSummary(),16f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4));parcours.addView(protocol);
@@ -249,7 +249,8 @@ public final class SettingsActivity extends HaafidhActivity {
     private LinearLayout rootScreen,currentScreen;
 
     /** One short page with a back header; a non-null parent also gets a "title ›" line on it. */
-    private LinearLayout subScreen(LinearLayout parent,String title){
+    private LinearLayout subScreen(LinearLayout parent,int titleId,int summaryId){
+        String title = getString(titleId);
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Ui.PAPER);
         LinearLayout page=Ui.column(this);scroll.addView(page);
         LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
@@ -268,22 +269,9 @@ public final class SettingsActivity extends HaafidhActivity {
         if(rootScreen==null)rootScreen=page;
         if(parent!=null){
             parents.put(page,parent);
-            parent.addView(Ui.settingRow(this,title,menuSummary(title),v->showScreen(page)));parent.addView(Ui.divider(this));
+            parent.addView(Ui.settingRow(this,title,getString(summaryId),v->showScreen(page)));parent.addView(Ui.divider(this));
         }else if(page!=rootScreen)parents.put(page,null);
         return page;
-    }
-
-    /** One-line summaries for the six root rubrics; full settings remain in their own screens. */
-    private static String menuSummary(String title) {
-        switch (title) {
-            case "Parcours": return "Jours · séances · horaires";
-            case "Plages & corpus": return "Apprentissage · Itqān · acquis";
-            case "Révision": return "Vitesses · corpus";
-            case "Audio & affichage": return "Récitation · écran BOOX";
-            case "Sauvegarde": return "Exporter · importer";
-            case "Avancé": return "Diagnostic · outils";
-            default: return "";
-        }
     }
 
     private void showScreen(LinearLayout page){

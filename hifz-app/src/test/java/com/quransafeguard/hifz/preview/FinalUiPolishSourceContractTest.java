@@ -67,12 +67,12 @@ public final class FinalUiPolishSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        for (String action : new String[]{"Apprentissage", "Stabilisation", "Révision"}) assertTrue(main.contains("\"" + action + "\""));
+        for (String action : new String[]{"path_learn", "path_deepen", "path_active_review"}) assertTrue(main.contains("R.string." + action));
         assertTrue(session.contains("return \"Apprentissage\""));
         assertTrue(session.contains("return \"Stabilisation\""));
         assertTrue(session.contains("return \"Consolidation\""));
         assertTrue(session.contains("return \"Révision\""));
-        assertTrue(settings.contains("subScreen(null, \"À propos du parcours\")"));
+        assertTrue(settings.contains("subScreen(null, R.string.settings_about, 0)"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
         assertTrue(settings.contains("consolidationSchemaNote.setText(\"Consolidation · soir \"+stabilizationDays);"));
         assertFalse(settings.contains("section(root,\"Repères\")"));
@@ -131,7 +131,7 @@ public final class FinalUiPolishSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(main.contains("\"Lecture\""));
+        assertTrue(main.contains("R.string.nav_read"));
         String advanced = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertFalse("Libre must no longer compete with Lecture on Home",
             main.contains("secondaryTile(secondary, \"Mémorisation libre\""));

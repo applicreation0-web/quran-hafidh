@@ -60,8 +60,8 @@ public final class CapHifdhWiringAndProgressionContractTest {
         assertTrue(prefs.contains("migrateLegacySabqiEndDefault()")
             && prefs.contains("SabqiRoute.ROUTE_END.toString()"));
         assertTrue(home.contains("boolean afterNas=prefs.itqanPostNasMaintenance()")
-            && home.contains("afterNas ? \"Maintien\" : \"Stabiliser\"")
-            && home.contains("prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE)"));
+            && home.contains("maintaining ? R.string.path_maintain : R.string.path_deepen_short")
+            && home.contains("prochain.setVisibility(universal || afterNas ? View.GONE : View.VISIBLE)"));
         assertTrue(view.contains("ring(canvas, px, annualY, 12f")
             && view.contains("projectedProgress(sabqi)")
             && view.contains("drawMaintenanceLane(canvas")

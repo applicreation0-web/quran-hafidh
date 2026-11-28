@@ -21,7 +21,7 @@ public final class FinalBlockerSourceContractTest {
 
     @Test public void corruptConsolidationIsVisibleAndRoutesToDiagnostic() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(main.contains("Consolidation · état à vérifier"));
+        assertTrue(main.contains("R.string.today_check_consolidation"));
         assertTrue(main.contains("consolidationNeedsAttention"));
         assertTrue(main.contains("SettingsActivity.class"));
     }

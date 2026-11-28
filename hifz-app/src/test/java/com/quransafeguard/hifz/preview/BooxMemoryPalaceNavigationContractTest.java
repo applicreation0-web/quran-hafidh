@@ -19,12 +19,12 @@ public final class BooxMemoryPalaceNavigationContractTest {
 
     @Test public void sixPathsAppearAndRemainIndividuallySelectable() throws Exception {
         String main = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(main.contains("pathTile(learningModes, \"Apprentissage\""));
-        assertTrue(main.contains("pathTile(otherModes, \"Stabilisation\""));
-        assertTrue(main.contains("pathTile(reviewModes, \"Révision active\""));
-        assertTrue(main.contains("pathTile(reviewModes, \"Fragilités\""));
-        assertTrue(main.contains("pathTile(learningModes, \"Renforcement\""));
-        assertTrue(main.contains("pathTile(otherModes, \"Consolidation\""));
+        assertTrue(main.contains("pathTile(learningModes, PathDestination.LEARNING"));
+        assertTrue(main.contains("pathTile(otherModes, PathDestination.DEEP"));
+        assertTrue(main.contains("pathTile(reviewModes, PathDestination.ACTIVE_REVIEW"));
+        assertTrue(main.contains("pathTile(reviewModes, PathDestination.FRAGILITIES"));
+        assertTrue(main.contains("pathTile(learningModes, PathDestination.STRENGTHEN"));
+        assertTrue(main.contains("pathTile(otherModes, PathDestination.CUMULATIVE"));
         assertTrue(main.contains("showRevisionSelector(false)"));
         assertTrue(main.contains("showFragilityQueue()"));
     }
@@ -49,9 +49,9 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertTrue(main.contains("tile.setBackgroundColor(Ui.PAPER)"));
         assertTrue("First draw must reflect a post-Nas installation",
             main.contains("refreshItqanCardVocabulary(); // Correct title on first draw"));
-        assertTrue(main.contains("setText(afterNas ? \"Maintien\" : \"Stabiliser\")"));
-        assertTrue(main.contains("prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE)"));
-        assertTrue(main.contains("?\"Maintien · \"+JuzMaintenanceStore.CUE"));
+        assertTrue(main.contains("setText(maintaining ? R.string.path_maintain : R.string.path_deepen_short)"));
+        assertTrue(main.contains("prochain.setVisibility(universal || afterNas ? View.GONE : View.VISIBLE)"));
+        assertTrue(main.contains("afterNas ? \"Maintien · \"+JuzMaintenanceStore.CUE"));
     }
 
     @Test public void weeklyBooxCirclesAreEmptyAndStateUsesFillAndOutline() throws Exception {
@@ -91,8 +91,8 @@ public final class BooxMemoryPalaceNavigationContractTest {
         assertFalse("Do not strand future Maintien below the pictogram",
             main.contains("itqanCard.addView(maintienCue);"));
         assertTrue("After An-Nas, title becomes Maintien; parenthesized second title is hidden",
-            main.contains("setText(afterNas ? \"Maintien\" : \"Stabiliser\")")
-            && main.contains("prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE)"));
+            main.contains("setText(maintaining ? R.string.path_maintain : R.string.path_deepen_short)")
+            && main.contains("prochain.setVisibility(universal || afterNas ? View.GONE : View.VISIBLE)"));
         assertTrue("Restored programme cue must not overwrite visible Maintien subtitle",
             main.contains("itqanCard.getChildAt(3) instanceof TextView"));
         assertFalse("Wrong child-1 lookup must never replace the subtitle onResume",

@@ -49,7 +49,7 @@ public final class MaintenanceCoverageWiringSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertFalse(main.contains("HifzSchedule.MAINTENANCE_MINUTES"));
         assertTrue("Home must show a short name, never a false Sabqi 1/3 ordinal",
-            main.contains("setToday(prefix+todaySummary(mode),true);")
+            main.contains("setToday(prefix+todaySummary(mode),true,R.string.today_continue,overdue);")
             && main.contains("if(HifzSessionActivity.SABQI.equals(mode))return "));
         assertFalse("No misleading Sabqi fraction on Home",
             main.contains("WeeklyDashboardPlanner.learningSessionCue("));

@@ -74,7 +74,7 @@ public final class CanonicalProgressUiSourceContractTest {
 
     @Test public void settingsShowCanonicalSchemaInsteadOfLexiconDefinitions() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        assertTrue(settings.contains("subScreen(null, \"À propos du parcours\")"));
+        assertTrue(settings.contains("subScreen(null, R.string.settings_about, 0)"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
         assertTrue(settings.contains("consolidationSchemaNote.setText(\"Consolidation · soir \"+stabilizationDays);"));
         assertFalse(settings.contains("section(root,\"Repères\")"));
@@ -95,7 +95,7 @@ public final class CanonicalProgressUiSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(main.contains("\"Apprentissage\""));
         assertTrue(main.contains("\"Stabilisation\""));
-        assertTrue(main.contains("\"Révision\""));
+        assertTrue(main.contains("R.string.path_active_review"));
         assertTrue(main.contains("WeeklyProgramPolicy.nextDue"));
         assertTrue(main.contains("HifzSessionActivity.EXTRA_SCHEDULED_DATE"));
         assertTrue(session.contains("if (SABQI.equals(mode)) return \"Apprentissage\""));

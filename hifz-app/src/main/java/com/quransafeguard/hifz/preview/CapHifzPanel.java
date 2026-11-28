@@ -57,6 +57,7 @@ final class CapHifzPanel extends LinearLayout {
     // UI-only cursor: true is the authentic CURRENT working position.
     // Exploring years/surah completions never changes receipts or saved progress.
     private boolean todayMode = true;
+    private final TextView title;
     private TextView todayShortcut;
     private VerseRef currentSabqiVerse;
     private VerseRef currentTailVerse;
@@ -81,7 +82,7 @@ final class CapHifzPanel extends LinearLayout {
         setOrientation(VERTICAL);
         setPadding(0, Ui.dp(context, 3), 0, 0);
         LinearLayout heading = Ui.row(context);
-        TextView title = Ui.notebookTitle(context, "Cap Hifdh", 19);
+        title = Ui.notebookTitle(context, "Cap Hifdh", 19);
         heading.addView(title, new LinearLayout.LayoutParams(0, Ui.dp(context, 48), 1f));
         title.setGravity(Gravity.CENTER_VERTICAL);
         todayShortcut = Ui.text(context, "↺ Aujourd’hui", 15, false);
@@ -101,9 +102,26 @@ final class CapHifzPanel extends LinearLayout {
         line("Chargement…", 13);
     }
 
+    private void renderUniversalProgress(GeometryRepository geometry) {
+        title.setText(R.string.nav_progress);
+        todayShortcut.setVisibility(View.GONE);
+        body.removeAllViews();
+        HifzPrefs.ProgressionSnapshot progress = prefs.progressionSnapshotV6();
+        line(context.getString(R.string.overview_remaining, prefs.sabqiLinesRemaining(geometry)), 16);
+        line(context.getString(R.string.overview_learned, progress.learned.size()), 16);
+        line(context.getString(R.string.overview_stabilized, progress.stabilized.size()), 16);
+        line(context.getString(R.string.overview_acquired, progress.acquired.size()), 16);
+    }
+
     void refresh(GeometryRepository geometry) {
         this.geometry = geometry;
         prefs = HifzPrefs.readOnly(context);
+        if (prefs.universalProfile()) {
+            renderUniversalProgress(geometry);
+            return;
+        }
+        title.setText("Cap Hifdh");
+        todayShortcut.setVisibility(View.VISIBLE);
         ledger = DashboardLedger.readOnly(context);
         finals = new PostFinalRecallStore(context);
         today = HifzClock.today();

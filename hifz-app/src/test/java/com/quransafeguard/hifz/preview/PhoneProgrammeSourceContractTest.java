@@ -12,7 +12,7 @@ public final class PhoneProgrammeSourceContractTest {
     }
     @Test public void continueAlwaysPreviewsAndWeekHasClearTitles() throws Exception {
         String main=source("MainActivity.java");
-        assertTrue(main.contains("VOIR LES SÉANCES  ›"));
+        assertTrue(main.contains("R.string.today_show_sessions"));
         assertTrue(main.contains("showTodayWindow(sessions);"));
         assertTrue(main.contains("if(sessions.isEmpty()){"));
         assertFalse(main.contains("if(sessions.size()<=1){ openMode(mode,scheduled); return; }"));

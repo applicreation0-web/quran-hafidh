@@ -19,14 +19,14 @@ public final class BooxMenuHierarchySourceContractTest {
         String home = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertFalse(home.contains("TextView subtitle = Ui.menuSubline(this, pathSubtitle(label))"));
         assertFalse(home.contains("tile.addView(subtitle)"));
-        assertTrue(home.contains("tile.setContentDescription(label+\" · \"+pathSubtitle(label)+\" · \"+state);"));
+        assertTrue(home.contains("tile.setContentDescription(getString(destination.label)+\" · \"+getString(destination.description)+\" · \"+state);"));
         assertTrue("The visible title must precede the large pictogram",
             home.indexOf("tile.addView(name);") < home.indexOf("tile.addView(iconView, iconLayout);"));
         assertTrue("Both historical finales require their own distinguishable icons",
             home.contains("ic_hifz_final_sabqi") && home.contains("ic_hifz_final_itqan"));
         for (String shortText : new String[] {
-            "Nouvelle leçon", "Révision cumulative Sabqi", "Répétitions approfondies",
-            "Révision cumulative Itqān", "Texte masqué", "Texte visible"
+            "study_new", "study_sabqi_review", "study_deep_reps",
+            "study_itqan_review", "study_masked_text", "study_weak_material"
         }) assertTrue(shortText, home.contains(shortText));
         assertTrue("Long stabilization state must remain available for updates",
             home.contains("cue.setVisibility(View.GONE);") && home.contains("tile.addView(cue);"));

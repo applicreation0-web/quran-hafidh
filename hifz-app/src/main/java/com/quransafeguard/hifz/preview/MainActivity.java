@@ -178,9 +178,9 @@ public final class MainActivity extends HaafidhActivity {
         // Sabqi: introduce one set, then cumulatively revisit it.
         path.addView(pathSectionTitle("ACQUISITION"));
         LinearLayout learningModes = Ui.row(this);
-        LinearLayout sabqi = pathTile(learningModes, "Apprentissage", "1 page/semaine",
+        LinearLayout sabqi = pathTile(learningModes, PathDestination.LEARNING, "1 page/semaine",
             v -> openMode(HifzSessionActivity.SABQI));
-        LinearLayout renforcement = pathTile(learningModes, "Renforcement", "Sabqi",
+        LinearLayout renforcement = pathTile(learningModes, PathDestination.STRENGTHEN, "Sabqi",
             v -> openMode(renforcementQuickAccessMode()));
         if(wideBoox())path.addView(learningModes,new LinearLayout.LayoutParams(-1,0,1f));
         else path.addView(learningModes);
@@ -188,7 +188,7 @@ public final class MainActivity extends HaafidhActivity {
         // Itqan: one bounded memorization unit, then its accumulated units.
         path.addView(pathSectionTitle("MAÎTRISE"));
         LinearLayout otherModes = Ui.row(this);
-        itqanCard = pathTile(otherModes, "Stabilisation", stabilizationProgramCue(),
+        itqanCard = pathTile(otherModes, PathDestination.DEEP, stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
         // The future Maintien regime is a second title line, directly beneath
         // Stabiliser, in the exact same BOOX book font. Never strand it below
@@ -198,7 +198,7 @@ public final class MainActivity extends HaafidhActivity {
         maintienCue.setPadding(0,Ui.dp(this,1),0,0);
         itqanCard.addView(maintienCue, 1);
         LinearLayout itqan = itqanCard;
-        LinearLayout consolidation = pathTile(otherModes, "Consolidation", "Itqān",
+        LinearLayout consolidation = pathTile(otherModes, PathDestination.CUMULATIVE, "Itqān",
             v -> openMode(consolidationQuickAccessMode()));
         consolidationCard = consolidation; // Same action and immutable original icon.
         refreshItqanCardVocabulary(); // Correct title on first draw, not just onResume.
@@ -209,9 +209,9 @@ public final class MainActivity extends HaafidhActivity {
         // Same acquired corpus, two modalities: text masked vs text visible.
         path.addView(pathSectionTitle("RÉVISION"));
         LinearLayout reviewModes = Ui.row(this);
-        LinearLayout activeRevision = pathTile(reviewModes, "Révision active", "Récitation masquée",
+        LinearLayout activeRevision = pathTile(reviewModes, PathDestination.ACTIVE_REVIEW, "Récitation masquée",
             v -> showRevisionSelector(false));
-        LinearLayout fragilities = pathTile(reviewModes, "Fragilités", "Passages à renforcer",
+        LinearLayout fragilities = pathTile(reviewModes, PathDestination.FRAGILITIES, "Passages à renforcer",
             v -> showFragilityQueue());
         if(wideBoox())path.addView(reviewModes,new LinearLayout.LayoutParams(-1,0,1f));
         else path.addView(reviewModes);
@@ -312,6 +312,8 @@ public final class MainActivity extends HaafidhActivity {
         days.setAdapter(choices);
         days.setSelection(3);
         root.addView(days);
+        root.addView(Ui.settingRow(this, getString(R.string.setup_template), "", view ->
+            chooseStudyTemplate(declared, deep, maintenance, days)));
         root.addView(Ui.button(this, getString(R.string.setup_save), view -> {
             try {
                 GeometryRepository geo = GeometryRepository.get(this);
@@ -332,6 +334,24 @@ public final class MainActivity extends HaafidhActivity {
             view -> startActivity(new Intent(this, SettingsActivity.class)
                 .putExtra(SettingsActivity.EXTRA_INITIAL_RESTORE, true))));
         setContentView(scrollOf(root));
+    }
+
+    private void chooseStudyTemplate(android.widget.EditText declaration, android.widget.CheckBox deep,
+            android.widget.CheckBox maintenance, android.widget.Spinner days) {
+        String[] choices = {
+            getString(R.string.setup_beginner), getString(R.string.setup_intermediate),
+            getString(R.string.setup_advanced), getString(R.string.setup_whole_quran),
+            getString(R.string.setup_review_only)
+        };
+        new android.app.AlertDialog.Builder(this)
+            .setTitle(R.string.setup_template)
+            .setItems(choices, (dialog, choice) -> {
+                days.setSelection(choice == 0 ? 2 : choice <= 2 ? 3 : 0);
+                deep.setChecked(choice == 2);
+                maintenance.setChecked(choice == 3);
+                if (choice == 3 && declaration.getText().toString().trim().isEmpty())
+                    declaration.setText("1:1-114:6");
+            }).setNegativeButton(android.R.string.cancel, null).show();
     }
 
     private android.widget.EditText rangeInput(LinearLayout root, int label, int id) {
@@ -432,21 +452,25 @@ public final class MainActivity extends HaafidhActivity {
     }
 
 
-    /** Full-size BOOX pictograms. Small action icons and their tint contract remain in Ui. */
-    private static int largeIconFor(String role) {
-        if ("Accueil".equals(role)) return R.drawable.ic_haafidh_accueil;
-        if ("Parcours".equals(role) || "Parcours Hifz".equals(role)) return R.drawable.ic_haafidh_parcours;
-        if ("Lecture".equals(role)) return R.drawable.ic_haafidh_lecture;
-        if ("Atlas".equals(role)) return R.drawable.ic_haafidh_atlas;
-        if ("Progression".equals(role)) return R.drawable.ic_haafidh_progression;
-        if ("Apprentissage".equals(role)) return R.drawable.ic_haafidh_apprentissage;
-        if ("Renforcement".equals(role)) return R.drawable.ic_haafidh_renforcement;
-        if ("Stabilisation".equals(role)) return R.drawable.ic_haafidh_stabilisation;
-        if ("Consolidation".equals(role)) return R.drawable.ic_haafidh_consolidation;
-        if ("Révision active".equals(role)) return R.drawable.ic_haafidh_revision_active;
-        if ("Fragilités".equals(role)) return R.drawable.ic_haafidh_fragilities;
-        if ("Révision passive".equals(role)) return R.drawable.ic_haafidh_revision_passive;
-        return 0;
+    private enum PathDestination {
+        LEARNING(R.drawable.ic_haafidh_apprentissage, R.string.path_learn, R.string.path_learn_short, R.string.study_new),
+        STRENGTHEN(R.drawable.ic_haafidh_renforcement, R.string.path_strengthen, R.string.path_strengthen, R.string.study_sabqi_review),
+        DEEP(R.drawable.ic_haafidh_stabilisation, R.string.path_deepen, R.string.path_deepen_short, R.string.study_deep_reps),
+        CUMULATIVE(R.drawable.ic_haafidh_consolidation, R.string.path_consolidate, R.string.path_consolidate, R.string.study_itqan_review),
+        ACTIVE_REVIEW(R.drawable.ic_haafidh_revision_active, R.string.path_active_review, R.string.path_active_review, R.string.study_masked_text),
+        FRAGILITIES(R.drawable.ic_haafidh_fragilities, R.string.fragility_title, R.string.fragility_title, R.string.study_weak_material);
+
+        final int icon;
+        final int label;
+        final int title;
+        final int description;
+
+        PathDestination(int icon, int label, int title, int description) {
+            this.icon = icon;
+            this.label = label;
+            this.title = title;
+            this.description = description;
+        }
     }
 
     /** BOOX typography responds to physical tablet proportions, not to phone font sizes. */
@@ -542,7 +566,7 @@ public final class MainActivity extends HaafidhActivity {
     }
 
     /** Borderless Hifz ribbon with frozen pictograms; child 1 remains live cue state. */
-    private LinearLayout pathTile(LinearLayout parent, String label, String state,
+    private LinearLayout pathTile(LinearLayout parent, PathDestination destination, String state,
                                  View.OnClickListener listener) {
         LinearLayout tile = Ui.column(this);
         tile.setPadding(Ui.dp(this, 2), Ui.dp(this, wideBoox() ? 4 : 8), Ui.dp(this, 2), Ui.dp(this, wideBoox() ? 4 : 8));
@@ -554,18 +578,12 @@ public final class MainActivity extends HaafidhActivity {
             tile.setBackgroundColor(Ui.PAPER);
             tile.setMinimumHeight(0);
         } else tile.setMinimumHeight(Ui.dp(this,sideDp+52));
-        String shortLabel = "Apprentissage".equals(label) ? "Apprendre"
-            : "Stabilisation".equals(label) ? "Stabiliser"
-            : "Révision".equals(label) ? "Réviser" : label;
-        TextView name = Ui.bookText(this, shortLabel, 19f, true);
+        TextView name = Ui.bookText(this, getString(destination.title), 19f, true);
         if (wideBoox()) name.setTextSize(19f);
         name.setGravity(Gravity.CENTER);
         name.setMaxLines(2);
-        int icon = largeIconFor(label);
-        if (icon == 0) icon = Ui.iconFor(label, label);
-        if (icon == 0) throw new IllegalArgumentException("Unmapped Hifz mode: "+label);
         // Intrinsic drawable size is only 24dp; explicit bounds keep it legible on BOOX.
-        Drawable architectural = getDrawable(icon).mutate();
+        Drawable architectural = getDrawable(destination.icon).mutate();
         architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp));
         tile.addView(name);
         ImageView iconView = new ImageView(this);
@@ -583,7 +601,7 @@ public final class MainActivity extends HaafidhActivity {
         tile.addView(cue);
         // No visible caption beneath Hifz pictograms; the title is ABOVE
         // the icon and a semantic subtitle remains available to accessibility.
-        tile.setContentDescription(label+" · "+pathSubtitle(label)+" · "+state);
+        tile.setContentDescription(getString(destination.label)+" · "+getString(destination.description)+" · "+state);
         tile.setClickable(true);
         tile.setFocusable(true);
         tile.setOnClickListener(listener);
@@ -595,37 +613,23 @@ public final class MainActivity extends HaafidhActivity {
         return tile;
     }
 
-    /** Clear, stable vocabulary: the selected-day panel carries all actual verse limits. */
-    private static String pathSubtitle(String label) {
-        switch (label) {
-            case "Apprentissage": return "Nouvelle leçon";
-            case "Renforcement": return "Révision cumulative Sabqi";
-            case "Stabilisation": return "Répétitions approfondies";
-            case "Consolidation": return "Révision cumulative Itqān";
-            case "Révision active": return "Texte masqué";
-            case "Fragilités": return "Passages à renforcer";
-            case "Révision passive": return "Texte visible";
-            default: return "";
-        }
-    }
-
     /** Today's dominant action displays the canonical next due session. */
     private void setToday(String text, boolean enabled) {
+        setToday(text, enabled, R.string.today_continue, false);
+    }
+
+    private void setToday(String text, boolean enabled, int actionLabel, boolean overdue) {
         today.setText(text);
         // The single hero CTA always describes its actual destination.
         if (todayObjective != null) {
             // One read-only preview of actual schedule objectives, never a credit or cursor advance.
-            todayObjective.setText(text.startsWith("Report ")
-                ? "PRIORITÉ · séance datée à rattraper"
-                : "Sélectionnez la séance pour les détails");
+            todayObjective.setText(overdue ? R.string.today_overdue : R.string.today_details);
             todayObjective.setContentDescription(todayRow==null ? "Programme détaillé dans Parcours" : scheduleDetail(todayRow.morning));
         }
         if (todayAction != null && todayAction.getChildCount() >= 4
                 && todayAction.getChildAt(3) instanceof TextView) {
             TextView action = (TextView) todayAction.getChildAt(3);
-            action.setText(text.startsWith("Consolidation · état") ? "VÉRIFIER  ›"
-                : text.contains("à reprendre") ? "REPRENDRE  ›"
-                : text.contains("Programme à jour") ? "VOIR LES SÉANCES  ›" : "CONTINUER  ›");
+            action.setText(actionLabel);
         }
         setTodayEnabled(enabled);
     }
@@ -674,26 +678,29 @@ public final class MainActivity extends HaafidhActivity {
     /** Only change text; retain the original fixed pictogram and click destination. */
     private void refreshItqanCardVocabulary() {
         if(consolidationCard==null || prefs==null) return;
+        boolean universal=prefs.universalProfile();
         boolean afterNas=prefs.itqanPostNasMaintenance();
+        boolean maintaining=universal?prefs.universalMaintenanceDue(HifzClock.today()):afterNas;
         // Child order: title, subtitle, pictogram, invisible program cue.
         if(itqanCard!=null){
             if(itqanCard.getChildAt(0) instanceof TextView)
-                ((TextView)itqanCard.getChildAt(0)).setText(afterNas ? "Maintien" : "Stabiliser");
+                ((TextView)itqanCard.getChildAt(0)).setText(maintaining ? R.string.path_maintain : R.string.path_deepen_short);
             if(itqanCard.getChildCount()>1 && itqanCard.getChildAt(1) instanceof TextView){
                 TextView prochain=(TextView)itqanCard.getChildAt(1);
                 prochain.setText("(Maintien)");
-                prochain.setVisibility(afterNas ? View.GONE : View.VISIBLE);
+                prochain.setVisibility(universal || afterNas ? View.GONE : View.VISIBLE);
             }
-            itqanCard.setContentDescription(afterNas
-                ?"Maintien · "+JuzMaintenanceStore.CUE
-                :"Stabiliser (Maintien) · Premier passage ; ensuite Maintien après An-Nās");
+            itqanCard.setContentDescription(universal
+                ? getString(maintaining ? R.string.setup_maintenance : R.string.setup_deep)
+                : afterNas ? "Maintien · "+JuzMaintenanceStore.CUE
+                    : "Stabiliser (Maintien) · Premier passage ; ensuite Maintien après An-Nās");
         }
         if(consolidationCard.getChildAt(0) instanceof TextView)
-            ((TextView)consolidationCard.getChildAt(0)).setText("Consolidation");
-        String subtitle=afterNas?"Maintiens de la semaine · masqués":"Révision cumulative Itqān";
+            ((TextView)consolidationCard.getChildAt(0)).setText(R.string.path_consolidate);
+        String subtitle=afterNas?"Maintiens de la semaine · masqués":getString(R.string.study_itqan_review);
         if(consolidationCard.getChildCount()>3 && consolidationCard.getChildAt(3) instanceof TextView)
             ((TextView)consolidationCard.getChildAt(3)).setText(subtitle);
-        consolidationCard.setContentDescription("Consolidation · "+subtitle);
+        consolidationCard.setContentDescription(getString(R.string.path_consolidate)+" · "+subtitle);
     }
 
     private void refreshAll() { refreshItqanCardVocabulary(); refreshBacklog(); refreshQuickAccessCadenceGating(); refreshDashboard(); refreshToday(); refreshRecentSabqiAdvisory(); refreshStabilizationPosition(); }
@@ -1476,7 +1483,8 @@ public final class MainActivity extends HaafidhActivity {
         // cadence cannot be reconstructed after midnight.
         List<TodaySession> prior=unfinishedWeekendSessions(current);
         if(!prior.isEmpty()) {
-            setToday(prior.size()==1?"Séance à reprendre":"Séances à reprendre",true);
+            setToday(getString(prior.size() == 1 ? R.string.today_pending_one : R.string.today_pending_multiple),
+                true, R.string.today_resume, false);
             if(todayObjective!=null) {
                 java.util.LinkedHashSet<String> names=new java.util.LinkedHashSet<>();
                 for(TodaySession item:prior) {
@@ -1498,14 +1506,18 @@ public final class MainActivity extends HaafidhActivity {
         ScheduledCadence due=nextDueCadence(current);
         String mode=nextMode(due);
         if(consolidationNeedsAttention||learningConsolidationNeedsAttention){
-            setToday("Consolidation · état à vérifier",true);
+            setToday(getString(R.string.today_check_consolidation),true,R.string.today_check,false);
             return;
         }
-        if(mode==null){setToday("Programme à jour · voir les séances",true);return;}
-        String prefix=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
+        if(mode==null){
+            setToday(getString(R.string.today_up_to_date),true,R.string.today_show_sessions,false);
+            return;
+        }
+        boolean overdue=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue();
+        String prefix=overdue?getString(R.string.today_deferred_date, due.getScheduledDate())+" ":"";
         // A delayed lesson keeps its physical cursor. No fictitious 1/3
         // marker on Home: attendance dates are not learned-unit ordinals.
-        setToday(prefix+todaySummary(mode),true);
+        setToday(prefix+todaySummary(mode),true,R.string.today_continue,overdue);
         if(todayObjective!=null){
             String description=homePreviewForMode(mode,todayRow,prefs.itqanEntretienActive());
             todayObjective.setText(description);

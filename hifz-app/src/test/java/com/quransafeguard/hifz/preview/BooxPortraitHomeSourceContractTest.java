@@ -108,13 +108,13 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("Decorative curves were rejected by the BOOX owner",
             home.contains("new BooxFlowStroke(this)"));
         assertTrue("Each Hifz mode uses an approved dedicated full-size vector",
-            home.contains("int icon = largeIconFor(label)")
-                && home.contains("if (icon == 0) icon = Ui.iconFor(label, label)")
+            home.contains("getDrawable(destination.icon)")
+                && home.contains("R.drawable.ic_haafidh_apprentissage")
                 && home.contains("architectural.setBounds(0, 0, Ui.dp(this, sideDp), Ui.dp(this, sideDp))")
                 && home.contains("booxIconDp(2, 124)"));
         assertTrue("Compact mode names must fit in one BOOX column",
-            home.contains("\"Apprentissage\".equals(label) ? \"Apprendre\"")
-                && home.contains("\"Stabilisation\".equals(label) ? \"Stabiliser\""));
+            home.contains("R.string.path_learn_short")
+                && home.contains("R.string.path_deepen_short"));
         assertTrue("Real verse boundaries must be shown rather than discarded into only modes",
             home.contains("scheduleDetail(chosen.morning)")
                 && home.contains("scheduleDetail(chosen.evening)")
