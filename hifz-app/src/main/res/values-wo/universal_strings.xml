@@ -2,7 +2,7 @@
 <resources>
   <string name="app_language">Làkk</string>
   <string name="setup_title">Tëral sa njàng</string>
-  <string name="setup_ranges_help">Bindal pàcc yi nii: saar:aaya-saar:aaya. Teqale leen ak wirgul. Misaal: 112:1-112:4.</string>
+  <string name="setup_ranges_help">Bindal pàcc yi nii: saar:aaya-saar:aaya. Teqale leen ak wirgul. Misaal: 112:1-112:4. Mën nga bind p1–2 ngir xët yi, h1–2 ngir hizb yi, j1–2 ngir juz yi, walla l1–5 ngir rëdd yi dale ko ci ndorteelu musaf bi.</string>
   <string name="setup_learning_ranges">Pàcc yi ngay mokkal</string>
   <string name="setup_declared_ranges">Pàcc yi nga mokkal ba noppi (boo bëggee)</string>
   <string name="setup_learning_days">Bési njàng ci ayu-bés bi</string>
@@ -110,4 +110,26 @@
   <string name="nav_week_accessibility">Dem ci nasum ayubés bi</string>
   <string name="nav_next_week">Juróom ñaari fan yi ñëw</string>
   <string name="today_title">TEY</string>
+  <string name="settings_review_budget">Diiru nafar gumba</string>
+  <string name="settings_review_budget_help">Ci jotaay yi di ñëw</string>
+  <string name="settings_review_budget_auto">Boppam, aju ci li nga mokkal</string>
+  <string name="settings_review_budget_minutes">%1$d simili ci tari bi ak %2$d simili ci pàcc yu jafe</string>
+  <string name="backup_export">Génne dencukaay</string>
+  <string name="backup_export_location">Denc ci biti jëfekaay bi</string>
+  <string name="backup_import">Dugal dencukaay</string>
+  <string name="backup_import_location">Ju jóge ci dencukaay</string>
+  <string name="backup_device_only">Sa liggéey dafa denc ci jëfekaay bii.</string>
+  <string name="backup_reference">Lu jëm ci dencukaay yi</string>
+  <string name="backup_title">Dencukaay</string>
+  <string name="backup_about">Sa liggéey dafa denc ci jëfekaay bii. Faral di génne dencukaay ngir bañ a ñàkk sa liggéey.</string>
+  <string name="backup_exported">Dencukaay bi génn na.</string>
+  <string name="backup_export_error">Génne dencukaay bi antuwul: %1$s</string>
+  <string name="backup_import_confirm">Dugal dencukaay</string>
+  <string name="backup_import_warning">Dencukaay bi dina wuutu sa liggéey bii. Dencukaay yu V1 yorul jotaay yi nga sottaloon. Xibaar yooyu sax duñu feeñ.</string>
+  <string name="backup_choose_file">Tànn dencukaay bi</string>
+  <string name="backup_chooser_title">Tànn dencukaay</string>
+  <string name="backup_restoring_title">Jëlaat li nga denc</string>
+  <string name="backup_restoring_message">Seet ak jëlaat li nga denc…</string>
+  <string name="backup_import_error">Dugal dencukaay bi antuwul: %1$s</string>
+  <string name="backup_restored">Dencukaay bi dellu na (%1$d mbir).</string>
 </resources>

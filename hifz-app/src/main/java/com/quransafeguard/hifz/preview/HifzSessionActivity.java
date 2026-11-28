@@ -289,7 +289,10 @@ public final class HifzSessionActivity extends HaafidhActivity implements Mushaf
                         throw new IllegalStateException("Unable to open correction");
                 }else{
                     standaloneMinutes=(int)(pending.activeElapsedMs/60_000L);
-                    if(standaloneMinutes!=40&&standaloneMinutes!=60&&standaloneMinutes!=70)
+                    boolean validMinutes = prefs.universalProfile()
+                        ? standaloneMinutes > 0 && ActiveReviewDurationPolicy.validProfileMinutes(standaloneMinutes)
+                        : standaloneMinutes == 40 || standaloneMinutes == 60 || standaloneMinutes == 70;
+                    if(!validMinutes)
                         throw new IllegalStateException("Invalid manual correction budget");
                 }
             }catch(RuntimeException problem){

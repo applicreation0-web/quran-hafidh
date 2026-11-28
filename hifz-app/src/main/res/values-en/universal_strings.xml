@@ -2,7 +2,7 @@
 <resources>
   <string name="app_language">Language</string>
   <string name="setup_title">Set up your study plan</string>
-  <string name="setup_ranges_help">Enter passages as surah:verse-surah:verse, separated by commas. For example: 112:1-112:4.</string>
+  <string name="setup_ranges_help">Enter passages as surah:verse-surah:verse, separated by commas. For example: 112:1-112:4. You can also enter p1–2 for pages, h1–2 for hizb, j1–2 for juz, or l1–5 for lines counted from the start of the mushaf.</string>
   <string name="setup_learning_ranges">Passages to memorize</string>
   <string name="setup_declared_ranges">Already memorized passages (optional)</string>
   <string name="setup_learning_days">Learning days per week</string>
@@ -110,4 +110,26 @@
   <string name="nav_week_accessibility">Go to the weekly plan</string>
   <string name="nav_next_week">Next seven days</string>
   <string name="today_title">TODAY</string>
+  <string name="settings_review_budget">Recall practice duration</string>
+  <string name="settings_review_budget_help">For future sessions</string>
+  <string name="settings_review_budget_auto">Automatic, based on memorized material</string>
+  <string name="settings_review_budget_minutes">%1$d min of recall and %2$d min on weak spots</string>
+  <string name="backup_export">Export</string>
+  <string name="backup_export_location">To a file outside the app</string>
+  <string name="backup_import">Import</string>
+  <string name="backup_import_location">From a backup file</string>
+  <string name="backup_device_only">Your progress is stored on this device.</string>
+  <string name="backup_reference">About backups</string>
+  <string name="backup_title">Backup</string>
+  <string name="backup_about">Progress stays in the app. Export backups regularly to keep a copy if you remove the app or lose this device.</string>
+  <string name="backup_exported">Backup exported.</string>
+  <string name="backup_export_error">Export failed: %1$s</string>
+  <string name="backup_import_confirm">Import a backup</string>
+  <string name="backup_import_warning">The backup will replace your current progress. Legacy V1 backups omit session completions. That history will remain unknown.</string>
+  <string name="backup_choose_file">Choose file</string>
+  <string name="backup_chooser_title">Choose a backup</string>
+  <string name="backup_restoring_title">Restoring</string>
+  <string name="backup_restoring_message">Checking and restoring the backup…</string>
+  <string name="backup_import_error">Import failed: %1$s</string>
+  <string name="backup_restored">Backup restored (%1$d entries).</string>
 </resources>

@@ -49,6 +49,28 @@ public final class UniversalLearningRouteTest {
         assertThrows(IllegalArgumentException.class, () -> UniversalLearningRoute.of(partial, geometry));
     }
 
+    @Test public void physicalAndCanonicalUnitsResolveToExplicitVerseRanges() {
+        var pages = UniversalLearningRoute.parse("p604, P1", geometry);
+        var route = UniversalLearningRoute.of(pages, geometry);
+        assertEquals(604, geometry.line(route.at(0).first).page);
+        assertEquals(geometry.lineCount() - 1, route.at(0).last);
+        assertEquals(0, route.at(1).first);
+        assertEquals(pages.get(1), UniversalLearningRoute.parse("l1–" + (route.at(1).last + 1), geometry).get(0));
+        var juz = UniversalLearningRoute.parse("j1-30", geometry);
+        assertEquals(UniversalLearningRoute.parse("1:1-114:6"), juz);
+        assertEquals(new VerseRef(114,6), UniversalLearningRoute.parse("H60", geometry).get(0).getEndInclusive());
+        assertThrows(IllegalArgumentException.class, () -> UniversalLearningRoute.parse("p605", geometry));
+        assertThrows(IllegalArgumentException.class, () -> UniversalLearningRoute.parse("h2-1", geometry));
+        for (int line = 0; line < geometry.lineCount()-1; line++) {
+            var verses = geometry.line(line).verses;
+            if (!geometry.line(line+1).verses.contains(verses.get(verses.size()-1))) continue;
+            String split = "l1-" + (line+1);
+            assertThrows(IllegalArgumentException.class, () -> UniversalLearningRoute.parse(split, geometry));
+            return;
+        }
+        fail("Fixture must contain at least one verse that spans two physical lines");
+    }
+
     @Test public void explicitFirstRunDeclarationNeverManufacturesEarnedLines() {
         InMemoryPrefs raw = new InMemoryPrefs();
         raw.edit().putInt("schema", 6).putString("programStartDate", "2026-11-27")
@@ -140,6 +162,34 @@ public final class UniversalLearningRouteTest {
         assertFalse(ItqanRegimeStore.postNasMaintenance(raw));
     }
 
+    @Test public void deepConsolidationOutsideHistoricRangesRequiresPhysicalProof() {
+        LocalDate date = LocalDate.of(2026,11,28);
+        HifzClock.setClockForTests(Clock.fixed(date.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putString("programStartDate", "2026-11-26").putBoolean(HifzPrefs.UNIVERSAL_SETUP,true).commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        var selected = UniversalLearningRoute.parse("1:1-1:7");
+        assertTrue(prefs.configureNewProfile(Collections.emptyList(), Collections.emptyList(), selected,
+            true, false, 0, geometry));
+        var entry = prefs.currentAnchoringEntry(geometry);
+        assertNotNull(entry);
+        var start = GeometryRepository.parseVerse(entry.start);
+        var end = GeometryRepository.parseVerse(entry.end);
+        assertEquals(new VerseRef(1,1), start);
+        var plan = StabilizationHalfPagePolicy.planPage(geometry.linesForExactIds(
+            prefs.ordinaryItqanLineIds(start,end,geometry)));
+        var block = plan.get(0);
+        var next = prefs.itqanWorkCorpus().nextAnchored(end, prefs.repairedItqanRotationStart());
+        boolean finalBlock = plan.size() == 1;
+        assertFalse(prefs.completeStabilizationBlockV6(block.lineIds, 1, finalBlock,
+            start, end, next, date.toString(), "synthetic", Collections.emptyList()));
+        assertTrue(MorningProtocolFixture.completeItqan(prefs, block.lineIds, 1, finalBlock,
+            start, end, next, date.toString(), "synthetic", Collections.emptyList()));
+        assertEquals(new java.util.LinkedHashSet<>(block.lineIds), prefs.progressionSnapshotV6().stabilized);
+        assertTrue(prefs.progressionSnapshotV6().acquired.isEmpty());
+        assertFalse(ItqanRegimeStore.postNasMaintenance(raw));
+    }
+
     @Test public void legacyRangeEditorsCannotAssignFutureLearningToAnotherDiscipline() {
         InMemoryPrefs raw = new InMemoryPrefs();
         raw.edit().putInt("schema", 6).putString("programStartDate", "2026-11-27")
@@ -171,5 +221,28 @@ public final class UniversalLearningRouteTest {
         assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
         values.remove(HifzPrefs.UNIVERSAL_LEARNING);
         assertThrows(org.json.JSONException.class, () -> HifzBackup.validateUniversalProfile(values, geometry));
+    }
+
+    @Test public void reviewBudgetChangesOnlyFutureSessionsAndKeepsHistoricDefaults() {
+        InMemoryPrefs raw = LongHorizonHifzPersistenceStressTest.freshV6Disk();
+        raw.edit().putString("itqanRanges", "[{\"start\":\"1:1\",\"end\":\"1:7\"}]")
+            .putString("programStartDate", "2026-11-27").commit();
+        HifzPrefs prefs = new HifzPrefs(raw, geometry);
+        assertFalse(prefs.setUniversalActiveReviewMinutes(30));
+        assertEquals(40, prefs.activeReviewMinutes(geometry));
+        raw.edit().putBoolean(HifzPrefs.UNIVERSAL_SETUP, true).commit();
+        assertTrue(prefs.configureNewProfile(Collections.emptyList(), UniversalLearningRoute.parse("1:1-1:7"),
+            Collections.emptyList(), false, false, 0, geometry));
+        assertFalse(prefs.setUniversalActiveReviewMinutes(13));
+        assertTrue(prefs.setUniversalActiveReviewMinutes(30));
+        var date = LocalDate.of(2026,11,28);
+        HifzClock.setClockForTests(Clock.fixed(date.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC));
+        var slots = prefs.activeReviewSlots();
+        var first = new VerseRef(1,1);
+        assertTrue(slots.checkpoint(date, ActiveReviewSlots.Slot.MORNING, first, first, 1, 1_000,
+            false, prefs.activeReviewMinutes(geometry)));
+        assertTrue(prefs.setUniversalActiveReviewMinutes(45));
+        assertEquals(30, slots.targetMinutes(date, ActiveReviewSlots.Slot.MORNING, prefs.activeReviewMinutes(geometry)));
+        assertEquals(45, slots.targetMinutes(date, ActiveReviewSlots.Slot.EVENING, prefs.activeReviewMinutes(geometry)));
     }
 }

@@ -169,6 +169,10 @@ public final class SettingsActivity extends HaafidhActivity {
         corpus.addView(effectiveCorpusStatus);
 
         murajaahStatus=Ui.text(this,"",16f,false);murajaahStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));revision.addView(murajaahStatus);
+        if (prefs.universalProfile()) {
+            revision.addView(Ui.settingRow(this, getString(R.string.settings_review_budget),
+                getString(R.string.settings_review_budget_help), view -> chooseReviewBudget()));
+        }
         revision.addView(Ui.divider(this));
         revision.addView(Ui.settingRow(this,"Rotation active · objectif","10 jours · référence 8 s/ligne",null));
         revision.addView(Ui.divider(this));
@@ -180,14 +184,14 @@ public final class SettingsActivity extends HaafidhActivity {
         TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",16f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
         Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);audioDisplay.addView(einkRow);
 
-        backup.addView(Ui.settingRow(this,"Exporter","Hors de l’appareil",v->exportBackup()));backup.addView(Ui.divider(this));
-        backup.addView(Ui.settingRow(this,"Importer","Depuis une sauvegarde",v->confirmImportBackup()));backup.addView(Ui.divider(this));
+        backup.addView(Ui.settingRow(this,getString(R.string.backup_export),getString(R.string.backup_export_location),v->exportBackup()));backup.addView(Ui.divider(this));
+        backup.addView(Ui.settingRow(this,getString(R.string.backup_import),getString(R.string.backup_import_location),v->confirmImportBackup()));backup.addView(Ui.divider(this));
         LinearLayout backupNoteRow=Ui.row(this);backupNoteRow.setGravity(Gravity.CENTER_VERTICAL);
-        TextView backupNote=Ui.text(this,"Progression stockée uniquement sur cet appareil.",16f,false);
+        TextView backupNote=Ui.text(this,getString(R.string.backup_device_only),16f,false);
         backupNote.setTextColor(Ui.MUTED);backupNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);Ui.weight(backupNote,1);backupNoteRow.addView(backupNote);
-        backupNoteRow.addView(Ui.iconButton(this,"i","Référence · sauvegarde",v->new AlertDialog.Builder(this)
-            .setTitle("Sauvegarde")
-            .setMessage("Sans compte ni serveur, la progression vit uniquement dans l’appli : désinstaller l’appli ou perdre l’appareil l’efface. Exportez régulièrement.")
+        backupNoteRow.addView(Ui.iconButton(this,R.drawable.ic_ui_info,getString(R.string.backup_reference),v->new AlertDialog.Builder(this)
+            .setTitle(R.string.backup_title)
+            .setMessage(R.string.backup_about)
             .setPositiveButton("OK",null).show()));
         backup.addView(backupNoteRow);
 
@@ -491,7 +495,7 @@ public final class SettingsActivity extends HaafidhActivity {
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.setup_save, (dialog, button) -> {
                 try {
-                    if (prefs.updateUniversalLearning(UniversalLearningRoute.parse(input.getText().toString()), geometry))
+                    if (prefs.updateUniversalLearning(UniversalLearningRoute.parse(input.getText().toString(), geometry), geometry))
                         refreshSabqi();
                     else Toast.makeText(this, R.string.setup_keep_finished_ranges, Toast.LENGTH_LONG).show();
                 } catch (IllegalArgumentException invalid) {
@@ -718,10 +722,37 @@ public final class SettingsActivity extends HaafidhActivity {
 
     private void refreshMurajaah(){
         int minutes=prefs.activeReviewMinutes(geometry);
+        if (prefs.universalProfile()) {
+            murajaahStatus.setText(reviewBudgetLabel(minutes));
+            murajaahStatus.setTextColor(Ui.MUTED);
+            return;
+        }
         murajaahStatus.setText("Palier actuel · "+minutes+" min actives + "
             +ActiveReviewDurationPolicy.fragilityMinutes(minutes)+" min fragilités\n"
             +"0–15 juz · 40 + 5 min\n>15–25 juz · 60 + 10 min\n>25–30 juz · 70 + 15 min\n"+prefs.activeCoverageSummary());
         murajaahStatus.setTextColor(Ui.MUTED);
+    }
+
+    private String reviewBudgetLabel(int minutes) {
+        return getString(R.string.settings_review_budget_minutes, minutes,
+            ActiveReviewDurationPolicy.fragilityMinutes(minutes));
+    }
+
+    private void chooseReviewBudget() {
+        int[] budgets = {0,30,40,45,60,70};
+        String[] labels = new String[budgets.length];
+        int selected = 0;
+        labels[0] = getString(R.string.settings_review_budget_auto);
+        for (int i = 1; i < budgets.length; i++) {
+            labels[i] = reviewBudgetLabel(budgets[i]);
+            if (budgets[i] == prefs.universalActiveReviewMinutes()) selected = i;
+        }
+        new AlertDialog.Builder(this).setTitle(R.string.settings_review_budget)
+            .setSingleChoiceItems(labels, selected, (dialog, choice) -> {
+                if (prefs.setUniversalActiveReviewMinutes(budgets[choice])) refreshMurajaah();
+                else Toast.makeText(this,R.string.setup_save_error,Toast.LENGTH_LONG).show();
+                dialog.dismiss();
+            }).setNegativeButton(R.string.ui_close,null).show();
     }
 
     private void refreshAudio(){
@@ -784,21 +815,21 @@ public final class SettingsActivity extends HaafidhActivity {
         try(java.io.OutputStream out=getContentResolver().openOutputStream(uri)){
             if(out==null)throw new java.io.IOException("Impossible d’ouvrir le fichier.");
             out.write(HifzBackup.export(this).toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            Toast.makeText(this,"Sauvegarde exportée.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,R.string.backup_exported,Toast.LENGTH_LONG).show();
         }catch(Exception error){
-            Toast.makeText(this,"Échec de l’export : "+error.getMessage(),Toast.LENGTH_LONG).show();
+            Toast.makeText(this,getString(R.string.backup_export_error, error.getMessage()),Toast.LENGTH_LONG).show();
         }
     }
 
     private void confirmImportBackup(){
-        new AlertDialog.Builder(this).setTitle("Importer une sauvegarde")
-            .setMessage("La progression actuelle sera remplacée. Attention : une ancienne sauvegarde V1 ne contient pas les validations des séances. Leur historique antérieur restera inconnu et ne créera pas de faux retard. Continuer ?")
-            .setNegativeButton("Annuler",null)
-            .setPositiveButton("Choisir le fichier",(d,w)->{
+        new AlertDialog.Builder(this).setTitle(R.string.backup_import_confirm)
+            .setMessage(R.string.backup_import_warning)
+            .setNegativeButton(R.string.ui_close,null)
+            .setPositiveButton(R.string.backup_choose_file,(d,w)->{
                 Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("application/json");
-                startActivityForResult(Intent.createChooser(intent,"Choisir la sauvegarde"),REQUEST_BACKUP_IMPORT);
+                startActivityForResult(Intent.createChooser(intent,getString(R.string.backup_chooser_title)),REQUEST_BACKUP_IMPORT);
             }).show();
     }
 
@@ -821,8 +852,8 @@ public final class SettingsActivity extends HaafidhActivity {
         // Modal guard prevents user changes while the independent restore worker
         // transactionally rewrites the Hifz and free-memory stores.
         final AlertDialog pending=new AlertDialog.Builder(this)
-            .setTitle("Restauration")
-            .setMessage("Vérification et restauration de la sauvegarde…")
+            .setTitle(R.string.backup_restoring_title)
+            .setMessage(R.string.backup_restoring_message)
             .setCancelable(false).create();
         pending.show();
         new Thread(()->{
@@ -839,11 +870,11 @@ public final class SettingsActivity extends HaafidhActivity {
             runOnUiThread(()->{
                 pending.dismiss();
                 if(failure==null){
-                    Toast.makeText(this,"Sauvegarde restaurée ("+count+" entrées).",Toast.LENGTH_LONG).show();
+                    Toast.makeText(this,getString(R.string.backup_restored, count),Toast.LENGTH_LONG).show();
                     if (getIntent().getBooleanExtra(EXTRA_INITIAL_RESTORE, false)) finish();
                     else recreate();
                 }else{
-                    Toast.makeText(this,"Échec de l’import : "+failure,Toast.LENGTH_LONG).show();
+                    Toast.makeText(this,getString(R.string.backup_import_error, failure),Toast.LENGTH_LONG).show();
                 }
             });
         },"hifz-backup-import").start();

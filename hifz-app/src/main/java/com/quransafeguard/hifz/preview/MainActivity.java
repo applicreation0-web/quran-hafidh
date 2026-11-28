@@ -341,9 +341,9 @@ public final class MainActivity extends HaafidhActivity {
             try {
                 GeometryRepository geo = GeometryRepository.get(this);
                 boolean saved = prefs.configureNewProfile(
-                    UniversalLearningRoute.parse(learning.getText().toString()),
-                    UniversalLearningRoute.parse(declared.getText().toString()),
-                    UniversalLearningRoute.parse(deepRanges.getText().toString()), deep.isChecked(),
+                    UniversalLearningRoute.parse(learning.getText().toString(), geo),
+                    UniversalLearningRoute.parse(declared.getText().toString(), geo),
+                    UniversalLearningRoute.parse(deepRanges.getText().toString(), geo), deep.isChecked(),
                     maintenance.isChecked(), days.getSelectedItemPosition(), geo);
                 if (saved) recreate();
                 else showSetupMessage(R.string.setup_save_error);

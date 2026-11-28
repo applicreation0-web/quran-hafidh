@@ -71,6 +71,7 @@ public final class HifzPrefs {
     static final String UNIVERSAL_DEEP = "universalItqanDeepV1";
     static final String UNIVERSAL_MAINTENANCE = "universalItqanMaintenanceV1";
     static final String UNIVERSAL_SETUP = "universalSetupPendingV1";
+    static final String UNIVERSAL_REVIEW_MINUTES = "universalActiveReviewMinutesV1";
 
     public HifzPrefs(Context context) {
         this(context, false);
@@ -1483,7 +1484,11 @@ public final class HifzPrefs {
      */
     /** Count the effective active corpus, including historical ranges, only once per physical line. */
     int activeReviewMinutes(GeometryRepository geometry) {
+        int explicit = universalActiveReviewMinutes();
+        if (explicit != 0) return explicit;
         java.util.BitSet lines = new java.util.BitSet(geometry.lineCount());
+        if (universalProfile() && !hasUniversalReviewMaterial())
+            return ActiveReviewDurationPolicy.activeMinutes(0, geometry.lineCount());
         for (VerseRange range : activeMurajaahCorpus().getRanges()) {
             int first = geometry.firstLineIndex(range.getStart());
             int last = geometry.lastLineIndex(range.getEndInclusive());
@@ -1492,6 +1497,15 @@ public final class HifzPrefs {
             lines.set(first, last + 1);
         }
         return ActiveReviewDurationPolicy.activeMinutes(lines.cardinality(), geometry.lineCount());
+    }
+
+    int universalActiveReviewMinutes() {
+        return universalProfile() ? p.getInt(UNIVERSAL_REVIEW_MINUTES, 0) : 0;
+    }
+
+    boolean setUniversalActiveReviewMinutes(int minutes) {
+        if (!universalProfile() || !ActiveReviewDurationPolicy.validProfileMinutes(minutes)) return false;
+        return p.edit().putInt(UNIVERSAL_REVIEW_MINUTES, minutes).commit();
     }
 
     public EligibleCorpus activeMurajaahCorpus() {

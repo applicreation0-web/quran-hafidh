@@ -23,4 +23,8 @@ final class ActiveReviewDurationPolicy {
     static boolean validPersistedMinutes(int minutes) {
         return minutes == 40 || minutes == 70 || (minutes >= 30 && minutes % 15 == 0);
     }
+
+    static boolean validProfileMinutes(int minutes) {
+        return minutes == 0 || minutes == 30 || minutes == 40 || minutes == 45 || minutes == 60 || minutes == 70;
+    }
 }

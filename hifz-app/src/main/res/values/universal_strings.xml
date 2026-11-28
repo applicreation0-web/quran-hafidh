@@ -2,7 +2,7 @@
 <resources>
   <string name="app_language">Langue</string>
   <string name="setup_title">Configurer le parcours</string>
-  <string name="setup_ranges_help">Indiquez chaque passage au format sourate:verset-sourate:verset, séparé par une virgule. Exemple : 112:1-112:4.</string>
+  <string name="setup_ranges_help">Indiquez chaque passage au format sourate:verset-sourate:verset, séparé par une virgule. Exemple : 112:1-112:4. Autres formats : p1–2 pour les pages, h1–2 pour les hizb, j1–2 pour les juz, l1–5 pour les lignes depuis le début du Mushaf.</string>
   <string name="setup_learning_ranges">Passages à apprendre</string>
   <string name="setup_declared_ranges">Passages déjà mémorisés (facultatif)</string>
   <string name="setup_learning_days">Jours d’apprentissage par semaine</string>
@@ -110,4 +110,26 @@
   <string name="nav_week_accessibility">Aller au planning de la semaine</string>
   <string name="nav_next_week">7 prochains jours</string>
   <string name="today_title">AUJOURD’HUI</string>
+  <string name="settings_review_budget">Durée de révision active</string>
+  <string name="settings_review_budget_help">Pour les prochaines séances</string>
+  <string name="settings_review_budget_auto">Automatique selon les acquis</string>
+  <string name="settings_review_budget_minutes">%1$d min de récitation et %2$d min de fragilités</string>
+  <string name="backup_export">Exporter</string>
+  <string name="backup_export_location">Hors de l’appareil</string>
+  <string name="backup_import">Importer</string>
+  <string name="backup_import_location">Depuis une sauvegarde</string>
+  <string name="backup_device_only">Progression stockée uniquement sur cet appareil.</string>
+  <string name="backup_reference">Référence · sauvegarde</string>
+  <string name="backup_title">Sauvegarde</string>
+  <string name="backup_about">Sans compte ni serveur, la progression vit uniquement dans l’appli : désinstaller l’appli ou perdre l’appareil l’efface. Exportez régulièrement.</string>
+  <string name="backup_exported">Sauvegarde exportée.</string>
+  <string name="backup_export_error">Échec de l’export : %1$s</string>
+  <string name="backup_import_confirm">Importer une sauvegarde</string>
+  <string name="backup_import_warning">La sauvegarde remplacera votre progression actuelle. Les anciennes sauvegardes V1 n’incluent pas les validations des séances. Cet historique restera inconnu.</string>
+  <string name="backup_choose_file">Choisir le fichier</string>
+  <string name="backup_chooser_title">Choisir la sauvegarde</string>
+  <string name="backup_restoring_title">Restauration</string>
+  <string name="backup_restoring_message">Vérification et restauration de la sauvegarde…</string>
+  <string name="backup_import_error">Échec de l’import : %1$s</string>
+  <string name="backup_restored">Sauvegarde restaurée (%1$d entrées).</string>
 </resources>
